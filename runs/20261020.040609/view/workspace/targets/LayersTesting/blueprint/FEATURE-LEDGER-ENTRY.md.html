@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-LEDGER-ENTRY.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-LEDGER-ENTRY.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-LEDGER-ENTRY.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Ledger Entry</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>The <code>ledger</code> executable at the application root parses its arguments and routes each command to its handler.</td></tr><tr><td>Depends On</td><td>FEATURE-DATABASE-SELECTION.md, DATABASE.md, FEATURE-TEST-RUNNER.md</td></tr><tr><td>Provides</td><td>./ledger &lt;command&gt;</td></tr><tr><td>Consumes</td><td>open_database(dsn)</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger</code> is the single command surface of the cash ledger. It is an executable file at the application root. Invoked as <code>./ledger &lt;command&gt; [arguments]</code>, it hands the arguments to the <code>cli</code> package entry point <code>main(argv)</code> and exits with the integer that <code>main</code> returns.</p>
+<h2>Behavior</h2>
+<ul><li><code>ledger</code> is a regular file at the application root with the executable bit set.</li><li><code>ledger</code> calls <code>cli.main</code> with the arguments after the program name and exits with the returned</li></ul>
+<p>integer as its exit status.</p>
+<ul><li>Each command name in the Commands table of <code>sources/INSTRUCTIONS.md</code> is routed to a handler in</li></ul>
+<p>the handler table. Each handler is implemented by the story that owns that command.</p>
+<ul><li>The database is opened through <code>open_database</code> with the DSN selected by FEATURE-DATABASE-SELECTION.md.</li></ul>
+<p>Usage errors are detected before any database is opened.</p>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC ledger-executable-present ===<br>Intent: The application root contains an executable regular file named ledger.</p>
+<p>from pathlib import Path import os</p>
+<p>ledger = Path(&quot;ledger&quot;) assert ledger.is_file() assert os.access(ledger, os.X_OK) === END AC ledger-executable-present ===</p>
+<p>=== AC ledger-entry-dispatch-in-process ===<br>Intent: The cli entry point main returns an integer status for an unknown command name.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;frobnicate&quot;) assert code == 2 assert out == &quot;&quot; === END AC ledger-entry-dispatch-in-process ===</p>
+<p>=== AC ledger-entry-exit-status ===<br>Intent: Invoking ./ledger with an unknown command exits with the status main returns.<br>Requires: executable=python3; scope=test</p>
+<p>import os import subprocess import tempfile</p>
+<p>with tempfile.TemporaryDirectory() as scratch: env = {**os.environ, &quot;DATABASE_URL&quot;: os.path.join(scratch, &quot;ledger.db&quot;)} result = subprocess.run( [&quot;./ledger&quot;, &quot;frobnicate&quot;], capture_output=True, text=True, env=env, ) print(result.stdout) print(result.stderr) assert result.returncode == 2 assert result.stdout == &quot;&quot; === END AC ledger-entry-exit-status ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li><code>ledger</code> contains no report, count, balance, or total computation. Every value comes from a query.</li><li>Application code never reads <code>sources/run.sh</code> or any seed file.</li><li>This story routes command names only. It does not implement the behavior of any command.</li><li>No database driver is imported here. Database access goes through <code>open_database</code> and the generated</li></ul>
+<p>persistence layer.</p></article>
+</main>
+</body>
+</html>

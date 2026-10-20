@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-TEST-RUNNER.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-TEST-RUNNER.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-TEST-RUNNER.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Test Runner</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td><code>bin/test.sh</code> runs the project suite against a temporary database and accepts an optional slice selector.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md</td></tr><tr><td>Provides</td><td><code>sh bin/test.sh [SLICE]</code></td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>bin/test.sh</code> is the single entry point for the project&#x27;s automated tests. Story-level builds run a slice of the suite. The terminal story runs the whole suite.</p>
+<h2>Behavior</h2>
+<ul><li><code>sh bin/test.sh</code> runs <code>pytest -q</code> from the application root with no selector.</li><li><code>sh bin/test.sh SLICE</code> passes <code>SLICE</code> to pytest as a <code>-k</code> expression, narrowing the run to the</li></ul>
+<p>matching tests.</p>
+<ul><li>Before running pytest, the script exports <code>DATABASE_URL</code> pointing at a fresh temporary SQLite</li></ul>
+<p>file, so tests never touch the user&#x27;s database.</p>
+<ul><li>The script exits <code>0</code> only when every selected test passes, and a nonzero status otherwise.</li><li>The script uses the interpreter in <code>.venv</code> when it exists.</li><li>The script is POSIX <code>sh</code>.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC test-runner-syntax ===<br>Intent: The test runner is valid POSIX shell syntax.</p>
+<p>import subprocess</p>
+<p>result = subprocess.run([&quot;sh&quot;, &quot;-n&quot;, &quot;bin/test.sh&quot;], capture_output=True, text=True) print(result.stdout) print(result.stderr) assert result.returncode == 0 === END AC test-runner-syntax ===</p>
+<p>=== AC test-runner-selector ===<br>Intent: The slice selector runs only the matching tests and reports their result in the exit status.</p>
+<p>import os import subprocess</p>
+<p>probes = { &quot;tests/test_ac_probe_pass.py&quot;: &quot;def test_probe_pass():\n    assert True\n&quot;, &quot;tests/test_ac_probe_fail.py&quot;: &quot;def test_probe_fail():\n    assert False\n&quot;, } os.makedirs(&quot;tests&quot;, exist_ok=True) try: for path, source in probes.items(): with open(path, &quot;w&quot;, encoding=&quot;utf-8&quot;) as handle: handle.write(source) passing = subprocess.run([&quot;sh&quot;, &quot;bin/test.sh&quot;, &quot;probe_pass&quot;], capture_output=True, text=True) failing = subprocess.run([&quot;sh&quot;, &quot;bin/test.sh&quot;, &quot;probe_fail&quot;], capture_output=True, text=True) finally: for path in probes: if os.path.exists(path): os.remove(path) print(passing.stdout) print(passing.stderr) print(failing.stdout) print(failing.stderr) assert passing.returncode == 0 assert failing.returncode != 0 === END AC test-runner-selector ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li><code>bin/test.sh</code> uses POSIX <code>sh</code> only. No bash-only constructs.</li><li><code>bin/test.sh</code> never points the suite at a database the user configured. It always exports a</li></ul>
+<p>fresh temporary <code>DATABASE_URL</code> first.</p></article>
+</main>
+</body>
+</html>

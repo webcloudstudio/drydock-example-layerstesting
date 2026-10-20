@@ -1,0 +1,102 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Next: drydock build LayersTesting
+
+Blueprint: LayersTesting
+Target: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.040609/workspace/targets/LayersTesting
+Rows: <state> <type>  <Name>  [<id>]   — pass [<id>] to --step
+
+Block: Build Block 1 · Foundational  [block-1]   — 0/1 stories complete
+  [pending] story  Create the Python project tree, environment, dependency manifest, and lockfile.  [scaffold-python]  <- next
+
+Block: Build Block 2 · Foundational  [block-2]   — 0/2 stories complete
+  [pending] story  Provide bin/test.sh, the POSIX automated test runner with a slice selector.  [foundation-005]
+  [pending] story  Declare the persistence contract for the three ledger tables.  [foundation-003]
+
+Block: Build Block 3 · Service  [block-3]   — 0/1 stories complete
+  [QUESTIONS] story  Select the database from DATABASE_URL, DATABASE_PATH, or data/app.db.  [foundation-002]
+
+Block: Build Block 4 · Service  [block-4]   — 0/1 stories complete
+  [pending] story  Convert between integer cents and two-decimal amount text.  [foundation-004]
+
+Block: Build Block 5 · Foundational  [block-5]   — 0/1 stories complete
+  [pending] story  Provide the ledger executable at the application root that dispatches commands.  [foundation-001]
+
+Block: Build Block 6 · Service  [block-6]   — 0/1 stories complete
+  [pending] story  Write CSV output conventions for successful commands.  [cli-001]
+
+Block: Build Block 7 · Service  [block-7]   — 0/2 stories complete
+  [pending] story  Map exit codes 0 to 4 and write one diagnostic line on failure.  [cli-002]
+  [pending] story  Initialize an empty three-table schema.  [schema-001]
+
+Block: Build Block 8 · Service  [block-8]   — 0/1 stories complete
+  [pending] story  Reject usage errors with exit code 2.  [cli-003]
+
+Block: Build Block 9 · Service  [block-9]   — 0/1 stories complete
+  [pending] story  Validate account and category codes.  [valid-001]
+
+Block: Build Block 10 · Service  [block-10]   — 0/2 stories complete
+  [pending] story  Validate names, descriptions, and memos.  [valid-002]
+  [pending] story  Count rows per table.  [schema-002]
+
+Block: Build Block 11 · Service  [block-11]   — 0/1 stories complete
+  [pending] story  Validate input amounts.  [valid-003]
+
+Block: Build Block 12 · Service  [block-12]   — 0/1 stories complete
+  [pending] story  Validate calendar dates.  [valid-004]
+
+Block: Build Block 13 · Service  [block-13]   — 0/1 stories complete
+  [pending] story  Run every command as one database transaction.  [integ-001]
+
+Block: Build Block 14 · Service  [block-14]   — 0/1 stories complete
+  [pending] story  Reject any command that leaves a negative account balance.  [integ-002]
+
+Block: Build Block 15 · Service  [block-15]   — 0/1 stories complete
+  [pending] story  Load accounts from a CSV file.  [load-001]
+
+Block: Build Block 16 · Service  [block-16]   — 0/1 stories complete
+  [pending] story  Load categories from a CSV file.  [load-002]
+
+Block: Build Block 17 · Service  [block-17]   — 0/2 stories complete
+  [pending] story  Load transactions keeping the file txn_id values.  [load-003]
+  [pending] story  Add an account.  [acct-001]
+
+Block: Build Block 18 · Service  [block-18]   — 0/2 stories complete
+  [pending] story  Reject a load atomically when any row is invalid or duplicated.  [load-004]
+  [pending] story  Get an account.  [acct-002]
+
+Block: Build Block 19 · Service  [block-19]   — 0/2 stories complete
+  [pending] story  Reject a load whose header does not match the table.  [load-005]
+  [pending] story  Rename an account.  [acct-003]
+
+Block: Build Block 20 · Service  [block-20]   — 0/1 stories complete
+  [pending] story  Delete an account that has no transactions.  [acct-004]
+
+Block: Build Block 21 · Service  [block-21]   — 0/1 stories complete
+  [pending] story  Post a transaction.  [txn-001]
+
+Block: Build Block 22 · Service  [block-22]   — 0/3 stories complete
+  [pending] story  Get a transaction.  [txn-002]
+  [pending] story  Transfer between two accounts as two linked rows.  [xfer-001]
+  [pending] story  Reject an invalid transfer.  [xfer-002]
+
+Block: Build Block 23 · Service  [block-23]   — 0/1 stories complete
+  [pending] story  Amend a transaction amount.  [txn-003]
+
+Block: Build Block 24 · Service  [block-24]   — 0/1 stories complete
+  [pending] story  Delete a transaction.  [txn-004]
+
+Block: Build Block 25 · Service  [block-25]   — 0/2 stories complete
+  [pending] story  Report balances by account.  [rpt-001]
+  [pending] story  Report totals by month.  [rpt-003]
+
+Block: Build Block 26 · Service  [block-26]   — 0/1 stories complete
+  [pending] story  Report totals by category.  [rpt-002]
+
+Block: Build Block 27 · Service  [block-27]   — 0/1 stories complete
+  [pending] story  Print usage for every command and sub-verb on --help.  [cli-004]
+
+Block: Build Block 28 · Feature  [block-28]   — 0/1 stories complete
+  [pending] story  Gate the finished application on the full grader and test suite.  [verify-001]
+
+Steps: 37 total — 0 done, 0 built (await verify), 0 in review, 36 pending, 1 blocked by questions, 0 failed (0% complete)
+Buildable now: block-1

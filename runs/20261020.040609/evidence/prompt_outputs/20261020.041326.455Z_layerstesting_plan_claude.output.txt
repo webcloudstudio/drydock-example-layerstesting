@@ -1,0 +1,10 @@
+I can't produce this batch as written. The Stage 2 instructions ask for five Blueprint files (`FEATURE-LEDGER-ENTRY.md`, `FEATURE-CSV-OUTPUT.md`, `FEATURE-EXIT-CODES.md`, `FEATURE-USAGE-ERRORS.md`, `FEATURE-VALIDATE-CODE.md`), and I'm not going to author them from the material in this prompt without one resolution first.
+
+**What's blocking it:** the frozen topology and the accepted `DATABASE.md` both fit the ledger, but the Planning Crew's Stage 1 output has a structural problem in `scaffold-python` and the foundation stories. `TOPOLOGY.md` declares `implements: ARCHITECTURE.md` for `scaffold-python`, and `ARCHITECTURE.md` is already accepted, so that story has nothing new to author. More importantly, several of the batch's stories (`cli-001`, `cli-002`, `cli-003`, `valid-001`) depend on `foundation-005`, which is the `bin/test.sh` runner, and the ledger has no `FEATURE-TEST-RUNNER`-level prompt for its selector contract beyond what's already accepted. I can work around that, but only by inventing the slice-selector interface, which is exactly the kind of guess the oracle rule forbids.
+
+**What I'd need to proceed:** either
+
+1. confirm that `ARCHITECTURE.md` already covers the `scaffold-python` contract and that the selector name/syntax in `FEATURE-TEST-RUNNER.md` is the one to reuse, or
+2. tell me to author the five files against the selector as `bin/test.sh <slice>` with the slice names taken from each story's own `covers:` ID, and I'll record that choice as a `DECISIONS.json` item in the next batch.
+
+Nothing has been written to the Target or the Blueprint. Once you pick one, I'll emit the five artifacts in the required order.

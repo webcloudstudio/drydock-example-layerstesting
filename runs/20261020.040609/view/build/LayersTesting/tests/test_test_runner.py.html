@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_test_runner.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_test_runner.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_test_runner.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;bin/test.sh contract: slice selector, exit status, and the temporary database it exports.
+
+Each case runs the script in a child process. The child pytest collects a sentinel module that
+exists only for the duration of the case, and selects it by a token no other test name contains,
+so the outer suite is never re-run from inside itself.
+&quot;&quot;&quot;
+
+import os
+import shutil
+import subprocess
+from pathlib import Path
+
+import pytest
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+RUNNER = PROJECT_ROOT / &quot;bin&quot; / &quot;test.sh&quot;
+SENTINEL = PROJECT_ROOT / &quot;tests&quot; / &quot;test_zqsentinel.py&quot;
+
+SENTINEL_SOURCE = &#x27;&#x27;&#x27;\
+import os
+from pathlib import Path
+
+
+def test_zqsentinel_ok():
+    out = os.environ.get(&quot;ZQSENTINEL_OUT&quot;)
+    if out:
+        Path(out).write_text(os.environ[&quot;DATABASE_URL&quot;], encoding=&quot;utf-8&quot;)
+
+
+def test_zqsentinel_bad():
+    assert False
+&#x27;&#x27;&#x27;
+
+
+@pytest.fixture
+def sentinel():
+    SENTINEL.write_text(SENTINEL_SOURCE, encoding=&quot;utf-8&quot;)
+    try:
+        yield SENTINEL
+    finally:
+        SENTINEL.unlink(missing_ok=True)
+
+
+def _run(selector, out=None, database_url=&quot;/nonexistent/user.db&quot;):
+    env = dict(os.environ, DATABASE_URL=database_url)
+    if out is not None:
+        env[&quot;ZQSENTINEL_OUT&quot;] = str(out)
+    args = [&quot;sh&quot;, str(RUNNER)] + ([selector] if selector is not None else [])
+    return subprocess.run(args, cwd=PROJECT_ROOT, env=env, capture_output=True, text=True)
+
+
+def test_selector_runs_passing_match_and_exits_zero(sentinel):
+    assert _run(&quot;zqsentinel_ok&quot;).returncode == 0
+
+
+def test_selector_runs_failing_match_and_exits_nonzero(sentinel):
+    assert _run(&quot;zqsentinel_bad&quot;).returncode != 0
+
+
+def test_selector_matching_nothing_exits_nonzero(sentinel):
+    assert _run(&quot;zqsentinel_nomatch&quot;).returncode != 0
+
+
+def test_runner_exports_fresh_temporary_database_not_the_callers(sentinel, tmp_path):
+    out = tmp_path / &quot;seen_database_url.txt&quot;
+    result = _run(&quot;zqsentinel_ok&quot;, out=out, database_url=&quot;/nonexistent/user.db&quot;)
+    assert result.returncode == 0
+    seen = Path(out.read_text(encoding=&quot;utf-8&quot;))
+    assert seen != Path(&quot;/nonexistent/user.db&quot;)
+    assert seen.name == &quot;test.db&quot;
+    assert not seen.parent.exists(), &quot;temporary database directory must be removed after the run&quot;
+
+
+def test_runner_is_valid_posix_sh():
+    dash = shutil.which(&quot;dash&quot;)
+    if dash is None:
+        pytest.skip(&quot;dash not installed&quot;)
+    assert subprocess.run([dash, &quot;-n&quot;, str(RUNNER)], capture_output=True).returncode == 0
+</pre></article>
+</main>
+</body>
+</html>

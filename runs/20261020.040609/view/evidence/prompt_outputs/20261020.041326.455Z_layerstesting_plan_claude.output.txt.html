@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.041326.455Z_layerstesting_plan_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.041326.455Z_layerstesting_plan_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.041326.455Z_layerstesting_plan_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>I can&#x27;t produce this batch as written. The Stage 2 instructions ask for five Blueprint files (`FEATURE-LEDGER-ENTRY.md`, `FEATURE-CSV-OUTPUT.md`, `FEATURE-EXIT-CODES.md`, `FEATURE-USAGE-ERRORS.md`, `FEATURE-VALIDATE-CODE.md`), and I&#x27;m not going to author them from the material in this prompt without one resolution first.
+
+**What&#x27;s blocking it:** the frozen topology and the accepted `DATABASE.md` both fit the ledger, but the Planning Crew&#x27;s Stage 1 output has a structural problem in `scaffold-python` and the foundation stories. `TOPOLOGY.md` declares `implements: ARCHITECTURE.md` for `scaffold-python`, and `ARCHITECTURE.md` is already accepted, so that story has nothing new to author. More importantly, several of the batch&#x27;s stories (`cli-001`, `cli-002`, `cli-003`, `valid-001`) depend on `foundation-005`, which is the `bin/test.sh` runner, and the ledger has no `FEATURE-TEST-RUNNER`-level prompt for its selector contract beyond what&#x27;s already accepted. I can work around that, but only by inventing the slice-selector interface, which is exactly the kind of guess the oracle rule forbids.
+
+**What I&#x27;d need to proceed:** either
+
+1. confirm that `ARCHITECTURE.md` already covers the `scaffold-python` contract and that the selector name/syntax in `FEATURE-TEST-RUNNER.md` is the one to reuse, or
+2. tell me to author the five files against the selector as `bin/test.sh &lt;slice&gt;` with the slice names taken from each story&#x27;s own `covers:` ID, and I&#x27;ll record that choice as a `DECISIONS.json` item in the next batch.
+
+Nothing has been written to the Target or the Blueprint. Once you pick one, I&#x27;ll emit the five artifacts in the required order.</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,589 @@
+=== BEGIN ARTIFACT FEATURE-TRANSFER.md ===
+# FEATURE: Transfer Between Accounts
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Moves an amount between two accounts as two linked rows in category TRANSFER. |
+| Depends On  | FEATURE-TXN-POST.md, FEATURE-NONNEGATIVE-BALANCE.md, FEATURE-VALIDATE-AMOUNT.md, FEATURE-VALIDATE-DATE.md |
+| Provides    | ledger transfer |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger transfer <from> <to> <amount> <date>` records an internal movement of cash. It stores two rows in category `TRANSFER`: a negative row on `<from>` and a positive row on `<to>`, with the memos and ids the Commands table specifies.
+
+## Behavior
+
+1. Validate `<from>`, `<to>`, `<amount>`, and `<date>` with the shared validators.
+2. Open one database transaction.
+3. Assign the outgoing row the next `txn_id` (one more than the largest present, or `1` in an empty table) and the incoming row the id after it.
+4. Insert both rows, check that no account balance is below zero, then commit.
+5. Write the header row and the two transaction rows to standard output, outgoing row first.
+
+Identical accounts, non-positive amounts, and unknown accounts are rejected before any row is written. Those cases are specified in FEATURE-TRANSFER-REJECTION.md.
+
+## Programmatic Acceptance
+
+=== AC transfer-stores-two-linked-rows ===
+Intent: A successful transfer stores a negative row on the source and a positive row on the destination, with consecutive ids and the TRANSFER category.
+
+import csv
+import io
+import os
+import tempfile
+from decimal import Decimal
+
+from cli.testing import cli_runner
+from persistence import open_database
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+for args in (
+    ("init",),
+    ("load", "accounts", "sources/seed_accounts.csv"),
+    ("load", "categories", "sources/seed_categories.csv"),
+    ("load", "transactions", "sources/seed_transactions.csv"),
+):
+    code, out, err = cli_runner(*args)
+    assert code == 0, err
+
+db = open_database(os.environ["DATABASE_URL"])
+previous_max = max(row.txn_id for row in db.transactions.list())
+
+from_account = "DRAWER1"
+to_account = "SAFE"
+amount_text = "500.00"
+amount_cents = 50000
+date = "2026-04-03"
+
+code, out, err = cli_runner("transfer", from_account, to_account, amount_text, date)
+assert code == 0, err
+rows = list(csv.reader(io.StringIO(out)))
+assert len(rows) == 3, rows
+header, outgoing_fields, incoming_fields = rows
+assert header == ["txn_id", "date", "account", "category", "amount", "memo"]
+
+outgoing = dict(zip(header, outgoing_fields))
+incoming = dict(zip(header, incoming_fields))
+assert int(outgoing["txn_id"]) == previous_max + 1
+assert int(incoming["txn_id"]) == previous_max + 2
+assert outgoing["account"] == from_account
+assert incoming["account"] == to_account
+assert outgoing["category"] == incoming["category"] == "TRANSFER"
+assert outgoing["date"] == incoming["date"] == date
+assert int(Decimal(outgoing["amount"]).scaleb(2)) == -amount_cents
+assert int(Decimal(incoming["amount"]).scaleb(2)) == amount_cents
+assert outgoing["memo"].split() == ["transfer", "to", to_account]
+assert incoming["memo"].split() == ["transfer", "from", from_account]
+
+for fields in (outgoing, incoming):
+    code, out, err = cli_runner("txn", "get", fields["txn_id"])
+    assert code == 0, err
+    stored = list(csv.reader(io.StringIO(out)))
+    assert stored[1] == [fields[name] for name in header]
+=== END AC transfer-stores-two-linked-rows ===
+
+=== AC transfer-rejects-overdraft-and-changes-nothing ===
+Intent: A transfer that would leave the source account below zero exits 3 and stores no rows.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence import open_database
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+for args in (
+    ("init",),
+    ("load", "accounts", "sources/seed_accounts.csv"),
+    ("load", "categories", "sources/seed_categories.csv"),
+    ("load", "transactions", "sources/seed_transactions.csv"),
+):
+    code, out, err = cli_runner(*args)
+    assert code == 0, err
+
+db = open_database(os.environ["DATABASE_URL"])
+
+
+def snapshot():
+    return sorted((row.txn_id, row.account, row.amount) for row in db.transactions.list())
+
+
+before = snapshot()
+code, out, err = cli_runner("transfer", "PETTY", "SAFE", "99999999.99", "2026-04-03")
+assert code == 3, err
+assert out == ""
+assert snapshot() == before
+=== END AC transfer-rejects-overdraft-and-changes-nothing ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Both rows of a transfer are stored in one database transaction; a transfer never stores one row alone.
+- The transfer reuses the posting path's id assignment and does not compute ids separately.
+- No account balance may be left below zero by a transfer.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-TRANSFER-REJECTION.md ===
+# FEATURE: Transfer Rejection
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Rejects invalid transfers with exit 3 and no change to any table. |
+| Depends On  | FEATURE-TRANSFER.md, FEATURE-VALIDATE-AMOUNT.md |
+
+## Questions
+
+- None.
+
+## Purpose
+
+A transfer is rejected when its two accounts are identical, its amount is not positive, its amount is zero, or either account is unknown. Each rejection exits 3, writes nothing to standard output, and leaves every table exactly as it was.
+
+## Behavior
+
+1. Check that `<from>` and `<to>` differ.
+2. Check that `<amount>` is positive and passes the amount rules.
+3. Check that both accounts exist.
+4. On any failure, roll back and exit 3 with one diagnostic line on standard error.
+
+## Programmatic Acceptance
+
+=== AC transfer-rejects-invalid-cases ===
+Intent: Each invalid transfer exits 3, writes nothing to standard output, and leaves the stored transactions unchanged.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence import open_database
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+for args in (
+    ("init",),
+    ("load", "accounts", "sources/seed_accounts.csv"),
+    ("load", "categories", "sources/seed_categories.csv"),
+    ("load", "transactions", "sources/seed_transactions.csv"),
+):
+    code, out, err = cli_runner(*args)
+    assert code == 0, err
+
+db = open_database(os.environ["DATABASE_URL"])
+
+
+def snapshot():
+    return sorted((row.txn_id, row.account, row.amount) for row in db.transactions.list())
+
+
+cases = (
+    ("DRAWER1", "DRAWER1", "1.00"),
+    ("DRAWER1", "SAFE", "-5.00"),
+    ("DRAWER1", "SAFE", "0.00"),
+    ("DRAWER1", "NOSUCH", "1.00"),
+)
+for from_account, to_account, amount_text in cases:
+    before = snapshot()
+    code, out, err = cli_runner("transfer", from_account, to_account, amount_text, "2026-04-04")
+    assert code == 3, (from_account, to_account, amount_text, err)
+    assert out == ""
+    assert snapshot() == before
+=== END AC transfer-rejects-invalid-cases ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A rejected transfer never stores either of its two rows.
+- A rejection never writes to standard output.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-REPORT-BALANCES.md ===
+# FEATURE: Balances Report
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Reports each account's transaction count and balance, then a TOTAL row, computed from the database. |
+| Depends On  | FEATURE-LOAD-TRANSACTIONS.md, FEATURE-TRANSFER.md, FEATURE-TXN-DELETE.md, FEATURE-CSV-OUTPUT.md |
+| Provides    | ledger report balances |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger report balances` writes `account,name,transactions,balance` for every account ordered by code, followed by `TOTAL,,<count>,<sum>`. The balance of an account is the sum of its transaction amounts.
+
+## Behavior
+
+1. Read every account and every transaction from the database.
+2. For each account, count its transactions and sum their amounts in integer cents.
+3. Write one row per account ordered by code, then the TOTAL row over all transactions.
+4. Write amounts with exactly two decimal places.
+
+When no accounts exist, only the header and the TOTAL row are written, with count `0` and sum `0.00`.
+
+## Programmatic Acceptance
+
+=== AC report-balances-match-database ===
+Intent: Each balances row and the TOTAL row equal values computed from the accounts and transactions read back from the database.
+
+import csv
+import io
+import os
+import tempfile
+from decimal import Decimal
+
+from cli.testing import cli_runner
+from persistence import open_database
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+for args in (
+    ("init",),
+    ("load", "accounts", "sources/seed_accounts.csv"),
+    ("load", "categories", "sources/seed_categories.csv"),
+    ("load", "transactions", "sources/seed_transactions.csv"),
+):
+    code, out, err = cli_runner(*args)
+    assert code == 0, err
+
+db = open_database(os.environ["DATABASE_URL"])
+accounts = list(db.accounts.list())
+transactions = list(db.transactions.list())
+
+code, out, err = cli_runner("report", "balances")
+assert code == 0, err
+rows = list(csv.reader(io.StringIO(out)))
+assert rows[0] == ["account", "name", "transactions", "balance"]
+body, total = rows[1:-1], rows[-1]
+
+codes = [row[0] for row in body]
+assert codes == sorted(codes)
+assert codes == sorted(account.account for account in accounts)
+for row in body:
+    account = next(item for item in accounts if item.account == row[0])
+    mine = [txn for txn in transactions if txn.account == row[0]]
+    assert row[1] == account.name
+    assert int(row[2]) == len(mine)
+    assert int(Decimal(row[3]).scaleb(2)) == sum(txn.amount for txn in mine)
+
+assert total[0] == "TOTAL" and total[1] == ""
+assert int(total[2]) == len(transactions)
+assert int(Decimal(total[3]).scaleb(2)) == sum(txn.amount for txn in transactions)
+=== END AC report-balances-match-database ===
+
+=== AC report-balances-empty-ledger ===
+Intent: With no accounts, the balances report writes only the header and a TOTAL row with zero count and zero sum.
+
+import csv
+import io
+import os
+import tempfile
+from decimal import Decimal
+
+from cli.testing import cli_runner
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+code, out, err = cli_runner("init")
+assert code == 0, err
+
+code, out, err = cli_runner("report", "balances")
+assert code == 0, err
+rows = list(csv.reader(io.StringIO(out)))
+assert len(rows) == 2
+assert rows[0] == ["account", "name", "transactions", "balance"]
+assert rows[1][0] == "TOTAL"
+assert int(rows[1][2]) == 0
+assert int(Decimal(rows[1][3]).scaleb(2)) == 0
+=== END AC report-balances-empty-ledger ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Every value in the report is computed from a database query; no account, count, or total is hardcoded.
+- Amounts are integer cents internally and are formatted only at the output boundary.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-REPORT-CATEGORIES.md ===
+# FEATURE: Categories Report
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Reports inflow, outflow, and net per category, including categories with no transactions, then a TOTAL row, computed from the database. |
+| Depends On  | FEATURE-LOAD-TRANSACTIONS.md, FEATURE-TRANSFER.md, FEATURE-TXN-DELETE.md, FEATURE-CSV-OUTPUT.md |
+| Provides    | ledger report categories |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger report categories` writes `category,description,transactions,inflow,outflow,net` for every category ordered by code, followed by `TOTAL,,<count>,<inflow>,<outflow>,<net>`.
+
+## Behavior
+
+1. Read every category and every transaction from the database.
+2. For each category, count its transactions, sum positive amounts as `inflow`, and sum the absolute values of negative amounts as `outflow`.
+3. Compute `net` as `inflow - outflow`.
+4. Write one row per category ordered by code, including categories with no transactions, then the TOTAL row.
+
+When no categories exist, only the header and the TOTAL row are written, with zeros in every numeric column.
+
+## Programmatic Acceptance
+
+=== AC report-categories-match-database ===
+Intent: Each categories row and the TOTAL row equal values computed from the categories and transactions read back from the database.
+
+import csv
+import io
+import os
+import tempfile
+from decimal import Decimal
+
+from cli.testing import cli_runner
+from persistence import open_database
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+for args in (
+    ("init",),
+    ("load", "accounts", "sources/seed_accounts.csv"),
+    ("load", "categories", "sources/seed_categories.csv"),
+    ("load", "transactions", "sources/seed_transactions.csv"),
+):
+    code, out, err = cli_runner(*args)
+    assert code == 0, err
+
+db = open_database(os.environ["DATABASE_URL"])
+categories = list(db.categories.list())
+transactions = list(db.transactions.list())
+
+code, out, err = cli_runner("report", "categories")
+assert code == 0, err
+rows = list(csv.reader(io.StringIO(out)))
+assert rows[0] == ["category", "description", "transactions", "inflow", "outflow", "net"]
+body, total = rows[1:-1], rows[-1]
+
+codes = [row[0] for row in body]
+assert codes == sorted(codes)
+assert codes == sorted(category.category for category in categories)
+for row in body:
+    category = next(item for item in categories if item.category == row[0])
+    mine = [txn for txn in transactions if txn.category == row[0]]
+    inflow = sum(txn.amount for txn in mine if txn.amount > 0)
+    outflow = sum(-txn.amount for txn in mine if txn.amount < 0)
+    assert row[1] == category.description
+    assert int(row[2]) == len(mine)
+    assert int(Decimal(row[3]).scaleb(2)) == inflow
+    assert int(Decimal(row[4]).scaleb(2)) == outflow
+    assert int(Decimal(row[5]).scaleb(2)) == inflow - outflow
+
+all_inflow = sum(txn.amount for txn in transactions if txn.amount > 0)
+all_outflow = sum(-txn.amount for txn in transactions if txn.amount < 0)
+assert total[0] == "TOTAL" and total[1] == ""
+assert int(total[2]) == len(transactions)
+assert int(Decimal(total[3]).scaleb(2)) == all_inflow
+assert int(Decimal(total[4]).scaleb(2)) == all_outflow
+assert int(Decimal(total[5]).scaleb(2)) == all_inflow - all_outflow
+=== END AC report-categories-match-database ===
+
+=== AC report-categories-lists-empty-categories ===
+Intent: A category with no transactions still appears in the categories report with zero counts and sums.
+
+import csv
+import io
+import os
+import tempfile
+from decimal import Decimal
+
+from cli.testing import cli_runner
+from persistence import open_database
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+for args in (
+    ("init",),
+    ("load", "categories", "sources/seed_categories.csv"),
+):
+    code, out, err = cli_runner(*args)
+    assert code == 0, err
+
+db = open_database(os.environ["DATABASE_URL"])
+categories = list(db.categories.list())
+
+code, out, err = cli_runner("report", "categories")
+assert code == 0, err
+rows = list(csv.reader(io.StringIO(out)))
+body, total = rows[1:-1], rows[-1]
+assert len(body) == len(categories)
+for row in body:
+    assert int(row[2]) == 0
+    assert int(Decimal(row[3]).scaleb(2)) == 0
+    assert int(Decimal(row[4]).scaleb(2)) == 0
+    assert int(Decimal(row[5]).scaleb(2)) == 0
+assert total[0] == "TOTAL"
+assert int(total[2]) == 0
+=== END AC report-categories-lists-empty-categories ===
+
+=== AC report-categories-empty-ledger ===
+Intent: With no categories, the categories report writes only the header and a TOTAL row of zeros.
+
+import csv
+import io
+import os
+import tempfile
+from decimal import Decimal
+
+from cli.testing import cli_runner
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+code, out, err = cli_runner("init")
+assert code == 0, err
+
+code, out, err = cli_runner("report", "categories")
+assert code == 0, err
+rows = list(csv.reader(io.StringIO(out)))
+assert len(rows) == 2
+assert rows[0] == ["category", "description", "transactions", "inflow", "outflow", "net"]
+assert rows[1][0] == "TOTAL"
+assert int(rows[1][2]) == 0
+assert int(Decimal(rows[1][3]).scaleb(2)) == 0
+assert int(Decimal(rows[1][4]).scaleb(2)) == 0
+assert int(Decimal(rows[1][5]).scaleb(2)) == 0
+=== END AC report-categories-empty-ledger ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Every value in the report is computed from a database query; no category, count, or total is hardcoded.
+- Outflow is written as a positive number.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-REPORT-MONTHLY.md ===
+# FEATURE: Monthly Report
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Reports transaction count, inflow, outflow, and net per calendar month, then a TOTAL row, computed from the database. |
+| Depends On  | FEATURE-LOAD-TRANSACTIONS.md, FEATURE-TRANSFER.md, FEATURE-TXN-DELETE.md, FEATURE-CSV-OUTPUT.md |
+| Provides    | ledger report monthly |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger report monthly` writes `month,transactions,inflow,outflow,net` for every `YYYY-MM` that has transactions, in ascending order, followed by `TOTAL,<count>,<inflow>,<outflow>,<net>`.
+
+## Behavior
+
+1. Read every transaction from the database.
+2. Group transactions by the `YYYY-MM` prefix of their date.
+3. For each month, count its transactions, sum positive amounts as `inflow`, sum the absolute values of negative amounts as `outflow`, and compute `net` as `inflow - outflow`.
+4. Write one row per month ascending, then the TOTAL row over all transactions.
+
+When no transactions exist, only the header and the TOTAL row are written, with zeros in every numeric column.
+
+## Programmatic Acceptance
+
+=== AC report-monthly-match-database ===
+Intent: Each monthly row and the TOTAL row equal values computed from the transactions read back from the database, with months ascending.
+
+import csv
+import io
+import os
+import tempfile
+from decimal import Decimal
+
+from cli.testing import cli_runner
+from persistence import open_database
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+for args in (
+    ("init",),
+    ("load", "accounts", "sources/seed_accounts.csv"),
+    ("load", "categories", "sources/seed_categories.csv"),
+    ("load", "transactions", "sources/seed_transactions.csv"),
+):
+    code, out, err = cli_runner(*args)
+    assert code == 0, err
+
+db = open_database(os.environ["DATABASE_URL"])
+transactions = list(db.transactions.list())
+
+code, out, err = cli_runner("report", "monthly")
+assert code == 0, err
+rows = list(csv.reader(io.StringIO(out)))
+assert rows[0] == ["month", "transactions", "inflow", "outflow", "net"]
+body, total = rows[1:-1], rows[-1]
+
+months = [row[0] for row in body]
+assert months == sorted({txn.date[:7] for txn in transactions})
+for row in body:
+    mine = [txn for txn in transactions if txn.date[:7] == row[0]]
+    inflow = sum(txn.amount for txn in mine if txn.amount > 0)
+    outflow = sum(-txn.amount for txn in mine if txn.amount < 0)
+    assert int(row[1]) == len(mine)
+    assert int(Decimal(row[2]).scaleb(2)) == inflow
+    assert int(Decimal(row[3]).scaleb(2)) == outflow
+    assert int(Decimal(row[4]).scaleb(2)) == inflow - outflow
+
+all_inflow = sum(txn.amount for txn in transactions if txn.amount > 0)
+all_outflow = sum(-txn.amount for txn in transactions if txn.amount < 0)
+assert total[0] == "TOTAL"
+assert int(total[1]) == len(transactions)
+assert int(Decimal(total[2]).scaleb(2)) == all_inflow
+assert int(Decimal(total[3]).scaleb(2)) == all_outflow
+assert int(Decimal(total[4]).scaleb(2)) == all_inflow - all_outflow
+=== END AC report-monthly-match-database ===
+
+=== AC report-monthly-empty-ledger ===
+Intent: With no transactions, the monthly report writes only the header and a TOTAL row of zeros.
+
+import csv
+import io
+import os
+import tempfile
+from decimal import Decimal
+
+from cli.testing import cli_runner
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+code, out, err = cli_runner("init")
+assert code == 0, err
+
+code, out, err = cli_runner("report", "monthly")
+assert code == 0, err
+rows = list(csv.reader(io.StringIO(out)))
+assert len(rows) == 2
+assert rows[0] == ["month", "transactions", "inflow", "outflow", "net"]
+assert rows[1][0] == "TOTAL"
+assert int(rows[1][1]) == 0
+assert int(Decimal(rows[1][2]).scaleb(2)) == 0
+assert int(Decimal(rows[1][3]).scaleb(2)) == 0
+assert int(Decimal(rows[1][4]).scaleb(2)) == 0
+=== END AC report-monthly-empty-ledger ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Every value in the report is computed from a database query; no month, count, or total is hardcoded.
+- Months with no transactions are omitted rather than written with zeros.
+=== END ARTIFACT ===

@@ -1,0 +1,219 @@
+[
+  {
+    "id": "Q-001",
+    "type": "choice",
+    "severity": "material",
+    "origin": "plan",
+    "blueprint": "DATABASE.md",
+    "story": "foundation-003",
+    "status": "recommended",
+    "archived": false,
+    "title": "PostgreSQL support",
+    "description": "The sources require DATABASE_URL to select PostgreSQL when given a postgres:// or postgresql:// DSN, but TECHNOLOGY_STACK.md lists only SQLite. Absence is undecided, so the sources govern. Adds postgres.md and psycopg[binary] to the stack.",
+    "options": [
+      {
+        "value": "sqlite-only",
+        "label": "SQLite only"
+      },
+      {
+        "value": "sqlite-and-postgres",
+        "label": "SQLite and PostgreSQL"
+      }
+    ],
+    "system_choice": "sqlite-and-postgres"
+  },
+  {
+    "id": "Q-002",
+    "type": "choice",
+    "severity": "material",
+    "origin": "plan",
+    "blueprint": "FEATURE-ATOMIC-COMMANDS.md",
+    "story": "integ-001",
+    "status": "recommended",
+    "archived": false,
+    "title": "Concurrent command behavior (AC-005)",
+    "description": "Two commands may run against one database at once. Each command runs as a single transaction and either commits or fails with no partial change. SQLite serializes writers; PostgreSQL uses default isolation. The persistence library's default connect timeout applies.",
+    "options": [
+      {
+        "value": "serialize-writes",
+        "label": "Serialize writes through the library's default transaction behavior"
+      },
+      {
+        "value": "custom-retry",
+        "label": "Add application-level retry loops"
+      }
+    ],
+    "system_choice": "serialize-writes"
+  },
+  {
+    "id": "Q-003",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "FEATURE-USAGE-ERRORS.md",
+    "story": "cli-003",
+    "status": "recommended",
+    "archived": false,
+    "title": "No-argument invocation",
+    "description": "The sources do not state the response when ledger runs with no arguments. Chosen: the conventional usage error, exit 2, with one usage line on standard error.",
+    "options": [
+      {
+        "value": "exit-2",
+        "label": "Exit 2 with usage on stderr"
+      },
+      {
+        "value": "exit-0",
+        "label": "Exit 0 with usage on stdout"
+      }
+    ],
+    "system_choice": "exit-2"
+  },
+  {
+    "id": "Q-004",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "FEATURE-CLI-HELP.md",
+    "story": "cli-004",
+    "status": "recommended",
+    "archived": false,
+    "title": "Help response contract",
+    "description": "The sources give no help text. Chosen: usage and arguments on standard output with exit 0, exempt from the CSV rule (AC-006).",
+    "options": [
+      {
+        "value": "stdout-exit-0",
+        "label": "stdout, exit 0"
+      },
+      {
+        "value": "stderr-exit-2",
+        "label": "stderr, exit 2"
+      }
+    ],
+    "system_choice": "stdout-exit-0"
+  },
+  {
+    "id": "Q-005",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "FEATURE-DATABASE-SELECTION.md",
+    "story": "foundation-002",
+    "status": "recommended",
+    "archived": false,
+    "title": "Connect timeout (AC-004)",
+    "description": "The timeout is not stated in the sources. Chosen: the persistence library's default connect timeout, with an expired connect exiting 1.",
+    "options": [
+      {
+        "value": "library-default",
+        "label": "Persistence library default"
+      },
+      {
+        "value": "custom",
+        "label": "Custom timeout value"
+      }
+    ],
+    "system_choice": "library-default"
+  },
+  {
+    "id": "Q-006",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "FEATURE-AMOUNT-CENTS.md",
+    "story": "foundation-004",
+    "status": "recommended",
+    "archived": false,
+    "title": "Amount conversion as its own story",
+    "description": "FOUNDATION-004 needs a unit that is not a schema detail. Chosen: a conversion module owned by its own story, which validation and integrity stories depend on.",
+    "options": [
+      {
+        "value": "own-story",
+        "label": "Own story"
+      },
+      {
+        "value": "fold-into-schema",
+        "label": "Fold into the DATABASE story"
+      }
+    ],
+    "system_choice": "own-story"
+  },
+  {
+    "id": "Q-007",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "FEATURE-VERIFICATION.md",
+    "story": "verify-001",
+    "status": "recommended",
+    "archived": false,
+    "title": "Seed file inputs in acceptance",
+    "description": "The guardrail bars application code from reading seed files, but acceptance may pass them to ledger load as input. Chosen: acceptance uses them only through the ledger load command.",
+    "options": [
+      {
+        "value": "load-command-only",
+        "label": "Only through ledger load"
+      },
+      {
+        "value": "direct-read",
+        "label": "Direct read by the test"
+      }
+    ],
+    "system_choice": "load-command-only"
+  },
+  {
+    "id": "acceptance-db-selection-unreachable-tooling",
+    "type": "text",
+    "severity": "blocking",
+    "origin": "plan",
+    "blueprint": "FEATURE-DATABASE-SELECTION.md",
+    "story": "foundation-002",
+    "status": "open",
+    "archived": false,
+    "title": "Authorize db-selection-unreachable runtime tooling",
+    "description": "Authorize python-package=psycopg for runtime scope. Planned installation: uv add psycopg. Affected acceptance check: FEATURE-DATABASE-SELECTION.md#db-selection-unreachable (An unreachable PostgreSQL server raises PersistenceError instead of returning a database.).",
+    "options": [],
+    "system_choice": "not authorized"
+  },
+  {
+    "id": "build-feature-test-runner.md-runner-fallback-and-dsn-form",
+    "type": "text",
+    "severity": "low",
+    "origin": "build",
+    "blueprint": "FEATURE-TEST-RUNNER.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Runner fallback and DSN form",
+    "description": "When .venv/bin/python is absent the runner falls back to python3 on PATH. DATABASE_URL is exported as a plain temporary file path, not a sqlite:// URL, matching sources/run.sh. Is that acceptable?",
+    "options": [],
+    "system_choice": "When .venv/bin/python is absent the runner falls back to python3 on PATH. DATABASE_URL is exported as a plain temporary file path, not a sqlite:// URL, matching sources/run.sh. Is that acceptable?"
+  },
+  {
+    "id": "build-schema-derived-indexes",
+    "type": "text",
+    "severity": "informational",
+    "origin": "build",
+    "blueprint": "DATABASE.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Indexes derived from the persistence declaration",
+    "description": "The rendered schema indexes transactions(account); transactions(category). Each is implied by the declaration \u2014 a foreign key is looked up by its child column, and a read pattern's Input fields are the predicate it filters on. Declare an `- INDEX (...)` bullet in DATABASE.md for any index this does not cover.",
+    "options": [],
+    "system_choice": "transactions(account); transactions(category)"
+  },
+  {
+    "id": "build-skip-architecture.md-scaffold-pyproject",
+    "type": "text",
+    "severity": "low",
+    "origin": "build",
+    "blueprint": "ARCHITECTURE.md",
+    "story": "scaffold-python",
+    "status": "recommended",
+    "archived": false,
+    "title": "Acceptance skipped: scaffold-pyproject",
+    "description": "excluded check: ERROR environment",
+    "options": [],
+    "system_choice": "Leave scaffold-pyproject untested until its acceptance setup is repaired; do not treat it as passed."
+  }
+]

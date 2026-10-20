@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompts/20261020.042415.378Z_layerstesting_plan_claude.prompt.md</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompts/20261020.042415.378Z_layerstesting_plan_claude.prompt.md</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompts/20261020.042415.378Z_layerstesting_plan_claude.prompt.md">Raw file</a></div></header>
+<article class="doc"><p>&lt;pblock label=&quot;Plan artifact repair&quot; kind=&quot;repair&quot;&gt;</p>
+<h1>Plan Artifact Repair</h1>
+<p>Drydock accepted the Plan response shape but rejected the emitted Blueprint artifact(s) below. Repair only the deterministic defect. Preserve all unrelated content, contracts, headings, decisions, and acceptance assertions byte-for-byte where possible. Do not remove or weaken a valid assertion while adding a missing one. Every artifact with a programmatic surface retains at least two concrete Python acceptance assertions. Every DECISIONS.json is the sole decision disclosure surface; do not emit Markdown question sections.</p>
+<p>Emit each artifact below in exactly this form, and emit no other text:</p>
+<p>=== BEGIN ARTIFACT &lt;FILENAME&gt; === &lt;the complete file body&gt; === END ARTIFACT ===</p>
+<p>The filename appears once, in the opening delimiter. The closing delimiter is the constant token above and never carries a name.</p>
+<p>Emit exactly one such block for each of: FEATURE-ACCOUNT-ADD.md, FEATURE-ACCOUNT-GET.md, FEATURE-ACCOUNT-RENAME.md, FEATURE-LOAD-ATOMIC.md, FEATURE-LOAD-HEADER.md.</p>
+<p>Repair pass: 1</p>
+<p>Deterministic validation defect: FEATURE-ACCOUNT-ADD.md [account-add-round-trip]: criterion is not valid Python: invalid syntax (line 1) FEATURE-ACCOUNT-ADD.md [account-add-duplicate]: criterion is not valid Python: invalid syntax (line 1) FEATURE-ACCOUNT-GET.md [account-get-present]: criterion is not valid Python: invalid syntax (line 1) FEATURE-ACCOUNT-GET.md [account-get-absent]: criterion is not valid Python: invalid syntax (line 1) FEATURE-ACCOUNT-RENAME.md [account-rename-round-trip]: criterion is not valid Python: invalid syntax (line 1) FEATURE-ACCOUNT-RENAME.md [account-rename-absent]: criterion is not valid Python: invalid syntax (line 1) FEATURE-LOAD-ATOMIC.md [load-atomic-bad-file]: criterion is not valid Python: invalid syntax (line 1) FEATURE-LOAD-ATOMIC.md [load-atomic-duplicate-key]: criterion is not valid Python: invalid syntax (line 1) FEATURE-LOAD-HEADER.md [load-header-mismatch]: criterion is not valid Python: invalid syntax (line 1) FEATURE-LOAD-HEADER.md [load-header-unreadable]: criterion is not valid Python: invalid syntax (line 1) FEATURE-LOAD-HEADER.md [load-header-accounts-mismatch]: criterion is not valid Python: invalid syntax (line 1)</p>
+<p>Normative Compass sections. They bind every assertion you write or retain, including one you add to satisfy the defect above.</p>
+<h2>Constraints</h2>
+<ul><li>Implement in the language and database named under <code>## Stack</code> in <code>sources/INSTRUCTIONS.md</code>.</li><li>Provide an executable named <code>ledger</code> at the application root, invoked as <code>./ledger &lt;command&gt;</code>.</li><li>Read the database location from <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code>.</li><li>Store amounts as integer cents.</li><li>Run every command as one database transaction.</li><li>Run without network access other than to a PostgreSQL server named by <code>DATABASE_URL</code>.</li><li>Diagnostics go to standard error and are never compared.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Do not modify, rewrite, regenerate, or substitute any file under <code>sources/</code>.</li><li>Do not read <code>sources/run.sh</code> or any seed file from application code. Seed files reach the</li></ul>
+<p>database only through <code>ledger load</code>.</p>
+<ul><li>Do not hardcode a report row, a count, or a total. Every value comes from a query.</li><li>Do not open a database driver outside the shipped persistence library.</li><li>Do not use floating point for money at any layer.</li></ul>
+<h2>Verification Protocol</h2>
+<div class="scroll"><table><thead><tr><th>Story kind</th><th>Command</th><th>Asserts</th></tr></thead><tbody><tr><td>Every behavioral story</td><td><code>sh bin/test.sh</code></td><td>exit <code>0</code></td></tr><tr><td>Terminal story (once, last)</td><td><code>sh sources/run.sh</code></td><td>exit <code>0</code></td></tr></tbody></table></div>
+<p>&lt;!-- drydock:build-write-guardrail:start --&gt;</p>
+<p>Original FEATURE-ACCOUNT-ADD.md, in the same form your reply must use: === BEGIN ARTIFACT FEATURE-ACCOUNT-ADD.md ===</p>
+<h1>FEATURE: Account Add</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td><code>account add</code> stores a new account with zero transactions and a zero balance; a duplicate code exits 3.</td></tr><tr><td>Depends On</td><td>FEATURE-ATOMIC-COMMANDS.md, FEATURE-VALIDATE-CODE.md, FEATURE-VALIDATE-TEXT.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger account add &lt;code&gt; &lt;name&gt;</td></tr><tr><td>Consumes</td><td>accounts.create, accounts.get</td></tr></tbody></table></div>
+<h2>Questions</h2>
+<ul><li>None.</li></ul>
+<h2>Purpose</h2>
+<p><code>ledger account add &lt;code&gt; &lt;name&gt;</code> creates one account. The command is one transaction. The output is the new account row in the <code>account,name,transactions,balance</code> format.</p>
+<h2>Behavior</h2>
+<ul><li>The code and name are validated before any database access.</li><li>A new account has zero transactions and a balance of <code>0.00</code>.</li><li>A code that already exists is rejected with exit 3 and changes nothing.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNT-001</code> — write: create an account - supplies: <code>account</code>, <code>name</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-ACCOUNT-002</code> — read: retrieve an account by code - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC account-add-round-trip ===<br>Intent: <code>account add</code> stores the account, reports zero transactions and a zero balance, and is readable back through the database.</p>
+<pre><code>import csv
+import io
+import os
+import sys
+import tempfile
+from decimal import Decimal
+from pathlib import Path
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = str(Path(tempfile.mkdtemp()) / &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+account_code = &quot;CASH9&quot;
+account_name = &quot;Event Float&quot;
+
+exit_code, out, err = cli_runner(&quot;init&quot;)
+assert exit_code == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, account_code, account_name)
+print(out)
+print(err, file=sys.stderr)
+assert exit_code == 0
+
+rows = list(csv.DictReader(io.StringIO(out)))
+assert len(rows) == 1
+assert rows[0][&quot;account&quot;] == account_code
+assert rows[0][&quot;name&quot;] == account_name
+assert int(rows[0][&quot;transactions&quot;]) == 0
+assert Decimal(rows[0][&quot;balance&quot;]) == Decimal(0)
+
+with db_session(dsn) as db:
+    stored = db.accounts.get(account=account_code)
+assert stored is not None
+assert stored.name == account_name</code></pre>
+<p>=== END AC account-add-round-trip ===</p>
+<p>=== AC account-add-duplicate ===<br>Intent: Adding an account whose code already exists exits 3 and leaves the stored name unchanged.</p>
+<pre><code>import os
+import sys
+import tempfile
+from pathlib import Path
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = str(Path(tempfile.mkdtemp()) / &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+account_code = &quot;CASH9&quot;
+account_name = &quot;Event Float&quot;
+other_name = &quot;Other Float&quot;
+
+exit_code, out, err = cli_runner(&quot;init&quot;)
+assert exit_code == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, account_code, account_name)
+assert exit_code == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, account_code, other_name)
+print(out)
+print(err, file=sys.stderr)
+assert exit_code == 3
+
+with db_session(dsn) as db:
+    stored = db.accounts.get(account=account_code)
+assert stored.name == account_name</code></pre>
+<p>=== END AC account-add-duplicate ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A new account&#x27;s balance is never stored. It is derived from transactions and is zero at creation.</li></ul>
+<p>=== END ARTIFACT ===</p>
+<p>Original FEATURE-ACCOUNT-GET.md, in the same form your reply must use: === BEGIN ARTIFACT FEATURE-ACCOUNT-GET.md ===</p>
+<h1>FEATURE: Account Get</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td><code>account get</code> writes the account row for a code; an absent code exits 4.</td></tr><tr><td>Depends On</td><td>FEATURE-ACCOUNT-ADD.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger account get &lt;code&gt;</td></tr><tr><td>Consumes</td><td>accounts.get</td></tr></tbody></table></div>
+<h2>Questions</h2>
+<ul><li>None.</li></ul>
+<h2>Purpose</h2>
+<p><code>ledger account get &lt;code&gt;</code> reads one account from the database and writes it as a single account row.</p>
+<h2>Behavior</h2>
+<ul><li>The output is the account row: <code>account,name,transactions,balance</code>.</li><li>The transaction count and balance are computed from the database at read time.</li><li>An absent code exits 4 and writes nothing to standard output.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNT-002</code> — read: retrieve an account by code - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC account-get-present ===<br>Intent: <code>account get</code> for an existing code writes that account&#x27;s row and exits 0.</p>
+<pre><code>import csv
+import io
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+from cli.testing import cli_runner
+
+dsn = str(Path(tempfile.mkdtemp()) / &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+account_code = &quot;CASH9&quot;
+account_name = &quot;Event Float&quot;
+
+exit_code, out, err = cli_runner(&quot;init&quot;)
+assert exit_code == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, account_code, account_name)
+assert exit_code == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, account_code)
+print(out)
+print(err, file=sys.stderr)
+assert exit_code == 0
+
+rows = list(csv.DictReader(io.StringIO(out)))
+assert len(rows) == 1
+assert rows[0][&quot;account&quot;] == account_code
+assert rows[0][&quot;name&quot;] == account_name</code></pre>
+<p>=== END AC account-get-present ===</p>
+<p>=== AC account-get-absent ===<br>Intent: <code>account get</code> for a code that does not exist exits 4.</p>
+<pre><code>import os
+import sys
+import tempfile
+from pathlib import Path
+
+from cli.testing import cli_runner
+
+dsn = str(Path(tempfile.mkdtemp()) / &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+missing_code = &quot;NOSUCH&quot;
+
+exit_code, out, err = cli_runner(&quot;init&quot;)
+assert exit_code == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, missing_code)
+print(out)
+print(err, file=sys.stderr)
+assert exit_code == 4</code></pre>
+<p>=== END AC account-get-absent ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A get never creates an account. An absent code stays absent.</li></ul>
+<p>=== END ARTIFACT ===</p>
+<p>Original FEATURE-ACCOUNT-RENAME.md, in the same form your reply must use: === BEGIN ARTIFACT FEATURE-ACCOUNT-RENAME.md ===</p>
+<h1>FEATURE: Account Rename</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td><code>account rename</code> updates an account&#x27;s name and writes the updated row; an absent code exits 4.</td></tr><tr><td>Depends On</td><td>FEATURE-ACCOUNT-GET.md, FEATURE-ATOMIC-COMMANDS.md, FEATURE-VALIDATE-TEXT.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger account rename &lt;code&gt; &lt;name&gt;</td></tr><tr><td>Consumes</td><td>accounts.update, accounts.get</td></tr></tbody></table></div>
+<h2>Questions</h2>
+<ul><li>None.</li></ul>
+<h2>Purpose</h2>
+<p><code>ledger account rename &lt;code&gt; &lt;name&gt;</code> changes the name of one existing account. The code and all transactions are unchanged.</p>
+<h2>Behavior</h2>
+<ul><li>The new name is validated before any database access.</li><li>The command writes the updated account row.</li><li>An absent code exits 4 and changes nothing.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNT-004</code> — write: rename an account - supplies: <code>account</code>, <code>name</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-ACCOUNT-002</code> — read: retrieve an account by code - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC account-rename-round-trip ===<br>Intent: <code>account rename</code> changes only the name and the new name is readable back through the database.</p>
+<pre><code>import csv
+import io
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = str(Path(tempfile.mkdtemp()) / &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+account_code = &quot;CASH9&quot;
+original_name = &quot;Event Float&quot;
+new_name = &quot;Event Cash Box&quot;
+
+exit_code, out, err = cli_runner(&quot;init&quot;)
+assert exit_code == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, account_code, original_name)
+assert exit_code == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, account_code, new_name)
+print(out)
+print(err, file=sys.stderr)
+assert exit_code == 0
+
+rows = list(csv.DictReader(io.StringIO(out)))
+assert len(rows) == 1
+assert rows[0][&quot;account&quot;] == account_code
+assert rows[0][&quot;name&quot;] == new_name
+
+with db_session(dsn) as db:
+    stored = db.accounts.get(account=account_code)
+assert stored.name == new_name</code></pre>
+<p>=== END AC account-rename-round-trip ===</p>
+<p>=== AC account-rename-absent ===<br>Intent: Renaming an account whose code does not exist exits 4 and creates no account.</p>
+<pre><code>import os
+import sys
+import tempfile
+from pathlib import Path
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = str(Path(tempfile.mkdtemp()) / &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+missing_code = &quot;NOSUCH&quot;
+new_name = &quot;Ghost Account&quot;
+
+exit_code, out, err = cli_runner(&quot;init&quot;)
+assert exit_code == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, missing_code, new_name)
+print(out)
+print(err, file=sys.stderr)
+assert exit_code == 4
+
+with db_session(dsn) as db:
+    assert db.accounts.get(account=missing_code) is None</code></pre>
+<p>=== END AC account-rename-absent ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A rename never changes an account code. Transactions keep referencing the same code.</li></ul>
+<p>=== END ARTIFACT ===</p>
+<p>Original FEATURE-LOAD-ATOMIC.md, in the same form your reply must use: === BEGIN ARTIFACT FEATURE-LOAD-ATOMIC.md ===</p>
+<h1>FEATURE: Atomic Transaction Load Rejection</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>A transaction load with any invalid or duplicate row exits 3 and stores none of its rows.</td></tr><tr><td>Depends On</td><td>FEATURE-LOAD-TRANSACTIONS.md, FEATURE-ATOMIC-COMMANDS.md, FEATURE-NONNEGATIVE-BALANCE.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger load transactions &lt;csv&gt; (atomic rejection)</td></tr><tr><td>Consumes</td><td>ledger load transactions &lt;csv&gt;, transactions.create, accounts.get, categories.get</td></tr></tbody></table></div>
+<h2>Questions</h2>
+<ul><li>None.</li></ul>
+<h2>Purpose</h2>
+<p>A load of transactions is one command. If any row fails validation, references an unknown account or category, or repeats a <code>txn_id</code>, the whole command is rejected. No row from the file persists, including rows that were valid on their own. The rejection exits 3 and writes one diagnostic line to standard error.</p>
+<h2>Behavior</h2>
+<ul><li>Every row is validated before commit. The first failing row ends the command.</li><li>The transaction is rolled back. Rows 1 to 10 of <code>sources/seed_transactions_bad.csv</code> do not persist</li></ul>
+<p>when row 11 names the unknown account <code>NOSUCH</code>.</p>
+<ul><li>A file containing two rows with the same <code>txn_id</code> is rejected in full.</li><li>A rejected load leaves <code>transactions</code> exactly as it was.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-TXN-001</code> — write: create a transaction - supplies: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code> - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li><li><code>FEATURE-ACCOUNT-002</code> — read: retrieve an account by code - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-CATEGORY-002</code> — read: retrieve a category by code - supplies: <code>category</code> - returns: <code>category</code>, <code>description</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC load-atomic-bad-file ===<br>Intent: A transaction load whose row 11 names an unknown account exits 3 and stores none of rows 1 to 10.</p>
+<pre><code>import os
+import sys
+import tempfile
+from pathlib import Path
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = str(Path(tempfile.mkdtemp()) / &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+account_code = &quot;DRAWER1&quot;
+account_name = &quot;Front Drawer&quot;
+category_code = &quot;SALES&quot;
+category_description = &quot;Sales receipts&quot;
+
+exit_code, out, err = cli_runner(&quot;init&quot;)
+assert exit_code == 0
+
+with db_session(dsn) as db:
+    db.accounts.create(account=account_code, name=account_name)
+    db.categories.create(category=category_code, description=category_description)
+
+bad_file = Path(&quot;sources/seed_transactions_bad.csv&quot;)
+exit_code, out, err = cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(bad_file))
+print(out)
+print(err, file=sys.stderr)
+assert exit_code == 3
+
+with db_session(dsn) as db:
+    assert len(db.transactions.list()) == 0</code></pre>
+<p>=== END AC load-atomic-bad-file ===</p>
+<p>=== AC load-atomic-duplicate-key ===<br>Intent: A transaction load that repeats a txn_id exits 3 and stores neither copy of the duplicated row.</p>
+<pre><code>import os
+import sys
+import tempfile
+from pathlib import Path
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = str(Path(tempfile.mkdtemp()) / &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+account_code = &quot;DRAWER1&quot;
+account_name = &quot;Front Drawer&quot;
+category_code = &quot;SALES&quot;
+category_description = &quot;Sales receipts&quot;
+header = &quot;txn_id,date,account,category,amount,memo\n&quot;
+duplicate_id = 1
+first_row = f&quot;{duplicate_id},2026-04-01,{account_code},{category_code},10.00,first\n&quot;
+second_row = f&quot;{duplicate_id},2026-04-01,{account_code},{category_code},10.00,second\n&quot;
+
+exit_code, out, err = cli_runner(&quot;init&quot;)
+assert exit_code == 0
+
+with db_session(dsn) as db:
+    db.accounts.create(account=account_code, name=account_name)
+    db.categories.create(category=category_code, description=category_description)
+
+dup_file = Path(tempfile.mkdtemp()) / &quot;duplicate.csv&quot;
+dup_file.write_text(header + first_row + second_row)
+
+exit_code, out, err = cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(dup_file))
+print(out)
+print(err, file=sys.stderr)
+assert exit_code == 3
+
+with db_session(dsn) as db:
+    assert len(db.transactions.list()) == 0</code></pre>
+<p>=== END AC load-atomic-duplicate-key ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A load never stores a partial file. Either every row persists or none does.</li><li>Application code never reads <code>sources/seed_transactions_bad.csv</code> directly. It is passed to <code>ledger load</code> only.</li></ul>
+<p>=== END ARTIFACT ===</p>
+<p>Original FEATURE-LOAD-HEADER.md, in the same form your reply must use: === BEGIN ARTIFACT FEATURE-LOAD-HEADER.md ===</p>
+<h1>FEATURE: Load Header Validation</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>A load whose header does not match the table&#x27;s columns in order exits 3; an unreadable file exits 1.</td></tr><tr><td>Depends On</td><td>FEATURE-LOAD-TRANSACTIONS.md, FEATURE-ACCOUNT-001.md, DATABASE.md</td></tr><tr><td>Provides</td><td>header validation for ledger load &lt;table&gt; &lt;csv&gt;</td></tr><tr><td>Consumes</td><td>ledger load &lt;table&gt; &lt;csv&gt;, accounts.create, transactions.list</td></tr></tbody></table></div>
+<h2>Questions</h2>
+<ul><li>None.</li></ul>
+<h2>Purpose</h2>
+<p>Before any row is read, the loader compares the file&#x27;s header with the table&#x27;s declared columns. The comparison is exact and ordered. A mismatch is a rejected file and exits 3. A file that cannot be opened or read is an operational failure and exits 1.</p>
+<h2>Behavior</h2>
+<ul><li>Column names must match the table&#x27;s columns in the order given in <code>sources/INSTRUCTIONS.md</code>.</li><li>A reordered, renamed, missing, or extra column is a mismatch.</li><li>A mismatch stores no rows and changes no table.</li><li>An unreadable or nonexistent file exits 1 and changes no table.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNT-001</code> — write: create an account - supplies: <code>account</code>, <code>name</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-TXN-003</code> — read: list transactions - supplies: <code>txn_id</code> - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC load-header-mismatch ===<br>Intent: A transaction load whose header columns are reordered exits 3 and stores no rows.</p>
+<pre><code>import os
+import sys
+import tempfile
+from pathlib import Path
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = str(Path(tempfile.mkdtemp()) / &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+reordered_header = &quot;account,txn_id,date,category,amount,memo\n&quot;
+reordered_row = &quot;DRAWER1,1,2026-04-01,SALES,10.00,reordered\n&quot;
+
+exit_code, out, err = cli_runner(&quot;init&quot;)
+assert exit_code == 0
+
+mismatch_file = Path(tempfile.mkdtemp()) / &quot;mismatch.csv&quot;
+mismatch_file.write_text(reordered_header + reordered_row)
+
+exit_code, out, err = cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(mismatch_file))
+print(out)
+print(err, file=sys.stderr)
+assert exit_code == 3
+
+with db_session(dsn) as db:
+    assert len(db.transactions.list()) == 0</code></pre>
+<p>=== END AC load-header-mismatch ===</p>
+<p>=== AC load-header-unreadable ===<br>Intent: A load of a file that does not exist exits 1 and changes no table.</p>
+<pre><code>import os
+import sys
+import tempfile
+from pathlib import Path
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = str(Path(tempfile.mkdtemp()) / &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+missing_file = Path(tempfile.mkdtemp()) / &quot;does-not-exist.csv&quot;
+assert not missing_file.exists()
+
+exit_code, out, err = cli_runner(&quot;init&quot;)
+assert exit_code == 0
+
+exit_code, out, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, str(missing_file))
+print(out)
+print(err, file=sys.stderr)
+assert exit_code == 1
+
+with db_session(dsn) as db:
+    assert len(db.accounts.list()) == 0</code></pre>
+<p>=== END AC load-header-unreadable ===</p>
+<p>=== AC load-header-accounts-mismatch ===<br>Intent: An accounts load whose header is missing a column exits 3 and stores no account rows.</p>
+<pre><code>import os
+import sys
+import tempfile
+from pathlib import Path
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = str(Path(tempfile.mkdtemp()) / &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+short_header = &quot;account\n&quot;
+short_row = &quot;DRAWER1\n&quot;
+
+exit_code, out, err = cli_runner(&quot;init&quot;)
+assert exit_code == 0
+
+short_file = Path(tempfile.mkdtemp()) / &quot;short.csv&quot;
+short_file.write_text(short_header + short_row)
+
+exit_code, out, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, str(short_file))
+print(out)
+print(err, file=sys.stderr)
+assert exit_code == 3
+
+with db_session(dsn) as db:
+    assert len(db.accounts.list()) == 0</code></pre>
+<p>=== END AC load-header-accounts-mismatch ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A header check runs before any row is stored. No partial load is ever committed.</li></ul>
+<p>=== END ARTIFACT === &lt;/pblock&gt;</p></article>
+</main>
+</body>
+</html>

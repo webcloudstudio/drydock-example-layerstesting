@@ -1,0 +1,67 @@
+{
+  "criteria": {
+    "db-selection-default": {
+      "status": "VALID",
+      "error_code": "product-missing",
+      "code_sha256": "5508a31c2b1516a0c347e3f5a7ef3db1595cb95e76b6cae90b5624c9a7be6e77",
+      "updated_at": "2026-10-20T04:33:40+00:00",
+      "detail": ""
+    },
+    "db-selection-path-fallback": {
+      "status": "VALID",
+      "error_code": "product-missing",
+      "code_sha256": "f6c71164532daa5513417149c49afcd6ce5b06a61ea8b965c02e45587840c14c",
+      "updated_at": "2026-10-20T04:33:40+00:00",
+      "detail": ""
+    },
+    "db-selection-postgres-dsn": {
+      "status": "VALID",
+      "error_code": "product-missing",
+      "code_sha256": "ffbb8e042947485c6223b814e409f82056a5894f2612ee0ccd4c79dc39419e7e",
+      "updated_at": "2026-10-20T04:33:40+00:00",
+      "detail": ""
+    },
+    "db-selection-unreachable": {
+      "status": "VALID",
+      "error_code": "baseline-red",
+      "code_sha256": "64e6510ba4730dcac1d6655d61cf0abaa8a833a3be0bfbbe8717a1a11fbd1d8d",
+      "updated_at": "2026-10-20T04:33:40+00:00",
+      "detail": ""
+    },
+    "db-selection-url-precedence": {
+      "status": "VALID",
+      "error_code": "product-missing",
+      "code_sha256": "14b2d8ca24805fee9d8ea49661afe22553a33b99ce9280bff4841e4761a60621",
+      "updated_at": "2026-10-20T04:33:40+00:00",
+      "detail": ""
+    },
+    "scaffold-environment": {
+      "status": "VALID",
+      "error_code": "baseline-red",
+      "code_sha256": "92dd49d5f68651b88d1f88f5bd063fb5aed8433b749b199203f0059649a1f544",
+      "updated_at": "2026-10-20T04:28:21+00:00",
+      "detail": ""
+    },
+    "scaffold-pyproject": {
+      "status": "ERROR",
+      "error_code": "environment",
+      "code_sha256": "5ed4065eddf9bb401854c4b0bca0b063fdfd343d699772837abd84d825320fcb",
+      "updated_at": "2026-10-20T04:28:21+00:00",
+      "detail": "unverified acceptance: the assertion raised FileNotFoundError ([Errno 2] No such file or directory: 'pyproject.toml') in its own frame, before reaching the code under test. This is a fault in the acceptance kit or its environment, not a defect in the build."
+    },
+    "test-runner-selector": {
+      "status": "VALID",
+      "error_code": "baseline-red",
+      "code_sha256": "aaf14ab4c3034e5d072666e2989ec9e0b97791a9acb978f287c15945f36d7b23",
+      "updated_at": "2026-10-20T04:30:36+00:00",
+      "detail": ""
+    },
+    "test-runner-syntax": {
+      "status": "VALID",
+      "error_code": "baseline-red",
+      "code_sha256": "1a2ba0894836987098aef6050508799eb2d3cdfcb21503e2f39e92323fc19506",
+      "updated_at": "2026-10-20T04:30:36+00:00",
+      "detail": ""
+    }
+  }
+}

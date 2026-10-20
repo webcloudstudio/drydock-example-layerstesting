@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-CLI-HELP.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-CLI-HELP.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-CLI-HELP.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: CLI Help</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Print usage and arguments for every command and sub-verb on <code>--help</code>, exiting 0.</td></tr><tr><td>Depends On</td><td>FEATURE-USAGE-ERRORS.md, FEATURE-SCHEMA-COUNT.md, FEATURE-ACCOUNT-DELETE.md, FEATURE-TXN-DELETE.md, FEATURE-TRANSFER-REJECTION.md, FEATURE-LOAD-HEADER.md, FEATURE-REPORT-MONTHLY.md</td></tr><tr><td>Provides</td><td><code>ledger &lt;command&gt; --help</code>, <code>ledger &lt;command&gt; &lt;sub-verb&gt; --help</code></td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Every command and sub-verb of the <code>ledger</code> executable prints its usage and arguments when <code>--help</code> is given. The help output is written to standard output and the process exits 0. Help output is exempt from the CSV output rule in FEATURE-CSV-OUTPUT.md.</p>
+<h2>Behavior</h2>
+<ul><li><code>--help</code> may follow any command or sub-verb in the Commands table of <code>sources/INSTRUCTIONS.md</code>.</li><li>Help is printed before any argument validation. A command invoked with <code>--help</code> does not open the</li></ul>
+<p>database and does not change any row.</p>
+<ul><li>Help text is written to standard output only. Standard error stays empty.</li><li>The exit status is 0.</li></ul>
+<h2>Commands and sub-verbs covered</h2>
+<div class="scroll"><table><thead><tr><th>Command</th><th>Sub-verbs</th></tr></thead><tbody><tr><td><code>init</code>, <code>count</code>, <code>load</code>, <code>transfer</code></td><td>none</td></tr><tr><td><code>account</code></td><td><code>add</code>, <code>get</code>, <code>rename</code>, <code>delete</code></td></tr><tr><td><code>txn</code></td><td><code>post</code>, <code>get</code>, <code>amend</code>, <code>delete</code></td></tr><tr><td><code>report</code></td><td><code>balances</code>, <code>categories</code>, <code>monthly</code></td></tr></tbody></table></div>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC cli-help-commands ===<br>Intent: Every top-level command and command group prints usage on stdout and exits 0 for --help.</p>
+<p>from cli.testing import cli_runner</p>
+<p>for argv in [[&quot;init&quot;], [&quot;count&quot;], [&quot;load&quot;], [&quot;transfer&quot;], [&quot;account&quot;], [&quot;txn&quot;], [&quot;report&quot;]]: code, out, err = cli_runner(*argv, &quot;--help&quot;) assert code == 0, argv assert out.strip() != &quot;&quot;, argv assert err == &quot;&quot;, argv === END AC cli-help-commands ===</p>
+<p>=== AC cli-help-account ===<br>Intent: Every account sub-verb prints usage on stdout and exits 0 for --help.</p>
+<p>from cli.testing import cli_runner</p>
+<p>for argv in [[&quot;account&quot;, &quot;add&quot;], [&quot;account&quot;, &quot;get&quot;], [&quot;account&quot;, &quot;rename&quot;], [&quot;account&quot;, &quot;delete&quot;]]: code, out, err = cli_runner(*argv, &quot;--help&quot;) assert code == 0, argv assert out.strip() != &quot;&quot;, argv assert err == &quot;&quot;, argv === END AC cli-help-account ===</p>
+<p>=== AC cli-help-txn ===<br>Intent: Every txn sub-verb prints usage on stdout and exits 0 for --help.</p>
+<p>from cli.testing import cli_runner</p>
+<p>for argv in [[&quot;txn&quot;, &quot;post&quot;], [&quot;txn&quot;, &quot;get&quot;], [&quot;txn&quot;, &quot;amend&quot;], [&quot;txn&quot;, &quot;delete&quot;]]: code, out, err = cli_runner(*argv, &quot;--help&quot;) assert code == 0, argv assert out.strip() != &quot;&quot;, argv assert err == &quot;&quot;, argv === END AC cli-help-txn ===</p>
+<p>=== AC cli-help-report ===<br>Intent: Every report sub-verb prints usage on stdout and exits 0 for --help.</p>
+<p>from cli.testing import cli_runner</p>
+<p>for argv in [[&quot;report&quot;, &quot;balances&quot;], [&quot;report&quot;, &quot;categories&quot;], [&quot;report&quot;, &quot;monthly&quot;]]: code, out, err = cli_runner(*argv, &quot;--help&quot;) assert code == 0, argv assert out.strip() != &quot;&quot;, argv assert err == &quot;&quot;, argv === END AC cli-help-report ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li><code>--help</code> never opens the database, never writes a row, and never drops or creates a table, including for <code>init</code>.</li><li>Help output is never written to standard error.</li><li>Help output does not follow the CSV output rule.</li></ul></article>
+</main>
+</body>
+</html>

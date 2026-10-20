@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.041333.124Z_layerstesting_plan_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.041333.124Z_layerstesting_plan_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.041333.124Z_layerstesting_plan_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT FEATURE-LEDGER-ENTRY.md ===
+# FEATURE: Ledger Entry
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | The `ledger` executable at the application root parses its arguments and routes each command to its handler. |
+| Depends On  | FEATURE-DATABASE-SELECTION.md, DATABASE.md, FEATURE-TEST-RUNNER.md |
+| Provides    | ./ledger &lt;command&gt; |
+| Consumes    | open_database(dsn) |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger` is the single command surface of the cash ledger. It is an executable file at the
+application root. Invoked as `./ledger &lt;command&gt; [arguments]`, it hands the arguments to the
+`cli` package entry point `main(argv)` and exits with the integer that `main` returns.
+
+## Behavior
+
+- `ledger` is a regular file at the application root with the executable bit set.
+- `ledger` calls `cli.main` with the arguments after the program name and exits with the returned
+  integer as its exit status.
+- Each command name in the Commands table of `sources/INSTRUCTIONS.md` is routed to a handler in
+  the handler table. Each handler is implemented by the story that owns that command.
+- The database is opened through `open_database` with the DSN selected by FEATURE-DATABASE-SELECTION.md.
+  Usage errors are detected before any database is opened.
+
+## Programmatic Acceptance
+
+=== AC ledger-executable-present ===
+Intent: The application root contains an executable regular file named ledger.
+
+from pathlib import Path
+import os
+
+ledger = Path(&quot;ledger&quot;)
+assert ledger.is_file()
+assert os.access(ledger, os.X_OK)
+=== END AC ledger-executable-present ===
+
+=== AC ledger-entry-dispatch-in-process ===
+Intent: The cli entry point main returns an integer status for an unknown command name.
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner(&quot;frobnicate&quot;)
+assert code == 2
+assert out == &quot;&quot;
+=== END AC ledger-entry-dispatch-in-process ===
+
+=== AC ledger-entry-exit-status ===
+Intent: Invoking ./ledger with an unknown command exits with the status main returns.
+Requires: executable=python3; scope=test
+
+import os
+import subprocess
+import tempfile
+
+with tempfile.TemporaryDirectory() as scratch:
+    env = {**os.environ, &quot;DATABASE_URL&quot;: os.path.join(scratch, &quot;ledger.db&quot;)}
+    result = subprocess.run(
+        [&quot;./ledger&quot;, &quot;frobnicate&quot;],
+        capture_output=True, text=True, env=env,
+    )
+print(result.stdout)
+print(result.stderr)
+assert result.returncode == 2
+assert result.stdout == &quot;&quot;
+=== END AC ledger-entry-exit-status ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- `ledger` contains no report, count, balance, or total computation. Every value comes from a query.
+- Application code never reads `sources/run.sh` or any seed file.
+- This story routes command names only. It does not implement the behavior of any command.
+- No database driver is imported here. Database access goes through `open_database` and the generated
+  persistence layer.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-CSV-OUTPUT.md ===
+# FEATURE: CSV Output
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Successful commands render their result as CSV: one header row, then data rows, with no quoting and no trailing spaces. |
+| Depends On  | FEATURE-LEDGER-ENTRY.md, FEATURE-TEST-RUNNER.md |
+| Provides    | cli.output.render_csv(header, rows) |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every successful command other than `init` writes CSV to standard output. This story supplies the
+one renderer that all commands use, so the output conventions live in one place.
+
+## Behavior
+
+- `render_csv(header, rows)` returns the text of one header row followed by one row per entry in
+  `rows`.
+- Fields are joined with `,`. No field is quoted. Each line ends with `\n`, and the text ends with
+  `\n`.
+- Values are written exactly as supplied. The renderer does not format numbers or trim text.
+- With no rows, the result is the header row alone.
+
+## Programmatic Acceptance
+
+=== AC csv-rows-round-trip ===
+Intent: render_csv writes the header and every data row, unquoted, comma-separated, each line ending in a newline.
+
+from cli.output import render_csv
+
+header = [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;]
+rows = [[&quot;DRAWER1&quot;, &quot;Front Drawer&quot;, &quot;39&quot;, &quot;2299.38&quot;], [&quot;PETTY&quot;, &quot;Petty Cash&quot;, &quot;21&quot;, &quot;306.25&quot;]]
+text = render_csv(header, rows)
+assert text.endswith(&quot;\n&quot;)
+raw = [line.split(&quot;,&quot;) for line in text.split(&quot;\n&quot;)[:-1]]
+assert raw == [header] + rows
+=== END AC csv-rows-round-trip ===
+
+=== AC csv-header-only-when-empty ===
+Intent: render_csv with no rows writes the header row alone.
+
+from cli.output import render_csv
+
+header = [&quot;table&quot;, &quot;rows&quot;]
+text = render_csv(header, [])
+assert text.endswith(&quot;\n&quot;)
+raw = [line.split(&quot;,&quot;) for line in text.split(&quot;\n&quot;)[:-1]]
+assert raw == [header]
+=== END AC csv-header-only-when-empty ===
+
+=== AC csv-negative-amount-row ===
+Intent: render_csv writes a negative amount with its leading minus and no thousands separator.
+
+from cli.output import render_csv
+
+header = [&quot;category&quot;, &quot;net&quot;]
+rows = [[&quot;RENT&quot;, &quot;-2700.00&quot;]]
+text = render_csv(header, rows)
+raw = [line.split(&quot;,&quot;) for line in text.split(&quot;\n&quot;)[:-1]]
+assert raw == [header] + rows
+=== END AC csv-negative-amount-row ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Amounts reach this renderer already formatted as two-decimal text by FEATURE-AMOUNT-CENTS.md.
+  This renderer never converts a number to text.
+- Values containing a comma or newline are rejected by upstream validation before rendering, so no
+  quoting is ever required.
+- Diagnostics never pass through this renderer.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-EXIT-CODES.md ===
+# FEATURE: Exit Codes
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Each command returns one of exit codes 0 to 4, and a failing command writes one diagnostic line to standard error and nothing to standard output. |
+| Depends On  | FEATURE-CSV-OUTPUT.md, FEATURE-AMOUNT-CENTS.md |
+| Provides    | cli.errors.LedgerError(code, message), cli.errors.run_command(handler) -&gt; int |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The exit code is the contract a caller reads. This story gives every command one place to convert
+its outcome into an exit code and a diagnostic.
+
+## Behavior
+
+- `LedgerError(code, message)` carries an exit code in `code` and a single-line message. Its code
+  is one of 1, 2, 3, or 4.
+- `run_command(handler)` calls `handler()`. The handler returns the CSV text to print.
+  - On success, `run_command` writes the returned text to standard output and returns `0`.
+  - On `LedgerError`, `run_command` writes one line to standard error and returns `error.code`,
+    writing nothing to standard output.
+- Exit codes follow the Exit codes table: 1 operational, 2 usage, 3 rejected, 4 not found.
+
+## Programmatic Acceptance
+
+=== AC exit-success-writes-output-and-zero ===
+Intent: run_command returns 0 and writes exactly the handler&#x27;s returned text to standard output on success.
+
+import contextlib
+import io
+
+from cli.errors import run_command
+
+body = &quot;account,name\nDRAWER1,Front Drawer\n&quot;
+out = io.StringIO()
+err = io.StringIO()
+with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+    code = run_command(lambda: body)
+assert code == 0
+assert out.getvalue() == body
+assert err.getvalue() == &quot;&quot;
+=== END AC exit-success-writes-output-and-zero ===
+
+=== AC exit-failure-codes-mapped ===
+Intent: For each failure code 1 to 4, run_command returns that code, writes nothing to standard output, and writes exactly one line to standard error.
+
+import contextlib
+import io
+
+from cli.errors import LedgerError, run_command
+
+def failing(code):
+    def handler():
+        raise LedgerError(code, &quot;rejected input&quot;)
+    return handler
+
+for code in [1, 2, 3, 4]:
+    out = io.StringIO()
+    err = io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        result = run_command(failing(code))
+    assert result == code
+    assert out.getvalue() == &quot;&quot;
+    assert err.getvalue().count(&quot;\n&quot;) == 1
+=== END AC exit-failure-codes-mapped ===
+
+=== AC exit-error-carries-code ===
+Intent: LedgerError exposes the exit code it was constructed with.
+
+from cli.errors import LedgerError
+
+error = LedgerError(3, &quot;rejected input&quot;)
+assert error.code == 3
+=== END AC exit-error-carries-code ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Only the codes 0, 1, 2, 3, and 4 are produced by this mechanism.
+- A failing command never writes to standard output, including output it had begun to compute.
+- Standard error is not compared by acceptance. It carries one diagnostic line on failure.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-USAGE-ERRORS.md ===
+# FEATURE: Usage Errors
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | An unknown command, unknown load table, unknown report, or wrong argument count exits 2 before any database is opened. |
+| Depends On  | FEATURE-EXIT-CODES.md |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Usage errors are the caller&#x27;s mistake, not a data problem. They are reported with exit code 2 and
+are detected from the arguments alone.
+
+## Behavior
+
+- An unknown command name exits 2.
+- `load` with a table name other than `accounts`, `categories`, or `transactions` exits 2.
+- `report` with a name other than `balances`, `categories`, or `monthly` exits 2.
+- A command given a number of arguments outside the Commands table exits 2.
+- Running `ledger` with no arguments exits 2 and writes one usage line to standard error. This is
+  the conventional response chosen in DECISIONS.json (Q-003).
+- Each usage error writes nothing to standard output and one line to standard error.
+
+## Programmatic Acceptance
+
+=== AC usage-unknown-command ===
+Intent: An unknown command exits 2, writes nothing to standard output, and writes one line to standard error.
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner(&quot;frobnicate&quot;)
+assert code == 2
+assert out == &quot;&quot;
+assert err.count(&quot;\n&quot;) == 1
+=== END AC usage-unknown-command ===
+
+=== AC usage-no-arguments ===
+Intent: Running with no arguments exits 2 with one usage line on standard error.
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner()
+assert code == 2
+assert out == &quot;&quot;
+assert err.count(&quot;\n&quot;) == 1
+=== END AC usage-no-arguments ===
+
+=== AC usage-unknown-load-table ===
+Intent: load with an unknown table name exits 2 without reading the file.
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner(&quot;load&quot;, &quot;nosuch&quot;, &quot;unknown-table.csv&quot;)
+assert code == 2
+assert out == &quot;&quot;
+=== END AC usage-unknown-load-table ===
+
+=== AC usage-unknown-report ===
+Intent: report with an unknown report name exits 2.
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner(&quot;report&quot;, &quot;nosuch&quot;)
+assert code == 2
+assert out == &quot;&quot;
+=== END AC usage-unknown-report ===
+
+=== AC usage-extra-argument ===
+Intent: A command given more arguments than its Commands table entry exits 2.
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner(&quot;count&quot;, &quot;extra&quot;)
+assert code == 2
+assert out == &quot;&quot;
+=== END AC usage-extra-argument ===
+
+=== AC usage-missing-argument ===
+Intent: A sub-verb given fewer arguments than its Commands table entry exits 2.
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;)
+assert code == 2
+assert out == &quot;&quot;
+=== END AC usage-missing-argument ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Usage is checked before any database is opened. A usage error never touches the database.
+- `--help` is not treated as an unknown command by this story. Help output belongs to the help story.
+- Usage messages are diagnostics. They are never written to standard output.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-VALIDATE-CODE.md ===
+# FEATURE: Code Validation
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Account and category codes are accepted only when they are 1 to 12 characters from A-Z and 0-9; any other code is rejected with exit 3. |
+| Depends On  | FEATURE-EXIT-CODES.md, FEATURE-TEST-RUNNER.md |
+| Provides    | cli.validate.validate_code(value) -&gt; str |
+| Consumes    | cli.errors.LedgerError(code, message) |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Codes are the keys of accounts and categories. Every command that accepts a code validates it here
+before the code reaches the database.
+
+## Behavior
+
+- `validate_code(value)` returns `value` unchanged when it is 1 to 12 characters, each from `A-Z`
+  or `0-9`.
+- Any other value raises `LedgerError` with code 3.
+- Values are never normalized. Lowercase letters are rejected, not converted to uppercase.
+
+## Programmatic Acceptance
+
+=== AC validate-code-accepts-boundaries ===
+Intent: validate_code returns the code unchanged for the shortest, longest, and all-digit valid codes.
+
+from cli.validate import validate_code
+
+shortest = &quot;A&quot;
+longest = &quot;ABCDEFGHIJKL&quot;
+digits = &quot;0042&quot;
+assert validate_code(shortest) == shortest
+assert validate_code(longest) == longest
+assert validate_code(digits) == digits
+=== END AC validate-code-accepts-boundaries ===
+
+=== AC validate-code-rejects-length ===
+Intent: validate_code rejects a code longer than 12 characters and an empty code with exit 3.
+
+from cli.errors import LedgerError
+from cli.validate import validate_code
+
+def rejected_code(value):
+    try:
+        validate_code(value)
+    except LedgerError as error:
+        return error.code
+    return None
+
+too_long = &quot;ABCDEFGHIJKLM&quot;
+empty = &quot;&quot;
+assert rejected_code(too_long) == 3
+assert rejected_code(empty) == 3
+=== END AC validate-code-rejects-length ===
+
+=== AC validate-code-rejects-lowercase ===
+Intent: validate_code rejects lowercase letters with exit 3 and does not normalize them.
+
+from cli.errors import LedgerError
+from cli.validate import validate_code
+
+def rejected_code(value):
+    try:
+        validate_code(value)
+    except LedgerError as error:
+        return error.code
+    return None
+
+lowercase = &quot;cash9&quot;
+assert rejected_code(lowercase) == 3
+=== END AC validate-code-rejects-lowercase ===
+
+=== AC validate-code-rejects-punctuation ===
+Intent: validate_code rejects hyphens, spaces, and trailing newlines with exit 3.
+
+from cli.errors import LedgerError
+from cli.validate import validate_code
+
+def rejected_code(value):
+    try:
+        validate_code(value)
+    except LedgerError as error:
+        return error.code
+    return None
+
+hyphenated = &quot;CASH-9&quot;
+spaced = &quot;CASH 9&quot;
+newline_ended = &quot;CASH9\n&quot;
+assert rejected_code(hyphenated) == 3
+assert rejected_code(spaced) == 3
+assert rejected_code(newline_ended) == 3
+=== END AC validate-code-rejects-punctuation ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A code is never normalized, trimmed, or case-folded by this validator.
+- This validator writes nothing to the database.
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

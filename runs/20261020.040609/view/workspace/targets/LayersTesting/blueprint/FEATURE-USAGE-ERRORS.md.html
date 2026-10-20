@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-USAGE-ERRORS.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-USAGE-ERRORS.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-USAGE-ERRORS.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Usage Errors</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>An unknown command, unknown load table, unknown report, or wrong argument count exits 2 before any database is opened.</td></tr><tr><td>Depends On</td><td>FEATURE-EXIT-CODES.md</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Usage errors are the caller&#x27;s mistake, not a data problem. They are reported with exit code 2 and are detected from the arguments alone.</p>
+<h2>Behavior</h2>
+<ul><li>An unknown command name exits 2.</li><li><code>load</code> with a table name other than <code>accounts</code>, <code>categories</code>, or <code>transactions</code> exits 2.</li><li><code>report</code> with a name other than <code>balances</code>, <code>categories</code>, or <code>monthly</code> exits 2.</li><li>A command given a number of arguments outside the Commands table exits 2.</li><li>Running <code>ledger</code> with no arguments exits 2 and writes one usage line to standard error. This is</li></ul>
+<p>the conventional response chosen in DECISIONS.json (Q-003).</p>
+<ul><li>Each usage error writes nothing to standard output and one line to standard error.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC usage-unknown-command ===<br>Intent: An unknown command exits 2, writes nothing to standard output, and writes one line to standard error.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;frobnicate&quot;) assert code == 2 assert out == &quot;&quot; assert err.count(&quot;\n&quot;) == 1 === END AC usage-unknown-command ===</p>
+<p>=== AC usage-no-arguments ===<br>Intent: Running with no arguments exits 2 with one usage line on standard error.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner() assert code == 2 assert out == &quot;&quot; assert err.count(&quot;\n&quot;) == 1 === END AC usage-no-arguments ===</p>
+<p>=== AC usage-unknown-load-table ===<br>Intent: load with an unknown table name exits 2 without reading the file.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;load&quot;, &quot;nosuch&quot;, &quot;unknown-table.csv&quot;) assert code == 2 assert out == &quot;&quot; === END AC usage-unknown-load-table ===</p>
+<p>=== AC usage-unknown-report ===<br>Intent: report with an unknown report name exits 2.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;report&quot;, &quot;nosuch&quot;) assert code == 2 assert out == &quot;&quot; === END AC usage-unknown-report ===</p>
+<p>=== AC usage-extra-argument ===<br>Intent: A command given more arguments than its Commands table entry exits 2.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;count&quot;, &quot;extra&quot;) assert code == 2 assert out == &quot;&quot; === END AC usage-extra-argument ===</p>
+<p>=== AC usage-missing-argument ===<br>Intent: A sub-verb given fewer arguments than its Commands table entry exits 2.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;) assert code == 2 assert out == &quot;&quot; === END AC usage-missing-argument ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Usage is checked before any database is opened. A usage error never touches the database.</li><li><code>--help</code> is not treated as an unknown command by this story. Help output belongs to the help story.</li><li>Usage messages are diagnostics. They are never written to standard output.</li></ul></article>
+</main>
+</body>
+</html>

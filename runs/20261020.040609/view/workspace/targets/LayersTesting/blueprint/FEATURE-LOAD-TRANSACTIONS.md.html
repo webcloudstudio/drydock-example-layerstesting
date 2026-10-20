@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-LOAD-TRANSACTIONS.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-LOAD-TRANSACTIONS.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-LOAD-TRANSACTIONS.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Load Transactions</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Loads transactions from a CSV file, keeping each file txn_id and applying the balance rule before commit.</td></tr><tr><td>Depends On</td><td>FEATURE-LOAD-ACCOUNTS.md, FEATURE-LOAD-CATEGORIES.md, FEATURE-NONNEGATIVE-BALANCE.md, FEATURE-VALIDATE-TEXT.md, FEATURE-VALIDATE-AMOUNT.md, FEATURE-VALIDATE-DATE.md, FEATURE-EXIT-CODES.md, FEATURE-TEST-RUNNER.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger load transactions &lt;csv&gt;</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger load transactions &lt;csv&gt;</code> reads a file whose header is <code>txn_id,date,account,category,amount,memo</code>, validates each row, and inserts every row with its file <code>txn_id</code> in one transaction. The balance rule is applied after all rows are written and before commit. Output is <code>table,loaded</code> then <code>transactions,&lt;rows&gt;</code>.</p>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC load-transactions-keeps-file-ids ===<br>Intent: A valid transactions file loads every row under its file txn_id and writes table,loaded then transactions,&lt;rows&gt;.</p>
+<p>import os import tempfile from cli.testing import cli_runner</p>
+<p>work = tempfile.mkdtemp() os.environ[&quot;DATABASE_URL&quot;] = os.path.join(work, &quot;ledger.db&quot;) accounts = os.path.join(work, &quot;accounts.csv&quot;) with open(accounts, &quot;w&quot;) as handle: handle.write(&quot;account,name\nCASH1,Cash Box\n&quot;) categories = os.path.join(work, &quot;categories.csv&quot;) with open(categories, &quot;w&quot;) as handle: handle.write(&quot;category,description\nSALES,Sales receipts\n&quot;) transactions = os.path.join(work, &quot;transactions.csv&quot;) with open(transactions, &quot;w&quot;) as handle: handle.write( &quot;txn_id,date,account,category,amount,memo\n&quot; &quot;7,2026-01-02,CASH1,SALES,10.00,sale a\n&quot; &quot;8,2026-01-03,CASH1,SALES,-4.00,refund\n&quot; ) row_count = 2 file_id = 7 amount_text = &quot;10.00&quot;</p>
+<p>assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, accounts)[0] == 0 assert cli_runner(&quot;load&quot;, &quot;categories&quot;, categories)[0] == 0 code, out, err = cli_runner(&quot;load&quot;, &quot;transactions&quot;, transactions) assert code == 0 lines = out.splitlines() assert lines[0] == &quot;table,loaded&quot; assert lines[1].split(&quot;,&quot;) == [&quot;transactions&quot;, str(row_count)] code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, str(file_id)) assert code == 0 row = out.splitlines()[1].split(&quot;,&quot;) assert row[0] == str(file_id) assert row[4] == amount_text assert cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;8&quot;)[0] == 0 === END AC load-transactions-keeps-file-ids ===</p>
+<p>=== AC load-transactions-overdraft-rejected ===<br>Intent: A file whose rows would leave an account below zero exits 3 and stores none of its rows.</p>
+<p>import os import tempfile from cli.testing import cli_runner</p>
+<p>work = tempfile.mkdtemp() os.environ[&quot;DATABASE_URL&quot;] = os.path.join(work, &quot;ledger.db&quot;) accounts = os.path.join(work, &quot;accounts.csv&quot;) with open(accounts, &quot;w&quot;) as handle: handle.write(&quot;account,name\nCASH1,Cash Box\n&quot;) categories = os.path.join(work, &quot;categories.csv&quot;) with open(categories, &quot;w&quot;) as handle: handle.write(&quot;category,description\nSALES,Sales receipts\n&quot;) transactions = os.path.join(work, &quot;transactions.csv&quot;) with open(transactions, &quot;w&quot;) as handle: handle.write(&quot;txn_id,date,account,category,amount,memo\n9,2026-01-04,CASH1,SALES,-50.00,too big\n&quot;) empty = 0</p>
+<p>assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, accounts)[0] == 0 assert cli_runner(&quot;load&quot;, &quot;categories&quot;, categories)[0] == 0 assert cli_runner(&quot;load&quot;, &quot;transactions&quot;, transactions)[0] == 3 assert cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;9&quot;)[0] == 4 rows = int(cli_runner(&quot;count&quot;)[1].splitlines()[3].split(&quot;,&quot;)[1]) assert rows == empty === END AC load-transactions-overdraft-rejected ===</p>
+<p>=== AC load-transactions-unknown-account-rejected ===<br>Intent: A file row naming an unknown account exits 3 and stores none of its rows.</p>
+<p>import os import tempfile from cli.testing import cli_runner</p>
+<p>work = tempfile.mkdtemp() os.environ[&quot;DATABASE_URL&quot;] = os.path.join(work, &quot;ledger.db&quot;) accounts = os.path.join(work, &quot;accounts.csv&quot;) with open(accounts, &quot;w&quot;) as handle: handle.write(&quot;account,name\nCASH1,Cash Box\n&quot;) categories = os.path.join(work, &quot;categories.csv&quot;) with open(categories, &quot;w&quot;) as handle: handle.write(&quot;category,description\nSALES,Sales receipts\n&quot;) transactions = os.path.join(work, &quot;transactions.csv&quot;) with open(transactions, &quot;w&quot;) as handle: handle.write( &quot;txn_id,date,account,category,amount,memo\n&quot; &quot;11,2026-01-05,CASH1,SALES,5.00,ok row\n&quot; &quot;12,2026-01-05,NOSUCH,SALES,5.00,unknown account\n&quot; ) empty = 0</p>
+<p>assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, accounts)[0] == 0 assert cli_runner(&quot;load&quot;, &quot;categories&quot;, categories)[0] == 0 assert cli_runner(&quot;load&quot;, &quot;transactions&quot;, transactions)[0] == 3 assert cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;11&quot;)[0] == 4 rows = int(cli_runner(&quot;count&quot;)[1].splitlines()[3].split(&quot;,&quot;)[1]) assert rows == empty === END AC load-transactions-unknown-account-rejected ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Every row keeps its file <code>txn_id</code>; the loader never reassigns ids.</li><li>The balance rule is evaluated after the file&#x27;s rows are staged and before commit, never per row.</li><li>Amounts are stored as integer cents and never pass through floating point.</li></ul></article>
+</main>
+</body>
+</html>

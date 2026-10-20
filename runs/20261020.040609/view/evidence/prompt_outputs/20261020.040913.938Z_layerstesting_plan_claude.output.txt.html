@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.040913.938Z_layerstesting_plan_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.040913.938Z_layerstesting_plan_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.040913.938Z_layerstesting_plan_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT TOPOLOGY.md ===
+## Declarations
+
+## story scaffold-python
+summary:      Create the Python project tree, environment, dependency manifest, and lockfile.
+type:         foundational
+kind:         capability
+phase:        1
+implements:   ARCHITECTURE.md
+stack:        common.md, python.md
+acceptance:   yes
+instructions: |
+  Create the project root with pyproject.toml declaring Python 3.11 or newer, pytest, and psycopg[binary], a committed uv.lock, and a .venv created by uv venv. Record the package layout and the Technology Stack section so later stories add packages without replacing these contracts.
+
+## story foundation-005
+summary:      Provide bin/test.sh, the POSIX automated test runner with a slice selector.
+type:         foundational
+kind:         test harness
+phase:        1
+implements:   FEATURE-TEST-RUNNER.md
+covers:       FOUNDATION-005
+accepts:      st-002
+stack:        common.md, python.md
+depends:      scaffold-python
+acceptance:   yes
+instructions: |
+  Create bin/test.sh as a POSIX sh script that runs pytest -q from the application root against a real temporary database. Accept one slice selector argument that narrows the run to a named set of tests. Exit 0 only when every selected test passes.
+
+## story foundation-003
+summary:      Declare the persistence contract for the three ledger tables.
+type:         foundational
+kind:         capability
+phase:        1
+implements:   DATABASE.md
+covers:       FOUNDATION-003
+accepts:      st-009
+stack:        common.md, python.md, persistence.md, sqlite.md, postgres.md
+provides:     accounts, categories, transactions tables; open_database(dsn)
+depends:      scaffold-python, foundation-005
+acceptance:   yes
+instructions: |
+  Declare accounts, categories, and transactions with the columns and keys in sources/INSTRUCTIONS.md Database. Store amounts as INTEGER cents with transactions.account and transactions.category as foreign keys. Declare an access pattern for each table operation the commands need. Drydock generates the persistence package and schema.sql; the builder writes no persistence code.
+
+## story foundation-002
+summary:      Select the database from DATABASE_URL, DATABASE_PATH, or data/app.db.
+type:         service
+kind:         integration
+phase:        1
+implements:   FEATURE-DATABASE-SELECTION.md
+covers:       FOUNDATION-002
+accepts:      st-009
+stack:        python.md
+depends:      foundation-003, foundation-005
+acceptance:   yes
+instructions: |
+  Resolve the DSN from DATABASE_URL, then DATABASE_PATH, then data/app.db. A postgres:// or postgresql:// value selects PostgreSQL; any other value is a SQLite path with an optional sqlite:// prefix. Use the persistence library&#x27;s default connect timeout; an expired connect exits 1.
+
+## story foundation-004
+summary:      Convert between integer cents and two-decimal amount text.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-AMOUNT-CENTS.md
+covers:       FOUNDATION-004
+accepts:      st-009
+stack:        python.md
+depends:      scaffold-python, foundation-003, foundation-005
+acceptance:   yes
+instructions: |
+  Provide the conversion module used at the output boundary: parse validated amount text to integer cents and format integer cents as text with exactly two decimal places and a leading minus when negative. Use integer arithmetic only; never use floating point for money.
+
+## story foundation-001
+summary:      Provide the ledger executable at the application root that dispatches commands.
+type:         foundational
+kind:         capability
+phase:        1
+implements:   FEATURE-LEDGER-ENTRY.md
+covers:       FOUNDATION-001
+stack:        cli.md, python.md
+provides:     ./ledger &lt;command&gt;
+depends:      foundation-002, foundation-003, foundation-005
+acceptance:   yes
+instructions: |
+  Create an executable named ledger at the application root that routes each command in the Commands table to its handler. Open the database through open_database with the DSN from foundation-002.
+
+## story cli-001
+summary:      Write CSV output conventions for successful commands.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-CSV-OUTPUT.md
+covers:       CLI-001
+stack:        python.md, cli.md
+depends:      foundation-001, foundation-005
+acceptance:   yes
+instructions: |
+  Write one header row followed by data rows, comma-separated, unquoted, with no trailing spaces and \n line endings. Write nothing for init and write nothing to standard output on failure.
+
+## story cli-002
+summary:      Map exit codes 0 to 4 and write one diagnostic line on failure.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-EXIT-CODES.md
+covers:       CLI-002
+accepts:      st-007
+stack:        python.md, cli.md
+depends:      cli-001, foundation-004
+acceptance:   yes
+instructions: |
+  Return exit codes exactly as the Exit codes table states. A failing command writes nothing to standard output and one diagnostic line to standard error.
+
+## story cli-003
+summary:      Reject usage errors with exit code 2.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-USAGE-ERRORS.md
+covers:       CLI-003
+stack:        python.md, cli.md
+depends:      cli-002
+acceptance:   yes
+instructions: |
+  An unknown command, unknown load table, unknown report, or wrong argument count exits 2. Running ledger with no arguments also exits 2 with a usage line on standard error.
+
+## story valid-001
+summary:      Validate account and category codes.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-VALIDATE-CODE.md
+covers:       VALID-001
+stack:        python.md
+depends:      cli-002, foundation-005
+acceptance:   yes
+instructions: |
+  Accept codes of 1 to 12 characters from A-Z and 0-9. Reject any other code with exit 3.
+
+## story valid-002
+summary:      Validate names, descriptions, and memos.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-VALIDATE-TEXT.md
+covers:       VALID-002
+stack:        python.md
+depends:      cli-002, foundation-005
+acceptance:   yes
+instructions: |
+  Names and descriptions are 1 to 40 characters; memos are 0 to 60 characters. None may contain a comma or newline. Violations exit 3.
+
+## story valid-003
+summary:      Validate input amounts.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-VALIDATE-AMOUNT.md
+covers:       VALID-003
+stack:        python.md
+depends:      foundation-004, cli-002, foundation-005
+acceptance:   yes
+instructions: |
+  Accept amounts matching -?DIGITS[.D[D]] that are never zero and have at most two decimal places. Reject others with exit 3, including 1.234.
+
+## story valid-004
+summary:      Validate calendar dates.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-VALIDATE-DATE.md
+covers:       VALID-004
+stack:        python.md
+depends:      cli-002, foundation-005
+acceptance:   yes
+instructions: |
+  Accept only real calendar dates in YYYY-MM-DD. Reject 2026-02-30 with exit 3.
+
+## story schema-001
+summary:      Initialize an empty three-table schema.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-SCHEMA-INIT.md
+covers:       SCHEMA-001
+accepts:      st-003
+stack:        python.md, cli.md
+provides:     ledger init
+depends:      foundation-003, cli-002, foundation-005
+acceptance:   yes
+instructions: |
+  Drop and recreate accounts, categories, and transactions empty through the generated persistence layer. Write nothing and exit 0.
+
+## story schema-002
+summary:      Count rows per table.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-SCHEMA-COUNT.md
+covers:       SCHEMA-002
+accepts:      st-003
+stack:        python.md, cli.md
+provides:     ledger count
+depends:      schema-001, cli-001
+acceptance:   yes
+instructions: |
+  Write table,rows then accounts, categories, and transactions counts in that order, read from the database.
+
+## story integ-001
+summary:      Run every command as one database transaction.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-ATOMIC-COMMANDS.md
+covers:       INTEG-001
+accepts:      st-007
+stack:        python.md, cli.md
+depends:      schema-001, foundation-005
+acceptance:   yes
+instructions: |
+  Wrap each command in one database transaction. A failing command rolls back, leaving every table unchanged. Use the persistence library&#x27;s default connect timeout and serialize writes; concurrent commands each commit or fail as one unit.
+
+## story integ-002
+summary:      Reject any command that leaves a negative account balance.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-NONNEGATIVE-BALANCE.md
+covers:       INTEG-002
+accepts:      st-008
+stack:        python.md
+depends:      integ-001, foundation-004
+acceptance:   yes
+instructions: |
+  After the command&#x27;s changes and before commit, check that no account balance is below zero. Reject any violation with exit 3 and roll back.
+
+## story load-001
+summary:      Load accounts from a CSV file.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-LOAD-ACCOUNTS.md
+covers:       LOAD-001
+accepts:      st-004
+stack:        python.md, cli.md
+provides:     ledger load accounts &lt;csv&gt;
+depends:      integ-002, valid-001, valid-002, foundation-005
+acceptance:   yes
+instructions: |
+  Load the file and write table,loaded then accounts,&lt;rows&gt;. Validate every row before commit.
+
+## story load-002
+summary:      Load categories from a CSV file.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-LOAD-CATEGORIES.md
+covers:       LOAD-002
+accepts:      st-004
+stack:        python.md, cli.md
+provides:     ledger load categories &lt;csv&gt;
+depends:      integ-002, valid-001, valid-002, foundation-005
+acceptance:   yes
+instructions: |
+  Load the file and write table,loaded then categories,&lt;rows&gt;. Validate every row before commit.
+
+## story load-003
+summary:      Load transactions keeping the file txn_id values.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-LOAD-TRANSACTIONS.md
+covers:       LOAD-003
+accepts:      st-004, st-008
+stack:        python.md, cli.md
+provides:     ledger load transactions &lt;csv&gt;
+depends:      load-001, load-002, valid-002, valid-003, valid-004, integ-002, foundation-005
+acceptance:   yes
+instructions: |
+  Load each row with its file txn_id and write table,loaded then transactions,&lt;rows&gt;. Apply the balance rule before commit.
+
+## story load-004
+summary:      Reject a load atomically when any row is invalid or duplicated.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-LOAD-ATOMIC.md
+covers:       LOAD-004
+accepts:      st-007
+stack:        python.md, cli.md
+depends:      load-003, foundation-005
+acceptance:   yes
+instructions: |
+  A file with an invalid row or duplicate key exits 3 and stores none of its rows. Rows 1 to 10 of seed_transactions_bad.csv must not persist when row 11 fails.
+
+## story load-005
+summary:      Reject a load whose header does not match the table.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-LOAD-HEADER.md
+covers:       LOAD-005
+accepts:      st-007
+stack:        python.md, cli.md
+depends:      load-003, foundation-005
+acceptance:   yes
+instructions: |
+  A header that does not match the table&#x27;s columns in order exits 3. An unreadable file exits 1.
+
+## story acct-001
+summary:      Add an account.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-ACCOUNT-ADD.md
+covers:       ACCT-001
+accepts:      st-006
+stack:        python.md, cli.md
+provides:     ledger account add
+depends:      integ-001, valid-001, valid-002, foundation-005
+acceptance:   yes
+instructions: |
+  Write the new account row with zero transactions and balance 0.00. A duplicate code exits 3.
+
+## story acct-002
+summary:      Get an account.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-ACCOUNT-GET.md
+covers:       ACCT-002
+accepts:      st-006
+stack:        python.md, cli.md
+provides:     ledger account get
+depends:      acct-001
+acceptance:   yes
+instructions: |
+  Write the account row. An absent code exits 4.
+
+## story acct-003
+summary:      Rename an account.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-ACCOUNT-RENAME.md
+covers:       ACCT-003
+accepts:      st-006
+stack:        python.md, cli.md
+provides:     ledger account rename
+depends:      acct-002, integ-001
+acceptance:   yes
+instructions: |
+  Update the name and write the updated account row. An absent code exits 4.
+
+## story acct-004
+summary:      Delete an account that has no transactions.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-ACCOUNT-DELETE.md
+covers:       ACCT-004
+accepts:      st-006
+stack:        python.md, cli.md
+provides:     ledger account delete
+depends:      acct-003, integ-002
+acceptance:   yes
+instructions: |
+  Write deleted then the code. An account with transactions exits 3; an absent code exits 4.
+
+## story txn-001
+summary:      Post a transaction.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-TXN-POST.md
+covers:       TXN-001
+accepts:      st-006
+stack:        python.md, cli.md
+provides:     ledger txn post
+depends:      acct-001, load-002, integ-002, valid-001, valid-002, valid-003, valid-004
+acceptance:   yes
+instructions: |
+  Assign txn_id one more than the largest present, or 1 in an empty table. An unknown account or category exits 3.
+
+## story txn-002
+summary:      Get a transaction.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-TXN-GET.md
+covers:       TXN-002
+accepts:      st-006
+stack:        python.md, cli.md
+provides:     ledger txn get
+depends:      txn-001
+acceptance:   yes
+instructions: |
+  Write the transaction row. An absent id exits 4.
+
+## story txn-003
+summary:      Amend a transaction amount.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-TXN-AMEND.md
+covers:       TXN-003
+accepts:      st-006
+stack:        python.md, cli.md
+provides:     ledger txn amend
+depends:      txn-002, integ-002, valid-003
+acceptance:   yes
+instructions: |
+  Change only the amount and write the updated row. An absent id exits 4.
+
+## story txn-004
+summary:      Delete a transaction.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-TXN-DELETE.md
+covers:       TXN-004
+accepts:      st-006
+stack:        python.md, cli.md
+provides:     ledger txn delete
+depends:      txn-002, integ-002
+acceptance:   yes
+instructions: |
+  Write deleted then the id. An absent id exits 4.
+
+## story xfer-001
+summary:      Transfer between two accounts as two linked rows.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-TRANSFER.md
+covers:       XFER-001
+accepts:      st-007
+stack:        python.md, cli.md
+provides:     ledger transfer
+depends:      txn-001, integ-002, valid-003, valid-004
+acceptance:   yes
+instructions: |
+  Store -amount on from-account then +amount on to-account, both in category TRANSFER, with the memos in the Commands table. Store both rows or neither.
+
+## story xfer-002
+summary:      Reject an invalid transfer.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-TRANSFER-REJECTION.md
+covers:       XFER-002
+accepts:      st-007
+stack:        python.md, cli.md
+depends:      xfer-001
+acceptance:   yes
+instructions: |
+  Reject identical accounts, a non-positive amount, or an unknown account with exit 3 and no change.
+
+## story rpt-001
+summary:      Report balances by account.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-REPORT-BALANCES.md
+covers:       RPT-001
+accepts:      st-005
+stack:        python.md, cli.md
+provides:     ledger report balances
+depends:      load-003, xfer-001, txn-004, cli-001
+acceptance:   yes
+instructions: |
+  Compute each row from the database, ordered by code, then TOTAL,,&lt;count&gt;,&lt;sum&gt;. An empty table writes TOTAL,,0,0.00.
+
+## story rpt-002
+summary:      Report totals by category.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-REPORT-CATEGORIES.md
+covers:       RPT-002
+accepts:      st-005
+stack:        python.md, cli.md
+provides:     ledger report categories
+depends:      load-003, xfer-001, txn-004, cli-001
+acceptance:   yes
+instructions: |
+  Compute inflow, outflow, and net per category from the database, including categories with no transactions, then the TOTAL row.
+
+## story rpt-003
+summary:      Report totals by month.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-REPORT-MONTHLY.md
+covers:       RPT-003
+accepts:      st-005
+stack:        python.md, cli.md
+provides:     ledger report monthly
+depends:      load-003, xfer-001, txn-004, cli-001
+acceptance:   yes
+instructions: |
+  Compute one row per YYYY-MM with transactions, ascending, then the TOTAL row, all from the database.
+
+## story cli-004
+summary:      Print usage for every command and sub-verb on --help.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-CLI-HELP.md
+covers:       CLI-004
+accepts:      st-001
+stack:        python.md, cli.md
+provides:     --help on every command and sub-verb
+depends:      cli-003, schema-002, acct-004, txn-004, xfer-002, load-005, rpt-003
+acceptance:   yes
+instructions: |
+  Print usage and arguments to standard output and exit 0 for each command and sub-verb. Help output is exempt from the CSV rule.
+
+## story verify-001
+summary:      Gate the finished application on the full grader and test suite.
+type:         feature
+kind:         test harness
+phase:        3
+implements:   FEATURE-VERIFICATION.md
+covers:       VERIFY-001
+accepts:      st-001, st-002
+stack:        common.md, python.md
+depends:      scaffold-python, foundation-001, foundation-002, foundation-003, foundation-004, foundation-005, cli-001, cli-002, cli-003, cli-004, valid-001, valid-002, valid-003, valid-004, schema-001, schema-002, integ-001, integ-002, load-001, load-002, load-003, load-004, load-005, acct-001, acct-002, acct-003, acct-004, txn-001, txn-002, txn-003, txn-004, xfer-001, xfer-002, rpt-001, rpt-002, rpt-003
+acceptance:   yes
+instructions: |
+  Terminal story. Run sh sources/run.sh unfiltered from the application root and require exit 0, then run bin/test.sh unfiltered and require exit 0. Declare Suite: full.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT DECISIONS.json ===
+[
+  {
+    &quot;id&quot;: &quot;Q-001&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;material&quot;,
+    &quot;blueprint&quot;: &quot;DATABASE.md&quot;,
+    &quot;story&quot;: &quot;foundation-003&quot;,
+    &quot;title&quot;: &quot;PostgreSQL support&quot;,
+    &quot;description&quot;: &quot;The sources require DATABASE_URL to select PostgreSQL when given a postgres:// or postgresql:// DSN, but TECHNOLOGY_STACK.md lists only SQLite. Absence is undecided, so the sources govern. Adds postgres.md and psycopg[binary] to the stack.&quot;,
+    &quot;options&quot;: [
+      { &quot;value&quot;: &quot;sqlite-only&quot;, &quot;label&quot;: &quot;SQLite only&quot; },
+      { &quot;value&quot;: &quot;sqlite-and-postgres&quot;, &quot;label&quot;: &quot;SQLite and PostgreSQL&quot; }
+    ],
+    &quot;system_choice&quot;: &quot;sqlite-and-postgres&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-002&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;material&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-ATOMIC-COMMANDS.md&quot;,
+    &quot;story&quot;: &quot;integ-001&quot;,
+    &quot;title&quot;: &quot;Concurrent command behavior (AC-005)&quot;,
+    &quot;description&quot;: &quot;Two commands may run against one database at once. Each command runs as a single transaction and either commits or fails with no partial change. SQLite serializes writers; PostgreSQL uses default isolation. The persistence library&#x27;s default connect timeout applies.&quot;,
+    &quot;options&quot;: [
+      { &quot;value&quot;: &quot;serialize-writes&quot;, &quot;label&quot;: &quot;Serialize writes through the library&#x27;s default transaction behavior&quot; },
+      { &quot;value&quot;: &quot;custom-retry&quot;, &quot;label&quot;: &quot;Add application-level retry loops&quot; }
+    ],
+    &quot;system_choice&quot;: &quot;serialize-writes&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-003&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-USAGE-ERRORS.md&quot;,
+    &quot;story&quot;: &quot;cli-003&quot;,
+    &quot;title&quot;: &quot;No-argument invocation&quot;,
+    &quot;description&quot;: &quot;The sources do not state the response when ledger runs with no arguments. Chosen: the conventional usage error, exit 2, with one usage line on standard error.&quot;,
+    &quot;options&quot;: [
+      { &quot;value&quot;: &quot;exit-2&quot;, &quot;label&quot;: &quot;Exit 2 with usage on stderr&quot; },
+      { &quot;value&quot;: &quot;exit-0&quot;, &quot;label&quot;: &quot;Exit 0 with usage on stdout&quot; }
+    ],
+    &quot;system_choice&quot;: &quot;exit-2&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-004&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-CLI-HELP.md&quot;,
+    &quot;story&quot;: &quot;cli-004&quot;,
+    &quot;title&quot;: &quot;Help response contract&quot;,
+    &quot;description&quot;: &quot;The sources give no help text. Chosen: usage and arguments on standard output with exit 0, exempt from the CSV rule (AC-006).&quot;,
+    &quot;options&quot;: [
+      { &quot;value&quot;: &quot;stdout-exit-0&quot;, &quot;label&quot;: &quot;stdout, exit 0&quot; },
+      { &quot;value&quot;: &quot;stderr-exit-2&quot;, &quot;label&quot;: &quot;stderr, exit 2&quot; }
+    ],
+    &quot;system_choice&quot;: &quot;stdout-exit-0&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-005&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-DATABASE-SELECTION.md&quot;,
+    &quot;story&quot;: &quot;foundation-002&quot;,
+    &quot;title&quot;: &quot;Connect timeout (AC-004)&quot;,
+    &quot;description&quot;: &quot;The timeout is not stated in the sources. Chosen: the persistence library&#x27;s default connect timeout, with an expired connect exiting 1.&quot;,
+    &quot;options&quot;: [
+      { &quot;value&quot;: &quot;library-default&quot;, &quot;label&quot;: &quot;Persistence library default&quot; },
+      { &quot;value&quot;: &quot;custom&quot;, &quot;label&quot;: &quot;Custom timeout value&quot; }
+    ],
+    &quot;system_choice&quot;: &quot;library-default&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-006&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-AMOUNT-CENTS.md&quot;,
+    &quot;story&quot;: &quot;foundation-004&quot;,
+    &quot;title&quot;: &quot;Amount conversion as its own story&quot;,
+    &quot;description&quot;: &quot;FOUNDATION-004 needs a unit that is not a schema detail. Chosen: a conversion module owned by its own story, which validation and integrity stories depend on.&quot;,
+    &quot;options&quot;: [
+      { &quot;value&quot;: &quot;own-story&quot;, &quot;label&quot;: &quot;Own story&quot; },
+      { &quot;value&quot;: &quot;fold-into-schema&quot;, &quot;label&quot;: &quot;Fold into the DATABASE story&quot; }
+    ],
+    &quot;system_choice&quot;: &quot;own-story&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-007&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-VERIFICATION.md&quot;,
+    &quot;story&quot;: &quot;verify-001&quot;,
+    &quot;title&quot;: &quot;Seed file inputs in acceptance&quot;,
+    &quot;description&quot;: &quot;The guardrail bars application code from reading seed files, but acceptance may pass them to ledger load as input. Chosen: acceptance uses them only through the ledger load command.&quot;,
+    &quot;options&quot;: [
+      { &quot;value&quot;: &quot;load-command-only&quot;, &quot;label&quot;: &quot;Only through ledger load&quot; },
+      { &quot;value&quot;: &quot;direct-read&quot;, &quot;label&quot;: &quot;Direct read by the test&quot; }
+    ],
+    &quot;system_choice&quot;: &quot;load-command-only&quot;
+  }
+]
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

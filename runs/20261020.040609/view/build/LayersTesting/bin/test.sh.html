@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/bin/test.sh</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/bin/test.sh</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/bin/test.sh">Raw file</a></div></header>
+<article class="doc"><pre>#!/bin/sh
+# CommandCenter Operation
+# Name: Run Test Suite
+# Type: batch
+#
+# Runs `pytest -q` from the application root against a fresh temporary database.
+#
+#   sh bin/test.sh          run the whole suite
+#   sh bin/test.sh SLICE    run only the tests matching SLICE (pytest -k expression)
+#
+# Exit status is pytest&#x27;s: 0 only when every selected test passes.
+set -u
+
+APP=$(cd &quot;$(dirname &quot;$0&quot;)/..&quot; &amp;&amp; pwd)
+cd &quot;$APP&quot; || exit 1
+
+WORK=$(mktemp -d) || exit 1
+trap &#x27;rm -rf &quot;$WORK&quot;&#x27; EXIT INT TERM
+
+# Never point the suite at the user&#x27;s database: always a fresh temporary SQLite file.
+DATABASE_URL=$WORK/test.db
+export DATABASE_URL
+
+if [ -x &quot;$APP/.venv/bin/python&quot; ]; then
+    PYTHON=$APP/.venv/bin/python
+else
+    PYTHON=python3
+fi
+
+rc=0
+if [ $# -ge 1 ]; then
+    &quot;$PYTHON&quot; -m pytest -q -k &quot;$1&quot; || rc=$?
+else
+    &quot;$PYTHON&quot; -m pytest -q || rc=$?
+fi
+exit &quot;$rc&quot;
+</pre></article>
+</main>
+</body>
+</html>

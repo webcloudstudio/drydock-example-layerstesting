@@ -1,0 +1,114 @@
+{
+  "stories": [
+    {
+      "id": "CLI-003",
+      "provenance": "plan",
+      "note": "sources/run.sh section U (U1, U2); sources/INSTRUCTIONS.md Exit codes 2"
+    },
+    {
+      "id": "SCHEMA-001",
+      "provenance": "plan",
+      "note": "sources/run.sh section A (A1) and section Z (Z1); sources/INSTRUCTIONS.md Commands init"
+    },
+    {
+      "id": "SCHEMA-002",
+      "provenance": "plan",
+      "note": "sources/run.sh section A (A2), section Z (Z2), and the count checks in sections B4, D3, G6"
+    },
+    {
+      "id": "INTEG-002",
+      "provenance": "plan",
+      "note": "sources/run.sh section G (G3 to G5); sources/INSTRUCTIONS.md Rule 2"
+    },
+    {
+      "id": "LOAD-001",
+      "provenance": "plan",
+      "note": "sources/run.sh section B (B1); sources/seed_accounts.csv"
+    },
+    {
+      "id": "LOAD-002",
+      "provenance": "plan",
+      "note": "sources/run.sh section B (B2); sources/seed_categories.csv"
+    },
+    {
+      "id": "ACCT-001",
+      "provenance": "plan",
+      "note": "sources/run.sh section E (E1, E2)"
+    },
+    {
+      "id": "ACCT-002",
+      "provenance": "plan",
+      "note": "sources/run.sh section E (E3, E5)"
+    },
+    {
+      "id": "ACCT-003",
+      "provenance": "plan",
+      "note": "sources/run.sh section E (E4)"
+    },
+    {
+      "id": "ACCT-004",
+      "provenance": "plan",
+      "note": "sources/run.sh section E (E6 to E8); sources/INSTRUCTIONS.md Commands account delete"
+    },
+    {
+      "id": "LOAD-003",
+      "provenance": "plan",
+      "note": "sources/run.sh section B (B3, B4); sources/seed_transactions.csv"
+    },
+    {
+      "id": "LOAD-004",
+      "provenance": "plan",
+      "note": "sources/run.sh section D (D1 to D3); sources/seed_transactions_bad.csv"
+    },
+    {
+      "id": "TXN-001",
+      "provenance": "plan",
+      "note": "sources/run.sh section F (F1, F5 to F7, F10)"
+    },
+    {
+      "id": "TXN-002",
+      "provenance": "plan",
+      "note": "sources/run.sh section F (F2, F4, F9)"
+    },
+    {
+      "id": "TXN-003",
+      "provenance": "plan",
+      "note": "sources/run.sh section F (F3)"
+    },
+    {
+      "id": "TXN-004",
+      "provenance": "plan",
+      "note": "sources/run.sh section F (F8)"
+    },
+    {
+      "id": "XFER-001",
+      "provenance": "plan",
+      "note": "sources/run.sh section G (G1); sources/INSTRUCTIONS.md Commands transfer"
+    },
+    {
+      "id": "XFER-002",
+      "provenance": "plan",
+      "note": "sources/run.sh section G (G2)"
+    },
+    {
+      "id": "RPT-001",
+      "provenance": "plan",
+      "note": "sources/run.sh section C (C1) and section H (H1)"
+    },
+    {
+      "id": "RPT-002",
+      "provenance": "plan",
+      "note": "sources/run.sh section C (C2) and section H (H2)"
+    },
+    {
+      "id": "RPT-003",
+      "provenance": "plan",
+      "note": "sources/run.sh section C (C3) and section H (H3)"
+    },
+    {
+      "id": "VERIFY-001",
+      "provenance": "plan",
+      "note": "sources/run.sh in full, run unfiltered across sections A through Z; sources/INSTRUCTIONS.md Run Harness"
+    }
+  ]
+}

@@ -13,7 +13,8 @@
 <h2>Objective</h2>
 <p>Build a command-line cash ledger for a small shop. The shop keeps cash in a few places (drawers, a safe, petty cash), records every receipt and payment against one of those places, and asks for three reports: balances by account, totals by category, and totals by month.</p>
 <p>The product is an executable named <code>ledger</code> at the application root. It stores everything in a relational database through the shipped persistence library, and every command either completes in full or changes nothing.</p>
-<p>The implementation language and database are fixed by this Target&#x27;s <code>TECHNOLOGY_STACK.md</code>. The contract below is language-neutral and database-neutral: the same commands, the same output, and the same exit codes on every supported language and database.</p>
+<h2>Stack</h2>
+<p>Implement in Python 3.11 or newer over SQLite, through the shipped Python persistence library. Tests run under pytest. The contract below is the same for every language and database: the same commands, the same output, and the same exit codes.</p>
 <h2>Run Harness</h2>
 <p><code>sources/run.sh</code> is the scoring entry point. It is supplied, not authored, and is staged verbatim into the application root with the seed files. <code>drydock uat</code> runs <code>sh sources/run.sh</code> from the completed application root and takes its exit code and output as the score.</p>
 <p>The harness creates a fresh database, runs <code>./ledger init</code>, loads the seed files, and then runs a fixed sequence of 43 checks. Each check compares one command&#x27;s exit code and standard output with a known answer. Standard error is never compared. The harness prints <code>PASS</code> or <code>FAIL</code> per check and ends with:</p>

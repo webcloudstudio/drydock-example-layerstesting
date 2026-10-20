@@ -1,0 +1,44 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Drydock status
+
+  Target          /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.040609/workspace/targets/LayersTesting
+  Name            drydock Layers Testing Uat Case
+  Description     Drydock uat - LayersTesting exercises the language and persistence layers. The source is an original
+                  brief for a command-line cash ledger with three tables (accounts, categories, transactions) reached…
+  Phase           Implement
+  State           Failed: programmatic acceptance failed: db-selection-unreachable
+  Metadata        building · running
+  Sources         6 imported · 37 authored blueprint files
+  Analysis        Ready · 36 stories · 0 questions · 0 blockers
+  Review          1 open blocking decision · 0 questionnaires
+  Blueprint       ⚠  0 errors · 6 warnings
+    ⚠  Acceptance snippets: FEATURE-LOAD-ACCOUNTS.md [load-accounts-valid-file]: expects 'table,loaded', a value re-
+       typed rather than derived from the input or read back from the system. This criterion is reported but does
+       not gate its story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-LOAD-CATEGORIES.md [load-categories-valid-file]: expects 'table,loaded', a value re-
+       typed rather than derived from the input or read back from the system. This criterion is reported but does
+       not gate its story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-LOAD-TRANSACTIONS.md [load-transactions-keeps-file-ids]: expects 'table,loaded', a
+       value re-typed rather than derived from the input or read back from the system. This criterion is reported
+       but does not gate its story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-TXN-AMEND.md [txn-amend-changes-only-amount]: expects
+       'txn_id,date,account,category,amount,memo', a value re-typed rather than derived from the input or read
+       back from the system. This criterion is reported but does not gate its story; bind the value to a name and
+       use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-TXN-GET.md [txn-get-returns-row]: expects
+       'txn_id,date,account,category,amount,memo', a value re-typed rather than derived from the input or read
+       back from the system. This criterion is reported but does not gate its story; bind the value to a name and
+       use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-TXN-POST.md [txn-post-round-trip]: expects
+       'txn_id,date,account,category,amount,memo', a value re-typed rather than derived from the input or read
+       back from the system. This criterion is reported but does not gate its story; bind the value to a name and
+       use that name on both sides to make it binding
+  Plan            33 pending · 1 blocked/questions · 3 closed/implemented
+  Frontier        foundation-004: Convert between integer cents and two-decimal amount text.
+  Workflow        5 steps
+                  Initialize         complete at 2026-10-20T04:06:11.610+00:00
+                  Import             complete at 2026-10-20T04:06:16.158+00:00
+                  Analyze            complete at 2026-10-20T04:09:09.061+00:00
+                  Plan               complete at 2026-10-20T04:27:12.650+00:00
+                  Build              failed at 2026-10-20T04:37:16.898+00:00
+  Next step       drydock run quarterdeck LayersTesting

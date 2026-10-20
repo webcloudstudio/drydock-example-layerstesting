@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-VALIDATE-TEXT.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-VALIDATE-TEXT.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-VALIDATE-TEXT.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Validate Text</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Validates free-text names, descriptions, and memos against their length limits and forbidden characters.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, FEATURE-EXIT-CODES.md, FEATURE-TEST-RUNNER.md</td></tr><tr><td>Provides</td><td>validation.text.validate_text</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Names and descriptions must be 1 to 40 characters. Memos must be 0 to 60 characters. None may contain a comma or a newline. This module enforces those rules before any command writes to the database.</p>
+<h2>Behavior</h2>
+<ul><li><code>validate_text(value, min_length, max_length)</code> returns <code>value</code> unchanged when <code>min_length &lt;= len(value) &lt;= max_length</code> and <code>value</code> contains neither <code>,</code> nor a newline.</li><li>Any other input raises <code>ValueError</code> with a one-line message. The CLI layer maps <code>ValueError</code> from validators to exit code 3.</li><li>Callers pass the limits: names and descriptions use <code>1, 40</code>; memos use <code>0, 60</code>.</li><li>The module lives at <code>validation/text.py</code> as part of a namespace package. It creates no <code>__init__.py</code>.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC text-accepts-bounds ===<br>Intent: Text at each inclusive limit, including an empty memo, is returned unchanged.</p>
+<p>from validation.text import validate_text</p>
+<p>name_min = &quot;x&quot; name_max = &quot;A&quot; * 40 memo_max = &quot;m&quot; * 60 empty_memo = &quot;&quot;</p>
+<p>assert validate_text(name_min, 1, 40) == name_min assert validate_text(name_max, 1, 40) == name_max assert validate_text(empty_memo, 0, 60) == empty_memo assert validate_text(memo_max, 0, 60) == memo_max === END AC text-accepts-bounds ===</p>
+<p>=== AC text-rejects-length ===<br>Intent: Text shorter than the minimum or longer than the maximum raises ValueError.</p>
+<p>from validation.text import validate_text</p>
+<p>cases = [ (&quot;&quot;, 1, 40), (&quot;B&quot; * 41, 1, 40), (&quot;C&quot; * 61, 0, 60), ] rejected = 0 for value, low, high in cases: try: validate_text(value, low, high) except ValueError: rejected += 1 assert rejected == len(cases) === END AC text-rejects-length ===</p>
+<p>=== AC text-rejects-comma-and-newline ===<br>Intent: A comma or a newline anywhere in the text raises ValueError regardless of length.</p>
+<p>from validation.text import validate_text</p>
+<p>cases = [ (&quot;Front,Desk&quot;, 1, 40), (&quot;two\nlines&quot;, 0, 60), (&quot;memo, with comma&quot;, 0, 60), ] rejected = 0 for value, low, high in cases: try: validate_text(value, low, high) except ValueError: rejected += 1 assert rejected == len(cases) === END AC text-rejects-comma-and-newline ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The validator never opens a database connection.</li><li>The validator never converts text to a number and never uses floating point.</li></ul></article>
+</main>
+</body>
+</html>

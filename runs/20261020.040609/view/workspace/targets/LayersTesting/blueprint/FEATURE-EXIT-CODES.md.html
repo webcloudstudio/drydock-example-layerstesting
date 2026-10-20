@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-EXIT-CODES.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-EXIT-CODES.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-EXIT-CODES.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Exit Codes</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Each command returns one of exit codes 0 to 4, and a failing command writes one diagnostic line to standard error and nothing to standard output.</td></tr><tr><td>Depends On</td><td>FEATURE-CSV-OUTPUT.md, FEATURE-AMOUNT-CENTS.md</td></tr><tr><td>Provides</td><td>cli.errors.LedgerError(code, message), cli.errors.run_command(handler) -&gt; int</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>The exit code is the contract a caller reads. This story gives every command one place to convert its outcome into an exit code and a diagnostic.</p>
+<h2>Behavior</h2>
+<ul><li><code>LedgerError(code, message)</code> carries an exit code in <code>code</code> and a single-line message. Its code</li></ul>
+<p>is one of 1, 2, 3, or 4.</p>
+<ul><li><code>run_command(handler)</code> calls <code>handler()</code>. The handler returns the CSV text to print.<ul><li>On success, <code>run_command</code> writes the returned text to standard output and returns <code>0</code>.</li><li>On <code>LedgerError</code>, <code>run_command</code> writes one line to standard error and returns <code>error.code</code>,</li></ul></li></ul>
+<p>writing nothing to standard output.</p>
+<ul><li>Exit codes follow the Exit codes table: 1 operational, 2 usage, 3 rejected, 4 not found.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC exit-success-writes-output-and-zero ===<br>Intent: run_command returns 0 and writes exactly the handler&#x27;s returned text to standard output on success.</p>
+<p>import contextlib import io</p>
+<p>from cli.errors import run_command</p>
+<p>body = &quot;account,name\nDRAWER1,Front Drawer\n&quot; out = io.StringIO() err = io.StringIO() with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err): code = run_command(lambda: body) assert code == 0 assert out.getvalue() == body assert err.getvalue() == &quot;&quot; === END AC exit-success-writes-output-and-zero ===</p>
+<p>=== AC exit-failure-codes-mapped ===<br>Intent: For each failure code 1 to 4, run_command returns that code, writes nothing to standard output, and writes exactly one line to standard error.</p>
+<p>import contextlib import io</p>
+<p>from cli.errors import LedgerError, run_command</p>
+<p>def failing(code): def handler(): raise LedgerError(code, &quot;rejected input&quot;) return handler</p>
+<p>for code in [1, 2, 3, 4]: out = io.StringIO() err = io.StringIO() with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err): result = run_command(failing(code)) assert result == code assert out.getvalue() == &quot;&quot; assert err.getvalue().count(&quot;\n&quot;) == 1 === END AC exit-failure-codes-mapped ===</p>
+<p>=== AC exit-error-carries-code ===<br>Intent: LedgerError exposes the exit code it was constructed with.</p>
+<p>from cli.errors import LedgerError</p>
+<p>error = LedgerError(3, &quot;rejected input&quot;) assert error.code == 3 === END AC exit-error-carries-code ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Only the codes 0, 1, 2, 3, and 4 are produced by this mechanism.</li><li>A failing command never writes to standard output, including output it had begun to compute.</li><li>Standard error is not compared by acceptance. It carries one diagnostic line on failure.</li></ul></article>
+</main>
+</body>
+</html>

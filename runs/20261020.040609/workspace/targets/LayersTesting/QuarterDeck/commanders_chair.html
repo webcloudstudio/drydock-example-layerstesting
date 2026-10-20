@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Commanders Chair - LayersTesting</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: #10201A;
+  color: #e2e8f0;
+  padding: 2rem;
+  min-height: 80vh;
+}
+.header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 1.5rem;
+  align-items: start;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #2C4A3B;
+}
+.target-line,
+.chair-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1.2;
+}
+.label { color: #8FB3A2; }
+.header-meta {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+}
+.header-meta li {
+  color: #C9D8CF;
+  font-size: 0.9rem;
+  margin-top: 0.35rem;
+  font-family: "SF Mono", "Cascadia Code", monospace;
+}
+.question-lead {
+  margin: 2rem 0;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid #2C4A3B;
+}
+.question-lead h2 {
+  color: #f8fafc;
+  font-size: 1rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+.question-status {
+  color: #C9D8CF;
+  font-size: 1rem;
+  margin-bottom: 0.9rem;
+}
+.next-step {
+  color: #f8fafc;
+  font-size: 0.95rem;
+  font-family: "SF Mono", "Cascadia Code", monospace;
+}
+.next-step strong {
+  color: #8FB3A2;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.8rem;
+}
+.big-error-panel {
+  margin-top: 1rem;
+  background: #7f1d1d;
+  border: 2px solid #f87171;
+  border-radius: 0.5rem;
+  color: #fee2e2;
+  padding: 1rem 1.25rem;
+  display: grid;
+  gap: 0.35rem;
+  font-size: 1rem;
+}
+.big-error-panel strong { color: #fff; font-size: 1.15rem; }
+.running-panel {
+  margin-top: 1rem;
+  background: #172554;
+  border: 2px solid #60a5fa;
+  border-radius: 0.5rem;
+  color: #dbeafe;
+  padding: 1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-family: "SF Mono", "Cascadia Code", monospace;
+}
+.running-panel strong { color: #fff; letter-spacing: 0.08em; }
+.running-panel span:last-child { margin-left: auto; color: #bfdbfe; }
+.running-pulse {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  margin-right: 0.5rem;
+  border-radius: 50%;
+  background: #60a5fa;
+  box-shadow: 0 0 0 0 rgba(96, 165, 250, 0.7);
+  animation: running-pulse 1.5s infinite;
+}
+@keyframes running-pulse {
+  70% { box-shadow: 0 0 0 0.6rem rgba(96, 165, 250, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(96, 165, 250, 0); }
+}
+.state-panel {
+  margin-top: 1rem;
+  background: #10231b;
+  border: 1px solid #2C4A3B;
+  border-radius: 0.5rem;
+  padding: 0.9rem 1.15rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 1rem;
+  font-family: "SF Mono", "Cascadia Code", monospace;
+  color: #cbd5e1;
+}
+.state-panel strong {
+  color: #fff;
+  letter-spacing: 0.06em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.state-verdict {
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+}
+.state-verdict.state-pass { background: #14532d; color: #86efac; }
+.state-verdict.state-fail { background: #7f1d1d; color: #fecaca; }
+.state-when { margin-left: auto; color: #94a3b8; font-size: 0.8rem; }
+.state-ladder {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex-basis: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+.state-step {
+  border: 1px solid #2C4A3B;
+  border-radius: 0.25rem;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+/* Held: reached and still standing. A state the machine dropped is indistinguishable from
+   one never reached, so both render as pending — the ladder never implies a lost pass. */
+.state-step.state-held { border-color: #14532d; color: #86efac; }
+.state-step.state-current { font-weight: 700; }
+.state-step.state-current.state-pass { background: #14532d; border-color: #22c55e; color: #dcfce7; }
+.state-step.state-current.state-fail,
+.state-step.state-fail { background: #7f1d1d; border-color: #ef4444; color: #fee2e2; }
+.chair-tabs {
+  display: flex;
+  gap: 0.35rem;
+  margin: 1.25rem 0 0;
+  border-bottom: 1px solid #2C4A3B;
+}
+.chair-tab {
+  appearance: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #8FB3A2;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 650;
+  padding: 0.7rem 1rem;
+}
+.chair-tab:hover { color: #e2e8f0; }
+.chair-tab.active {
+  border-bottom-color: #60a5fa;
+  color: #f8fafc;
+}
+.chair-pane[hidden] { display: none; }
+.live-pane {
+  min-height: 18rem;
+  padding: 1.5rem 0;
+}
+.live-pane table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.live-pane th,
+.live-pane td {
+  border-bottom: 1px solid #2C4A3B;
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+}
+.live-pane th { color: #8FB3A2; text-transform: uppercase; letter-spacing: 0.05em; }
+.live-pane code { color: #dbeafe; white-space: normal; overflow-wrap: anywhere; }
+.run-history-summary { color: #8FB3A2; margin-bottom: 1rem; }
+.run-history-scroll { overflow-x: auto; border: 1px solid #2C4A3B; border-radius: 0.6rem; }
+.run-history-table { min-width: 760px; background: #142820; }
+.run-history-table th { background: #1B2E25; font-size: 0.72rem; }
+.run-history-table tbody tr { transition: background 120ms ease; }
+.run-history-table tbody tr:hover { background: #1B352A; }
+.run-history-table td { padding: 0.8rem 0.9rem; }
+.run-time { color: #C9D8CF; font-family: "SF Mono", "Cascadia Code", monospace; white-space: nowrap; }
+.run-status,
+.run-phase {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.7rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.run-status-success { background: #14532d; color: #bbf7d0; border: 1px solid #22c55e; }
+.run-status-failed { background: #7f1d1d; color: #fecaca; border: 1px solid #f87171; }
+.run-status-recorded { background: #78350f; color: #fef3c7; border: 1px solid #fbbf24; }
+.run-phase { background: #172554; color: #bfdbfe; border: 1px solid #3b82f6; }
+.run-command {
+  display: inline-block;
+  padding: 0.38rem 0.55rem;
+  border: 1px solid #315443;
+  border-radius: 0.35rem;
+  background: #0F1D17;
+  color: #C9D8CF;
+  font-family: "SF Mono", "Cascadia Code", monospace;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.run-command-tool { color: #5eead4; font-weight: 750; }
+.llm-table { min-width: 1180px; }
+.llm-table td.num,
+.llm-table th.num {
+  text-align: right;
+  font-family: "SF Mono", "Cascadia Code", monospace;
+  white-space: nowrap;
+}
+.llm-muted { color: #7F9E8E; }
+.llm-detail {
+  color: #8FB3A2;
+  font-family: "SF Mono", "Cascadia Code", monospace;
+  font-size: 0.76rem;
+  margin-top: 0.35rem;
+}
+.llm-provider {
+  color: #C9D8CF;
+  font-family: "SF Mono", "Cascadia Code", monospace;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.llm-stats { grid-template-columns: repeat(4, minmax(120px, 1fr)); margin-bottom: 1.25rem; }
+.llm-stats .stat-value { font-size: 1.6rem; }
+.llm-heading {
+  color: #f8fafc;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 1.75rem 0 0.75rem;
+  text-transform: uppercase;
+}
+.llm-note {
+  background: #142820;
+  border: 1px solid #2C4A3B;
+  border-left: 3px solid #60a5fa;
+  border-radius: 0.5rem;
+  color: #C9D8CF;
+  font-size: 0.85rem;
+  line-height: 1.6;
+  margin-bottom: 1.25rem;
+  padding: 0.9rem 1.1rem;
+}
+.llm-note strong { color: #f8fafc; }
+.llm-note em { color: #8FB3A2; font-style: normal; font-weight: 650; }
+.llm-note code { color: #dbeafe; font-family: "SF Mono", "Cascadia Code", monospace; }
+.llm-rate-limit { color: #fde68a; font-size: 0.85rem; margin-bottom: 1rem; }
+.llm-failures { color: #C9D8CF; font-size: 0.85rem; line-height: 1.7; padding-left: 1.25rem; }
+.llm-failures code { color: #5eead4; }
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(130px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.stat {
+  display: block;
+  background: #1B2E25;
+  border: 1px solid #2C4A3B;
+  border-radius: 0.5rem;
+  padding: 1rem 1.25rem;
+  color: inherit;
+  text-decoration: none;
+}
+.stat[href]:hover {
+  border-color: #3E6B54;
+  background: #234534;
+}
+.stat-value {
+  color: #f8fafc;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.stat-label {
+  color: #8FB3A2;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  margin-top: 0.45rem;
+  text-transform: uppercase;
+}
+.story-list { display: grid; gap: 0.35rem; margin: 0; }
+.story-feature {
+  color: #8FB3A2;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-top: 0.75rem;
+  margin-bottom: 0.2rem;
+}
+.story-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  color: #C9D8CF;
+  line-height: 1.5;
+}
+.story-name { flex: 1; }
+.badge {
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.45rem;
+  border-radius: 0.25rem;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+.badge-pending  { background: #2C4A3B; color: #8FB3A2; }
+.badge-review   { background: #78350f; color: #fde68a; }
+.badge-verified { background: #14532d; color: #86efac; }
+.badge-failed   { background: #7f1d1d; color: #fca5a5; }
+.details {
+  display: grid;
+  gap: 1.25rem;
+}
+.detail-section {
+  border-top: 1px solid #2C4A3B;
+  padding-top: 1rem;
+}
+.detail-section h2 {
+  color: #f8fafc;
+  font-size: 1.1rem;
+  margin-bottom: 0.75rem;
+}
+.detail-section ul {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+.detail-section li {
+  color: #C9D8CF;
+  line-height: 1.5;
+  margin: 0.25rem 0;
+}
+.empty {
+  color: #8FB3A2;
+  font-style: italic;
+}
+@media (max-width: 760px) {
+  body { padding: 1.25rem; }
+  .header { grid-template-columns: 1fr; }
+  .stats,
+  .llm-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .running-panel { align-items: flex-start; flex-direction: column; }
+  .running-panel span:last-child { margin-left: 0; }
+  .state-panel { align-items: flex-start; flex-direction: column; }
+  .state-when { margin-left: 0; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <div class="target-line"><span class="label">Target:</span> LayersTesting</div>
+    <ul class="header-meta">
+      <li>- Building: 2026-10-20</li>
+    </ul>
+  </div>
+  <img src="/logo.png" alt="Drydock" style="height:64px;display:block;">
+</div>
+
+<section class="state-panel"><strong>STATE: BUILDING<span class="state-verdict state-pass">PASS</span></strong><span class="state-when">2026-10-20 00:27</span><ol class="state-ladder"><li class="state-step state-held">INITIALIZED</li><li class="state-step state-held">IMPORTED</li><li class="state-step state-held">ANALYZED</li><li class="state-step state-held">PLAN CREATED</li><li class="state-step">PLAN REPAIRED</li><li class="state-step state-current state-pass">BUILDING</li><li class="state-step">BUILT</li><li class="state-step">SCORE AC</li><li class="state-step">SCORE BUILD</li><li class="state-step">SCORE RELEASE</li></ol></section>
+<section class="big-error-panel"><strong>Failed: programmatic acceptance failed: db-selection-unreachable</strong><span>Command: build. Open <b>BIG ERRORS</b> for recovery.</span></section>
+<nav class="chair-tabs" aria-label="Commanders Chair views">
+  <button class="chair-tab active" type="button" data-chair-tab="overview">Overview</button>
+  <button class="chair-tab" type="button" data-chair-tab="build">Build Report</button>
+  <button class="chair-tab" type="button" data-chair-tab="history">Run History</button>
+  <button class="chair-tab" type="button" data-chair-tab="llm">LLM Usage</button>
+</nav>
+
+<main id="chair-overview" class="chair-pane">
+<section class="question-lead">
+  <div class="question-status question-status-inline"><strong>Questionnaires:</strong> No open questionnaires</div>
+  <div class="next-step"><strong>Next Step:</strong> drydock build LayersTesting  (36 steps remaining)</div>
+</section>
+
+<div class="stats">
+<div class="stat"><div class="stat-value">0%</div><div class="stat-label">Complete</div></div>
+<div class="stat"><div class="stat-value">0</div><div class="stat-label">Verified</div></div>
+<div class="stat"><div class="stat-value">0</div><div class="stat-label">In Review</div></div>
+<div class="stat"><div class="stat-value">1</div><div class="stat-label">Failed</div></div>
+</div>
+
+<div class="details">
+  <section id="stories" class="detail-section">
+    <h2>Stories</h2>
+    <div class="story-list">
+<div class="story-feature">Build Block 1 · Foundational</div>
+<div class="story-row"><span class="story-name">Create the Python project tree, environment, dependency manifest, and lockfile.</span> <span class="badge badge-review">built</span></div>
+<div class="story-feature">Build Block 2 · Foundational</div>
+<div class="story-row"><span class="story-name">Provide bin/test.sh, the POSIX automated test runner with a slice selector.</span> <span class="badge badge-review">built</span></div>
+<div class="story-row"><span class="story-name">Declare the persistence contract for the three ledger tables.</span> <span class="badge badge-review">built</span></div>
+<div class="story-feature">Build Block 3 · Service</div>
+<div class="story-row"><span class="story-name">Select the database from DATABASE_URL, DATABASE_PATH, or data/app.db.</span> <span class="badge badge-failed">failed</span></div>
+<div class="story-feature">Build Block 4 · Service</div>
+<div class="story-row"><span class="story-name">Convert between integer cents and two-decimal amount text.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 5 · Foundational</div>
+<div class="story-row"><span class="story-name">Provide the ledger executable at the application root that dispatches commands.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 6 · Service</div>
+<div class="story-row"><span class="story-name">Write CSV output conventions for successful commands.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 7 · Service</div>
+<div class="story-row"><span class="story-name">Map exit codes 0 to 4 and write one diagnostic line on failure.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-row"><span class="story-name">Initialize an empty three-table schema.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 8 · Service</div>
+<div class="story-row"><span class="story-name">Reject usage errors with exit code 2.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 9 · Service</div>
+<div class="story-row"><span class="story-name">Validate account and category codes.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 10 · Service</div>
+<div class="story-row"><span class="story-name">Validate names, descriptions, and memos.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-row"><span class="story-name">Count rows per table.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 11 · Service</div>
+<div class="story-row"><span class="story-name">Validate input amounts.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 12 · Service</div>
+<div class="story-row"><span class="story-name">Validate calendar dates.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 13 · Service</div>
+<div class="story-row"><span class="story-name">Run every command as one database transaction.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 14 · Service</div>
+<div class="story-row"><span class="story-name">Reject any command that leaves a negative account balance.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 15 · Service</div>
+<div class="story-row"><span class="story-name">Load accounts from a CSV file.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 16 · Service</div>
+<div class="story-row"><span class="story-name">Load categories from a CSV file.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 17 · Service</div>
+<div class="story-row"><span class="story-name">Load transactions keeping the file txn_id values.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-row"><span class="story-name">Add an account.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 18 · Service</div>
+<div class="story-row"><span class="story-name">Reject a load atomically when any row is invalid or duplicated.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-row"><span class="story-name">Get an account.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 19 · Service</div>
+<div class="story-row"><span class="story-name">Reject a load whose header does not match the table.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-row"><span class="story-name">Rename an account.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 20 · Service</div>
+<div class="story-row"><span class="story-name">Delete an account that has no transactions.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 21 · Service</div>
+<div class="story-row"><span class="story-name">Post a transaction.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 22 · Service</div>
+<div class="story-row"><span class="story-name">Get a transaction.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-row"><span class="story-name">Transfer between two accounts as two linked rows.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-row"><span class="story-name">Reject an invalid transfer.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 23 · Service</div>
+<div class="story-row"><span class="story-name">Amend a transaction amount.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 24 · Service</div>
+<div class="story-row"><span class="story-name">Delete a transaction.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 25 · Service</div>
+<div class="story-row"><span class="story-name">Report balances by account.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-row"><span class="story-name">Report totals by month.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 26 · Service</div>
+<div class="story-row"><span class="story-name">Report totals by category.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 27 · Service</div>
+<div class="story-row"><span class="story-name">Print usage for every command and sub-verb on --help.</span> <span class="badge badge-pending">pending</span></div>
+<div class="story-feature">Build Block 28 · Feature</div>
+<div class="story-row"><span class="story-name">Gate the finished application on the full grader and test suite.</span> <span class="badge badge-pending">pending</span></div>
+</div>
+  </section>
+  <section id="questions" class="detail-section">
+    <h2>Questionnaires</h2>
+    
+  </section>
+  <section id="blockers" class="detail-section">
+    <h2>Blockers</h2>
+    
+  </section>
+  <section id="features" class="detail-section">
+    <h2>Features</h2>
+    
+  </section>
+  <section id="scorecard" class="detail-section">
+    <h2>Scorecard</h2>
+    <p class="empty">Not yet scored. Run drydock score release.</p>
+  </section>
+</div>
+</main>
+
+<section id="chair-build" class="chair-pane live-pane" hidden>
+  <p class="empty">Loading build report…</p>
+</section>
+
+<section id="chair-history" class="chair-pane live-pane" hidden>
+  <p class="empty">Loading run history…</p>
+</section>
+
+<section id="chair-llm" class="chair-pane live-pane" hidden>
+  <p class="empty">Loading LLM usage…</p>
+</section>
+
+<script>
+(() => {
+  const tabs = document.querySelectorAll("[data-chair-tab]");
+  const panes = document.querySelectorAll(".chair-pane");
+
+  const NAMES = ["overview", "build", "history", "llm"];
+  // Panes that read files the CLI keeps rewriting, so a left-open tab stays current.
+  const REFRESH_MS = 15000;
+  let refreshTimer = null;
+
+  async function loadLivePane(name, { showLoading = true } = {}) {
+    if (name === "overview") return;
+    const pane = document.getElementById(`chair-${name}`);
+    if (showLoading) pane.innerHTML = '<p class="empty">Loading…</p>';
+    try {
+      const response = await fetch(`/api/chair/${name}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const markup = await response.text();
+      // A silent refresh only repaints on change, so it never interrupts a selection or
+      // scroll position while the reader is looking at the pane.
+      if (pane.innerHTML !== markup) pane.innerHTML = markup;
+    } catch (error) {
+      if (showLoading) {
+        pane.innerHTML = `<p class="empty">Unable to load ${name}: ${error.message}</p>`;
+      }
+    }
+  }
+
+  function scheduleRefresh(name) {
+    if (refreshTimer) clearInterval(refreshTimer);
+    refreshTimer = null;
+    if (name === "overview") return;
+    refreshTimer = setInterval(() => {
+      // A background tab costs nothing: the browser throttles it anyway, and a hidden pane
+      // has no reader to serve.
+      if (document.hidden) return;
+      loadLivePane(name, { showLoading: false });
+    }, REFRESH_MS);
+  }
+
+  function activate(name, updateHash = true) {
+    tabs.forEach(tab => {
+      const selected = tab.dataset.chairTab === name;
+      tab.classList.toggle("active", selected);
+      tab.setAttribute("aria-selected", selected ? "true" : "false");
+    });
+    panes.forEach(pane => { pane.hidden = pane.id !== `chair-${name}`; });
+    if (updateHash) history.replaceState(null, "", `#chair-${name}`);
+    loadLivePane(name);
+    scheduleRefresh(name);
+  }
+
+  tabs.forEach(tab => tab.addEventListener("click", () => activate(tab.dataset.chairTab)));
+  const requested = location.hash.replace("#chair-", "");
+  activate(NAMES.includes(requested) ? requested : "overview", false);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-2.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-2.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-2.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 2 · Foundational (block-2)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 18988</li><li>execution id: 20261020.043039.505Z-1c2afa01</li></ul>
+<h2>Stories built</h2>
+<ul><li>Provide bin/test.sh, the POSIX automated test runner with a slice selector. (foundation-005) [story]</li><li>Declare the persistence contract for the three ledger tables. (foundation-003) [story]</li></ul>
+<h2>Reusable compacts</h2>
+<ul><li>DATABASE_compact.md</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 921)</li><li>compass: COMPASS.md (SP 1145)</li><li>implements: FEATURE-TEST-RUNNER.md (SP 983)</li><li>context: ARCHITECTURE_compact.md (SP 450)</li><li>context: DATABASE.md (SP 3228)</li><li>stack: common.md (SP 2776)</li><li>implements: DATABASE.md (SP 3228)</li><li>stack: persistence.md (SP 3689)</li><li>stack: sqlite.md (SP 2778)</li><li>stack: postgres.md (SP 2778)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>bin/test.sh</li><li>tests/test_persistence_contract.py</li><li>tests/test_test_runner.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>RED: test-runner-syntax (FEATURE-TEST-RUNNER.md)</li></ul>
+<p>intent: The test runner is valid POSIX shell syntax. return code: 1 stdout: sh: 0: cannot open bin/test.sh: No such file stderr: --- drydock: values at failure --- result = CompletedProcess(args=[&#x27;sh&#x27;, &#x27;-n&#x27;, &#x27;bin/test.sh&#x27;], returncode=2, stdout=&#x27;&#x27;, stderr=&#x27;sh: 0: cannot open bin/test.sh: No such file\n&#x27;) --- drydock: end values --- Traceback (most recent call last): File &quot;test-runner-syntax.py&quot;, line 6, in &lt;module&gt; assert result.returncode == 0 AssertionError</p>
+<ul><li>RED: test-runner-selector (FEATURE-TEST-RUNNER.md)</li></ul>
+<p>intent: The slice selector runs only the matching tests and reports their result in the exit status. return code: 1 stdout: sh: 0: cannot open bin/test.sh: No such file</p>
+<p>sh: 0: cannot open bin/test.sh: No such file stderr: --- drydock: values at failure --- passing = CompletedProcess(args=[&#x27;sh&#x27;, &#x27;bin/test.sh&#x27;, &#x27;probe_pass&#x27;], returncode=2, stdout=&#x27;&#x27;, stderr=&#x27;sh: 0: cannot open bin/test.sh: No such file\n&#x27;) --- drydock: end values --- Traceback (most recent call last): File &quot;test-runner-selector.py&quot;, line 23, in &lt;module&gt; assert passing.returncode == 0 AssertionError</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: test-runner-syntax (FEATURE-TEST-RUNNER.md)</li></ul>
+<p>intent: The test runner is valid POSIX shell syntax. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.040609/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: test-runner-selector (FEATURE-TEST-RUNNER.md)</li></ul>
+<p>intent: The slice selector runs only the matching tests and reports their result in the exit status. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.040609/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: .                                                                        [100%] 1 passed, 32 deselected in 1.06s</p>
+<p>F                                                                        [100%] =================================== FAILURES =================================== <strong>_</strong><strong>_</strong><strong>_</strong><strong>_</strong><strong>_</strong><strong>_</strong>_ test_probe_fail <strong>_</strong><strong>_</strong><strong>_</strong><strong>_</strong><strong>_</strong><strong>_</strong>__</p>
+<p>def test_probe_fail(): &gt;       assert False E       assert False</p>
+<p>tests/test_ac_probe_fail.py:2: AssertionError =========================== short test summary info ============================ FAILED tests/test_ac_probe_fail.py::test_probe_fail - assert False 1 failed, 32 deselected in 2.18s</p>
+<h2>Build summary</h2>
+<p>Persistence and <code>schema.sql</code> are already generated from the protected <code>DATABASE.md</code>, so this step only needs <code>bin/test.sh</code> plus tests that prove the generated contract round-trips. Writing the runner first.Now the tests. The runner tests re-invoke <code>bin/test.sh</code>, so I&#x27;m using a distinct sentinel module and selectors that can&#x27;t recurse into the outer suite.Before writing the persistence tests I need to know how the generated <code>Database</code> reports missing rows and integrity failures.<code>update</code> and <code>delete</code> return rowcounts and <code>create</code> returns the key, so I can read back through <code>get</code>/<code>list</code> for each one. Writing the contract tests now.The first test has a sloppy <code>or</code> assertion, and the row is a dataclass, so I&#x27;ll compare against <code>AccountRow</code> directly.Now running the runner&#x27;s declared acceptance checks (syntax and selector), then the full suite through the runner itself.The sentinel&#x27;s passing case requires <code>ZQSENTINEL_OUT</code>, which the plain selector cases don&#x27;t set. I&#x27;ll make the write conditional.Full suite passes through the runner (31 tests). Next I&#x27;ll run the two declared acceptance checks for <code>foundation-005</code> exactly as written, from a scratch directory outside the build tree.Both stories in block-2 are built. The full suite passes through the new runner (31 tests), and both declared acceptance checks for <code>foundation-005</code> pass when run exactly as written.</p>
+<p><strong>foundation-005: <code>bin/test.sh</code></strong></p>
+<ul><li>POSIX <code>sh</code> script. It runs <code>pytest -q</code> from the application root, or <code>pytest -q -k SLICE</code> when given one argument.</li><li>It exports <code>DATABASE_URL</code> as a fresh temporary SQLite path in a <code>mktemp -d</code> directory that is removed on exit. It never uses the caller&#x27;s database.</li><li>It uses <code>.venv/bin/python</code> when present and falls back to <code>python3</code>.</li><li>It exits with pytest&#x27;s status, so it is 0 only when every selected test passes.</li></ul>
+<p><strong>foundation-003: persistence contract</strong></p>
+<ul><li>I wrote no persistence code. <code>persistence/</code>, <code>schema.sql</code> and the <code>Database</code> surface are generated from the protected <code>blueprint/DATABASE.md</code>, and they already matched it.</li><li><code>tests/test_persistence_contract.py</code> (21 tests) drives <code>db.accounts</code>, <code>db.categories</code> and <code>db.transactions</code> through create/get/list/update/delete. It checks integer-cent amounts, the 60-character memo boundary, the empty-memo default, foreign-key rejection, undeclared verbs raising <code>UnknownOperation</code>, and per-test fresh stores.</li></ul>
+<p><strong>Files changed</strong></p>
+<ul><li><code>bin/test.sh</code> (new)</li><li><code>tests/test_test_runner.py</code> (new, 5 tests)</li><li><code>tests/test_persistence_contract.py</code> (new, 21 tests)</li></ul>
+<p><strong>Choices I made</strong></p>
+<ul><li>The runner tests re-invoke <code>bin/test.sh</code> against a sentinel module with a selector token that appears in no other test name. This keeps the outer suite from recursing into itself.</li><li>The runner exports a plain path for <code>DATABASE_URL</code>, matching the <code>run.sh</code> grader, rather than a <code>sqlite://</code> URL.</li><li>I did not add the <code>data/logs</code> tee logging from <code>common.md</code>. It would mask pytest&#x27;s exit status under POSIX <code>sh</code>, which has no <code>pipefail</code>.</li></ul>
+<p><strong>Not verified:</strong> <code>sources/INSTRUCTIONS.md</code> is not on disk or in the prompt, so I checked the column and key declarations against <code>DATABASE.md</code> only.</p>
+<p>&lt;reusable-compact filename=&quot;DATABASE.md&quot;&gt;<br>Store: SQLite via open_database(dsn) (plain path or sqlite://); PostgreSQL when DSN is postgresql://. Tables:</p>
+<ul><li>accounts(account VARCHAR(12) PK, name VARCHAR(40))</li><li>categories(category VARCHAR(12) PK, description VARCHAR(40))</li><li>transactions(txn_id INTEGER PK, date TEXT, account VARCHAR(12) FK-&gt;accounts, category VARCHAR(12) FK-&gt;categories, amount INTEGER cents signed, memo VARCHAR(60) DEFAULT &#x27;&#x27;)</li></ul>
+<p>Operations (db.&lt;table&gt;.&lt;verb&gt;): accounts.{create,get,list,update,delete}; categories.{create,get,list}; transactions.{create,get,list,update(txn_id,amount),delete}. get returns a row dataclass or None; update/delete return rowcount; create returns the key; unlisted verbs raise UnknownOperation; FK violations raise PersistenceError. Schema applied from schema.sql (CREATE IF NOT EXISTS). Money is INTEGER cents only. &lt;/reusable-compact&gt;</p>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>bin/test.sh</li><li>tests/test_test_runner.py</li><li>tests/test_persistence_contract.py</li></ul>
+<p>SUMMARY: foundation-005: bin/test.sh is a POSIX sh runner with an optional -k slice selector, a fresh temporary DATABASE_URL per run, and pytest&#x27;s exit status. Verified: <code>sh -n</code> passes; the declared test-runner-syntax and test-runner-selector checks pass; the full suite through the runner reports 31 passed, exit 0. foundation-003: the persistence package and schema.sql are generated from the protected DATABASE.md and were not written by this build. tests/test_persistence_contract.py verifies the declared operations round-trip through the generated surface, including integer cents, FK rejection and unknown verbs.<br>Test coverage: full suite 31 passed (5 runner, 21 persistence, 5 scaffold). The staged sources/run.sh was not invoked, as no criterion in this step calls it.</p>
+<p>BLOCKERS:</p>
+<ul><li>sources/INSTRUCTIONS.md is absent from disk and from the prompt, so the column/key declarations were checked against DATABASE.md only.</li></ul>
+<p>&lt;blueprint-decisions&gt; [{&quot;spec&quot;:&quot;FEATURE-TEST-RUNNER.md&quot;,&quot;severity&quot;:&quot;Low&quot;,&quot;subject&quot;:&quot;Runner fallback and DSN form&quot;,&quot;decision&quot;:&quot;When .venv/bin/python is absent the runner falls back to python3 on PATH. DATABASE_URL is exported as a plain temporary file path, not a sqlite:// URL, matching sources/run.sh. Is that acceptable?&quot;}] &lt;/blueprint-decisions&gt;</p></article>
+</main>
+</body>
+</html>

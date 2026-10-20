@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-CSV-OUTPUT.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-CSV-OUTPUT.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-CSV-OUTPUT.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: CSV Output</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Successful commands render their result as CSV: one header row, then data rows, with no quoting and no trailing spaces.</td></tr><tr><td>Depends On</td><td>FEATURE-LEDGER-ENTRY.md, FEATURE-TEST-RUNNER.md</td></tr><tr><td>Provides</td><td>cli.output.render_csv(header, rows)</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Every successful command other than <code>init</code> writes CSV to standard output. This story supplies the one renderer that all commands use, so the output conventions live in one place.</p>
+<h2>Behavior</h2>
+<ul><li><code>render_csv(header, rows)</code> returns the text of one header row followed by one row per entry in</li></ul>
+<p><code>rows</code>.</p>
+<ul><li>Fields are joined with <code>,</code>. No field is quoted. Each line ends with <code>\n</code>, and the text ends with</li></ul>
+<p><code>\n</code>.</p>
+<ul><li>Values are written exactly as supplied. The renderer does not format numbers or trim text.</li><li>With no rows, the result is the header row alone.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC csv-rows-round-trip ===<br>Intent: render_csv writes the header and every data row, unquoted, comma-separated, each line ending in a newline.</p>
+<p>from cli.output import render_csv</p>
+<p>header = [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;] rows = [[&quot;DRAWER1&quot;, &quot;Front Drawer&quot;, &quot;39&quot;, &quot;2299.38&quot;], [&quot;PETTY&quot;, &quot;Petty Cash&quot;, &quot;21&quot;, &quot;306.25&quot;]] text = render_csv(header, rows) assert text.endswith(&quot;\n&quot;) raw = [line.split(&quot;,&quot;) for line in text.split(&quot;\n&quot;)[:-1]] assert raw == [header] + rows === END AC csv-rows-round-trip ===</p>
+<p>=== AC csv-header-only-when-empty ===<br>Intent: render_csv with no rows writes the header row alone.</p>
+<p>from cli.output import render_csv</p>
+<p>header = [&quot;table&quot;, &quot;rows&quot;] text = render_csv(header, []) assert text.endswith(&quot;\n&quot;) raw = [line.split(&quot;,&quot;) for line in text.split(&quot;\n&quot;)[:-1]] assert raw == [header] === END AC csv-header-only-when-empty ===</p>
+<p>=== AC csv-negative-amount-row ===<br>Intent: render_csv writes a negative amount with its leading minus and no thousands separator.</p>
+<p>from cli.output import render_csv</p>
+<p>header = [&quot;category&quot;, &quot;net&quot;] rows = [[&quot;RENT&quot;, &quot;-2700.00&quot;]] text = render_csv(header, rows) raw = [line.split(&quot;,&quot;) for line in text.split(&quot;\n&quot;)[:-1]] assert raw == [header] + rows === END AC csv-negative-amount-row ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Amounts reach this renderer already formatted as two-decimal text by FEATURE-AMOUNT-CENTS.md.</li></ul>
+<p>This renderer never converts a number to text.</p>
+<ul><li>Values containing a comma or newline are rejected by upstream validation before rendering, so no</li></ul>
+<p>quoting is ever required.</p>
+<ul><li>Diagnostics never pass through this renderer.</li></ul></article>
+</main>
+</body>
+</html>

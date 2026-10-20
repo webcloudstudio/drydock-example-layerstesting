@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-LOAD-ACCOUNTS.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-LOAD-ACCOUNTS.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-LOAD-ACCOUNTS.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Load Accounts</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Loads accounts from a CSV file, validating every row before commit.</td></tr><tr><td>Depends On</td><td>FEATURE-NONNEGATIVE-BALANCE.md, FEATURE-VALIDATE-CODE.md, FEATURE-VALIDATE-TEXT.md, FEATURE-EXIT-CODES.md, FEATURE-TEST-RUNNER.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger load accounts &lt;csv&gt;</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger load accounts &lt;csv&gt;</code> reads a file whose header is <code>account,name</code>, validates each row&#x27;s code and name, and inserts every row in one transaction. Output is <code>table,loaded</code> then <code>accounts,&lt;rows&gt;</code>. A row that fails validation or duplicates an existing key rejects the whole file with exit 3.</p>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNT-001</code> — write: create an account from a loaded row - supplies: <code>account</code>, <code>name</code> - returns: <code>account</code>, <code>name</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC load-accounts-valid-file ===<br>Intent: A valid accounts file loads every row and writes table,loaded then accounts,&lt;rows&gt;.</p>
+<p>import os import tempfile from cli.testing import cli_runner</p>
+<p>work = tempfile.mkdtemp() os.environ[&quot;DATABASE_URL&quot;] = os.path.join(work, &quot;ledger.db&quot;) accounts = os.path.join(work, &quot;accounts.csv&quot;) with open(accounts, &quot;w&quot;) as handle: handle.write(&quot;account,name\nDRAWER1,Front Drawer\nSAFE,Store Safe\n&quot;) row_count = 2</p>
+<p>assert cli_runner(&quot;init&quot;)[0] == 0 code, out, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, accounts) assert code == 0 lines = out.splitlines() assert lines[0] == &quot;table,loaded&quot; assert lines[1].split(&quot;,&quot;) == [&quot;accounts&quot;, str(row_count)] assert cli_runner(&quot;count&quot;)[1].splitlines()[1].split(&quot;,&quot;) == [&quot;accounts&quot;, str(row_count)] === END AC load-accounts-valid-file ===</p>
+<p>=== AC load-accounts-rows-readable ===<br>Intent: Each loaded account reads back through account get with the name it was loaded with.</p>
+<p>import os import tempfile from cli.testing import cli_runner</p>
+<p>work = tempfile.mkdtemp() os.environ[&quot;DATABASE_URL&quot;] = os.path.join(work, &quot;ledger.db&quot;) accounts = os.path.join(work, &quot;accounts.csv&quot;) with open(accounts, &quot;w&quot;) as handle: handle.write(&quot;account,name\nDRAWER1,Front Drawer\n&quot;) code_text = &quot;DRAWER1&quot; name_text = &quot;Front Drawer&quot;</p>
+<p>assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, accounts)[0] == 0 code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, code_text) assert code == 0 row = out.splitlines()[1].split(&quot;,&quot;) assert row[0] == code_text assert row[1] == name_text === END AC load-accounts-rows-readable ===</p>
+<p>=== AC load-accounts-invalid-row-rejects-file ===<br>Intent: A file containing an invalid account code exits 3 and stores none of its rows.</p>
+<p>import os import tempfile from cli.testing import cli_runner</p>
+<p>work = tempfile.mkdtemp() os.environ[&quot;DATABASE_URL&quot;] = os.path.join(work, &quot;ledger.db&quot;) accounts = os.path.join(work, &quot;accounts.csv&quot;) with open(accounts, &quot;w&quot;) as handle: handle.write(&quot;account,name\nSAFE,Store Safe\nbad-code,Bad Row\n&quot;) empty = 0</p>
+<p>assert cli_runner(&quot;init&quot;)[0] == 0 code, out, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, accounts) assert code == 3 rows = int(cli_runner(&quot;count&quot;)[1].splitlines()[1].split(&quot;,&quot;)[1]) assert rows == empty assert cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;SAFE&quot;)[0] == 4 === END AC load-accounts-invalid-row-rejects-file ===</p>
+<p>=== AC load-accounts-duplicate-key-rejected ===<br>Intent: Loading an account code that already exists exits 3 and leaves the stored row unchanged.</p>
+<p>import os import tempfile from cli.testing import cli_runner</p>
+<p>work = tempfile.mkdtemp() os.environ[&quot;DATABASE_URL&quot;] = os.path.join(work, &quot;ledger.db&quot;) accounts = os.path.join(work, &quot;accounts.csv&quot;) with open(accounts, &quot;w&quot;) as handle: handle.write(&quot;account,name\nSAFE,Store Safe\n&quot;)</p>
+<p>assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, accounts)[0] == 0 before = cli_runner(&quot;count&quot;)[1] assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, accounts)[0] == 3 assert cli_runner(&quot;count&quot;)[1] == before === END AC load-accounts-duplicate-key-rejected ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The loader reads the file only through the <code>accounts</code> table operations; it never opens a driver.</li><li>Validation of every row completes before the transaction commits.</li></ul></article>
+</main>
+</body>
+</html>

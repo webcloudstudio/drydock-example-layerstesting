@@ -1,0 +1,51 @@
+Persistence and `schema.sql` are already generated from the protected `DATABASE.md`, so this step only needs `bin/test.sh` plus tests that prove the generated contract round-trips. Writing the runner first.Now the tests. The runner tests re-invoke `bin/test.sh`, so I'm using a distinct sentinel module and selectors that can't recurse into the outer suite.Before writing the persistence tests I need to know how the generated `Database` reports missing rows and integrity failures.`update` and `delete` return rowcounts and `create` returns the key, so I can read back through `get`/`list` for each one. Writing the contract tests now.The first test has a sloppy `or` assertion, and the row is a dataclass, so I'll compare against `AccountRow` directly.Now running the runner's declared acceptance checks (syntax and selector), then the full suite through the runner itself.The sentinel's passing case requires `ZQSENTINEL_OUT`, which the plain selector cases don't set. I'll make the write conditional.Full suite passes through the runner (31 tests). Next I'll run the two declared acceptance checks for `foundation-005` exactly as written, from a scratch directory outside the build tree.Both stories in block-2 are built. The full suite passes through the new runner (31 tests), and both declared acceptance checks for `foundation-005` pass when run exactly as written.
+
+**foundation-005: `bin/test.sh`**
+- POSIX `sh` script. It runs `pytest -q` from the application root, or `pytest -q -k SLICE` when given one argument.
+- It exports `DATABASE_URL` as a fresh temporary SQLite path in a `mktemp -d` directory that is removed on exit. It never uses the caller's database.
+- It uses `.venv/bin/python` when present and falls back to `python3`.
+- It exits with pytest's status, so it is 0 only when every selected test passes.
+
+**foundation-003: persistence contract**
+- I wrote no persistence code. `persistence/`, `schema.sql` and the `Database` surface are generated from the protected `blueprint/DATABASE.md`, and they already matched it.
+- `tests/test_persistence_contract.py` (21 tests) drives `db.accounts`, `db.categories` and `db.transactions` through create/get/list/update/delete. It checks integer-cent amounts, the 60-character memo boundary, the empty-memo default, foreign-key rejection, undeclared verbs raising `UnknownOperation`, and per-test fresh stores.
+
+**Files changed**
+- `bin/test.sh` (new)
+- `tests/test_test_runner.py` (new, 5 tests)
+- `tests/test_persistence_contract.py` (new, 21 tests)
+
+**Choices I made**
+- The runner tests re-invoke `bin/test.sh` against a sentinel module with a selector token that appears in no other test name. This keeps the outer suite from recursing into itself.
+- The runner exports a plain path for `DATABASE_URL`, matching the `run.sh` grader, rather than a `sqlite://` URL.
+- I did not add the `data/logs` tee logging from `common.md`. It would mask pytest's exit status under POSIX `sh`, which has no `pipefail`.
+
+**Not verified:** `sources/INSTRUCTIONS.md` is not on disk or in the prompt, so I checked the column and key declarations against `DATABASE.md` only.
+
+<reusable-compact filename="DATABASE.md">
+Store: SQLite via open_database(dsn) (plain path or sqlite://); PostgreSQL when DSN is postgresql://. Tables:
+- accounts(account VARCHAR(12) PK, name VARCHAR(40))
+- categories(category VARCHAR(12) PK, description VARCHAR(40))
+- transactions(txn_id INTEGER PK, date TEXT, account VARCHAR(12) FK->accounts, category VARCHAR(12) FK->categories, amount INTEGER cents signed, memo VARCHAR(60) DEFAULT '')
+Operations (db.<table>.<verb>): accounts.{create,get,list,update,delete}; categories.{create,get,list}; transactions.{create,get,list,update(txn_id,amount),delete}. get returns a row dataclass or None; update/delete return rowcount; create returns the key; unlisted verbs raise UnknownOperation; FK violations raise PersistenceError.
+Schema applied from schema.sql (CREATE IF NOT EXISTS). Money is INTEGER cents only.
+</reusable-compact>
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- bin/test.sh
+- tests/test_test_runner.py
+- tests/test_persistence_contract.py
+
+SUMMARY:
+foundation-005: bin/test.sh is a POSIX sh runner with an optional -k slice selector, a fresh temporary DATABASE_URL per run, and pytest's exit status. Verified: `sh -n` passes; the declared test-runner-syntax and test-runner-selector checks pass; the full suite through the runner reports 31 passed, exit 0.
+foundation-003: the persistence package and schema.sql are generated from the protected DATABASE.md and were not written by this build. tests/test_persistence_contract.py verifies the declared operations round-trip through the generated surface, including integer cents, FK rejection and unknown verbs.
+Test coverage: full suite 31 passed (5 runner, 21 persistence, 5 scaffold). The staged sources/run.sh was not invoked, as no criterion in this step calls it.
+
+BLOCKERS:
+- sources/INSTRUCTIONS.md is absent from disk and from the prompt, so the column/key declarations were checked against DATABASE.md only.
+
+<blueprint-decisions>
+[{"spec":"FEATURE-TEST-RUNNER.md","severity":"Low","subject":"Runner fallback and DSN form","decision":"When .venv/bin/python is absent the runner falls back to python3 on PATH. DATABASE_URL is exported as a plain temporary file path, not a sqlite:// URL, matching sources/run.sh. Is that acceptable?"}]
+</blueprint-decisions>

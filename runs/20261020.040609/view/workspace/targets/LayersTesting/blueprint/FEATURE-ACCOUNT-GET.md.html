@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-ACCOUNT-GET.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-ACCOUNT-GET.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-ACCOUNT-GET.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Account Get</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td><code>account get</code> writes the account row for a code; an absent code exits 4.</td></tr><tr><td>Depends On</td><td>FEATURE-ACCOUNT-ADD.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger account get &lt;code&gt;</td></tr><tr><td>Consumes</td><td>accounts.get</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger account get &lt;code&gt;</code> reads one account from the database and writes it as a single account row.</p>
+<h2>Behavior</h2>
+<ul><li>The output is the account row: <code>account,name,transactions,balance</code>.</li><li>The transaction count and balance are computed from the database at read time.</li><li>An absent code exits 4 and writes nothing to standard output.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNT-002</code> — read: retrieve an account by code - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC account-get-present ===</p>
+<h1>Intent: <code>account get</code> for an existing code writes that account&#x27;s row and exits 0.</h1>
+<p>import csv import io import os import sys import tempfile from pathlib import Path</p>
+<p>from cli.testing import cli_runner</p>
+<p>dsn = str(Path(tempfile.mkdtemp()) / &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn</p>
+<p>account_code = &quot;CASH9&quot; account_name = &quot;Event Float&quot;</p>
+<p>exit_code, out, err = cli_runner(&quot;init&quot;) assert exit_code == 0</p>
+<p>exit_code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, account_code, account_name) assert exit_code == 0</p>
+<p>exit_code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, account_code) print(out) print(err, file=sys.stderr) assert exit_code == 0</p>
+<p>rows = list(csv.DictReader(io.StringIO(out))) assert len(rows) == 1 assert rows[0][&quot;account&quot;] == account_code assert rows[0][&quot;name&quot;] == account_name === END AC account-get-present ===</p>
+<p>=== AC account-get-absent ===</p>
+<h1>Intent: <code>account get</code> for a code that does not exist exits 4.</h1>
+<p>import os import sys import tempfile from pathlib import Path</p>
+<p>from cli.testing import cli_runner</p>
+<p>dsn = str(Path(tempfile.mkdtemp()) / &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn</p>
+<p>missing_code = &quot;NOSUCH&quot;</p>
+<p>exit_code, out, err = cli_runner(&quot;init&quot;) assert exit_code == 0</p>
+<p>exit_code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, missing_code) print(out) print(err, file=sys.stderr) assert exit_code == 4 === END AC account-get-absent ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A get never creates an account. An absent code stays absent.</li></ul></article>
+</main>
+</body>
+</html>

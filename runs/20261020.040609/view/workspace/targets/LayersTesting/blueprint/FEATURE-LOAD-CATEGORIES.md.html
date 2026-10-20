@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-LOAD-CATEGORIES.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-LOAD-CATEGORIES.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-LOAD-CATEGORIES.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Load Categories</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Loads categories from a CSV file, validating every row before commit.</td></tr><tr><td>Depends On</td><td>FEATURE-NONNEGATIVE-BALANCE.md, FEATURE-VALIDATE-CODE.md, FEATURE-VALIDATE-TEXT.md, FEATURE-EXIT-CODES.md, FEATURE-TEST-RUNNER.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger load categories &lt;csv&gt;</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger load categories &lt;csv&gt;</code> reads a file whose header is <code>category,description</code>, validates each row&#x27;s code and description, and inserts every row in one transaction. Output is <code>table,loaded</code> then <code>categories,&lt;rows&gt;</code>. A row that fails validation or duplicates an existing key rejects the whole file with exit 3.</p>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-CATEGORY-001</code> — write: create a category from a loaded row - supplies: <code>category</code>, <code>description</code> - returns: <code>category</code>, <code>description</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC load-categories-valid-file ===<br>Intent: A valid categories file loads every row and writes table,loaded then categories,&lt;rows&gt;.</p>
+<p>import os import tempfile from cli.testing import cli_runner</p>
+<p>work = tempfile.mkdtemp() os.environ[&quot;DATABASE_URL&quot;] = os.path.join(work, &quot;ledger.db&quot;) categories = os.path.join(work, &quot;categories.csv&quot;) with open(categories, &quot;w&quot;) as handle: handle.write(&quot;category,description\nSALES,Sales receipts\nRENT,Rent\n&quot;) row_count = 2</p>
+<p>assert cli_runner(&quot;init&quot;)[0] == 0 code, out, err = cli_runner(&quot;load&quot;, &quot;categories&quot;, categories) assert code == 0 lines = out.splitlines() assert lines[0] == &quot;table,loaded&quot; assert lines[1].split(&quot;,&quot;) == [&quot;categories&quot;, str(row_count)] assert cli_runner(&quot;count&quot;)[1].splitlines()[2].split(&quot;,&quot;) == [&quot;categories&quot;, str(row_count)] === END AC load-categories-valid-file ===</p>
+<p>=== AC load-categories-usable-by-posting ===<br>Intent: A loaded category code is accepted by txn post and reads back on the stored transaction.</p>
+<p>import os import tempfile from cli.testing import cli_runner</p>
+<p>work = tempfile.mkdtemp() os.environ[&quot;DATABASE_URL&quot;] = os.path.join(work, &quot;ledger.db&quot;) categories = os.path.join(work, &quot;categories.csv&quot;) with open(categories, &quot;w&quot;) as handle: handle.write(&quot;category,description\nSALES,Sales receipts\n&quot;) category_code = &quot;SALES&quot;</p>
+<p>assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;CASH1&quot;, &quot;Cash Box&quot;)[0] == 0 assert cli_runner(&quot;load&quot;, &quot;categories&quot;, categories)[0] == 0 assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;CASH1&quot;, category_code, &quot;10.00&quot;, &quot;2026-01-01&quot;)[0] == 0 row = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;)[1].splitlines()[1].split(&quot;,&quot;) assert row[3] == category_code === END AC load-categories-usable-by-posting ===</p>
+<p>=== AC load-categories-invalid-row-rejects-file ===<br>Intent: A file containing an invalid category code exits 3 and stores none of its rows.</p>
+<p>import os import tempfile from cli.testing import cli_runner</p>
+<p>work = tempfile.mkdtemp() os.environ[&quot;DATABASE_URL&quot;] = os.path.join(work, &quot;ledger.db&quot;) categories = os.path.join(work, &quot;categories.csv&quot;) with open(categories, &quot;w&quot;) as handle: handle.write(&quot;category,description\nSALES,Sales receipts\nSALE$,Bad Code\n&quot;) empty = 0</p>
+<p>assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;load&quot;, &quot;categories&quot;, categories)[0] == 3 rows = int(cli_runner(&quot;count&quot;)[1].splitlines()[2].split(&quot;,&quot;)[1]) assert rows == empty === END AC load-categories-invalid-row-rejects-file ===</p>
+<p>=== AC load-categories-duplicate-key-rejected ===<br>Intent: Loading a category code that already exists exits 3 and leaves the stored count unchanged.</p>
+<p>import os import tempfile from cli.testing import cli_runner</p>
+<p>work = tempfile.mkdtemp() os.environ[&quot;DATABASE_URL&quot;] = os.path.join(work, &quot;ledger.db&quot;) categories = os.path.join(work, &quot;categories.csv&quot;) with open(categories, &quot;w&quot;) as handle: handle.write(&quot;category,description\nSALES,Sales receipts\n&quot;)</p>
+<p>assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;load&quot;, &quot;categories&quot;, categories)[0] == 0 before = cli_runner(&quot;count&quot;)[1] assert cli_runner(&quot;load&quot;, &quot;categories&quot;, categories)[0] == 3 assert cli_runner(&quot;count&quot;)[1] == before === END AC load-categories-duplicate-key-rejected ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The loader reads the file only through the <code>categories</code> table operations; it never opens a driver.</li><li>Validation of every row completes before the transaction commits.</li></ul></article>
+</main>
+</body>
+</html>

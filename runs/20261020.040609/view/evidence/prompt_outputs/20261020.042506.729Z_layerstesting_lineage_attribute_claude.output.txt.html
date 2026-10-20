@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.042506.729Z_layerstesting_lineage_attribute_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.042506.729Z_layerstesting_lineage_attribute_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.042506.729Z_layerstesting_lineage_attribute_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>&lt;requirement name=&quot;ledger-dispatch&quot; stories=&quot;foundation-001&quot;&gt;
+The deliverable is an executable named ledger at the application root.
+&lt;/requirement&gt;
+&lt;requirement name=&quot;database-env&quot; stories=&quot;foundation-002&quot;&gt;
+Database: DATABASE_URL when the caller sets it (for example a PostgreSQL DSN), otherwise a SQLite file in a fresh temporary directory.
+&lt;/requirement&gt;
+&lt;requirement name=&quot;schema-lifecycle&quot; stories=&quot;schema-001,schema-002,foundation-003&quot;&gt;
+A. Schema lifecycle
+&lt;/requirement&gt;
+&lt;requirement name=&quot;reinit-drops-rows&quot; stories=&quot;schema-001,schema-002&quot;&gt;
+Z. Re-initialization drops every row
+&lt;/requirement&gt;
+&lt;requirement name=&quot;bulk-load&quot; stories=&quot;load-001,load-002,load-003,schema-002&quot;&gt;
+B. Bulk load of the known dataset
+&lt;/requirement&gt;
+&lt;requirement name=&quot;reports-seeded&quot; stories=&quot;rpt-001,rpt-002,rpt-003&quot;&gt;
+C. Reports over the seeded rows
+&lt;/requirement&gt;
+&lt;requirement name=&quot;reports-after-changes&quot; stories=&quot;rpt-001,rpt-002,rpt-003&quot;&gt;
+H. Reports after the changes
+&lt;/requirement&gt;
+&lt;requirement name=&quot;rejected-load-changes-nothing&quot; stories=&quot;load-004,integ-001,schema-002&quot;&gt;
+D. A rejected load changes nothing
+&lt;/requirement&gt;
+&lt;requirement name=&quot;account-crud&quot; stories=&quot;acct-001,acct-002,acct-003,acct-004,valid-002&quot;&gt;
+E. Account create, read, update, delete
+&lt;/requirement&gt;
+&lt;requirement name=&quot;txn-crud&quot; stories=&quot;txn-001,txn-002,txn-003,txn-004,valid-002&quot;&gt;
+F. Transaction create, read, update, delete
+&lt;/requirement&gt;
+&lt;requirement name=&quot;validate-txn-account&quot; stories=&quot;valid-001&quot;&gt;
+check F5 3 txn post DRAWER1 NOSUCH 1.00 2026-04-01 &lt; /dev/null
+&lt;/requirement&gt;
+&lt;requirement name=&quot;validate-amount&quot; stories=&quot;valid-003,foundation-004&quot;&gt;
+check F6 3 txn post DRAWER1 SALES 1.234 2026-04-01 &lt; /dev/null
+&lt;/requirement&gt;
+&lt;requirement name=&quot;validate-date&quot; stories=&quot;valid-004&quot;&gt;
+check F7 3 txn post DRAWER1 SALES 1.00 2026-02-30 &lt; /dev/null
+&lt;/requirement&gt;
+&lt;requirement name=&quot;transfers-atomic&quot; stories=&quot;xfer-001,integ-001&quot;&gt;
+Transfers are atomic;
+&lt;/requirement&gt;
+&lt;requirement name=&quot;nonnegative-balance&quot; stories=&quot;integ-002,xfer-002,txn-003,txn-004&quot;&gt;
+no command leaves a negative balance
+&lt;/requirement&gt;
+&lt;requirement name=&quot;usage-errors&quot; stories=&quot;cli-003&quot;&gt;
+U. Usage errors
+&lt;/requirement&gt;
+&lt;requirement name=&quot;csv-output&quot; stories=&quot;cli-001&quot;&gt;
+standard output with the known answer below
+&lt;/requirement&gt;
+&lt;requirement name=&quot;exit-codes&quot; stories=&quot;cli-002,cli-003&quot;&gt;
+compares every command&#x27;s exit code
+&lt;/requirement&gt;
+&lt;requirement name=&quot;grader-gate&quot; stories=&quot;verify-001&quot;&gt;
+Exit 0 only when every check passes.
+&lt;/requirement&gt;
+&lt;unattached story=&quot;scaffold-python&quot;/&gt;
+&lt;unattached story=&quot;foundation-005&quot;/&gt;
+&lt;unattached story=&quot;load-005&quot;/&gt;
+&lt;unattached story=&quot;cli-004&quot;/&gt;</pre></article>
+</main>
+</body>
+</html>

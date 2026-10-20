@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-VALIDATE-DATE.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-VALIDATE-DATE.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-VALIDATE-DATE.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Validate Date</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Validates that input is a real calendar date written YYYY-MM-DD.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, FEATURE-EXIT-CODES.md, FEATURE-TEST-RUNNER.md</td></tr><tr><td>Provides</td><td>validation.date.validate_date</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Dates are real calendar dates written <code>YYYY-MM-DD</code>. Impossible dates such as <code>2026-02-30</code> are rejected.</p>
+<h2>Behavior</h2>
+<ul><li><code>validate_date(text)</code> returns <code>text</code> unchanged when it is exactly four digits, a hyphen, two digits, a hyphen, and two digits, and those parts form a real calendar date, including leap-day rules.</li><li>Any other input raises <code>ValueError</code> with a one-line message. The CLI layer maps it to exit code 3.</li><li>The module lives at <code>validation/date.py</code> as part of a namespace package. It creates no <code>__init__.py</code>.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC date-accepts-real-dates ===<br>Intent: Real calendar dates in YYYY-MM-DD form, including a leap day, are returned unchanged.</p>
+<p>from validation.date import validate_date</p>
+<p>accepted = [&quot;2026-02-28&quot;, &quot;2026-12-31&quot;, &quot;2028-02-29&quot;] for text in accepted: assert validate_date(text) == text === END AC date-accepts-real-dates ===</p>
+<p>=== AC date-rejects-impossible-dates ===<br>Intent: Impossible calendar dates raise ValueError, including 2026-02-30 and a non-leap 2026-02-29.</p>
+<p>from validation.date import validate_date</p>
+<p>rejected_inputs = [&quot;2026-02-30&quot;, &quot;2026-02-29&quot;, &quot;2026-13-01&quot;, &quot;2026-04-31&quot;] rejected = 0 for text in rejected_inputs: try: validate_date(text) except ValueError: rejected += 1 assert rejected == len(rejected_inputs) === END AC date-rejects-impossible-dates ===</p>
+<p>=== AC date-rejects-bad-format ===<br>Intent: Dates that are not exactly YYYY-MM-DD raise ValueError.</p>
+<p>from validation.date import validate_date</p>
+<p>rejected_inputs = [&quot;2026-1-5&quot;, &quot;26-01-05&quot;, &quot;2026/01/05&quot;, &quot;&quot;] rejected = 0 for text in rejected_inputs: try: validate_date(text) except ValueError: rejected += 1 assert rejected == len(rejected_inputs) === END AC date-rejects-bad-format ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The validator never opens a database connection.</li><li>The validator never accepts a date that a calendar cannot represent.</li></ul></article>
+</main>
+</body>
+</html>

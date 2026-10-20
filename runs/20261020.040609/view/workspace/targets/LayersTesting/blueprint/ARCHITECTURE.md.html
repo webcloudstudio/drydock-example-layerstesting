@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/ARCHITECTURE.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/ARCHITECTURE.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/ARCHITECTURE.md">Raw file</a></div></header>
+<article class="doc"><h1>ARCHITECTURE: Cash Ledger</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Module layout, boundaries, and technology decisions for the command-line cash ledger.</td></tr><tr><td>Depends On</td><td>—</td></tr><tr><td>Provides</td><td>—</td></tr></tbody></table></div>
+<h2>Overview</h2>
+<p>The cash ledger is a local, single-user command-line program. Its executable is <code>ledger</code> at the application root. Every command reaches the database only through the generated persistence package, runs as one transaction, and writes CSV to standard output with diagnostics on standard error.</p>
+<h2>Layout</h2>
+<div class="scroll"><table><thead><tr><th>Path</th><th>Owner</th><th>Purpose</th></tr></thead><tbody><tr><td><code>ledger</code></td><td>cli</td><td>Executable at the application root that dispatches each command.</td></tr><tr><td><code>cli/</code></td><td>cli</td><td>Command dispatch, CSV output, exit codes, and usage errors.</td></tr><tr><td><code>amounts.py</code></td><td>amounts</td><td>Conversion between integer cents and two-decimal amount text.</td></tr><tr><td><code>config.py</code></td><td>config</td><td>Resolution of <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code>.</td></tr><tr><td><code>persistence/</code></td><td>generated</td><td>Shipped persistence library plus the declaration generated from <code>DATABASE.md</code>.</td></tr><tr><td><code>schema.sql</code></td><td>generated</td><td>Idempotent DDL generated from <code>DATABASE.md</code>.</td></tr><tr><td><code>bin/test.sh</code></td><td>test runner</td><td>POSIX runner for the project suite with a slice selector.</td></tr><tr><td><code>tests/</code></td><td>project suite</td><td>pytest tests written beside the code.</td></tr><tr><td><code>pyproject.toml</code>, <code>uv.lock</code>, <code>.venv/</code></td><td>language foundation</td><td>Dependency manifest, lockfile, and environment.</td></tr></tbody></table></div>
+<h2>Module Ownership</h2>
+<div class="scroll"><table><thead><tr><th>Boundary</th><th>Owner</th><th>Low-level access permitted</th></tr></thead><tbody><tr><td>Persistence</td><td><code>persistence/</code> package</td><td><code>sqlite3</code> and <code>psycopg</code> are reached only inside <code>persistence/</code>.</td></tr><tr><td>Configuration</td><td><code>config.py</code></td><td>Reads <code>DATABASE_URL</code> and <code>DATABASE_PATH</code> from the environment.</td></tr><tr><td>File store</td><td>None</td><td>The product has no file store beyond the database.</td></tr><tr><td>External service</td><td>None</td><td>Network access only to the PostgreSQL server named by <code>DATABASE_URL</code>.</td></tr></tbody></table></div>
+<h2>Technology Stack</h2>
+<ul><li>Python 3.11 or newer: implementation language and pytest test runner (<code>python.md</code>).</li><li>SQLite: default database engine, reached through the persistence library (<code>sqlite.md</code>).</li><li>PostgreSQL: engine selected when <code>DATABASE_URL</code> is a <code>postgres://</code> or <code>postgresql://</code> DSN,</li></ul>
+<p>with <code>psycopg[binary]</code> as the driver (<code>postgres.md</code>). Variance: <code>TECHNOLOGY_STACK.md</code> does not list PostgreSQL, but <code>sources/INSTRUCTIONS.md</code> requires it. The sources govern, per decision Q-001.</p>
+<ul><li>CLI: the <code>ledger</code> executable (<code>cli.md</code>).</li><li>Shell: POSIX <code>sh</code> for <code>bin/test.sh</code> and the supplied grader (<code>common.md</code>).</li></ul>
+<h2>Technical Decisions</h2>
+<ul><li>Amounts are stored as integer cents. No layer uses floating point for money.</li><li>Every command runs as one database transaction through <code>open_database(dsn)</code>.</li><li><code>pyproject.toml</code> declares Python 3.11 or newer, <code>pytest</code>, and <code>psycopg[binary]</code>. <code>uv.lock</code> is</li></ul>
+<p>committed. <code>.venv</code> is created by <code>uv venv</code>.</p>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC scaffold-pyproject ===<br>Intent: The project manifest declares Python 3.11 or newer, pytest, and psycopg.</p>
+<p>import os import re import tomllib</p>
+<p>with open(&quot;pyproject.toml&quot;, &quot;rb&quot;) as handle: manifest = tomllib.load(handle) project = manifest[&quot;project&quot;] requirement = project[&quot;requires-python&quot;] dependencies = project[&quot;dependencies&quot;] names = {re.split(r&quot;[&lt;&gt;=!~\[ ;]&quot;, entry, maxsplit=1)[0].lower() for entry in dependencies} print(requirement, sorted(names)) assert requirement.startswith(&quot;&gt;=3.11&quot;) assert {&quot;pytest&quot;, &quot;psycopg&quot;} &lt;= names === END AC scaffold-pyproject ===</p>
+<p>=== AC scaffold-environment ===<br>Intent: The lockfile is committed and the virtual environment directory exists.</p>
+<p>import os</p>
+<p>assert os.path.isfile(&quot;uv.lock&quot;) assert os.path.isdir(&quot;.venv&quot;) assert os.path.isfile(&quot;pyproject.toml&quot;) === END AC scaffold-environment ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li><code>persistence/</code>, <code>schema.sql</code>, and the persistence declaration are generated by Drydock and are</li></ul>
+<p>never hand-written.</p>
+<ul><li>No module outside <code>persistence/</code> imports <code>sqlite3</code> or <code>psycopg</code>.</li></ul></article>
+</main>
+</body>
+</html>
