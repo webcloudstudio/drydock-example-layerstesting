@@ -1,0 +1,490 @@
+=== BEGIN ARTIFACT FEATURE-CliOutput.md ===
+# FEATURE: CSV Output
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Render successful command output as CSV lines and failure diagnostics as one stderr line. |
+| Depends On  | FEATURE-CliEntry.md, ARCHITECTURE.md |
+| Provides    | render_csv, render_diagnostic |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every successful command except `init` writes CSV to standard output: one header row, then data
+rows, comma-separated, no quoting, no trailing spaces, and `\n` line endings. A failing command
+writes nothing to standard output and one diagnostic line to standard error. This feature owns the
+text rendering used by every command so that the format is defined once.
+
+## Interface
+
+- `cli.output.render_csv(header: list[str], rows: list[list[str]]) -> str` returns the header line
+  followed by one line per row, each terminated by `\n`. Fields are joined with `,` with no quoting
+  and no padding.
+- `cli.output.render_diagnostic(message: str) -> str` returns the message followed by a single `\n`.
+  The caller writes the result to standard error.
+
+## Behavior
+
+- `render_csv` never alters a field value. Callers validate fields before rendering.
+- With an empty `rows` list, only the header line is returned.
+- `init` writes nothing; it does not call `render_csv`.
+
+## Programmatic Acceptance
+
+=== AC cli-output-csv-shape ===
+Intent: render_csv writes the header and each row as one comma-separated line, in order.
+
+from cli.output import render_csv
+
+header = ["account", "name"]
+rows = [["DRAWER1", "Front Drawer"], ["SAFE", "Store Safe"]]
+text = render_csv(header, rows)
+assert [line.split(",") for line in text.split("\n")[:-1]] == [header] + rows
+assert text.count("\n") == len(rows) + 1
+assert text.split("\n")[-1] == ""
+=== END AC cli-output-csv-shape ===
+
+=== AC cli-output-csv-header-only ===
+Intent: render_csv with no rows writes only the header line.
+
+from cli.output import render_csv
+
+header = ["table", "rows"]
+text = render_csv(header, [])
+assert [line.split(",") for line in text.split("\n")[:-1]] == [header]
+assert text.count("\n") == 1
+=== END AC cli-output-csv-header-only ===
+
+=== AC cli-output-csv-no-padding ===
+Intent: render_csv adds no leading or trailing spaces to any line.
+
+from cli.output import render_csv
+
+header = ["table", "rows"]
+rows = [["accounts", "4"], ["categories", "7"]]
+text = render_csv(header, rows)
+assert all(line == line.strip() for line in text.split("\n"))
+=== END AC cli-output-csv-no-padding ===
+
+=== AC cli-output-diagnostic-one-line ===
+Intent: render_diagnostic returns the message as exactly one line.
+
+from cli.output import render_diagnostic
+
+message = "account DRAWER9 not found"
+text = render_diagnostic(message)
+assert text.rstrip("\n") == message
+assert text.count("\n") == 1
+=== END AC cli-output-diagnostic-one-line ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Standard output carries CSV only; diagnostics never go to standard output.
+- Field values are never quoted, escaped, or padded by this feature.
+- Money is rendered by the amount formatter, not by this feature.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-ValidateText.md ===
+# FEATURE: Text Validation
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Validate account and category codes, names, descriptions, and memos. |
+| Depends On  | FEATURE-CliEntry.md, ARCHITECTURE.md |
+| Provides    | check_code, check_name, check_memo |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Rules 3 and 4 of the cash ledger: codes, names, descriptions, and memos are checked before any
+command writes to the database. A violation is reported by the command layer with exit code 3.
+
+## Interface
+
+- `cli.text_validation.check_code(text: str) -> str` returns `text` when it is 1 to 12 characters
+  from `A-Z` and `0-9`; otherwise raises `ValueError`.
+- `cli.text_validation.check_name(text: str) -> str` returns `text` when it is 1 to 40 characters
+  and contains no comma and no newline; otherwise raises `ValueError`. Used for names and
+  descriptions.
+- `cli.text_validation.check_memo(text: str) -> str` returns `text` when it is 0 to 60 characters
+  and contains no comma and no newline; otherwise raises `ValueError`.
+
+## Behavior
+
+- Validators never normalize case or whitespace; a lowercase code is rejected.
+- Validators do not touch the database.
+
+## Programmatic Acceptance
+
+=== AC valid-text-code-accepts ===
+Intent: check_code returns each 1-to-12-character A-Z/0-9 code unchanged.
+
+from cli.text_validation import check_code
+
+samples = ["A", "AB12", "Z9", "A" * 12]
+accepted = [check_code(code) for code in samples]
+assert accepted == samples
+=== END AC valid-text-code-accepts ===
+
+=== AC valid-text-code-rejects ===
+Intent: check_code raises ValueError for empty, lowercase, punctuated, spaced, and over-length codes.
+
+from cli.text_validation import check_code
+
+samples = ["", "ab", "A-1", "A B", "A" * 13]
+rejected = []
+for code in samples:
+    try:
+        check_code(code)
+    except ValueError:
+        rejected.append(code)
+assert rejected == samples
+=== END AC valid-text-code-rejects ===
+
+=== AC valid-text-name-accepts ===
+Intent: check_name returns each 1-to-40-character name without comma or newline unchanged.
+
+from cli.text_validation import check_name
+
+samples = ["N", "Front Drawer", "N" * 40]
+accepted = [check_name(name) for name in samples]
+assert accepted == samples
+=== END AC valid-text-name-accepts ===
+
+=== AC valid-text-name-rejects ===
+Intent: check_name raises ValueError for empty, over-length, comma-bearing, and newline-bearing names.
+
+from cli.text_validation import check_name
+
+samples = ["", "N" * 41, "a,b", "a\nb"]
+rejected = []
+for name in samples:
+    try:
+        check_name(name)
+    except ValueError:
+        rejected.append(name)
+assert rejected == samples
+=== END AC valid-text-name-rejects ===
+
+=== AC valid-text-memo-accepts ===
+Intent: check_memo returns a 0-to-60-character memo without comma or newline unchanged, including an empty memo.
+
+from cli.text_validation import check_memo
+
+samples = ["", "walk in sale", "m" * 60]
+accepted = [check_memo(memo) for memo in samples]
+assert accepted == samples
+=== END AC valid-text-memo-accepts ===
+
+=== AC valid-text-memo-rejects ===
+Intent: check_memo raises ValueError for over-length, comma-bearing, and newline-bearing memos.
+
+from cli.text_validation import check_memo
+
+samples = ["m" * 61, "a,b", "a\nb"]
+rejected = []
+for memo in samples:
+    try:
+        check_memo(memo)
+    except ValueError:
+        rejected.append(memo)
+assert rejected == samples
+=== END AC valid-text-memo-rejects ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A validator never accepts a value the Rules section rejects.
+- Validators raise ValueError only; the command layer maps the failure to exit code 3.
+- Validators never read or write the database.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-ValidateAmount.md ===
+# FEATURE: Amount Validation
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Parse input amounts to integer cents and format stored cents as two-decimal text. |
+| Depends On  | FEATURE-CliEntry.md, ARCHITECTURE.md |
+| Provides    | parse_amount, format_amount |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Rule 5 of the cash ledger. Amounts are stored as integer cents. Input text matching
+`-?DIGITS[.D[D]]` is parsed without floating point; output always has exactly two decimals.
+
+## Interface
+
+- `cli.amount.parse_amount(text: str) -> int` returns the signed integer number of cents. It accepts
+  text matching `-?DIGITS[.D[D]]` with at most two decimal places and a non-zero value; otherwise it
+  raises `ValueError`.
+- `cli.amount.format_amount(cents: int) -> str` returns the amount with exactly two decimal places,
+  a leading `-` when negative, and no thousands separator.
+
+## Behavior
+
+- Parsing uses integer arithmetic only.
+- A single decimal place is padded to two places in the stored value, not in the input.
+
+## Programmatic Acceptance
+
+=== AC valid-amount-parse-cents ===
+Intent: parse_amount converts accepted input text to the expected integer cents.
+
+from cli.amount import parse_amount
+
+cases = [("12.5", 1250), ("-0.05", -5), ("7", 700), ("0.1", 10), ("-3", -300), ("1.10", 110)]
+parsed = [parse_amount(text) for text, _ in cases]
+assert parsed == [cents for _, cents in cases]
+=== END AC valid-amount-parse-cents ===
+
+=== AC valid-amount-round-trip ===
+Intent: format_amount of parse_amount returns each canonical two-decimal input unchanged.
+
+from cli.amount import format_amount, parse_amount
+
+samples = ["12.50", "-0.05", "0.10", "5000.00", "-12.50"]
+assert [format_amount(parse_amount(text)) for text in samples] == samples
+=== END AC valid-amount-round-trip ===
+
+=== AC valid-amount-rejects ===
+Intent: parse_amount raises ValueError for zero, excess decimals, malformed, signed-plus, and empty input.
+
+from cli.amount import parse_amount
+
+samples = ["0", "0.00", "-0", "1.234", "1.", ".5", "1,00", "+5", "abc", ""]
+rejected = []
+for text in samples:
+    try:
+        parse_amount(text)
+    except ValueError:
+        rejected.append(text)
+assert rejected == samples
+=== END AC valid-amount-rejects ===
+
+=== AC valid-amount-integer-type ===
+Intent: parse_amount returns a Python int, never a float.
+
+from cli.amount import parse_amount
+
+assert type(parse_amount("1.10")) is int
+assert type(parse_amount("-7")) is int
+=== END AC valid-amount-integer-type ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- No floating-point value is used for money at any layer.
+- Zero amounts are rejected on input.
+- Output never contains a thousands separator.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-ValidateDate.md ===
+# FEATURE: Date Validation
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Accept only real calendar dates written YYYY-MM-DD. |
+| Depends On  | FEATURE-CliEntry.md, ARCHITECTURE.md |
+| Provides    | check_date |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Rule 6 of the cash ledger. A date is accepted only when it is a real calendar date in the form
+`YYYY-MM-DD`. Impossible dates such as `2026-02-30` are rejected.
+
+## Interface
+
+- `cli.dates.check_date(text: str) -> str` returns `text` when it is a real calendar date in the form
+  `YYYY-MM-DD`; otherwise raises `ValueError`.
+
+## Behavior
+
+- The check uses the calendar, including leap years.
+- Only the exact `YYYY-MM-DD` shape is accepted; single-digit months or days are rejected.
+
+## Programmatic Acceptance
+
+=== AC valid-date-accepts ===
+Intent: check_date returns each real calendar date in YYYY-MM-DD form unchanged, including a leap day.
+
+from cli.dates import check_date
+
+samples = ["2026-01-01", "2024-02-29", "2026-12-31"]
+assert [check_date(text) for text in samples] == samples
+=== END AC valid-date-accepts ===
+
+=== AC valid-date-rejects ===
+Intent: check_date raises ValueError for impossible dates and for every malformed shape.
+
+from cli.dates import check_date
+
+samples = [
+    "2026-02-30",
+    "2025-02-29",
+    "2026-13-01",
+    "2026-00-10",
+    "2026-04-31",
+    "2026-1-01",
+    "26-01-01",
+    "2026/01/01",
+    "",
+]
+rejected = []
+for text in samples:
+    try:
+        check_date(text)
+    except ValueError:
+        rejected.append(text)
+assert rejected == samples
+=== END AC valid-date-rejects ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A date that the calendar does not contain is never accepted.
+- Dates are never converted to another format by this feature.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-CommandTransaction.md ===
+# FEATURE: Command Transaction
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Run each command as one database transaction that commits on success and rolls back on any failure. |
+| Depends On  | FEATURE-CliEntry.md, DATABASE.md, ARCHITECTURE.md |
+| Provides    | run_command |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Rule 1 of the cash ledger: every command either completes in full or changes nothing. This feature
+provides the one wrapper that every mutating command and every load runs inside.
+
+## Interface
+
+- `cli.transactional.run_command(db, command)` calls `command(store)` inside one database
+  transaction, where `store` is the `db` handle. When `command` returns normally, the transaction
+  commits and the return value of `command` is returned. When `command` raises, the transaction
+  rolls back and the exception is re-raised unchanged.
+- Callers inside `command` use the declared operations, for example
+  `store.accounts.create(account=..., name=...)`, with keyword arguments named by the Input DTO
+  fields in `DATABASE.md`.
+
+## Behavior
+
+- The wrapper adds no locking. Concurrent processes rely on the database's own transaction
+  isolation.
+- Rollback covers every table written inside the command, not only the last one.
+
+## Programmatic Acceptance
+
+=== AC integ-txn-commit-on-success ===
+Intent: run_command commits the writes of a command that returns normally.
+
+from persistence.testing import db_session
+from cli.transactional import run_command
+
+code = "CASH1"
+name = "Float"
+with db_session() as db:
+    def succeeding(store):
+        store.accounts.create(account=code, name=name)
+        return None
+
+    run_command(db, succeeding)
+    rows = db.accounts.list()
+    assert len(rows) == 1
+    assert rows[0].account == code
+    assert rows[0].name == name
+=== END AC integ-txn-commit-on-success ===
+
+=== AC integ-txn-rollback-single-table ===
+Intent: run_command rolls back a write made before the command raises, leaving the table empty.
+
+from persistence.testing import db_session
+from cli.transactional import run_command
+
+code = "CASH1"
+name = "Float"
+with db_session() as db:
+    def failing(store):
+        store.accounts.create(account=code, name=name)
+        raise ValueError("rejected after write")
+
+    raised = False
+    try:
+        run_command(db, failing)
+    except ValueError:
+        raised = True
+    assert raised
+    assert len(db.accounts.list()) == 0
+=== END AC integ-txn-rollback-single-table ===
+
+=== AC integ-txn-rollback-multi-table ===
+Intent: run_command rolls back writes to two tables when the command raises after both writes.
+
+from persistence.testing import db_session
+from cli.transactional import run_command
+
+code = "CASH1"
+name = "Float"
+category = "OPENING"
+description = "Opening balance"
+with db_session() as db:
+    def failing(store):
+        store.accounts.create(account=code, name=name)
+        store.categories.create(category=category, description=description)
+        raise ValueError("rejected after two writes")
+
+    raised = False
+    try:
+        run_command(db, failing)
+    except ValueError:
+        raised = True
+    assert raised
+    assert len(db.accounts.list()) == 0
+    assert len(db.categories.list()) == 0
+=== END AC integ-txn-rollback-multi-table ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A command that fails leaves every table exactly as it was before the command started.
+- No application-level lock is added around the transaction.
+- Database drivers are never opened here; access goes through the persistence handle only.
+=== END ARTIFACT ===

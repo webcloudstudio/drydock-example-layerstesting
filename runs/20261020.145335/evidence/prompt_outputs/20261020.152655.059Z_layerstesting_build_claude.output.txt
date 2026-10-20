@@ -1,0 +1,25 @@
+This is the same repair request as the last two passes, and the failure is unchanged. I'll confirm the build directory and the generated `open_database` are still in the same state before reporting.The `git status` output is empty, but last pass it listed `balance.py` and `tests/test_balance.py` as untracked. I need to find out why before reporting.The files are intact. The harness checkpointed them into commit `0808893` (`Build block-9: FEATURE-NonNegativeBalance.md [failed]`), so the working tree is clean.
+
+No files changed in this pass. The four declared checks still fail, and the fix is outside this block.
+
+- **Cause:** each staged script calls `open_database(path)` on a fresh file and then creates a category. The generated `open_database` (`persistence/schema.py:153`) only builds the `Database` object and never applies `schema.sql`. The first insert hits a store with no tables.
+- **Why I didn't edit it:** `persistence/schema.py` and `persistence/db.py` are generated or shipped and marked do-not-edit. Making the checks pass would mean changing generated code or the criteria, and neither is this block's to change.
+- **Not `AC_BROKEN`:** the scripts raise during setup, so the assertions never run. The token is for a command that succeeds while its assertion fails.
+- **`nonneg-accepts-zero-balance`:** the feedback reports this one as "excluded check: ALWAYS_PASSES vacuous". That comes from the harness, not from the balance code. The script has no assertion that could fail, so I cannot make it meaningful from this block.
+- **Verified:** with the schema applied, the same script bodies passed in the earlier pass. `sh bin/test.sh` still reports 227 passed.
+
+To unblock, the persistence generator (or `DATABASE.md`) must apply the declared schema when `open_database` opens a fresh store. Alternatively, the criteria must open their store through `persistence.testing.db_session()`. Then rerun this block.
+
+RESULT: FAILED
+
+FILES CHANGED:
+- (none in this pass)
+
+SUMMARY:
+Rechecked the build directory. `balance.py` and `tests/test_balance.py` are present and unchanged from the previous pass, and `sh bin/test.sh` reports 227 passed. The four declared checks still fail at setup on `open_database(path)`, which does not apply the declared schema to a fresh store. Nothing in this block's files can fix that without editing generated persistence code.
+
+BLOCKERS:
+- The staged acceptance checks cannot run until `open_database` on a fresh store applies the declared schema, or until the criteria open their store through `persistence.testing.db_session()`. Both changes are outside this block.
+
+FAILURE_SUMMARY: Staged acceptance checks fail at setup because `open_database` does not apply the declared schema to a fresh store.
+FAILURE_DETAIL: Each check creates a category on a store with no tables, so it raises `no such table: categories` before `ensure_non_negative` is reached. `persistence/schema.py` and `persistence/db.py` are generated or shipped and must not be hand-edited. Before rerunning, the Drydock persistence generation must make `open_database` apply `schema.sql` to a new store, or the criteria must open their store through `db_session()`. Also, `nonneg-accepts-zero-balance` is reported as vacuous by the harness; that criterion has no assertion that can fail, so it needs repair in the Blueprint.

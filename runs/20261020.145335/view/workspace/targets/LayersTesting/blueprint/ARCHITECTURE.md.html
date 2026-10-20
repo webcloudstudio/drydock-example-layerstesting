@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/ARCHITECTURE.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/ARCHITECTURE.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/ARCHITECTURE.md">Raw file</a></div></header>
+<article class="doc"><h1>ARCHITECTURE: Cash Ledger</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Module layout, boundaries, and technology decisions for the command-line cash ledger.</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>The <code>ledger</code> executable is a command-line cash ledger for a small shop. Commands read CSV on standard output, diagnostics on standard error, and exit codes 0 to 4. Every command runs as one database transaction. All persistence goes through the shipped persistence library, and the database is selected by <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code>.</p>
+<h2>Technology Stack</h2>
+<ul><li>Python 3.11 or newer: implementation language. Governed by <code>python.md</code>.</li><li>SQLite: database engine, reached through <code>persistence.open_database</code> and the shipped SQLite engine. Governed by <code>sqlite.md</code>.</li><li>PostgreSQL: selected only by a <code>postgres://</code> or <code>postgresql://</code> DSN through the same shipped library. Not verified by any acceptance check.</li><li>CLI: the <code>ledger</code> executable at the application root. Governed by <code>cli.md</code>.</li><li>pytest: test runner behind <code>bin/test.sh</code>. Governed by <code>python.md</code>.</li><li>POSIX sh: <code>bin/test.sh</code>, the <code>ledger</code> launcher, and the supplied grader. Governed by <code>common.md</code>.</li></ul>
+<h2>Module Layout</h2>
+<ul><li><code>ledger</code>: POSIX launcher at the application root. It changes to the application root and runs <code>cli.main</code> under <code>.venv</code>.</li><li><code>pyproject.toml</code> and <code>uv.lock</code>: dependency manifest and committed lock file.</li><li><code>.venv/</code>: environment created by <code>uv venv</code>.</li><li><code>bin/</code>: POSIX launchers, including <code>bin/test.sh</code>.</li><li><code>config.py</code>: database target resolution from the environment.</li><li><code>cli/</code>: <code>main(argv)</code> entry point, <code>cli_runner</code> test client, command dispatch, and CSV output.</li><li><code>commands/</code>: one module per command group (accounts, categories, transactions, transfers, loads, reports). Each command body runs inside the command transaction wrapper.</li><li><code>persistence/</code> and <code>schema.sql</code>: generated from <code>DATABASE.md</code> at the DATABASE step.</li><li><code>tests/</code>: pytest suite for the application.</li></ul>
+<h2>Boundaries</h2>
+<ul><li>Call direction is <code>cli</code> to <code>commands</code> to <code>persistence</code>. The <code>cli</code> package never opens a database.</li><li><code>commands</code> reach storage only through <code>db.&lt;table&gt;.&lt;verb&gt;(...)</code>, obtained from <code>persistence.open_database</code>.</li><li>Application code never imports <code>sqlite3</code> or any PostgreSQL driver. Only the shipped engines under <code>persistence/</code> do.</li><li><code>config.py</code> reads the environment and returns the selected target as a string. It never opens a connection.</li><li>No command reads <code>sources/run.sh</code> or any seed file except through <code>ledger load</code>.</li></ul>
+<h2>Module Ownership</h2>
+<div class="scroll"><table><thead><tr><th>Boundary</th><th>Owner</th><th>Low-level APIs it may access</th></tr></thead><tbody><tr><td>Persistence</td><td><code>persistence/</code> (generated and shipped)</td><td>Driver APIs inside <code>persistence/sqlite.py</code> and <code>persistence/postgres.py</code> only</td></tr><tr><td>Configuration</td><td><code>config.py</code></td><td><code>os.environ</code> for <code>DATABASE_URL</code>, <code>DATABASE_PATH</code></td></tr><tr><td>File store</td><td>None</td><td>None. Seed files are read only by <code>ledger load</code>, through <code>commands/</code></td></tr><tr><td>External service</td><td>None</td><td>None</td></tr></tbody></table></div>
+<h2>Transaction and Balance Boundary</h2>
+<ul><li>The <code>commands</code> layer opens one transaction per command and commits it only after every change succeeds.</li><li>Before commit, the balance rule is checked for every affected account. A negative balance rolls the command back and exits 3.</li><li>Concurrency relies on the database&#x27;s own transaction isolation. No application-level locking is added.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC architecture-python-manifest ===<br>Intent: pyproject.toml declares a project requiring Python 3.11 or newer.</p>
+<p>import tomllib from pathlib import Path</p>
+<p>data = tomllib.loads(Path(&quot;pyproject.toml&quot;).read_text(encoding=&quot;utf-8&quot;)) requires = data[&quot;project&quot;][&quot;requires-python&quot;] assert isinstance(requires, str) assert &quot;3.11&quot; in requires === END AC architecture-python-manifest ===</p>
+<p>=== AC architecture-dependency-manifest ===<br>Intent: pyproject.toml declares psycopg for the PostgreSQL engine and pytest for the test runner.</p>
+<p>import tomllib from pathlib import Path</p>
+<p>data = tomllib.loads(Path(&quot;pyproject.toml&quot;).read_text(encoding=&quot;utf-8&quot;)) dependencies = list(data[&quot;project&quot;][&quot;dependencies&quot;]) dev_group = list(data.get(&quot;dependency-groups&quot;, {}).get(&quot;dev&quot;, [])) assert any(item.startswith(&quot;psycopg&quot;) for item in dependencies) assert any(item.startswith(&quot;pytest&quot;) for item in dependencies + dev_group) === END AC architecture-dependency-manifest ===</p>
+<p>=== AC architecture-lock-and-venv ===<br>Intent: uv.lock is committed at the application root and .venv exists as the environment directory.</p>
+<p>from pathlib import Path</p>
+<p>assert Path(&quot;uv.lock&quot;).is_file() assert Path(&quot;.venv&quot;).is_dir() === END AC architecture-lock-and-venv ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Application code never opens a database driver outside the shipped persistence library.</li><li>Money is stored and computed as integer cents at every layer.</li><li>No command writes outside the application root and its temporary test database.</li><li>No report row, count, or total is embedded in code.</li></ul></article>
+</main>
+</body>
+</html>

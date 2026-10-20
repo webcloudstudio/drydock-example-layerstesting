@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/config.py</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/config.py</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../build/LayersTesting/config.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Database target resolution. Reads the environment only; never opens a connection.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import os
+
+DEFAULT_DATABASE_PATH = &quot;data/app.db&quot;
+
+
+def resolve_database_target() -&gt; str:
+    &quot;&quot;&quot;Return ``DATABASE_URL``, then ``DATABASE_PATH``, then ``data/app.db``, unchanged.&quot;&quot;&quot;
+    for name in (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;):
+        value = os.environ.get(name)
+        if value:
+            return value
+    return DEFAULT_DATABASE_PATH
+</pre></article>
+</main>
+</body>
+</html>

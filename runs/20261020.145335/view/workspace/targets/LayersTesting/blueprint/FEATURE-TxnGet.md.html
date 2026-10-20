@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-TxnGet.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-TxnGet.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-TxnGet.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Get Transaction</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Read one stored transaction by its id and write it as a CSV row.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-CliDispatch.md, FEATURE-CliOutput.md, FEATURE-TxnPost.md</td></tr><tr><td>Provides</td><td>ledger txn get</td></tr><tr><td>Consumes</td><td>db.transactions.get</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Lets the operator inspect a single posted or loaded transaction.</p>
+<h2>Command</h2>
+<p><code>ledger txn get &lt;id&gt;</code></p>
+<h2>Behavior</h2>
+<ul><li>Read the transaction with the given id from the database.</li><li>On success, write the header and the transaction row as CSV, per FEATURE-CliOutput.</li><li>An id that is not present exits 4 and writes nothing to standard output.</li><li>The command never changes stored data.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-LEDGER-010</code> — read: get a transaction by id - supplies: <code>txn_id</code> - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC txn-get-round-trip ===<br>Intent: The stored transaction is written as a CSV header and row carrying its stored fields.</p>
+<h1>Exercises ledger txn get against a seeded transaction.</h1>
+<p>import csv import io import os import tempfile</p>
+<p>from cli.testing import cli_runner from persistence.schema import AccountRow, CategoryRow, TransactionRow from persistence.testing import db_session</p>
+<p>txn_id = 1 date = &quot;2026-04-01&quot; account = &quot;DRAWER1&quot; category = &quot;SALES&quot; amount_in = &quot;45.50&quot; stored_amount = 4550 memo = &quot;walk in sale&quot;</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn with db_session(dsn) as db: db.accounts.create(AccountRow(account=account, name=&quot;Front Drawer&quot;)) db.categories.create(CategoryRow(category=category, description=&quot;Sales receipts&quot;)) db.transactions.create( TransactionRow(txn_id=txn_id, date=date, account=account, category=category, amount=stored_amount, memo=memo) )</p>
+<p>code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, str(txn_id)) print(out) print(err) assert code == 0</p>
+<p>rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;] assert rows[1] == [str(txn_id), date, account, category, amount_in, memo] === END AC txn-get-round-trip ===</p>
+<p>=== AC txn-get-absent-id ===<br>Intent: An id that is not present exits 4.</p>
+<h1>Exercises ledger txn get against an empty transactions table.</h1>
+<p>import os import tempfile</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>absent_id = &quot;999&quot; not_found_exit = 4</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn with db_session(dsn): pass</p>
+<p>code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, absent_id) print(out) print(err) assert code == not_found_exit === END AC txn-get-absent-id ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Do not read the transaction from a cached or in-memory copy; every read goes to the database.</li><li>Do not write to the database from this command.</li><li>Do not use floating point when formatting the amount.</li></ul></article>
+</main>
+</body>
+</html>

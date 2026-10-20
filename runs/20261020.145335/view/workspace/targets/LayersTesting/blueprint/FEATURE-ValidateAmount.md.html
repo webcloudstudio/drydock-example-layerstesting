@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-ValidateAmount.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-ValidateAmount.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-ValidateAmount.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Amount Validation</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Parse input amounts to integer cents and format stored cents as two-decimal text.</td></tr><tr><td>Depends On</td><td>FEATURE-CliEntry.md, ARCHITECTURE.md</td></tr><tr><td>Provides</td><td>parse_amount, format_amount</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Rule 5 of the cash ledger. Amounts are stored as integer cents. Input text matching <code>-?DIGITS[.D[D]]</code> is parsed without floating point; output always has exactly two decimals.</p>
+<h2>Interface</h2>
+<ul><li><code>cli.amount.parse_amount(text: str) -&gt; int</code> returns the signed integer number of cents. It accepts</li></ul>
+<p>text matching <code>-?DIGITS[.D[D]]</code> with at most two decimal places and a non-zero value; otherwise it raises <code>ValueError</code>.</p>
+<ul><li><code>cli.amount.format_amount(cents: int) -&gt; str</code> returns the amount with exactly two decimal places,</li></ul>
+<p>a leading <code>-</code> when negative, and no thousands separator.</p>
+<h2>Behavior</h2>
+<ul><li>Parsing uses integer arithmetic only.</li><li>A single decimal place is padded to two places in the stored value, not in the input.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC valid-amount-parse-cents ===<br>Intent: parse_amount converts accepted input text to the expected integer cents.</p>
+<p>from cli.amount import parse_amount</p>
+<p>cases = [(&quot;12.5&quot;, 1250), (&quot;-0.05&quot;, -5), (&quot;7&quot;, 700), (&quot;0.1&quot;, 10), (&quot;-3&quot;, -300), (&quot;1.10&quot;, 110)] parsed = [parse_amount(text) for text, _ in cases] assert parsed == [cents for _, cents in cases] === END AC valid-amount-parse-cents ===</p>
+<p>=== AC valid-amount-round-trip ===<br>Intent: format_amount of parse_amount returns each canonical two-decimal input unchanged.</p>
+<p>from cli.amount import format_amount, parse_amount</p>
+<p>samples = [&quot;12.50&quot;, &quot;-0.05&quot;, &quot;0.10&quot;, &quot;5000.00&quot;, &quot;-12.50&quot;] assert [format_amount(parse_amount(text)) for text in samples] == samples === END AC valid-amount-round-trip ===</p>
+<p>=== AC valid-amount-rejects ===<br>Intent: parse_amount raises ValueError for zero, excess decimals, malformed, signed-plus, and empty input.</p>
+<p>from cli.amount import parse_amount</p>
+<p>samples = [&quot;0&quot;, &quot;0.00&quot;, &quot;-0&quot;, &quot;1.234&quot;, &quot;1.&quot;, &quot;.5&quot;, &quot;1,00&quot;, &quot;+5&quot;, &quot;abc&quot;, &quot;&quot;] rejected = [] for text in samples: try: parse_amount(text) except ValueError: rejected.append(text) assert rejected == samples === END AC valid-amount-rejects ===</p>
+<p>=== AC valid-amount-integer-type ===<br>Intent: parse_amount returns a Python int, never a float.</p>
+<p>from cli.amount import parse_amount</p>
+<p>assert type(parse_amount(&quot;1.10&quot;)) is int assert type(parse_amount(&quot;-7&quot;)) is int === END AC valid-amount-integer-type ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>No floating-point value is used for money at any layer.</li><li>Zero amounts are rejected on input.</li><li>Output never contains a thousands separator.</li></ul></article>
+</main>
+</body>
+</html>

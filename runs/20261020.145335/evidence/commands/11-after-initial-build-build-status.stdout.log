@@ -1,0 +1,79 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Next: drydock build LayersTesting
+
+Blueprint: LayersTesting
+Target: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/workspace/targets/LayersTesting
+Rows: <state> <type>  <Name>  [<id>]   — pass [<id>] to --step
+Block: Build Block 1 · Foundational  [block-1]   — [built] story Stand up the Python project root, environment, dependency manifest, and POSIX launchers.  [foundation] — complete
+
+Block: Build Block 2 · Foundational  [block-2]   — 2/2 stories complete
+  [built]   story  Declare the three-table schema in DATABASE.md and generate the persistence package.  [PERSIST-002]
+  [built]   story  Provide the ledger executable at the application root.  [CLI-003]
+
+Block: Build Block 3 · Service  [block-3]   — 2/2 stories complete
+  [built]   story  Resolve the database target from DATABASE_URL, DATABASE_PATH, or data/app.db.  [PERSIST-001]
+  [built]   story  Validate calendar dates in YYYY-MM-DD form.  [VALID-003]
+Block: Build Block 4 · Service  [block-4]   — [built] story Dispatch commands and reject usage errors with exit 2.  [CLI-001] — complete
+Block: Build Block 5 · Service  [block-5]   — [built] story Write CSV success output and failure diagnostics.  [CLI-002] — complete
+Block: Build Block 6 · Service  [block-6]   — [built] story Validate codes, names, descriptions, and memos.  [VALID-001] — complete
+Block: Build Block 7 · Service  [block-7]   — [built] story Validate and format amounts as integer cents.  [VALID-002] — complete
+Block: Build Block 8 · Service  [block-8]   — [built] story Run each command as one database transaction.  [INTEG-001] — complete
+
+Block: Build Block 9 · Service  [block-9]   — 0/1 stories complete
+  [FAILED]  story  Reject any command that would leave an account balance below zero.  [INTEG-002]  <- resume (repairs in place)
+
+Block: Build Block 10 · Service  [block-10]   — 0/1 stories complete
+  [pending] story  Initialize an empty schema with ledger init.  [PERSIST-003]
+
+Block: Build Block 11 · Service  [block-11]   — 0/1 stories complete
+  [pending] story  Count table rows with ledger count.  [PERSIST-004]
+
+Block: Build Block 12 · Service  [block-12]   — 0/1 stories complete
+  [pending] story  Load accounts from a CSV file.  [LOAD-001]
+
+Block: Build Block 13 · Service  [block-13]   — 0/1 stories complete
+  [pending] story  Load categories from a CSV file.  [LOAD-002]
+
+Block: Build Block 14 · Service  [block-14]   — 0/1 stories complete
+  [pending] story  Load transactions from a CSV file, keeping each txn_id.  [LOAD-003]
+
+Block: Build Block 15 · Service  [block-15]   — 0/1 stories complete
+  [pending] story  Add an account.  [ACCT-001]
+
+Block: Build Block 16 · Service  [block-16]   — 0/1 stories complete
+  [pending] story  Get an account with its transaction count and balance.  [ACCT-002]
+
+Block: Build Block 17 · Service  [block-17]   — 0/1 stories complete
+  [pending] story  Rename an account.  [ACCT-003]
+
+Block: Build Block 18 · Service  [block-18]   — 0/1 stories complete
+  [pending] story  Delete an account that has no transactions.  [ACCT-004]
+
+Block: Build Block 19 · Service  [block-19]   — 0/1 stories complete
+  [pending] story  Post a transaction.  [TXN-001]
+
+Block: Build Block 20 · Service  [block-20]   — 0/2 stories complete
+  [pending] story  Get a transaction by id.  [TXN-002]
+  [pending] story  Delete a transaction.  [TXN-004]
+
+Block: Build Block 21 · Service  [block-21]   — 0/2 stories complete
+  [pending] story  Amend a transaction amount.  [TXN-003]
+  [pending] story  Transfer between two accounts as two linked rows.  [XFER-001]
+
+Block: Build Block 22 · Service  [block-22]   — 0/2 stories complete
+  [pending] story  Report account balances.  [RPT-001]
+  [pending] story  Report category totals.  [RPT-002]
+
+Block: Build Block 23 · Service  [block-23]   — 0/1 stories complete
+  [pending] story  Report monthly totals.  [RPT-003]
+
+Block: Build Block 24 · Service  [block-24]   — 0/1 stories complete
+  [pending] story  Provide bin/test.sh, the POSIX runner for the application's pytest suite.  [VERIFY-001]
+
+Block: Build Block 25 · Feature  [block-25]   — 0/1 stories complete
+  [pending] story  Pass the complete supplied grader, sh sources/run.sh.  [VERIFY-002]
+
+Steps: 30 total — 0 done, 10 built (await verify), 0 in review, 19 pending, 0 blocked by questions, 1 failed (0% complete)
+Buildable now: block-9
+Failed (resume with drydock build, or --step <id>; --reset discards work instead): INTEG-002
+Target - committed project workspace git store

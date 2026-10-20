@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-7.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-7.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-7.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 7 · Service (block-7)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 4038</li><li>execution id: 20261020.152133.944Z-8c6cd0c6</li></ul>
+<h2>Stories built</h2>
+<ul><li>Validate and format amounts as integer cents. (VALID-002) [story]</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 921)</li><li>compass: COMPASS.md (SP 1145)</li><li>implements: FEATURE-ValidateAmount.md (SP 1031)</li><li>context: ARCHITECTURE_compact.md (SP 427)</li><li>context: DATABASE_compact.md (SP 427)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>cli/amount.py</li><li>tests/test_amount.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>RED: valid-amount-parse-cents (FEATURE-ValidateAmount.md)</li></ul>
+<p>intent: parse_amount converts accepted input text to the expected integer cents. return code: 1 stderr: Traceback (most recent call last): File &quot;valid-amount-parse-cents.py&quot;, line 1, in &lt;module&gt; from cli.amount import parse_amount<br>ModuleNotFoundError: No module named &#x27;cli.amount&#x27;</p>
+<ul><li>RED: valid-amount-round-trip (FEATURE-ValidateAmount.md)</li></ul>
+<p>intent: format_amount of parse_amount returns each canonical two-decimal input unchanged. return code: 1 stderr: Traceback (most recent call last): File &quot;valid-amount-round-trip.py&quot;, line 1, in &lt;module&gt; from cli.amount import format_amount, parse_amount<br>ModuleNotFoundError: No module named &#x27;cli.amount&#x27;</p>
+<ul><li>RED: valid-amount-rejects (FEATURE-ValidateAmount.md)</li></ul>
+<p>intent: parse_amount raises ValueError for zero, excess decimals, malformed, signed-plus, and empty input. return code: 1 stderr: Traceback (most recent call last): File &quot;valid-amount-rejects.py&quot;, line 1, in &lt;module&gt; from cli.amount import parse_amount<br>ModuleNotFoundError: No module named &#x27;cli.amount&#x27;</p>
+<ul><li>RED: valid-amount-integer-type (FEATURE-ValidateAmount.md)</li></ul>
+<p>intent: parse_amount returns a Python int, never a float. return code: 1 stderr: Traceback (most recent call last): File &quot;valid-amount-integer-type.py&quot;, line 1, in &lt;module&gt; from cli.amount import parse_amount<br>ModuleNotFoundError: No module named &#x27;cli.amount&#x27;</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: valid-amount-parse-cents (FEATURE-ValidateAmount.md)</li></ul>
+<p>intent: parse_amount converts accepted input text to the expected integer cents. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: valid-amount-round-trip (FEATURE-ValidateAmount.md)</li></ul>
+<p>intent: format_amount of parse_amount returns each canonical two-decimal input unchanged. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: valid-amount-rejects (FEATURE-ValidateAmount.md)</li></ul>
+<p>intent: parse_amount raises ValueError for zero, excess decimals, malformed, signed-plus, and empty input. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: valid-amount-integer-type (FEATURE-ValidateAmount.md)</li></ul>
+<p>intent: parse_amount returns a Python int, never a float. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Build summary</h2>
+<p>I&#x27;ll start by inspecting the build directory and the existing application files.Existing <code>cli/</code> already has <code>dates.py</code> and <code>text_validation.py</code>, but no <code>amount.py</code>. I&#x27;ll read the CLI code, the tests, and the amount-related checks in <code>run.sh</code>.The spec is clear: a new <code>cli/amount.py</code> with <code>parse_amount</code> and <code>format_amount</code>, plus tests. The existing <code>cli/</code> modules set the style: module docstring, <code>from __future__ import annotations</code>, and pure checks that raise <code>ValueError</code>. I&#x27;ll get a baseline test run before I change anything.Baseline is green at 147 passing. Now I&#x27;ll write the amount module as specified.Both files are written. Next I&#x27;ll run the full suite and then the spec&#x27;s four programmatic acceptance assertions verbatim, since those are the Definition of Done.Amounts now parse to integer cents and format with two decimals. The full suite passes (200 tests, up from 147), and the four acceptance assertions in the spec pass when run verbatim.</p>
+<p>I added two files and changed nothing else:</p>
+<ul><li><code>cli/amount.py</code> contains <code>parse_amount</code> and <code>format_amount</code>. Parsing is integer-only, uses a fullmatch on <code>-?DIGITS[.D[D]]</code> with ASCII digits, and rejects zero. Formatting always gives two decimals with a leading <code>-</code> when negative.</li><li><code>tests/test_amount.py</code> covers valid and invalid inputs, boundaries, the int-type check, and round-trips.</li></ul>
+<p>The story also says a violation exits with status 3. No command handler exists yet, so that exit path isn&#x27;t wired. It belongs to the command block that will call <code>parse_amount</code>.</p>
+<pre><code>RESULT: SUCCESS
+
+FILES CHANGED:
+- cli/amount.py
+- tests/test_amount.py
+
+SUMMARY:
+Implemented FEATURE-ValidateAmount.md (VALID-002) as cli/amount.py with parse_amount(text) -&gt; int and format_amount(cents) -&gt; str, using integer arithmetic only. Added tests/test_amount.py: parametrized parse, zero/excess-decimal/malformed rejection, int-type check, format, and round-trip cases, each asserting on return values or raised ValueError. Test runs: `sh bin/test.sh` 200 passed (baseline 147 before this step, 53 added). The four spec ACs (valid-amount-parse-cents, valid-amount-round-trip, valid-amount-rejects, valid-amount-integer-type) were executed verbatim and pass. No staged sources/ asset was run or modified; the staged suite is not invoked by this step&#x27;s criteria.
+
+BLOCKERS:
+- Exit status 3 for a rejected amount is a command-layer behavior; no command handler is built in this block, so it is not wired here and belongs to the block that adds the transaction commands.
+
+&lt;blueprint-decisions&gt;
+[{&quot;spec&quot;:&quot;FEATURE-ValidateAmount.md&quot;,&quot;severity&quot;:&quot;Low&quot;,&quot;subject&quot;:&quot;Leading zeros in the integer part&quot;,&quot;decision&quot;:&quot;The pattern -?DIGITS[.D[D]] allows any run of digits, so &#x27;007&#x27; parses to 700 and &#x27;00.5&#x27; parses to 50. I kept this rather than rejecting leading zeros, because the spec only forbids zero values and excess decimals. Say if leading zeros should be rejected instead.&quot;}]
+&lt;/blueprint-decisions&gt;</code></pre></article>
+</main>
+</body>
+</html>

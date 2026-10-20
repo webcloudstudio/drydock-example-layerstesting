@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-InitSchema.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-InitSchema.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-InitSchema.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Initialize Schema</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Provide <code>ledger init</code>, which drops and recreates the three ledger tables empty.</td></tr><tr><td>Depends On</td><td>FEATURE-DatabaseTarget.md, FEATURE-CommandTransaction.md, FEATURE-CliDispatch.md, FEATURE-CliOutput.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger init</td></tr><tr><td>Consumes</td><td>open_database, db.accounts.list, db.categories.list, db.transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger init</code> resets the store. It drops <code>accounts</code>, <code>categories</code>, and <code>transactions</code> if they exist, recreates all three from the declared schema, and leaves them empty. It writes nothing to standard output and exits <code>0</code>. It runs inside the command transaction, so a failure leaves the prior tables as they were.</p>
+<p>A missing SQLite file is created empty by the first command that opens it. If a command then finds no ledger tables, it exits <code>1</code> and writes nothing to standard output. The no-tables failure is exercised by the commands that read the tables; this feature verifies <code>init</code> itself.</p>
+<h2>Trigger</h2>
+<p><code>ledger init</code> with no further arguments. Usage errors (extra arguments) exit <code>2</code> under FEATURE-CliDispatch.md.</p>
+<h2>Sequence</h2>
+<ol><li>Resolve the database target through FEATURE-DatabaseTarget.md.</li><li>Open the store with <code>open_database</code>.</li><li>Drop each declared table if present.</li><li>Create each declared table empty, using the generated schema.</li><li>Commit. Write nothing.</li></ol>
+<h2>Routes and Interfaces</h2>
+<ul><li><code>ledger init</code>: exit <code>0</code> on success, <code>1</code> when the database is unreachable.</li></ul>
+<h2>Reads and Writes</h2>
+<ul><li>Writes: drops and recreates <code>accounts</code>, <code>categories</code>, and <code>transactions</code>.</li><li>Reads: none beyond the table existence check.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC init-leaves-tables-empty ===<br>Intent: <code>ledger init</code> exits 0, writes nothing to stdout, and leaves all three tables empty. import os import tempfile</p>
+<p>from cli.testing import cli_runner from persistence import open_database</p>
+<p>work = tempfile.mkdtemp() os.environ[&quot;DATABASE_URL&quot;] = os.path.join(work, &quot;ledger.db&quot;)</p>
+<p>expected_exit = 0 code, out, err = cli_runner(&quot;init&quot;) print(&quot;stdout:&quot;, repr(out), &quot;stderr:&quot;, repr(err)) assert code == expected_exit assert out == &quot;&quot;</p>
+<p>db = open_database(os.environ[&quot;DATABASE_URL&quot;]) assert len(db.accounts.list()) == 0 assert len(db.categories.list()) == 0 assert len(db.transactions.list()) == 0 === END AC init-leaves-tables-empty ===</p>
+<p>=== AC init-drops-existing-rows ===<br>Intent: <code>ledger init</code> removes rows that existed before it ran. import os import tempfile</p>
+<p>from cli.testing import cli_runner from persistence import open_database</p>
+<p>work = tempfile.mkdtemp() os.environ[&quot;DATABASE_URL&quot;] = os.path.join(work, &quot;ledger.db&quot;) cli_runner(&quot;init&quot;)</p>
+<p>db = open_database(os.environ[&quot;DATABASE_URL&quot;]) db.accounts.create(account=&quot;CASH1&quot;, name=&quot;Till&quot;) before = len(db.accounts.list())</p>
+<p>expected_exit = 0 code, out, err = cli_runner(&quot;init&quot;) print(&quot;stdout:&quot;, repr(out), &quot;stderr:&quot;, repr(err)) assert code == expected_exit</p>
+<p>db = open_database(os.environ[&quot;DATABASE_URL&quot;]) assert before == 1 assert len(db.accounts.list()) == 0 === END AC init-drops-existing-rows ===</p>
+<p>=== AC init-creates-missing-file ===<br>Intent: The first command against a missing SQLite file creates it. import os import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>work = tempfile.mkdtemp() path = os.path.join(work, &quot;fresh.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = path assert not os.path.exists(path)</p>
+<p>expected_exit = 0 code, out, err = cli_runner(&quot;init&quot;) print(&quot;stdout:&quot;, repr(out), &quot;stderr:&quot;, repr(err)) assert code == expected_exit assert os.path.exists(path) === END AC init-creates-missing-file ===</p>
+<p>=== AC init-rejects-extra-argument ===<br>Intent: Extra arguments to <code>init</code> are a usage error with exit 2. import os import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>work = tempfile.mkdtemp() os.environ[&quot;DATABASE_URL&quot;] = os.path.join(work, &quot;ledger.db&quot;)</p>
+<p>expected_exit = 2 code, out, err = cli_runner(&quot;init&quot;, &quot;extra&quot;) print(&quot;stdout:&quot;, repr(out), &quot;stderr:&quot;, repr(err)) assert code == expected_exit assert out == &quot;&quot; === END AC init-rejects-extra-argument ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li><code>init</code> never writes CSV or any other text to standard output.</li><li><code>init</code> never reads or stages a seed file.</li><li>Table creation comes from the declared schema; no table or column is hand-written here.</li></ul></article>
+</main>
+</body>
+</html>

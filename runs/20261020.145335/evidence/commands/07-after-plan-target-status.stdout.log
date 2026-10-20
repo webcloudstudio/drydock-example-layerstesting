@@ -1,0 +1,30 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Drydock status
+
+  Target          /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/workspace/targets/LayersTesting
+  Name            drydock Layers Testing Uat Case
+  Description     Drydock uat - LayersTesting exercises the language and persistence layers. The source is an original
+                  brief for a command-line cash ledger with three tables (accounts, categories, transactions) reached…
+  Phase           Implement
+  State           30 pending
+  Metadata        planned · approved
+  Sources         6 imported · 30 authored blueprint files
+  Analysis        Ready · 29 stories · 0 questions · 0 blockers
+  Blueprint       ⚠  0 errors · 3 warnings
+    ⚠  Acceptance snippets: FEATURE-CountRows.md [count-header-and-order]: expects 'table,rows', a value re-typed rather
+       than derived from the input or read back from the system. This criterion is reported but does not gate its
+       story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-LoadAccounts.md [load-accounts-seed-file]: expects 'table,loaded', a value re-typed
+       rather than derived from the input or read back from the system. This criterion is reported but does not
+       gate its story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-LoadCategories.md [load-categories-seed-file]: expects 'table,loaded', a value re-
+       typed rather than derived from the input or read back from the system. This criterion is reported but does
+       not gate its story; bind the value to a name and use that name on both sides to make it binding
+  Plan            30 pending
+  Frontier        foundation: Stand up the Python project root, environment, dependency manifest, and POSIX launchers.
+  Workflow        4 steps
+                  Initialize         complete at 2026-10-20T14:53:39.084+00:00
+                  Import             complete at 2026-10-20T14:53:43.757+00:00
+                  Analyze            complete at 2026-10-20T14:55:59.751+00:00
+                  Plan               complete at 2026-10-20T15:10:04.012+00:00
+  Next step       drydock build LayersTesting  (frontier: Stand up the Python project root, environment, dependency manifest, and POSIX launchers.)

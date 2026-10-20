@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/amount.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/amount.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/amount.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Amount validation. Parses input text to integer cents and formats stored cents as two-decimal text. No floating point.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import re
+
+_SHAPE = re.compile(r&quot;(-?)([0-9]+)(?:\.([0-9]{1,2}))?&quot;)
+
+
+def parse_amount(text: str) -&gt; int:
+    &quot;&quot;&quot;Return the signed integer cents for ``text``; raise ``ValueError`` unless it is ``-?DIGITS[.D[D]]`` and non-zero.&quot;&quot;&quot;
+    match = _SHAPE.fullmatch(text)
+    if match is None:
+        raise ValueError(f&quot;amount must be written -?DIGITS[.D[D]]: {text!r}&quot;)
+    sign, whole, fraction = match.groups()
+    cents = int(whole) * 100 + int((fraction or &quot;0&quot;).ljust(2, &quot;0&quot;))
+    if cents == 0:
+        raise ValueError(f&quot;amount must not be zero: {text!r}&quot;)
+    return -cents if sign else cents
+
+
+def format_amount(cents: int) -&gt; str:
+    &quot;&quot;&quot;Return ``cents`` as text with exactly two decimal places, a leading ``-`` when negative, and no separators.&quot;&quot;&quot;
+    whole, fraction = divmod(abs(cents), 100)
+    sign = &quot;-&quot; if cents &lt; 0 else &quot;&quot;
+    return f&quot;{sign}{whole}.{fraction:02d}&quot;
+</pre></article>
+</main>
+</body>
+</html>

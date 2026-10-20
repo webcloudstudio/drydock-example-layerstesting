@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_dispatch.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_dispatch.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_dispatch.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Command dispatch: help for every command, and usage errors that exit 2 with one stderr line.&quot;&quot;&quot;
+
+import pytest
+
+from cli.testing import cli_runner
+
+COMMANDS_WITH_HELP = [
+    [&quot;init&quot;],
+    [&quot;count&quot;],
+    [&quot;load&quot;],
+    [&quot;account&quot;, &quot;add&quot;],
+    [&quot;account&quot;, &quot;get&quot;],
+    [&quot;account&quot;, &quot;rename&quot;],
+    [&quot;account&quot;, &quot;delete&quot;],
+    [&quot;txn&quot;, &quot;post&quot;],
+    [&quot;txn&quot;, &quot;get&quot;],
+    [&quot;txn&quot;, &quot;amend&quot;],
+    [&quot;txn&quot;, &quot;delete&quot;],
+    [&quot;transfer&quot;],
+    [&quot;report&quot;, &quot;balances&quot;],
+    [&quot;report&quot;, &quot;categories&quot;],
+    [&quot;report&quot;, &quot;monthly&quot;],
+]
+
+USAGE_ERRORS = [
+    [&quot;frobnicate&quot;],
+    [&quot;load&quot;, &quot;nosuch&quot;, &quot;bogus.csv&quot;],
+    [&quot;load&quot;, &quot;accounts&quot;],
+    [&quot;report&quot;, &quot;nosuch&quot;],
+    [&quot;report&quot;],
+    [&quot;account&quot;],
+    [&quot;txn&quot;, &quot;get&quot;],
+    [&quot;txn&quot;, &quot;get&quot;, &quot;not-a-number&quot;],
+    [&quot;init&quot;, &quot;extra&quot;],
+]
+
+
+def _non_blank_lines(text: str) -&gt; list[str]:
+    return [line for line in text.splitlines() if line.strip()]
+
+
+def test_top_level_help_exits_zero_with_usage_on_stdout() -&gt; None:
+    code, out, err = cli_runner(&quot;--help&quot;)
+    assert code == 0
+    assert out.strip() != &quot;&quot;
+    assert err == &quot;&quot;
+
+
+@pytest.mark.parametrize(&quot;words&quot;, COMMANDS_WITH_HELP, ids=&quot; &quot;.join)
+def test_command_help_exits_zero_with_usage_on_stdout(words: list[str]) -&gt; None:
+    code, out, err = cli_runner(*words, &quot;--help&quot;)
+    assert code == 0
+    assert out.strip() != &quot;&quot;
+    assert err == &quot;&quot;
+
+
+@pytest.mark.parametrize(&quot;group&quot;, [&quot;account&quot;, &quot;txn&quot;, &quot;report&quot;])
+def test_group_help_exits_zero_with_usage_on_stdout(group: str) -&gt; None:
+    code, out, err = cli_runner(group, &quot;--help&quot;)
+    assert code == 0
+    assert out.strip() != &quot;&quot;
+    assert err == &quot;&quot;
+
+
+@pytest.mark.parametrize(&quot;argv&quot;, USAGE_ERRORS, ids=&quot; &quot;.join)
+def test_usage_error_exits_two_with_empty_stdout(argv: list[str]) -&gt; None:
+    code, out, _ = cli_runner(*argv)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+@pytest.mark.parametrize(&quot;argv&quot;, USAGE_ERRORS, ids=&quot; &quot;.join)
+def test_usage_error_writes_exactly_one_stderr_line(argv: list[str]) -&gt; None:
+    _, _, err = cli_runner(*argv)
+    assert len(_non_blank_lines(err)) == 1
+
+
+def test_no_arguments_exits_two_with_one_usage_line() -&gt; None:
+    code, out, err = cli_runner()
+    assert code == 2
+    assert out == &quot;&quot;
+    assert len(_non_blank_lines(err)) == 1
+
+
+def test_txn_get_accepts_one_numeric_transaction_number() -&gt; None:
+    # Parsing succeeds and reaches dispatch; no handler is built yet, so the command is not run.
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;7&quot;)
+    assert code != 2
+    assert out == &quot;&quot;
+
+
+def test_recognized_command_without_handler_exits_one_not_two() -&gt; None:
+    code, out, _ = cli_runner(&quot;count&quot;)
+    assert code == 1
+    assert out == &quot;&quot;
+</pre></article>
+</main>
+</body>
+</html>

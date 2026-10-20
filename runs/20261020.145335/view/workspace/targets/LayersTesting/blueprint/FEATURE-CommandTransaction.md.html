@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-CommandTransaction.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-CommandTransaction.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-CommandTransaction.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Command Transaction</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Run each command as one database transaction that commits on success and rolls back on any failure.</td></tr><tr><td>Depends On</td><td>FEATURE-CliEntry.md, DATABASE.md, ARCHITECTURE.md</td></tr><tr><td>Provides</td><td>run_command</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Rule 1 of the cash ledger: every command either completes in full or changes nothing. This feature provides the one wrapper that every mutating command and every load runs inside.</p>
+<h2>Interface</h2>
+<ul><li><code>cli.transactional.run_command(db, command)</code> calls <code>command(store)</code> inside one database</li></ul>
+<p>transaction, where <code>store</code> is the <code>db</code> handle. When <code>command</code> returns normally, the transaction commits and the return value of <code>command</code> is returned. When <code>command</code> raises, the transaction rolls back and the exception is re-raised unchanged.</p>
+<ul><li>Callers inside <code>command</code> use the declared operations, for example</li></ul>
+<p><code>store.accounts.create(account=..., name=...)</code>, with keyword arguments named by the Input DTO fields in <code>DATABASE.md</code>.</p>
+<h2>Behavior</h2>
+<ul><li>The wrapper adds no locking. Concurrent processes rely on the database&#x27;s own transaction</li></ul>
+<p>isolation.</p>
+<ul><li>Rollback covers every table written inside the command, not only the last one.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC integ-txn-commit-on-success ===<br>Intent: run_command commits the writes of a command that returns normally.</p>
+<p>from persistence.testing import db_session from cli.transactional import run_command</p>
+<p>code = &quot;CASH1&quot; name = &quot;Float&quot; with db_session() as db: def succeeding(store): store.accounts.create(account=code, name=name) return None</p>
+<p>run_command(db, succeeding) rows = db.accounts.list() assert len(rows) == 1 assert rows[0].account == code assert rows[0].name == name === END AC integ-txn-commit-on-success ===</p>
+<p>=== AC integ-txn-rollback-single-table ===<br>Intent: run_command rolls back a write made before the command raises, leaving the table empty.</p>
+<p>from persistence.testing import db_session from cli.transactional import run_command</p>
+<p>code = &quot;CASH1&quot; name = &quot;Float&quot; with db_session() as db: def failing(store): store.accounts.create(account=code, name=name) raise ValueError(&quot;rejected after write&quot;)</p>
+<p>raised = False try: run_command(db, failing) except ValueError: raised = True assert raised assert len(db.accounts.list()) == 0 === END AC integ-txn-rollback-single-table ===</p>
+<p>=== AC integ-txn-rollback-multi-table ===<br>Intent: run_command rolls back writes to two tables when the command raises after both writes.</p>
+<p>from persistence.testing import db_session from cli.transactional import run_command</p>
+<p>code = &quot;CASH1&quot; name = &quot;Float&quot; category = &quot;OPENING&quot; description = &quot;Opening balance&quot; with db_session() as db: def failing(store): store.accounts.create(account=code, name=name) store.categories.create(category=category, description=description) raise ValueError(&quot;rejected after two writes&quot;)</p>
+<p>raised = False try: run_command(db, failing) except ValueError: raised = True assert raised assert len(db.accounts.list()) == 0 assert len(db.categories.list()) == 0 === END AC integ-txn-rollback-multi-table ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A command that fails leaves every table exactly as it was before the command started.</li><li>No application-level lock is added around the transaction.</li><li>Database drivers are never opened here; access goes through the persistence handle only.</li></ul></article>
+</main>
+</body>
+</html>

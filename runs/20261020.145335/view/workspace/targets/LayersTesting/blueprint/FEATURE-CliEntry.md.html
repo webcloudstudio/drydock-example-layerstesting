@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-CliEntry.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-CliEntry.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-CliEntry.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: CLI Entry</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Provides the ledger executable at the application root and the cli.main entry point with its test client.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md</td></tr><tr><td>Provides</td><td>ledger, cli.main, cli.testing.cli_runner</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger</code> is the only command-line entry point. It is a POSIX launcher at the application root. It changes into the application root and runs <code>cli.main(argv)</code> under the <code>.venv</code> interpreter, then exits with the returned status. <code>cli.main</code> takes an argument list and returns an integer status. <code>cli.testing.cli_runner(*args)</code> calls <code>main</code> in-process and returns <code>(exit_code, stdout, stderr)</code>.</p>
+<h2>Launcher Contract</h2>
+<pre><code>#!/bin/sh
+HERE=$(cd &quot;$(dirname &quot;$0&quot;)&quot; &amp;&amp; pwd)
+cd &quot;$HERE&quot; &amp;&amp; exec &quot;$HERE/.venv/bin/python&quot; -c &#x27;import sys; from cli import main; sys.exit(main(sys.argv[1:]))&#x27; &quot;$@&quot;</code></pre>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC cli-entry-executable ===<br>Intent: The ledger executable is a file at the application root with its execute bit set.</p>
+<p>import os from pathlib import Path</p>
+<p>ledger_path = Path(&quot;ledger&quot;) assert ledger_path.is_file() assert os.access(ledger_path, os.X_OK) === END AC cli-entry-executable ===</p>
+<p>=== AC cli-entry-main-contract ===<br>Intent: cli_runner returns an integer status and two strings, and the ledger executable exits with the same status for the same argv.</p>
+<p>import subprocess from pathlib import Path from cli.testing import cli_runner</p>
+<p>args = [&quot;no-such-command&quot;] code, out, err = cli_runner(*args) assert isinstance(code, int) assert isinstance(out, str) assert isinstance(err, str) proc = subprocess.run([str(Path(&quot;ledger&quot;).resolve()), *args], capture_output=True, text=True) print(proc.stdout) print(proc.stderr) assert proc.returncode == code === END AC cli-entry-main-contract ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The <code>ledger</code> launcher never invokes a system Python for command execution; it always uses <code>.venv</code>.</li><li>The cli package never opens a database connection.</li><li>The launcher writes nothing to standard output of its own.</li></ul></article>
+</main>
+</body>
+</html>

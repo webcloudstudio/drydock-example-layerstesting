@@ -1,0 +1,104 @@
+<requirement name="init-empty-schema" stories="PERSIST-002,PERSIST-003">
+Every run starts with `ledger init`, so the grader never depends on prior state.
+check A1 0 init < /dev/null
+</requirement>
+<requirement name="reinit-drops-rows" stories="PERSIST-003,PERSIST-004">
+Re-initialization drops every row
+check Z1 0 init < /dev/null
+</requirement>
+<requirement name="count-rows" stories="PERSIST-004">
+check A2 0 count <<'EOF'
+</requirement>
+<requirement name="load-accounts" stories="LOAD-001">
+check B1 0 load accounts "$SEED/seed_accounts.csv" <<'EOF'
+</requirement>
+<requirement name="load-categories" stories="LOAD-002">
+check B2 0 load categories "$SEED/seed_categories.csv" <<'EOF'
+</requirement>
+<requirement name="load-transactions" stories="LOAD-003">
+check B3 0 load transactions "$SEED/seed_transactions.csv" <<'EOF'
+</requirement>
+<requirement name="rejected-load-changes-nothing" stories="LOAD-001,LOAD-002,LOAD-003,INTEG-001">
+A rejected load changes nothing
+check D1 3 load transactions "$SEED/seed_transactions_bad.csv" < /dev/null
+</requirement>
+<requirement name="ledger-executable-at-root" stories="CLI-003">
+The deliverable is an executable named ledger at the application root.
+</requirement>
+<requirement name="database-target" stories="PERSIST-001">
+Database: DATABASE_URL when the caller sets it (for example a PostgreSQL DSN), otherwise a SQLite file in a fresh temporary directory.
+</requirement>
+<requirement name="csv-success-output" stories="CLI-002">
+account,name,transactions,balance
+</requirement>
+<requirement name="usage-errors-exit-2" stories="CLI-001">
+U. Usage errors
+check U1 2 frobnicate < /dev/null
+</requirement>
+<requirement name="not-found-exit-4" stories="ACCT-002,TXN-002">
+check E5 4 account get NOSUCH < /dev/null
+check F4 4 txn get 999 < /dev/null
+</requirement>
+<requirement name="account-add" stories="ACCT-001">
+check E1 0 account add CASH9 "Event Float"
+</requirement>
+<requirement name="reject-duplicate-account" stories="ACCT-001">
+check E2 3 account add CASH9 "Event Float" < /dev/null
+</requirement>
+<requirement name="account-get" stories="ACCT-002">
+check E3 0 account get CASH9
+</requirement>
+<requirement name="account-rename" stories="ACCT-003">
+check E4 0 account rename CASH9 "Event Cash Box"
+</requirement>
+<requirement name="account-delete" stories="ACCT-004">
+check E7 0 account delete CASH9
+</requirement>
+<requirement name="reject-delete-account-with-transactions" stories="ACCT-004">
+check E6 3 account delete DRAWER1 < /dev/null
+</requirement>
+<requirement name="txn-post" stories="TXN-001">
+check F1 0 txn post DRAWER1 SALES 45.50 2026-04-01 "walk in sale"
+</requirement>
+<requirement name="txn-get" stories="TXN-002">
+check F2 0 txn get 121
+</requirement>
+<requirement name="txn-amend" stories="TXN-003">
+check F3 0 txn amend 121 54.50
+</requirement>
+<requirement name="txn-delete" stories="TXN-004">
+check F8 0 txn delete 121
+</requirement>
+<requirement name="reject-unknown-account-on-post" stories="VALID-001,TXN-001">
+check F5 3 txn post DRAWER1 NOSUCH 1.00 2026-04-01 < /dev/null
+</requirement>
+<requirement name="reject-invalid-amount" stories="VALID-002">
+check F6 3 txn post DRAWER1 SALES 1.234 2026-04-01 < /dev/null
+</requirement>
+<requirement name="reject-invalid-date" stories="VALID-003">
+check F7 3 txn post DRAWER1 SALES 1.00 2026-02-30 < /dev/null
+</requirement>
+<requirement name="transfer-two-linked-rows" stories="XFER-001">
+check G1 0 transfer DRAWER1 SAFE 500.00 2026-04-03 <<'EOF'
+</requirement>
+<requirement name="transfers-are-atomic" stories="XFER-001,INTEG-001">
+Transfers are atomic
+</requirement>
+<requirement name="no-negative-balance" stories="INTEG-002,TXN-001,TXN-003,TXN-004,XFER-001">
+no command leaves a negative balance
+check G3 3 txn post PETTY SUPPLY -1000.00 2026-04-04 < /dev/null
+</requirement>
+<requirement name="report-balances" stories="RPT-001">
+check C1 0 report balances <<'EOF'
+</requirement>
+<requirement name="report-categories" stories="RPT-002">
+check C2 0 report categories <<'EOF'
+</requirement>
+<requirement name="report-monthly" stories="RPT-003">
+check C3 0 report monthly <<'EOF'
+</requirement>
+<requirement name="grader-passes-on-all-checks" stories="VERIFY-002">
+Exit 0 only when every check passes.
+</requirement>
+<unattached story="foundation"/>
+<unattached story="VERIFY-001"/>

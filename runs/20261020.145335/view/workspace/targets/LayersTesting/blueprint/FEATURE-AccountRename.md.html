@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-AccountRename.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-AccountRename.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-AccountRename.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Account Rename</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Rename an account without changing its code, transactions, or balance.</td></tr><tr><td>Depends On</td><td>DATABASE.md, FEATURE-CommandTransaction.md, FEATURE-ValidateText.md, FEATURE-AccountGet.md, FEATURE-CliDispatch.md, FEATURE-CliOutput.md</td></tr><tr><td>Provides</td><td>ledger account rename</td></tr><tr><td>Consumes</td><td>accounts.get, accounts.update</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Changes only the name of an existing account and writes the updated account row.</p>
+<h2>Command</h2>
+<p><code>ledger account rename &lt;code&gt; &lt;name&gt;</code></p>
+<h2>Contract</h2>
+<ul><li>The code must exist. An absent code exits 4 and changes nothing.</li><li>The new name is validated by FEATURE-ValidateText as 1 to 40 characters with no comma or newline.</li></ul>
+<p>An invalid name exits 3 and changes nothing.</p>
+<ul><li>On success, standard output is the header <code>account,name,transactions,balance</code> followed by the</li></ul>
+<p>updated row, with the transaction count and balance computed as in FEATURE-AccountGet.</p>
+<ul><li>The command runs as one transaction through FEATURE-CommandTransaction.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-LEDGER-002</code> — read: confirm the account exists - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-LEDGER-004</code> — write: store the new name - supplies: <code>account</code>, <code>name</code> - returns: <code>account</code>, <code>name</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC acct-rename-round-trip ===<br>Intent: Renaming an empty account writes the updated row and the stored name reads back as the new name.</p>
+<p>import csv import io import os import tempfile</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn assert cli_runner(&quot;init&quot;)[0] == 0</p>
+<p>code, old_name, new_name = &quot;CASH9&quot;, &quot;Event Float&quot;, &quot;Event Cash Box&quot; assert cli_runner(&quot;account&quot;, &quot;add&quot;, code, old_name)[0] == 0</p>
+<p>exit_code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, new_name) print(out) print(err) assert exit_code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;] assert rows[1] == [code, new_name, &quot;0&quot;, &quot;0.00&quot;]</p>
+<p>with db_session(dsn) as db: stored = db.accounts.get(account=code) assert stored.name == new_name === END AC acct-rename-round-trip ===</p>
+<p>=== AC acct-rename-keeps-transactions ===<br>Intent: Renaming an account with a stored transaction leaves its transaction count and balance unchanged.</p>
+<p>import csv import io import os import tempfile</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn assert cli_runner(&quot;init&quot;)[0] == 0</p>
+<p>code, old_name, new_name = &quot;DRAWER1&quot;, &quot;Front Drawer&quot;, &quot;Till One&quot; assert cli_runner(&quot;account&quot;, &quot;add&quot;, code, old_name)[0] == 0 with db_session(dsn) as db: db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales receipts&quot;) db.transactions.create(txn_id=1, date=&quot;2026-01-02&quot;, account=code, category=&quot;SALES&quot;, amount=50000, memo=&quot;&quot;)</p>
+<p>exit_code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, new_name) print(err) assert exit_code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[1] == [code, new_name, &quot;1&quot;, &quot;500.00&quot;] === END AC acct-rename-keeps-transactions ===</p>
+<p>=== AC acct-rename-absent ===<br>Intent: Renaming an absent account exits 4, prints nothing, and creates no account.</p>
+<p>import os import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn assert cli_runner(&quot;init&quot;)[0] == 0</p>
+<p>exit_code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, &quot;NOSUCH&quot;, &quot;Anything&quot;) print(err) assert exit_code == 4 assert out == &quot;&quot; assert cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;NOSUCH&quot;)[0] == 4 === END AC acct-rename-absent ===</p>
+<p>=== AC acct-rename-invalid-name ===<br>Intent: An empty name and a name containing a comma are rejected with exit 3, and the original name is kept.</p>
+<p>import os import tempfile</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn assert cli_runner(&quot;init&quot;)[0] == 0</p>
+<p>code, name = &quot;CASH9&quot;, &quot;Event Float&quot; assert cli_runner(&quot;account&quot;, &quot;add&quot;, code, name)[0] == 0</p>
+<p>exit_code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, &quot;&quot;) print(err) assert exit_code == 3 assert out == &quot;&quot;</p>
+<p>exit_code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, &quot;Float, Event&quot;) print(err) assert exit_code == 3 assert out == &quot;&quot;</p>
+<p>with db_session(dsn) as db: stored = db.accounts.get(account=code) assert stored.name == name === END AC acct-rename-invalid-name ===</p>
+<p>=== AC acct-rename-name-bounds ===<br>Intent: A 40-character name is accepted and a 41-character name is rejected with exit 3.</p>
+<p>import os import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn assert cli_runner(&quot;init&quot;)[0] == 0</p>
+<p>code = &quot;CASH9&quot; assert cli_runner(&quot;account&quot;, &quot;add&quot;, code, &quot;Event Float&quot;)[0] == 0</p>
+<p>exit_code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, &quot;N&quot; * 40) print(err) assert exit_code == 0</p>
+<p>exit_code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, &quot;N&quot; * 41) print(err) assert exit_code == 3 assert out == &quot;&quot; === END AC acct-rename-name-bounds ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A rename never changes the account code, any transaction, or any balance.</li><li>A rejected rename leaves the stored name exactly as it was.</li></ul></article>
+</main>
+</body>
+</html>

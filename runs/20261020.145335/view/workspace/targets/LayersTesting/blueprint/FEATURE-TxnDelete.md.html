@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-TxnDelete.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-TxnDelete.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-TxnDelete.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Delete Transaction</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Remove one stored transaction by id, refusing any removal that leaves a balance negative.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-CliDispatch.md, FEATURE-CliOutput.md, FEATURE-CommandTransaction.md, FEATURE-NonNegativeBalance.md, FEATURE-TxnGet.md</td></tr><tr><td>Provides</td><td>ledger txn delete</td></tr><tr><td>Consumes</td><td>db.transactions.get, db.transactions.delete, db.transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Removes a transaction recorded in error, while keeping every account balance non-negative.</p>
+<h2>Command</h2>
+<p><code>ledger txn delete &lt;id&gt;</code></p>
+<h2>Behavior</h2>
+<ul><li>An id that is not present exits 4 and changes nothing.</li><li>Delete the transaction row. Run inside the transaction wrapper of FEATURE-CommandTransaction.</li><li>If any account balance would be below zero after the deletion, per FEATURE-NonNegativeBalance, the</li></ul>
+<p>command exits 3 and the row remains stored.</p>
+<ul><li>On success, write <code>deleted</code> then the id, per FEATURE-CliOutput.</li></ul>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC txn-delete-round-trip ===<br>Intent: Deleting an existing transaction removes it, and a read by its id then finds nothing.</p>
+<h1>Exercises ledger txn delete against a seeded transaction whose removal keeps the balance non-negative.</h1>
+<p>import os import tempfile</p>
+<p>from cli.testing import cli_runner from persistence import open_database from persistence.schema import AccountRow, CategoryRow, TransactionKey, TransactionRow from persistence.testing import db_session</p>
+<p>txn_id = 1 date = &quot;2026-04-01&quot; account = &quot;DRAWER1&quot; category = &quot;SALES&quot;</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn with db_session(dsn) as db: db.accounts.create(AccountRow(account=account, name=&quot;Front Drawer&quot;)) db.categories.create(CategoryRow(category=category, description=&quot;Sales receipts&quot;)) db.transactions.create( TransactionRow(txn_id=txn_id, date=date, account=account, category=category, amount=10000, memo=&quot;sale&quot;) )</p>
+<p>code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, str(txn_id)) print(out) print(err) assert code == 0 assert open_database(dsn).transactions.get(TransactionKey(txn_id=txn_id)) is None === END AC txn-delete-round-trip ===</p>
+<p>=== AC txn-delete-absent-id ===<br>Intent: Deleting an id that is not present exits 4.</p>
+<h1>Exercises ledger txn delete against an empty transactions table.</h1>
+<p>import os import tempfile</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>absent_id = &quot;999&quot; not_found_exit = 4</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn with db_session(dsn): pass</p>
+<p>code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, absent_id) print(out) print(err) assert code == not_found_exit === END AC txn-delete-absent-id ===</p>
+<p>=== AC txn-delete-refuses-negative-balance ===<br>Intent: Deleting a transaction that would leave the account balance below zero exits 3 and keeps the row.</p>
+<h1>Exercises ledger txn delete on the credit that funds a later debit.</h1>
+<p>import os import tempfile</p>
+<p>from cli.testing import cli_runner from persistence import open_database from persistence.schema import AccountRow, CategoryRow, TransactionKey, TransactionRow from persistence.testing import db_session</p>
+<p>txn_id = 1 debit_id = 2 date = &quot;2026-04-01&quot; account = &quot;DRAWER1&quot; category = &quot;SALES&quot; credit_amount = 10000 debit_amount = -5000 rejected_exit = 3</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn with db_session(dsn) as db: db.accounts.create(AccountRow(account=account, name=&quot;Front Drawer&quot;)) db.categories.create(CategoryRow(category=category, description=&quot;Sales receipts&quot;)) db.transactions.create( TransactionRow(txn_id=txn_id, date=date, account=account, category=category, amount=credit_amount, memo=&quot;sale&quot;) ) db.transactions.create( TransactionRow(txn_id=debit_id, date=date, account=account, category=category, amount=debit_amount, memo=&quot;refund&quot;) )</p>
+<p>code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, str(txn_id)) print(out) print(err) assert code == rejected_exit</p>
+<p>row = open_database(dsn).transactions.get(TransactionKey(txn_id=txn_id)) assert row is not None assert row.amount == credit_amount === END AC txn-delete-refuses-negative-balance ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Do not delete a row for a command that exits non-zero.</li><li>Do not hardcode a balance; compute it from the transaction rows.</li><li>Do not open a database driver outside the shipped persistence library.</li></ul></article>
+</main>
+</body>
+</html>

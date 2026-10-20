@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-CliOutput.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-CliOutput.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-CliOutput.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: CSV Output</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Render successful command output as CSV lines and failure diagnostics as one stderr line.</td></tr><tr><td>Depends On</td><td>FEATURE-CliEntry.md, ARCHITECTURE.md</td></tr><tr><td>Provides</td><td>render_csv, render_diagnostic</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Every successful command except <code>init</code> writes CSV to standard output: one header row, then data rows, comma-separated, no quoting, no trailing spaces, and <code>\n</code> line endings. A failing command writes nothing to standard output and one diagnostic line to standard error. This feature owns the text rendering used by every command so that the format is defined once.</p>
+<h2>Interface</h2>
+<ul><li><code>cli.output.render_csv(header: list[str], rows: list[list[str]]) -&gt; str</code> returns the header line</li></ul>
+<p>followed by one line per row, each terminated by <code>\n</code>. Fields are joined with <code>,</code> with no quoting and no padding.</p>
+<ul><li><code>cli.output.render_diagnostic(message: str) -&gt; str</code> returns the message followed by a single <code>\n</code>.</li></ul>
+<p>The caller writes the result to standard error.</p>
+<h2>Behavior</h2>
+<ul><li><code>render_csv</code> never alters a field value. Callers validate fields before rendering.</li><li>With an empty <code>rows</code> list, only the header line is returned.</li><li><code>init</code> writes nothing; it does not call <code>render_csv</code>.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC cli-output-csv-shape ===<br>Intent: render_csv writes the header and each row as one comma-separated line, in order.</p>
+<p>from cli.output import render_csv</p>
+<p>header = [&quot;account&quot;, &quot;name&quot;] rows = [[&quot;DRAWER1&quot;, &quot;Front Drawer&quot;], [&quot;SAFE&quot;, &quot;Store Safe&quot;]] text = render_csv(header, rows) assert [line.split(&quot;,&quot;) for line in text.split(&quot;\n&quot;)[:-1]] == [header] + rows assert text.count(&quot;\n&quot;) == len(rows) + 1 assert text.split(&quot;\n&quot;)[-1] == &quot;&quot; === END AC cli-output-csv-shape ===</p>
+<p>=== AC cli-output-csv-header-only ===<br>Intent: render_csv with no rows writes only the header line.</p>
+<p>from cli.output import render_csv</p>
+<p>header = [&quot;table&quot;, &quot;rows&quot;] text = render_csv(header, []) assert [line.split(&quot;,&quot;) for line in text.split(&quot;\n&quot;)[:-1]] == [header] assert text.count(&quot;\n&quot;) == 1 === END AC cli-output-csv-header-only ===</p>
+<p>=== AC cli-output-csv-no-padding ===<br>Intent: render_csv adds no leading or trailing spaces to any line.</p>
+<p>from cli.output import render_csv</p>
+<p>header = [&quot;table&quot;, &quot;rows&quot;] rows = [[&quot;accounts&quot;, &quot;4&quot;], [&quot;categories&quot;, &quot;7&quot;]] text = render_csv(header, rows) assert all(line == line.strip() for line in text.split(&quot;\n&quot;)) === END AC cli-output-csv-no-padding ===</p>
+<p>=== AC cli-output-diagnostic-one-line ===<br>Intent: render_diagnostic returns the message as exactly one line.</p>
+<p>from cli.output import render_diagnostic</p>
+<p>message = &quot;account DRAWER9 not found&quot; text = render_diagnostic(message) assert text.rstrip(&quot;\n&quot;) == message assert text.count(&quot;\n&quot;) == 1 === END AC cli-output-diagnostic-one-line ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Standard output carries CSV only; diagnostics never go to standard output.</li><li>Field values are never quoted, escaped, or padded by this feature.</li><li>Money is rendered by the amount formatter, not by this feature.</li></ul></article>
+</main>
+</body>
+</html>

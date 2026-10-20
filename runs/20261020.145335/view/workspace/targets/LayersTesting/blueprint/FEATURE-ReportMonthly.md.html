@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-ReportMonthly.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-ReportMonthly.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-ReportMonthly.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Report Monthly</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td><code>ledger report monthly</code> writes one row per month that has transactions, plus a TOTAL row, computed from the database.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-CliDispatch.md, FEATURE-CliOutput.md, FEATURE-LoadTransactions.md, FEATURE-TxnPost.md, FEATURE-TxnAmend.md, FEATURE-TxnDelete.md, FEATURE-Transfer.md</td></tr><tr><td>Provides</td><td>ledger report monthly</td></tr><tr><td>Consumes</td><td>transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Report totals per calendar month. Months with no transactions do not appear.</p>
+<h2>Trigger</h2>
+<p><code>ledger report monthly</code> with no further arguments.</p>
+<h2>Behavior</h2>
+<ul><li>Read every transaction through <code>transactions.list</code>.</li><li>Group transactions by the <code>YYYY-MM</code> prefix of <code>date</code>.</li><li>For each month with at least one transaction, compute <code>transactions</code> (count), <code>inflow</code> (sum of</li></ul>
+<p>positive amounts), <code>outflow</code> (sum of absolute values of negative amounts, written positive), and <code>net</code> (<code>inflow - outflow</code>).</p>
+<ul><li>Write the header <code>month,transactions,inflow,outflow,net</code>, then one row per month in ascending</li></ul>
+<p>order.</p>
+<ul><li>Write <code>TOTAL,&lt;count&gt;,&lt;inflow&gt;,&lt;outflow&gt;,&lt;net&gt;</code> as the final row, summed over all transactions.</li><li>Amounts use exactly two decimals, a leading <code>-</code> when negative, and no thousands separator.</li><li>With no transactions, write the header and <code>TOTAL,0,0.00,0.00,0.00</code> with no month rows.</li><li>Exit 0 on success.</li><li>A database that cannot be read exits 1 with nothing on standard output.</li></ul>
+<h2>Output</h2>
+<pre><code>month,transactions,inflow,outflow,net
+2026-01,40,9659.45,5215.00,4444.45
+...
+TOTAL,120,19878.95,15645.00,4233.95</code></pre>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC RPT-003-empty-monthly ===<br>Intent: On an empty transactions table, report monthly writes the header and TOTAL,0,0.00,0.00,0.00 with no month rows.<br>Suite: scoped<br>Requires: executable=python3; scope=test</p>
+<p>import subprocess import sys</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: expected_header = &quot;month,transactions,inflow,outflow,net&quot; expected_total = &quot;TOTAL,0,0.00,0.00,0.00&quot; result = subprocess.run( [sys.executable, &quot;-m&quot;, &quot;cli&quot;, &quot;report&quot;, &quot;monthly&quot;], capture_output=True, text=True, ) print(result.stdout) print(result.stderr, file=sys.stderr) lines = [line for line in result.stdout.splitlines() if line] assert result.returncode == 0 assert lines[0] == expected_header assert lines[-1] == expected_total assert len(lines) == 2 === END AC RPT-003-empty-monthly ===</p>
+<p>=== AC RPT-003-months-ascending ===<br>Intent: Month rows appear in ascending YYYY-MM order, one per month that has transactions.<br>Suite: scoped<br>Requires: executable=python3; scope=test</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;SAFE&quot;, name=&quot;Store Safe&quot;) db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales receipts&quot;) db.transactions.create(txn_id=1, date=&quot;2026-02-01&quot;, account=&quot;SAFE&quot;, category=&quot;SALES&quot;, amount=500, memo=&quot;&quot;) db.transactions.create(txn_id=2, date=&quot;2026-01-01&quot;, account=&quot;SAFE&quot;, category=&quot;SALES&quot;, amount=500, memo=&quot;&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;) rows = [line for line in out.splitlines() if line] assert code == 0 assert rows[1].split(&quot;,&quot;)[0] == &quot;2026-01&quot; assert rows[2].split(&quot;,&quot;)[0] == &quot;2026-02&quot; assert rows[-1].startswith(&quot;TOTAL,&quot;) === END AC RPT-003-months-ascending ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Month rows are derived from transaction dates; no month is hardcoded.</li><li>Application code does not read <code>sources/run.sh</code> or any seed file.</li></ul></article>
+</main>
+</body>
+</html>

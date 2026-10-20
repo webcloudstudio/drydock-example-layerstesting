@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-5.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-5.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-5.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 5 · Service (block-5)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 4170</li><li>execution id: 20261020.151915.045Z-2a4c9db2</li></ul>
+<h2>Stories built</h2>
+<ul><li>Write CSV success output and failure diagnostics. (CLI-002) [story]</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 921)</li><li>compass: COMPASS.md (SP 1145)</li><li>implements: FEATURE-CliOutput.md (SP 1175)</li><li>context: ARCHITECTURE_compact.md (SP 427)</li><li>context: DATABASE_compact.md (SP 427)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>cli/output.py</li><li>tests/test_output.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>RED: cli-output-csv-shape (FEATURE-CliOutput.md)</li></ul>
+<p>intent: render_csv writes the header and each row as one comma-separated line, in order. return code: 1 stderr: Traceback (most recent call last): File &quot;cli-output-csv-shape.py&quot;, line 1, in &lt;module&gt; from cli.output import render_csv<br>ModuleNotFoundError: No module named &#x27;cli.output&#x27;</p>
+<ul><li>RED: cli-output-csv-header-only (FEATURE-CliOutput.md)</li></ul>
+<p>intent: render_csv with no rows writes only the header line. return code: 1 stderr: Traceback (most recent call last): File &quot;cli-output-csv-header-only.py&quot;, line 1, in &lt;module&gt; from cli.output import render_csv<br>ModuleNotFoundError: No module named &#x27;cli.output&#x27;</p>
+<ul><li>RED: cli-output-csv-no-padding (FEATURE-CliOutput.md)</li></ul>
+<p>intent: render_csv adds no leading or trailing spaces to any line. return code: 1 stderr: Traceback (most recent call last): File &quot;cli-output-csv-no-padding.py&quot;, line 1, in &lt;module&gt; from cli.output import render_csv<br>ModuleNotFoundError: No module named &#x27;cli.output&#x27;</p>
+<ul><li>RED: cli-output-diagnostic-one-line (FEATURE-CliOutput.md)</li></ul>
+<p>intent: render_diagnostic returns the message as exactly one line. return code: 1 stderr: Traceback (most recent call last): File &quot;cli-output-diagnostic-one-line.py&quot;, line 1, in &lt;module&gt; from cli.output import render_diagnostic<br>ModuleNotFoundError: No module named &#x27;cli.output&#x27;</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: cli-output-csv-shape (FEATURE-CliOutput.md)</li></ul>
+<p>intent: render_csv writes the header and each row as one comma-separated line, in order. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: cli-output-csv-header-only (FEATURE-CliOutput.md)</li></ul>
+<p>intent: render_csv with no rows writes only the header line. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: cli-output-csv-no-padding (FEATURE-CliOutput.md)</li></ul>
+<p>intent: render_csv adds no leading or trailing spaces to any line. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: cli-output-diagnostic-one-line (FEATURE-CliOutput.md)</li></ul>
+<p>intent: render_diagnostic returns the message as exactly one line. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Build summary</h2>
+<p>The spec for this block is <code>FEATURE-CliOutput.md</code>: a new <code>cli/output.py</code> with <code>render_csv</code> and <code>render_diagnostic</code>, plus tests. Nothing in the existing CLI calls these yet, so I&#x27;ll keep the change to the output module and its tests.That last parametrized header test duplicates the header-only case without adding coverage, so I&#x27;ll remove it before running.Implemented the CSV output and diagnostic rendering for CLI-002 per <code>FEATURE-CliOutput.md</code>. The full suite passes: <code>sh bin/test.sh</code> reports 109 passed, exit 0.</p>
+<p>Nothing calls these functions yet, so the &quot;init writes nothing&quot; and &quot;failing command writes nothing to stdout&quot; behaviors will only take effect when the command blocks wire them in. I kept this block to the output module.</p>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>cli/output.py</li><li>tests/test_output.py</li></ul>
+<p>SUMMARY:</p>
+<ul><li><code>cli/output.py</code> provides <code>render_csv(header, rows)</code>, which joins each line with <code>,</code> and ends each with <code>\n</code>, with no quoting or padding, and <code>render_diagnostic(message)</code>, which returns the message plus one <code>\n</code>.</li><li><code>tests/test_output.py</code> has 12 tests. The four declared acceptance assertions (<code>cli-output-csv-shape</code>, <code>cli-output-csv-header-only</code>, <code>cli-output-csv-no-padding</code>, <code>cli-output-diagnostic-one-line</code>) are each covered by a test. Extra tests cover one row, many rows, empty fields, values passed through unaltered, no quoting, and the diagnostic edge cases.</li><li>Coverage run for this step: <code>sh bin/test.sh</code> (the declared <code>Suite</code> for every behavioral story), 109 passed, 0 failed. The terminal <code>sh sources/run.sh</code> check is not part of this block.</li><li>Not touched: <code>sources/</code>, the Drydock-protected paths, and git history.</li></ul></article>
+</main>
+</body>
+</html>

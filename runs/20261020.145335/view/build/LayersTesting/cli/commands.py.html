@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/commands.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/commands.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/commands.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Command dispatch. Behavior for each command is added as its block is built; none is registered yet.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import argparse
+import sys
+from collections.abc import Callable
+
+# Maps a leaf route (for example &quot;txn get&quot;) to its handler. Each handler takes the parsed Namespace.
+HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {}
+
+
+def dispatch(args: argparse.Namespace) -&gt; int:
+    handler = HANDLERS.get(args.route)
+    if handler is None:
+        # Recognized by the parser, but its behavior belongs to a block not yet built.
+        print(f&quot;error: command {args.route!r} is not implemented yet&quot;, file=sys.stderr)
+        return 1
+    return handler(args)
+</pre></article>
+</main>
+</body>
+</html>

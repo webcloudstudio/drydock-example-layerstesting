@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/output.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/output.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/output.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;CSV and diagnostic text rendering. Field values are written exactly as given; nothing is quoted, escaped, or padded.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+
+def render_csv(header: list[str], rows: list[list[str]]) -&gt; str:
+    &quot;&quot;&quot;Return the header line followed by one line per row, each terminated by ``\\n``.&quot;&quot;&quot;
+    lines = [header, *rows]
+    return &quot;&quot;.join(&quot;,&quot;.join(fields) + &quot;\n&quot; for fields in lines)
+
+
+def render_diagnostic(message: str) -&gt; str:
+    &quot;&quot;&quot;Return ``message`` followed by a single ``\\n``. The caller writes it to standard error.&quot;&quot;&quot;
+    return message + &quot;\n&quot;
+</pre></article>
+</main>
+</body>
+</html>

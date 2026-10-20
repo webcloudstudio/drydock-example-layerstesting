@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-TxnAmend.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-TxnAmend.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-TxnAmend.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Amend Transaction Amount</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Change only the amount of one stored transaction, rejecting any change that leaves a balance negative.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-CliDispatch.md, FEATURE-CliOutput.md, FEATURE-CommandTransaction.md, FEATURE-NonNegativeBalance.md, FEATURE-TxnGet.md, FEATURE-ValidateAmount.md</td></tr><tr><td>Provides</td><td>ledger txn amend</td></tr><tr><td>Consumes</td><td>db.transactions.get, db.transactions.update, db.transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Corrects the amount of a recorded transaction without altering its date, account, category, or memo.</p>
+<h2>Command</h2>
+<p><code>ledger txn amend &lt;id&gt; &lt;amount&gt;</code></p>
+<h2>Behavior</h2>
+<ul><li>Validate the amount with FEATURE-ValidateAmount. A violation exits 3.</li><li>An id that is not present exits 4 and changes nothing.</li><li>Update only the amount, stored as integer cents. Date, account, category, and memo are unchanged.</li><li>Run inside the transaction wrapper of FEATURE-CommandTransaction. If any account balance would be</li></ul>
+<p>below zero after the change, per FEATURE-NonNegativeBalance, the command exits 3 and the stored amount is unchanged.</p>
+<ul><li>On success, write the updated transaction row per FEATURE-CliOutput.</li></ul>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC txn-amend-round-trip ===<br>Intent: Amending a transaction changes only its amount, and the stored row reads back with that single change.</p>
+<h1>Exercises ledger txn amend against a seeded transaction.</h1>
+<p>import os import tempfile</p>
+<p>from cli.testing import cli_runner from persistence import open_database from persistence.schema import AccountRow, CategoryRow, TransactionKey, TransactionRow from persistence.testing import db_session</p>
+<p>txn_id = 1 date = &quot;2026-04-01&quot; account = &quot;DRAWER1&quot; category = &quot;SALES&quot; memo = &quot;walk in sale&quot; seeded_amount = 10000 amount_in = &quot;54.50&quot; amended_amount = 5450</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn with db_session(dsn) as db: db.accounts.create(AccountRow(account=account, name=&quot;Front Drawer&quot;)) db.categories.create(CategoryRow(category=category, description=&quot;Sales receipts&quot;)) db.transactions.create( TransactionRow(txn_id=txn_id, date=date, account=account, category=category, amount=seeded_amount, memo=memo) )</p>
+<p>code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, str(txn_id), amount_in) print(out) print(err) assert code == 0</p>
+<p>row = open_database(dsn).transactions.get(TransactionKey(txn_id=txn_id)) assert row is not None assert row.amount == amended_amount assert row.date == date assert row.account == account assert row.category == category assert row.memo == memo === END AC txn-amend-round-trip ===</p>
+<p>=== AC txn-amend-absent-id ===<br>Intent: Amending an id that is not present exits 4.</p>
+<h1>Exercises ledger txn amend against an empty transactions table.</h1>
+<p>import os import tempfile</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>absent_id = &quot;999&quot; not_found_exit = 4</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn with db_session(dsn): pass</p>
+<p>code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, absent_id, &quot;1.00&quot;) print(out) print(err) assert code == not_found_exit === END AC txn-amend-absent-id ===</p>
+<p>=== AC txn-amend-refuses-negative-balance ===<br>Intent: An amendment that would leave the account balance below zero exits 3 and leaves the stored amount unchanged.</p>
+<h1>Exercises ledger txn amend with an amount that drives the only transaction negative.</h1>
+<p>import os import tempfile</p>
+<p>from cli.testing import cli_runner from persistence import open_database from persistence.schema import AccountRow, CategoryRow, TransactionKey, TransactionRow from persistence.testing import db_session</p>
+<p>txn_id = 1 date = &quot;2026-04-01&quot; account = &quot;DRAWER1&quot; category = &quot;SALES&quot; memo = &quot;walk in sale&quot; seeded_amount = 10000 rejected_exit = 3</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn with db_session(dsn) as db: db.accounts.create(AccountRow(account=account, name=&quot;Front Drawer&quot;)) db.categories.create(CategoryRow(category=category, description=&quot;Sales receipts&quot;)) db.transactions.create( TransactionRow(txn_id=txn_id, date=date, account=account, category=category, amount=seeded_amount, memo=memo) )</p>
+<p>code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, str(txn_id), &quot;-1.00&quot;) print(out) print(err) assert code == rejected_exit</p>
+<p>row = open_database(dsn).transactions.get(TransactionKey(txn_id=txn_id)) assert row is not None assert row.amount == seeded_amount === END AC txn-amend-refuses-negative-balance ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Do not change any field except the amount.</li><li>Do not hardcode a balance; compute it from the transaction rows.</li><li>Do not use floating point for the amount at any layer.</li></ul></article>
+</main>
+</body>
+</html>

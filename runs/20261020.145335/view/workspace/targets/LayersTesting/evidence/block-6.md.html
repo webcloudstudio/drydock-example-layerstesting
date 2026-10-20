@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-6.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-6.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-6.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 6 · Service (block-6)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 4402</li><li>execution id: 20261020.152027.043Z-e5980e8b</li></ul>
+<h2>Stories built</h2>
+<ul><li>Validate codes, names, descriptions, and memos. (VALID-001) [story]</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 921)</li><li>compass: COMPASS.md (SP 1145)</li><li>implements: FEATURE-ValidateText.md (SP 1406)</li><li>context: ARCHITECTURE_compact.md (SP 427)</li><li>context: DATABASE_compact.md (SP 427)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>cli/text_validation.py</li><li>tests/test_text_validation.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>RED: valid-text-code-accepts (FEATURE-ValidateText.md)</li></ul>
+<p>intent: check_code returns each 1-to-12-character A-Z/0-9 code unchanged. return code: 1 stderr: Traceback (most recent call last): File &quot;valid-text-code-accepts.py&quot;, line 1, in &lt;module&gt; from cli.text_validation import check_code<br>ModuleNotFoundError: No module named &#x27;cli.text_validation&#x27;</p>
+<ul><li>RED: valid-text-code-rejects (FEATURE-ValidateText.md)</li></ul>
+<p>intent: check_code raises ValueError for empty, lowercase, punctuated, spaced, and over-length codes. return code: 1 stderr: Traceback (most recent call last): File &quot;valid-text-code-rejects.py&quot;, line 1, in &lt;module&gt; from cli.text_validation import check_code<br>ModuleNotFoundError: No module named &#x27;cli.text_validation&#x27;</p>
+<ul><li>RED: valid-text-name-accepts (FEATURE-ValidateText.md)</li></ul>
+<p>intent: check_name returns each 1-to-40-character name without comma or newline unchanged. return code: 1 stderr: Traceback (most recent call last): File &quot;valid-text-name-accepts.py&quot;, line 1, in &lt;module&gt; from cli.text_validation import check_name<br>ModuleNotFoundError: No module named &#x27;cli.text_validation&#x27;</p>
+<ul><li>RED: valid-text-name-rejects (FEATURE-ValidateText.md)</li></ul>
+<p>intent: check_name raises ValueError for empty, over-length, comma-bearing, and newline-bearing names. return code: 1 stderr: Traceback (most recent call last): File &quot;valid-text-name-rejects.py&quot;, line 1, in &lt;module&gt; from cli.text_validation import check_name<br>ModuleNotFoundError: No module named &#x27;cli.text_validation&#x27;</p>
+<ul><li>RED: valid-text-memo-accepts (FEATURE-ValidateText.md)</li></ul>
+<p>intent: check_memo returns a 0-to-60-character memo without comma or newline unchanged, including an empty memo. return code: 1 stderr: Traceback (most recent call last): File &quot;valid-text-memo-accepts.py&quot;, line 1, in &lt;module&gt; from cli.text_validation import check_memo<br>ModuleNotFoundError: No module named &#x27;cli.text_validation&#x27;</p>
+<ul><li>RED: valid-text-memo-rejects (FEATURE-ValidateText.md)</li></ul>
+<p>intent: check_memo raises ValueError for over-length, comma-bearing, and newline-bearing memos. return code: 1 stderr: Traceback (most recent call last): File &quot;valid-text-memo-rejects.py&quot;, line 1, in &lt;module&gt; from cli.text_validation import check_memo<br>ModuleNotFoundError: No module named &#x27;cli.text_validation&#x27;</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: valid-text-code-accepts (FEATURE-ValidateText.md)</li></ul>
+<p>intent: check_code returns each 1-to-12-character A-Z/0-9 code unchanged. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: valid-text-code-rejects (FEATURE-ValidateText.md)</li></ul>
+<p>intent: check_code raises ValueError for empty, lowercase, punctuated, spaced, and over-length codes. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: valid-text-name-accepts (FEATURE-ValidateText.md)</li></ul>
+<p>intent: check_name returns each 1-to-40-character name without comma or newline unchanged. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: valid-text-name-rejects (FEATURE-ValidateText.md)</li></ul>
+<p>intent: check_name raises ValueError for empty, over-length, comma-bearing, and newline-bearing names. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: valid-text-memo-accepts (FEATURE-ValidateText.md)</li></ul>
+<p>intent: check_memo returns a 0-to-60-character memo without comma or newline unchanged, including an empty memo. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: valid-text-memo-rejects (FEATURE-ValidateText.md)</li></ul>
+<p>intent: check_memo raises ValueError for over-length, comma-bearing, and newline-bearing memos. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Build summary</h2>
+<p>Let me look at an existing module and its test to match the project&#x27;s idiom, and check the test runner.The existing <code>dates.py</code> sets the pattern: a module docstring, a <code>check_*</code> function that returns its input or raises <code>ValueError</code>, and parametrized pytest tests. I&#x27;ll follow it for the validators.Now the tests, following <code>test_dates.py</code>: parametrized accepts and rejects, with boundaries and the declared maxima.Running the project&#x27;s declared test command, then the six declared acceptance checks from the spec, each as its own script outside the build tree.All six declared checks pass and the full suite is green. Cleaning up the scratch directory and confirming which files changed.RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>cli/text_validation.py</li><li>tests/test_text_validation.py</li></ul>
+<p>SUMMARY: Implemented FEATURE-ValidateText (VALID-001) in <code>cli/text_validation.py</code> with <code>check_code</code>, <code>check_name</code>, and <code>check_memo</code>. Each returns its input unchanged or raises <code>ValueError</code>, and none of them touch the database.</p>
+<ul><li><code>check_code</code>: 1–12 characters, fullmatch of <code>[A-Z0-9]</code>, so lowercase, spaces, punctuation, and a trailing newline are rejected.</li><li><code>check_name</code>: 1–40 characters, no comma, no line break.</li><li><code>check_memo</code>: 0–60 characters, no comma, no line break.</li></ul>
+<p>The tests in <code>tests/test_text_validation.py</code> are parametrized and cover accepted values, rejected values, the declared maxima and minima, and the empty memo versus empty name. They assert on return values and raised <code>ValueError</code>, not on message wording.</p>
+<p>Verification:</p>
+<ul><li><code>sh bin/test.sh tests/test_text_validation.py</code>: 38 passed.</li><li><code>sh bin/test.sh</code> (full project suite): 147 passed, exit 0.</li><li>The six declared acceptance checks (valid-text-code-accepts/rejects, name-accepts/rejects, memo-accepts/rejects) were each run as standalone scripts, outside the build tree, against the built module. All six passed.</li><li>No staged <code>sources/</code> assets were touched, and no Git history was changed.</li></ul>
+<p>blueprint-decisions:</p>
+<pre><code>&lt;blueprint-decisions&gt;
+[{&quot;spec&quot;:&quot;FEATURE-ValidateText.md&quot;,&quot;severity&quot;:&quot;Low&quot;,&quot;subject&quot;:&quot;Carriage return treated as a line break&quot;,&quot;decision&quot;:&quot;The spec forbids only a newline. I also reject a carriage return (\\r) in names and memos, since it is a line break that would corrupt line-oriented CSV and output. Is that acceptable, or should only \\n be rejected?&quot;}]
+&lt;/blueprint-decisions&gt;</code></pre></article>
+</main>
+</body>
+</html>

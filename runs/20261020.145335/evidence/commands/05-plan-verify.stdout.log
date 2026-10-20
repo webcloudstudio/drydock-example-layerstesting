@@ -1,0 +1,6 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+plan verify: LayersTesting
+  99 acceptance criteria in 30 files: every one can run
+  ⚠  FEATURE-CountRows.md [count-header-and-order]: expects 'table,rows', a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-LoadAccounts.md [load-accounts-seed-file]: expects 'table,loaded', a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-LoadCategories.md [load-categories-seed-file]: expects 'table,loaded', a value re-typed rather than derived from the input or read back from the system

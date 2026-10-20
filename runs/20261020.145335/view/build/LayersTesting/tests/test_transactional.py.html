@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_transactional.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_transactional.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_transactional.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Command transaction: a command commits in full or changes nothing.&quot;&quot;&quot;
+
+import pytest
+
+from cli.transactional import run_command
+from persistence import PersistenceError
+from persistence.testing import db_session
+
+
+def test_successful_command_commits_its_write() -&gt; None:
+    with db_session() as db:
+        def succeeding(store):
+            store.accounts.create(account=&quot;CASH1&quot;, name=&quot;Float&quot;)
+
+        run_command(db, succeeding)
+
+        rows = db.accounts.list()
+        assert len(rows) == 1
+        assert rows[0].account == &quot;CASH1&quot;
+        assert rows[0].name == &quot;Float&quot;
+
+
+def test_command_return_value_is_returned() -&gt; None:
+    with db_session() as db:
+        def succeeding(store):
+            store.accounts.create(account=&quot;CASH1&quot;, name=&quot;Float&quot;)
+            return &quot;done&quot;
+
+        assert run_command(db, succeeding) == &quot;done&quot;
+
+
+def test_failing_command_rolls_back_single_table_write() -&gt; None:
+    with db_session() as db:
+        def failing(store):
+            store.accounts.create(account=&quot;CASH1&quot;, name=&quot;Float&quot;)
+            raise ValueError(&quot;rejected after write&quot;)
+
+        with pytest.raises(ValueError, match=&quot;rejected after write&quot;):
+            run_command(db, failing)
+
+        assert len(db.accounts.list()) == 0
+
+
+def test_failing_command_rolls_back_every_table_written() -&gt; None:
+    with db_session() as db:
+        def failing(store):
+            store.accounts.create(account=&quot;CASH1&quot;, name=&quot;Float&quot;)
+            store.categories.create(category=&quot;OPENING&quot;, description=&quot;Opening balance&quot;)
+            raise ValueError(&quot;rejected after two writes&quot;)
+
+        with pytest.raises(ValueError):
+            run_command(db, failing)
+
+        assert len(db.accounts.list()) == 0
+        assert len(db.categories.list()) == 0
+
+
+def test_original_exception_is_reraised_unchanged() -&gt; None:
+    with db_session() as db:
+        error = ValueError(&quot;the very same instance&quot;)
+
+        def failing(store):
+            raise error
+
+        with pytest.raises(ValueError) as caught:
+            run_command(db, failing)
+
+        assert caught.value is error
+
+
+def test_persistence_error_inside_command_rolls_back_earlier_writes() -&gt; None:
+    with db_session() as db:
+        db.accounts.create(account=&quot;CASH1&quot;, name=&quot;Float&quot;)
+
+        def failing(store):
+            store.categories.create(category=&quot;OPENING&quot;, description=&quot;Opening balance&quot;)
+            # Duplicate primary key: the store refuses it, and the command must not survive.
+            store.accounts.create(account=&quot;CASH1&quot;, name=&quot;Again&quot;)
+
+        with pytest.raises(PersistenceError):
+            run_command(db, failing)
+
+        assert len(db.categories.list()) == 0
+        assert [row.name for row in db.accounts.list()] == [&quot;Float&quot;]
+
+
+def test_writes_inside_successful_command_are_visible_to_later_reads_in_command() -&gt; None:
+    with db_session() as db:
+        def succeeding(store):
+            store.accounts.create(account=&quot;CASH1&quot;, name=&quot;Float&quot;)
+            return [row.account for row in store.accounts.list()]
+
+        assert run_command(db, succeeding) == [&quot;CASH1&quot;]
+
+
+def test_driver_connect_is_restored_after_success() -&gt; None:
+    with db_session() as db:
+        run_command(db, lambda store: store.accounts.create(account=&quot;CASH1&quot;, name=&quot;Float&quot;))
+
+        assert &quot;connect&quot; not in vars(db.driver)
+
+
+def test_driver_connect_is_restored_after_failure() -&gt; None:
+    with db_session() as db:
+        def failing(store):
+            raise ValueError(&quot;boom&quot;)
+
+        with pytest.raises(ValueError):
+            run_command(db, failing)
+
+        assert &quot;connect&quot; not in vars(db.driver)
+        # The store still works for the next command.
+        run_command(db, lambda store: store.accounts.create(account=&quot;CASH1&quot;, name=&quot;Float&quot;))
+        assert len(db.accounts.list()) == 1
+
+
+def test_command_with_no_writes_succeeds_and_changes_nothing() -&gt; None:
+    with db_session() as db:
+        assert run_command(db, lambda store: store.accounts.list()) == []
+        assert db.accounts.list() == []
+
+
+def test_failed_command_leaves_prior_committed_rows_intact() -&gt; None:
+    with db_session() as db:
+        run_command(db, lambda store: store.accounts.create(account=&quot;CASH1&quot;, name=&quot;Float&quot;))
+
+        def failing(store):
+            store.accounts.update(account=&quot;CASH1&quot;, name=&quot;Renamed&quot;)
+            raise ValueError(&quot;rejected&quot;)
+
+        with pytest.raises(ValueError):
+            run_command(db, failing)
+
+        assert [(row.account, row.name) for row in db.accounts.list()] == [(&quot;CASH1&quot;, &quot;Float&quot;)]
+</pre></article>
+</main>
+</body>
+</html>

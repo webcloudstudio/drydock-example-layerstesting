@@ -1,0 +1,123 @@
+<requirement name="ledger-executable" stories="CLI-003,CLI-001">
+The product is an executable named `ledger` at the application root.
+</requirement>
+<requirement name="python-sqlite-stack" stories="foundation,VERIFY-001">
+Implement in Python 3.11 or newer over SQLite, through the shipped Python persistence library. Tests run under pytest.
+</requirement>
+<requirement name="database-target" stories="PERSIST-001">
+`DATABASE_URL` names the database. A value beginning `postgres://` or `postgresql://` is a PostgreSQL DSN. Any other value is a SQLite file path, optionally prefixed `sqlite://`. When `DATABASE_URL` is unset, `DATABASE_PATH` is used, then `data/app.db`.
+</requirement>
+<requirement name="three-table-schema" stories="PERSIST-002">
+Three tables. Amounts are stored as integer cents and never as floating point.
+</requirement>
+<requirement name="access-through-persistence-library" stories="PERSIST-002,PERSIST-001">
+All database access goes through the shipped persistence library and the relational layer generated from `DATABASE.md`. Application code never opens a database driver directly.
+</requirement>
+<requirement name="atomic-commands" stories="INTEG-001">
+**Every command is one database transaction.** A command that fails for any reason leaves every table exactly as it was.
+</requirement>
+<requirement name="non-negative-balance" stories="INTEG-002">
+**No command leaves an account balance below zero.** An account's balance is the sum of its transaction amounts.
+</requirement>
+<requirement name="code-format" stories="VALID-001">
+**Codes** (`account`, `category`) are 1 to 12 characters from `A-Z` and `0-9`.
+</requirement>
+<requirement name="name-and-memo-length" stories="VALID-001">
+**Names and descriptions** are 1 to 40 characters. **Memos** are 0 to 60 characters. None of them contains a comma or a newline.
+</requirement>
+<requirement name="amount-format" stories="VALID-002">
+**Amounts** on input match `-?DIGITS[.D[D]]`: at most two decimal places, never zero. On output an amount is written with exactly two decimal places, a leading `-` when negative, and no thousands separator: `-12.50`, `0.00`, `5000.00`.
+</requirement>
+<requirement name="date-format" stories="VALID-003">
+**Dates** are real calendar dates written `YYYY-MM-DD`. `2026-02-30` is rejected.
+</requirement>
+<requirement name="keep-loaded-txn-id" stories="LOAD-003">
+A loaded transaction keeps the `txn_id` from its file.
+</requirement>
+<requirement name="post-next-txn-id" stories="TXN-001">
+A posted transaction receives one more than the largest `txn_id` present, or `1` in an empty table.
+</requirement>
+<requirement name="transfer-linked-txn-ids" stories="XFER-001">
+A transfer's outgoing row takes that id and its incoming row the next.
+</requirement>
+<requirement name="init-schema" stories="PERSIST-003">
+`ledger init` | Drops all three tables if present and creates them empty. Nothing written.
+</requirement>
+<requirement name="count-rows" stories="PERSIST-004">
+`ledger count` | `table,rows`, then `accounts`, `categories`, `transactions` rows in that order.
+</requirement>
+<requirement name="load-table" stories="LOAD-001,LOAD-002,LOAD-003">
+`ledger load <table> <csv>` | Loads `accounts`, `categories`, or `transactions` from a file whose header matches the table's columns in the order above. Writes `table,loaded` and `<table>,<rows>`.
+</requirement>
+<requirement name="csv-success-output" stories="CLI-002">
+Every successful command except `init` writes CSV to standard output: one header row, then data rows, comma-separated, no quoting, no trailing spaces, `\n` line endings.
+</requirement>
+<requirement name="failure-diagnostic" stories="CLI-002">
+A failing command writes nothing to standard output and one diagnostic line to standard error.
+</requirement>
+<requirement name="account-row-format" stories="ACCT-002,RPT-001">
+The account row is `account,name,transactions,balance`, where `transactions` counts the account's transactions.
+</requirement>
+<requirement name="transaction-row-format" stories="TXN-001,TXN-002">
+The transaction row is `txn_id,date,account,category,amount,memo`.
+</requirement>
+<requirement name="account-add" stories="ACCT-001">
+`ledger account add <code> <name>` | The new account row.
+</requirement>
+<requirement name="account-get" stories="ACCT-002">
+`ledger account get <code>` | The account row.
+</requirement>
+<requirement name="account-rename" stories="ACCT-003">
+`ledger account rename <code> <name>` | The updated account row.
+</requirement>
+<requirement name="account-delete" stories="ACCT-004">
+`ledger account delete <code>` | `deleted` and the code. Refused while the account has transactions.
+</requirement>
+<requirement name="txn-post" stories="TXN-001">
+`ledger txn post <account> <category> <amount> <date> [<memo>]` | The new transaction row.
+</requirement>
+<requirement name="txn-get" stories="TXN-002">
+`ledger txn get <id>` | The transaction row.
+</requirement>
+<requirement name="txn-amend" stories="TXN-003">
+`ledger txn amend <id> <amount>` | The updated transaction row. Only the amount changes.
+</requirement>
+<requirement name="txn-delete" stories="TXN-004">
+`ledger txn delete <id>` | `deleted` and the id.
+</requirement>
+<requirement name="transfer" stories="XFER-001">
+`ledger transfer <from> <to> <amount> <date>` | Two transaction rows in category `TRANSFER`: `-amount` on `<from>` with memo `transfer to <to>`, then `+amount` on `<to>` with memo `transfer from <from>`. The amount is positive and the accounts differ.
+</requirement>
+<requirement name="report-balances" stories="RPT-001">
+`ledger report balances` | `account,name,transactions,balance` per account ordered by code, then `TOTAL,,<count>,<sum>`.
+</requirement>
+<requirement name="report-categories" stories="RPT-002">
+`ledger report categories` | `category,description,transactions,inflow,outflow,net` per category ordered by code, including categories with no transactions, then `TOTAL,,<count>,<inflow>,<outflow>,<net>`.
+</requirement>
+<requirement name="report-monthly" stories="RPT-003">
+`ledger report monthly` | `month,transactions,inflow,outflow,net` per `YYYY-MM` that has transactions, ascending, then `TOTAL,<count>,<inflow>,<outflow>,<net>`.
+</requirement>
+<requirement name="inflow-outflow-net" stories="RPT-002,RPT-003">
+`inflow` is the sum of positive amounts. `outflow` is the sum of the absolute values of negative amounts, written as a positive number. `net` is `inflow - outflow`.
+</requirement>
+<requirement name="reports-from-database" stories="RPT-001,RPT-002,RPT-003">
+Every report is computed from the database.
+</requirement>
+<requirement name="usage-exit-code" stories="CLI-001">
+Usage error: unknown command, unknown table or report, wrong argument count.
+</requirement>
+<requirement name="rejected-exit-code" stories="VALID-001,VALID-002,VALID-003,INTEG-002,ACCT-004">
+Rejected: invalid code, name, amount, date, or file row; duplicate key; unknown account or category; account in use; any change that would leave a negative balance.
+</requirement>
+<requirement name="not-found-exit-code" stories="ACCT-002,ACCT-003,ACCT-004,TXN-002,TXN-003,TXN-004">
+Not found: `account get/rename/delete` of an absent account, `txn get/amend/delete` of an absent id.
+</requirement>
+<requirement name="operational-exit-code" stories="PERSIST-001,LOAD-001,LOAD-002,LOAD-003">
+Operational failure: database unreachable, tables missing, file unreadable.
+</requirement>
+<requirement name="grader-run" stories="VERIFY-002">
+`drydock uat` runs `sh sources/run.sh` from the completed application root and takes its exit code and output as the score.
+</requirement>
+<requirement name="test-suite" stories="VERIFY-001">
+The completed application provides a POSIX-compatible `bin/test.sh` that runs its own automated test suite from the application root and exits zero only when every test passes.
+</requirement>

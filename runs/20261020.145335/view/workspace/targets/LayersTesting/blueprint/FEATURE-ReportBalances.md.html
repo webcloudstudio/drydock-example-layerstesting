@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-ReportBalances.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-ReportBalances.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-ReportBalances.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Report Balances</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td><code>ledger report balances</code> writes one row per account and a TOTAL row, computed from the database.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-CliDispatch.md, FEATURE-CliOutput.md, FEATURE-LoadTransactions.md, FEATURE-AccountRename.md, FEATURE-AccountDelete.md, FEATURE-TxnAmend.md, FEATURE-TxnDelete.md, FEATURE-Transfer.md</td></tr><tr><td>Provides</td><td>ledger report balances</td></tr><tr><td>Consumes</td><td>accounts.list, accounts.get, transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Report the balance of every account. The balance of an account is the sum of its transaction amounts, in integer cents. Output is produced only from rows read from the database.</p>
+<h2>Trigger</h2>
+<p><code>ledger report balances</code> with no further arguments.</p>
+<h2>Behavior</h2>
+<ul><li>Read every account through <code>accounts.list</code>, ordered by <code>account</code> ascending.</li><li>For each account, compute <code>transactions</code> (the count of its transactions) and <code>balance</code> (the sum</li></ul>
+<p>of its transaction amounts) from <code>transactions.list</code>, never from a stored value.</p>
+<ul><li>Write the header <code>account,name,transactions,balance</code>, then one row per account in code order.</li><li>Write <code>TOTAL,,&lt;count&gt;,&lt;sum&gt;</code> as the final row, where <code>&lt;count&gt;</code> is the total transaction count and</li></ul>
+<p><code>&lt;sum&gt;</code> is the sum of all transaction amounts.</p>
+<ul><li>Amounts are written with exactly two decimals, a leading <code>-</code> when negative, and no thousands</li></ul>
+<p>separator.</p>
+<ul><li>With no accounts, write the header and <code>TOTAL,,0,0.00</code>.</li><li>Exit 0 on success.</li><li>A database that cannot be read exits 1 with nothing on standard output.</li></ul>
+<h2>Output</h2>
+<pre><code>account,name,transactions,balance
+DRAWER1,Front Drawer,39,2299.38
+...
+TOTAL,,120,4233.95</code></pre>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC RPT-001-empty-balances ===<br>Intent: On an empty accounts table, report balances writes the header and TOTAL,,0,0.00.<br>Suite: scoped<br>Requires: executable=python3; scope=test</p>
+<p>import subprocess import sys</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: expected_header = &quot;account,name,transactions,balance&quot; expected_total = &quot;TOTAL,,0,0.00&quot; result = subprocess.run( [sys.executable, &quot;-m&quot;, &quot;cli&quot;, &quot;report&quot;, &quot;balances&quot;], capture_output=True, text=True, ) print(result.stdout) print(result.stderr, file=sys.stderr) lines = [line for line in result.stdout.splitlines() if line] assert result.returncode == 0 assert lines[0] == expected_header assert lines[-1] == expected_total === END AC RPT-001-empty-balances ===</p>
+<p>=== AC RPT-001-total-row-from-database ===<br>Intent: The TOTAL row is produced by a query, with one row per account, after loading seeded accounts.<br>Suite: scoped<br>Requires: executable=python3; scope=test</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;) db.accounts.create(account=&quot;SAFE&quot;, name=&quot;Store Safe&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;) rows = [line for line in out.splitlines() if line] assert code == 0 assert len(rows) == 1 + 2 + 1 assert rows[-1].startswith(&quot;TOTAL,,&quot;) assert rows[1].split(&quot;,&quot;)[0] == &quot;DRAWER1&quot; assert rows[2].split(&quot;,&quot;)[0] == &quot;SAFE&quot; === END AC RPT-001-total-row-from-database ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>No balance, count, or total is embedded as a literal; each value is computed by a query.</li><li>Application code does not read <code>sources/run.sh</code> or any seed file.</li></ul></article>
+</main>
+</body>
+</html>

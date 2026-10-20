@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-3.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-3.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-3.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 3 · Service (block-3)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 4751</li><li>execution id: 20261020.151542.070Z-3026385f</li></ul>
+<h2>Stories built</h2>
+<ul><li>Resolve the database target from DATABASE_URL, DATABASE_PATH, or data/app.db. (PERSIST-001) [story]</li><li>Validate calendar dates in YYYY-MM-DD form. (VALID-003) [story]</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 921)</li><li>compass: COMPASS.md (SP 1145)</li><li>implements: FEATURE-DatabaseTarget.md (SP 1019)</li><li>context: ARCHITECTURE_compact.md (SP 427)</li><li>context: DATABASE_compact.md (SP 427)</li><li>implements: FEATURE-ValidateDate.md (SP 678)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>cli/dates.py</li><li>config.py</li><li>tests/test_config.py</li><li>tests/test_dates.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>RED: target-precedence (FEATURE-DatabaseTarget.md)</li></ul>
+<p>intent: DATABASE_URL takes precedence over DATABASE_PATH, which takes precedence over data/app.db, and each value is returned unchanged. return code: 1 stderr: Traceback (most recent call last): File &quot;target-precedence.py&quot;, line 2, in &lt;module&gt; from config import resolve_database_target<br>ModuleNotFoundError: No module named &#x27;config&#x27;</p>
+<ul><li>RED: target-opens-store (FEATURE-DatabaseTarget.md)</li></ul>
+<p>intent: The resolved target opens through the shipped persistence library and yields an empty accounts table. return code: 1 stderr: Traceback (most recent call last): File &quot;target-opens-store.py&quot;, line 4, in &lt;module&gt; from config import resolve_database_target<br>ModuleNotFoundError: No module named &#x27;config&#x27;</p>
+<ul><li>RED: valid-date-accepts (FEATURE-ValidateDate.md)</li></ul>
+<p>intent: check_date returns each real calendar date in YYYY-MM-DD form unchanged, including a leap day. return code: 1 stderr: Traceback (most recent call last): File &quot;valid-date-accepts.py&quot;, line 1, in &lt;module&gt; from cli.dates import check_date<br>ModuleNotFoundError: No module named &#x27;cli.dates&#x27;</p>
+<ul><li>RED: valid-date-rejects (FEATURE-ValidateDate.md)</li></ul>
+<p>intent: check_date raises ValueError for impossible dates and for every malformed shape. return code: 1 stderr: Traceback (most recent call last): File &quot;valid-date-rejects.py&quot;, line 1, in &lt;module&gt; from cli.dates import check_date<br>ModuleNotFoundError: No module named &#x27;cli.dates&#x27;</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: target-precedence (FEATURE-DatabaseTarget.md)</li></ul>
+<p>intent: DATABASE_URL takes precedence over DATABASE_PATH, which takes precedence over data/app.db, and each value is returned unchanged. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: target-opens-store (FEATURE-DatabaseTarget.md)</li></ul>
+<p>intent: The resolved target opens through the shipped persistence library and yields an empty accounts table. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: []</p>
+<ul><li>PASS: valid-date-accepts (FEATURE-ValidateDate.md)</li></ul>
+<p>intent: check_date returns each real calendar date in YYYY-MM-DD form unchanged, including a leap day. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: valid-date-rejects (FEATURE-ValidateDate.md)</li></ul>
+<p>intent: check_date raises ValueError for impossible dates and for every malformed shape. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.145335/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Build summary</h2>
+<p>The build block needs <code>config.py</code> (target resolution) and <code>cli/dates.py</code> (date check), plus tests. Nothing in <code>config.py</code> or <code>cli/dates.py</code> exists yet, and <code>persistence/</code> is already shipped, so I&#x27;ll write the two modules and their tests.Now I&#x27;ll run the project&#x27;s declared test command, then the two acceptance snippets verbatim.The pytest suite passed (56 tests). The snippet run failed only because <code>-I</code> ignores <code>PYTHONPATH</code>; I&#x27;ll put the project root on <code>sys.path</code> explicitly and rerun.RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>config.py</li><li>cli/dates.py</li><li>tests/test_config.py</li><li>tests/test_dates.py</li></ul>
+<p>SUMMARY:</p>
+<ul><li><strong>PERSIST-001:</strong> <code>config.resolve_database_target()</code> returns <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code>. Empty values fall through to the next setting. The value is returned unchanged, and the function opens no connection. The store is opened only through <code>persistence.open_database</code> (via <code>db_session</code> in the tests).</li><li><strong>VALID-003:</strong> <code>cli.dates.check_date(text)</code> accepts only the exact <code>YYYY-MM-DD</code> shape (ASCII digits, no whitespace or sign) and then checks the calendar with <code>date.fromisoformat</code>, so leap years are handled. It returns the input unchanged or raises <code>ValueError</code>.</li><li><strong>Tests:</strong> 56 pytest tests pass under <code>sh bin/test.sh</code> (exit 0). They cover the precedence rules, empty-value fall-through, the no-connection guarantee, a store round-trip through <code>accounts.create</code>/<code>get</code>, and calendar and shape boundaries (leap years 1900/2000/2100, year 0000, malformed shapes, Unicode digits). I also ran the three declared acceptance snippets (target-precedence, target-opens-store, valid-date-accepts/rejects) verbatim, and all pass.</li><li><strong>Not covered by this block:</strong> VALID-003&#x27;s &quot;rejected with exit 3&quot; is a CLI-level behavior. No command exists yet, so exit-code mapping is untested here and belongs to a later block.</li><li><strong>Not run:</strong> <code>sh sources/run.sh</code>, which is the terminal story and not part of this block. I did not touch <code>sources/</code>, <code>MANIFEST.md</code>, <code>COMPASS.md</code>, <code>blueprint/</code>, or <code>QuarterDeck/</code>/<code>evidence/</code>. No git operations were performed.</li></ul>
+<p>Choices made:</p>
+<ul><li><code>check_date</code> uses an explicit regex for shape before the calendar check, so <code>date.fromisoformat</code> alone (which accepts forms like <code>20260101</code>) cannot let through non-spec input.</li><li>The tests live in new files (<code>test_config.py</code>, <code>test_dates.py</code>) rather than extending <code>test_cli.py</code>, to keep each module&#x27;s tests separate.</li></ul>
+<p>&lt;blueprint-decisions&gt; [{&quot;spec&quot;:&quot;FEATURE-ValidateDate.md&quot;,&quot;severity&quot;:&quot;Low&quot;,&quot;subject&quot;:&quot;Shape check before calendar check&quot;,&quot;decision&quot;:&quot;check_date enforces the exact YYYY-MM-DD shape with an ASCII-digit regex before calling date.fromisoformat, because fromisoformat also accepts compact forms like 20260101. Is that acceptable?&quot;}] &lt;/blueprint-decisions&gt;</p></article>
+</main>
+</body>
+</html>

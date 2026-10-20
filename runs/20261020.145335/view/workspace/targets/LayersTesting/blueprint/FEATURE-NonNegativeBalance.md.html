@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-NonNegativeBalance.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-NonNegativeBalance.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-NonNegativeBalance.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Non-Negative Balance</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Reject any command whose changes would leave an account balance below zero.</td></tr><tr><td>Depends On</td><td>FEATURE-CommandTransaction.md, DATABASE.md</td></tr><tr><td>Provides</td><td>balance.ensure_non_negative(db, accounts)</td></tr><tr><td>Consumes</td><td>db.accounts.list, db.transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Guards every mutating command. After a command&#x27;s writes and before its transaction commits, the command passes the accounts it touched to <code>balance.ensure_non_negative</code>. The function computes each named account&#x27;s balance as the sum of its transaction amounts, in integer cents, from the database. If any balance is below zero it raises <code>RejectedError</code> with <code>exit_code</code> set to <code>3</code>. The caller then rolls back the command&#x27;s transaction, so no table changes.</p>
+<h2>Interface</h2>
+<ul><li><code>balance.ensure_non_negative(db, accounts)</code>: <code>accounts</code> is an iterable of account codes. Returns</li></ul>
+<p><code>None</code> when every named balance is zero or positive. Raises <code>balance.RejectedError</code> otherwise.</p>
+<ul><li><code>balance.RejectedError</code>: carries <code>exit_code</code>, which is <code>3</code>.</li><li>Reads: <code>db.accounts.list</code> to confirm each named account exists, and <code>db.transactions.list</code> to sum</li></ul>
+<p>amounts per account. Writes nothing.</p>
+<h2>Behavior</h2>
+<ol><li>Sum the <code>amount</code> integer-cent values of every transaction whose <code>account</code> equals each named code.</li><li>An account with no transactions has balance <code>0</code>.</li><li>A balance below <code>0</code> raises <code>RejectedError</code> for the first offending account in code order.</li><li>Amounts are never converted to floating point at any step.</li></ol>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC nonneg-rejects-negative-balance ===<br>Intent: A balance below zero raises RejectedError with exit code 3. import tempfile import os</p>
+<p>from persistence import open_database from balance import RejectedError, ensure_non_negative</p>
+<p>work = tempfile.mkdtemp() db = open_database(os.path.join(work, &quot;ledger.db&quot;)) db.categories.create(category=&quot;OPENING&quot;, description=&quot;Opening balance&quot;) db.accounts.create(account=&quot;CASH1&quot;, name=&quot;Till&quot;) db.transactions.create(txn_id=1, date=&quot;2026-01-01&quot;, account=&quot;CASH1&quot;, category=&quot;OPENING&quot;, amount=-500, memo=&quot;&quot;)</p>
+<p>expected_exit = 3 raised = None try: ensure_non_negative(db, [&quot;CASH1&quot;]) except RejectedError as error: raised = error print(&quot;raised:&quot;, raised) assert raised is not None assert raised.exit_code == expected_exit === END AC nonneg-rejects-negative-balance ===</p>
+<p>=== AC nonneg-accepts-zero-balance ===<br>Intent: A balance of exactly zero does not raise. import tempfile import os</p>
+<p>from persistence import open_database from balance import ensure_non_negative</p>
+<p>work = tempfile.mkdtemp() db = open_database(os.path.join(work, &quot;ledger.db&quot;)) db.categories.create(category=&quot;OPENING&quot;, description=&quot;Opening balance&quot;) db.accounts.create(account=&quot;CASH1&quot;, name=&quot;Till&quot;) db.transactions.create(txn_id=1, date=&quot;2026-01-01&quot;, account=&quot;CASH1&quot;, category=&quot;OPENING&quot;, amount=500, memo=&quot;&quot;) db.transactions.create(txn_id=2, date=&quot;2026-01-02&quot;, account=&quot;CASH1&quot;, category=&quot;OPENING&quot;, amount=-500, memo=&quot;&quot;)</p>
+<p>ensure_non_negative(db, [&quot;CASH1&quot;]) === END AC nonneg-accepts-zero-balance ===</p>
+<p>=== AC nonneg-sums-all-transactions ===<br>Intent: The balance is the sum of all transactions, so a positive total passes even with a negative row. import tempfile import os</p>
+<p>from persistence import open_database from balance import ensure_non_negative</p>
+<p>work = tempfile.mkdtemp() db = open_database(os.path.join(work, &quot;ledger.db&quot;)) db.categories.create(category=&quot;OPENING&quot;, description=&quot;Opening balance&quot;) db.accounts.create(account=&quot;CASH1&quot;, name=&quot;Till&quot;) db.transactions.create(txn_id=1, date=&quot;2026-01-01&quot;, account=&quot;CASH1&quot;, category=&quot;OPENING&quot;, amount=500, memo=&quot;&quot;) db.transactions.create(txn_id=2, date=&quot;2026-01-02&quot;, account=&quot;CASH1&quot;, category=&quot;OPENING&quot;, amount=-200, memo=&quot;&quot;)</p>
+<p>ensure_non_negative(db, [&quot;CASH1&quot;]) assert len(db.transactions.list()) == 2 === END AC nonneg-sums-all-transactions ===</p>
+<p>=== AC nonneg-rejection-changes-nothing ===<br>Intent: A rejected check leaves every transaction row unchanged. import tempfile import os</p>
+<p>from persistence import open_database from balance import RejectedError, ensure_non_negative</p>
+<p>work = tempfile.mkdtemp() db = open_database(os.path.join(work, &quot;ledger.db&quot;)) db.categories.create(category=&quot;OPENING&quot;, description=&quot;Opening balance&quot;) db.accounts.create(account=&quot;CASH1&quot;, name=&quot;Till&quot;) db.transactions.create(txn_id=1, date=&quot;2026-01-01&quot;, account=&quot;CASH1&quot;, category=&quot;OPENING&quot;, amount=-500, memo=&quot;&quot;) before = db.transactions.list()</p>
+<p>try: ensure_non_negative(db, [&quot;CASH1&quot;]) except RejectedError: pass after = db.transactions.list() print(&quot;before:&quot;, before, &quot;after:&quot;, after) assert after == before === END AC nonneg-rejection-changes-nothing ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The check reads only through the persistence library; it opens no database driver directly.</li><li>Balances are computed from the database on every call; no balance is cached or stored.</li><li>The check never converts amounts to floating point.</li></ul></article>
+</main>
+</body>
+</html>

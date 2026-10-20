@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/parser.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/parser.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/parser.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Argument parser construction. No behavior lives here.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import argparse
+
+TABLES = (&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;)
+REPORTS = (&quot;balances&quot;, &quot;categories&quot;, &quot;monthly&quot;)
+
+
+class UsageError(Exception):
+    &quot;&quot;&quot;A command line the parser rejects. ``main`` reports it as one stderr line and exits 2.&quot;&quot;&quot;
+
+
+class _Parser(argparse.ArgumentParser):
+    &quot;&quot;&quot;Raises ``UsageError`` instead of printing usage and exiting, so each usage error is one line.&quot;&quot;&quot;
+
+    def error(self, message: str) -&gt; None:
+        raise UsageError(message)
+
+
+def build_parser() -&gt; argparse.ArgumentParser:
+    parser = _Parser(prog=&quot;ledger&quot;, description=&quot;Command-line cash ledger.&quot;)
+    commands = parser.add_subparsers(dest=&quot;command&quot;, required=True, metavar=&quot;&lt;command&gt;&quot;)
+
+    commands.add_parser(&quot;init&quot;, help=&quot;Create the database schema.&quot;).set_defaults(route=&quot;init&quot;)
+    commands.add_parser(&quot;count&quot;, help=&quot;Count stored rows in each table.&quot;).set_defaults(route=&quot;count&quot;)
+
+    load = commands.add_parser(&quot;load&quot;, help=&quot;Load a seed CSV file into a table.&quot;)
+    load.add_argument(&quot;table&quot;, choices=TABLES, help=&quot;Table to load: accounts, categories, or transactions.&quot;)
+    load.add_argument(&quot;file&quot;, help=&quot;Path of the CSV file to load.&quot;)
+    load.set_defaults(route=&quot;load&quot;)
+
+    account = commands.add_parser(&quot;account&quot;, help=&quot;Manage accounts.&quot;)
+    account_verbs = account.add_subparsers(dest=&quot;verb&quot;, required=True, metavar=&quot;&lt;verb&gt;&quot;)
+    account_verbs.add_parser(&quot;add&quot;, help=&quot;Add an account.&quot;).set_defaults(route=&quot;account add&quot;)
+    account_verbs.add_parser(&quot;get&quot;, help=&quot;Show an account.&quot;).set_defaults(route=&quot;account get&quot;)
+    account_verbs.add_parser(&quot;rename&quot;, help=&quot;Rename an account.&quot;).set_defaults(route=&quot;account rename&quot;)
+    account_verbs.add_parser(&quot;delete&quot;, help=&quot;Delete an account.&quot;).set_defaults(route=&quot;account delete&quot;)
+
+    txn = commands.add_parser(&quot;txn&quot;, help=&quot;Manage cash transactions.&quot;)
+    txn_verbs = txn.add_subparsers(dest=&quot;verb&quot;, required=True, metavar=&quot;&lt;verb&gt;&quot;)
+    txn_verbs.add_parser(&quot;post&quot;, help=&quot;Post a transaction.&quot;).set_defaults(route=&quot;txn post&quot;)
+    get = txn_verbs.add_parser(&quot;get&quot;, help=&quot;Show a transaction.&quot;)
+    get.add_argument(&quot;txn_id&quot;, type=int, help=&quot;Transaction number.&quot;)
+    get.set_defaults(route=&quot;txn get&quot;)
+    txn_verbs.add_parser(&quot;amend&quot;, help=&quot;Amend a transaction.&quot;).set_defaults(route=&quot;txn amend&quot;)
+    txn_verbs.add_parser(&quot;delete&quot;, help=&quot;Delete a transaction.&quot;).set_defaults(route=&quot;txn delete&quot;)
+
+    commands.add_parser(&quot;transfer&quot;, help=&quot;Move cash between two accounts.&quot;).set_defaults(route=&quot;transfer&quot;)
+
+    report = commands.add_parser(&quot;report&quot;, help=&quot;Print a report.&quot;)
+    report_names = report.add_subparsers(dest=&quot;name&quot;, required=True, metavar=&quot;&lt;report&gt;&quot;)
+    for name in REPORTS:
+        report_names.add_parser(name, help=f&quot;Print the {name} report.&quot;).set_defaults(route=f&quot;report {name}&quot;)
+
+    return parser
+</pre></article>
+</main>
+</body>
+</html>

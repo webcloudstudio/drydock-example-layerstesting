@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_output.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_output.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_output.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;CSV output and diagnostic rendering: header and rows as plain comma-separated lines.&quot;&quot;&quot;
+
+from cli.output import render_csv, render_diagnostic
+
+
+def _split_lines(text: str) -&gt; list[list[str]]:
+    return [line.split(&quot;,&quot;) for line in text.split(&quot;\n&quot;)[:-1]]
+
+
+def test_csv_writes_header_then_rows_in_order() -&gt; None:
+    header = [&quot;account&quot;, &quot;name&quot;]
+    rows = [[&quot;DRAWER1&quot;, &quot;Front Drawer&quot;], [&quot;SAFE&quot;, &quot;Store Safe&quot;]]
+    text = render_csv(header, rows)
+    assert _split_lines(text) == [header] + rows
+
+
+def test_csv_terminates_every_line_with_newline() -&gt; None:
+    rows = [[&quot;DRAWER1&quot;, &quot;Front Drawer&quot;], [&quot;SAFE&quot;, &quot;Store Safe&quot;]]
+    text = render_csv([&quot;account&quot;, &quot;name&quot;], rows)
+    assert text.count(&quot;\n&quot;) == len(rows) + 1
+    assert text.endswith(&quot;\n&quot;)
+    assert text.split(&quot;\n&quot;)[-1] == &quot;&quot;
+
+
+def test_csv_with_no_rows_writes_only_header_line() -&gt; None:
+    header = [&quot;table&quot;, &quot;rows&quot;]
+    text = render_csv(header, [])
+    assert _split_lines(text) == [header]
+    assert text.count(&quot;\n&quot;) == 1
+
+
+def test_csv_with_one_row_writes_header_and_that_row() -&gt; None:
+    text = render_csv([&quot;table&quot;, &quot;rows&quot;], [[&quot;accounts&quot;, &quot;4&quot;]])
+    assert _split_lines(text) == [[&quot;table&quot;, &quot;rows&quot;], [&quot;accounts&quot;, &quot;4&quot;]]
+
+
+def test_csv_with_many_rows_keeps_every_row_in_order() -&gt; None:
+    rows = [[str(i), f&quot;item-{i}&quot;] for i in range(250)]
+    text = render_csv([&quot;id&quot;, &quot;label&quot;], rows)
+    assert _split_lines(text) == [[&quot;id&quot;, &quot;label&quot;]] + rows
+
+
+def test_csv_with_empty_field_keeps_the_empty_field() -&gt; None:
+    text = render_csv([&quot;account&quot;, &quot;memo&quot;], [[&quot;SAFE&quot;, &quot;&quot;]])
+    assert _split_lines(text) == [[&quot;account&quot;, &quot;memo&quot;], [&quot;SAFE&quot;, &quot;&quot;]]
+
+
+def test_csv_adds_no_leading_or_trailing_spaces() -&gt; None:
+    text = render_csv([&quot;table&quot;, &quot;rows&quot;], [[&quot;accounts&quot;, &quot;4&quot;], [&quot;categories&quot;, &quot;7&quot;]])
+    assert all(line == line.strip() for line in text.split(&quot;\n&quot;))
+
+
+def test_csv_does_not_alter_field_values() -&gt; None:
+    value = &quot;  spaced \&quot;quoted\&quot; value  &quot;
+    text = render_csv([&quot;memo&quot;], [[value]])
+    assert _split_lines(text)[1] == [value]
+
+
+def test_csv_writes_no_quoting_around_fields() -&gt; None:
+    text = render_csv([&quot;name&quot;], [[&quot;Front Drawer&quot;]])
+    assert &#x27;&quot;&#x27; not in text
+
+
+def test_diagnostic_is_returned_as_exactly_one_line() -&gt; None:
+    message = &quot;account DRAWER9 not found&quot;
+    text = render_diagnostic(message)
+    assert text.rstrip(&quot;\n&quot;) == message
+    assert text.count(&quot;\n&quot;) == 1
+
+
+def test_diagnostic_appends_single_newline_to_message() -&gt; None:
+    assert render_diagnostic(&quot;insufficient funds&quot;) == &quot;insufficient funds\n&quot;
+
+
+def test_diagnostic_of_empty_message_is_one_newline() -&gt; None:
+    assert render_diagnostic(&quot;&quot;) == &quot;\n&quot;
+
+
+def test_diagnostic_does_not_alter_message_text() -&gt; None:
+    message = &quot;  date must be written YYYY-MM-DD: &#x27;2026-1-01&#x27;  &quot;
+    assert render_diagnostic(message) == message + &quot;\n&quot;
+</pre></article>
+</main>
+</body>
+</html>

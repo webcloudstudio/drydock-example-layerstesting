@@ -1,0 +1,230 @@
+#!/bin/sh
+# run.sh — LayersTesting grader. Do not filter, skip, or reinterpret.
+#
+# Exercises ./ledger against a fresh database and compares every command's exit code and standard
+# output with the known answer below. Standard error is never compared.
+#
+#   sh sources/run.sh                    from the application root (how `drydock uat` runs it)
+#   sh uat/LayersTesting/bin/run.sh APP  from anywhere, grading the application root APP
+#
+# Database: DATABASE_URL when the caller sets it (for example a PostgreSQL DSN), otherwise a
+# SQLite file in a fresh temporary directory. Every run starts with `ledger init`, so the grader
+# never depends on prior state. Exit 0 only when every check passes.
+set -u
+
+HERE=$(cd "$(dirname "$0")" && pwd)
+APP=$(cd "${1:-.}" && pwd)
+if [ -f "$HERE/seed_accounts.csv" ]; then SEED=$HERE; else SEED=$(cd "$HERE/../sources" && pwd); fi
+LEDGER="$APP/ledger"
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT INT TERM
+DATABASE_URL=${DATABASE_URL:-$WORK/ledger.db}
+export DATABASE_URL
+
+if [ ! -x "$LEDGER" ]; then
+    echo "error: no executable ./ledger at the application root $APP." >&2
+    echo "The deliverable is an executable named ledger at the application root." >&2
+    exit 1
+fi
+
+PASSED=0
+FAILED=0
+
+# check <id> <expected exit> <ledger args...>  — expected standard output on stdin.
+check() {
+    id=$1
+    want_rc=$2
+    shift 2
+    cat > "$WORK/want"
+    (cd "$APP" && "$LEDGER" "$@") > "$WORK/got" 2> "$WORK/err"
+    rc=$?
+    if [ "$rc" -eq "$want_rc" ] && cmp -s "$WORK/want" "$WORK/got"; then
+        PASSED=$((PASSED + 1))
+        echo "PASS $id: ledger $*"
+    else
+        FAILED=$((FAILED + 1))
+        echo "FAIL $id: ledger $*"
+        echo "  exit: expected $want_rc, got $rc"
+        diff "$WORK/want" "$WORK/got" | sed 's/^/  /'
+        sed 's/^/  stderr: /' "$WORK/err"
+    fi
+}
+
+# ── A. Schema lifecycle ──────────────────────────────────────────────────────────────────
+check A1 0 init < /dev/null
+check A2 0 count <<'EOF'
+table,rows
+accounts,0
+categories,0
+transactions,0
+EOF
+
+# ── B. Bulk load of the known dataset ────────────────────────────────────────────────────
+check B1 0 load accounts "$SEED/seed_accounts.csv" <<'EOF'
+table,loaded
+accounts,4
+EOF
+check B2 0 load categories "$SEED/seed_categories.csv" <<'EOF'
+table,loaded
+categories,7
+EOF
+check B3 0 load transactions "$SEED/seed_transactions.csv" <<'EOF'
+table,loaded
+transactions,120
+EOF
+check B4 0 count <<'EOF'
+table,rows
+accounts,4
+categories,7
+transactions,120
+EOF
+
+# ── C. Reports over the seeded rows ──────────────────────────────────────────────────────
+check C1 0 report balances <<'EOF'
+account,name,transactions,balance
+DRAWER1,Front Drawer,39,2299.38
+DRAWER2,Back Drawer,39,1378.32
+PETTY,Petty Cash,21,306.25
+SAFE,Store Safe,21,250.00
+TOTAL,,120,4233.95
+EOF
+check C2 0 report categories <<'EOF'
+category,description,transactions,inflow,outflow,net
+OPENING,Opening balance,2,5200.00,0.00,5200.00
+PAYROLL,Payroll,6,0.00,7200.00,-7200.00
+REFUND,Customer refunds,12,0.00,101.25,-101.25
+RENT,Rent,3,0.00,2700.00,-2700.00
+SALES,Sales receipts,64,9578.95,0.00,9578.95
+SUPPLY,Supplies,15,0.00,543.75,-543.75
+TRANSFER,Internal transfer,18,5100.00,5100.00,0.00
+TOTAL,,120,19878.95,15645.00,4233.95
+EOF
+check C3 0 report monthly <<'EOF'
+month,transactions,inflow,outflow,net
+2026-01,40,9659.45,5215.00,4444.45
+2026-02,40,4979.65,5215.00,-235.35
+2026-03,40,5239.85,5215.00,24.85
+TOTAL,120,19878.95,15645.00,4233.95
+EOF
+
+# ── D. A rejected load changes nothing ───────────────────────────────────────────────────
+check D1 3 load transactions "$SEED/seed_transactions_bad.csv" < /dev/null
+check D2 3 load accounts "$SEED/seed_accounts.csv" < /dev/null
+check D3 0 count <<'EOF'
+table,rows
+accounts,4
+categories,7
+transactions,120
+EOF
+
+# ── E. Account create, read, update, delete ──────────────────────────────────────────────
+check E1 0 account add CASH9 "Event Float" <<'EOF'
+account,name,transactions,balance
+CASH9,Event Float,0,0.00
+EOF
+check E2 3 account add CASH9 "Event Float" < /dev/null
+check E3 0 account get CASH9 <<'EOF'
+account,name,transactions,balance
+CASH9,Event Float,0,0.00
+EOF
+check E4 0 account rename CASH9 "Event Cash Box" <<'EOF'
+account,name,transactions,balance
+CASH9,Event Cash Box,0,0.00
+EOF
+check E5 4 account get NOSUCH < /dev/null
+check E6 3 account delete DRAWER1 < /dev/null
+check E7 0 account delete CASH9 <<'EOF'
+deleted
+CASH9
+EOF
+check E8 4 account get CASH9 < /dev/null
+
+# ── F. Transaction create, read, update, delete ──────────────────────────────────────────
+check F1 0 txn post DRAWER1 SALES 45.50 2026-04-01 "walk in sale" <<'EOF'
+txn_id,date,account,category,amount,memo
+121,2026-04-01,DRAWER1,SALES,45.50,walk in sale
+EOF
+check F2 0 txn get 121 <<'EOF'
+txn_id,date,account,category,amount,memo
+121,2026-04-01,DRAWER1,SALES,45.50,walk in sale
+EOF
+check F3 0 txn amend 121 54.50 <<'EOF'
+txn_id,date,account,category,amount,memo
+121,2026-04-01,DRAWER1,SALES,54.50,walk in sale
+EOF
+check F4 4 txn get 999 < /dev/null
+check F5 3 txn post DRAWER1 NOSUCH 1.00 2026-04-01 < /dev/null
+check F6 3 txn post DRAWER1 SALES 1.234 2026-04-01 < /dev/null
+check F7 3 txn post DRAWER1 SALES 1.00 2026-02-30 < /dev/null
+check F8 0 txn delete 121 <<'EOF'
+deleted
+121
+EOF
+check F9 4 txn get 121 < /dev/null
+check F10 0 txn post PETTY SUPPLY -12.34 2026-04-02 tape <<'EOF'
+txn_id,date,account,category,amount,memo
+121,2026-04-02,PETTY,SUPPLY,-12.34,tape
+EOF
+
+# ── G. Transfers are atomic; no command leaves a negative balance ────────────────────────
+check G1 0 transfer DRAWER1 SAFE 500.00 2026-04-03 <<'EOF'
+txn_id,date,account,category,amount,memo
+122,2026-04-03,DRAWER1,TRANSFER,-500.00,transfer to SAFE
+123,2026-04-03,SAFE,TRANSFER,500.00,transfer from DRAWER1
+EOF
+check G2 3 transfer SAFE PETTY 999.99 2026-04-04 < /dev/null
+check G3 3 txn post PETTY SUPPLY -1000.00 2026-04-04 < /dev/null
+check G4 3 txn amend 1 1.00 < /dev/null
+check G5 3 txn delete 1 < /dev/null
+check G6 0 count <<'EOF'
+table,rows
+accounts,4
+categories,7
+transactions,123
+EOF
+
+# ── H. Reports after the changes ─────────────────────────────────────────────────────────
+check H1 0 report balances <<'EOF'
+account,name,transactions,balance
+DRAWER1,Front Drawer,40,1799.38
+DRAWER2,Back Drawer,39,1378.32
+PETTY,Petty Cash,22,293.91
+SAFE,Store Safe,22,750.00
+TOTAL,,123,4221.61
+EOF
+check H2 0 report categories <<'EOF'
+category,description,transactions,inflow,outflow,net
+OPENING,Opening balance,2,5200.00,0.00,5200.00
+PAYROLL,Payroll,6,0.00,7200.00,-7200.00
+REFUND,Customer refunds,12,0.00,101.25,-101.25
+RENT,Rent,3,0.00,2700.00,-2700.00
+SALES,Sales receipts,64,9578.95,0.00,9578.95
+SUPPLY,Supplies,16,0.00,556.09,-556.09
+TRANSFER,Internal transfer,20,5600.00,5600.00,0.00
+TOTAL,,123,20378.95,16157.34,4221.61
+EOF
+check H3 0 report monthly <<'EOF'
+month,transactions,inflow,outflow,net
+2026-01,40,9659.45,5215.00,4444.45
+2026-02,40,4979.65,5215.00,-235.35
+2026-03,40,5239.85,5215.00,24.85
+2026-04,3,500.00,512.34,-12.34
+TOTAL,123,20378.95,16157.34,4221.61
+EOF
+
+# ── U. Usage errors ──────────────────────────────────────────────────────────────────────
+check U1 2 frobnicate < /dev/null
+check U2 2 report nosuch < /dev/null
+
+# ── Z. Re-initialization drops every row ─────────────────────────────────────────────────
+check Z1 0 init < /dev/null
+check Z2 0 count <<'EOF'
+table,rows
+accounts,0
+categories,0
+transactions,0
+EOF
+
+TOTAL=$((PASSED + FAILED))
+echo "LayersTesting: $PASSED passed, $FAILED failed (of $TOTAL)"
+[ "$FAILED" -eq 0 ]

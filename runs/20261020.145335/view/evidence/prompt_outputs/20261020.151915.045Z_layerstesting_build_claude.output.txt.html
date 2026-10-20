@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.151915.045Z_layerstesting_build_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.151915.045Z_layerstesting_build_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.151915.045Z_layerstesting_build_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>The spec for this block is `FEATURE-CliOutput.md`: a new `cli/output.py` with `render_csv` and `render_diagnostic`, plus tests. Nothing in the existing CLI calls these yet, so I&#x27;ll keep the change to the output module and its tests.That last parametrized header test duplicates the header-only case without adding coverage, so I&#x27;ll remove it before running.Implemented the CSV output and diagnostic rendering for CLI-002 per `FEATURE-CliOutput.md`. The full suite passes: `sh bin/test.sh` reports 109 passed, exit 0.
+
+Nothing calls these functions yet, so the &quot;init writes nothing&quot; and &quot;failing command writes nothing to stdout&quot; behaviors will only take effect when the command blocks wire them in. I kept this block to the output module.
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli/output.py
+- tests/test_output.py
+
+SUMMARY:
+- `cli/output.py` provides `render_csv(header, rows)`, which joins each line with `,` and ends each with `\n`, with no quoting or padding, and `render_diagnostic(message)`, which returns the message plus one `\n`.
+- `tests/test_output.py` has 12 tests. The four declared acceptance assertions (`cli-output-csv-shape`, `cli-output-csv-header-only`, `cli-output-csv-no-padding`, `cli-output-diagnostic-one-line`) are each covered by a test. Extra tests cover one row, many rows, empty fields, values passed through unaltered, no quoting, and the diagnostic edge cases.
+- Coverage run for this step: `sh bin/test.sh` (the declared `Suite` for every behavioral story), 109 passed, 0 failed. The terminal `sh sources/run.sh` check is not part of this block.
+- Not touched: `sources/`, the Drydock-protected paths, and git history.</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.150235.682Z_layerstesting_plan_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.150235.682Z_layerstesting_plan_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.150235.682Z_layerstesting_plan_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT FEATURE-LoadTransactions.md ===
+# FEATURE: Load Transactions
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Load transactions from a CSV file atomically, keeping each txn_id from the file. |
+| Depends On  | DATABASE.md, FEATURE-LoadAccounts.md, FEATURE-LoadCategories.md, FEATURE-NonNegativeBalance.md, FEATURE-ValidateText.md, FEATURE-ValidateAmount.md, FEATURE-ValidateDate.md, FEATURE-CliDispatch.md, FEATURE-CliOutput.md |
+| Provides    | ledger load transactions |
+| Consumes    | accounts.get, categories.get, transactions.create |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Loads `transactions` from a CSV file. The file either stores every row or stores none. Each row
+keeps the `txn_id` written in the file, so a loaded transaction is never renumbered.
+
+## Command
+
+`ledger load transactions &lt;csv&gt;`
+
+## Contract
+
+- The header must match exactly `txn_id,date,account,category,amount,memo`, in that order. A file
+  whose header differs, reorders, or omits a column is rejected with exit 3 and stores no rows.
+- `txn_id` is an integer and must be unique among existing transactions and within the file. A
+  duplicate is rejected with exit 3.
+- `date` is validated by FEATURE-ValidateDate. `memo` is validated by FEATURE-ValidateText.
+- `amount` is parsed to integer cents by FEATURE-ValidateAmount. No floating point is used.
+- `account` must name an existing account and `category` an existing category. An unknown value
+  is rejected with exit 3.
+- After every row is staged, and before commit, FEATURE-NonNegativeBalance checks each account.
+  Any negative balance rejects the file with exit 3.
+- A file that cannot be read exits 1 and writes nothing to standard output.
+- Any rejected row rejects the whole file. The command runs as one transaction through
+  FEATURE-CommandTransaction.
+- On success, standard output is `table,loaded` then `transactions,&lt;rows&gt;`.
+
+## Database Interface
+
+- `FEATURE-LEDGER-002` — read: look up each row&#x27;s account - supplies: `account` - returns: `account`
+- `FEATURE-LEDGER-007` — read: look up each row&#x27;s category - supplies: `category` - returns: `category`
+- `FEATURE-LEDGER-011` — write: insert each accepted row - supplies: `txn_id`, `date`, `account`, `category`, `amount`, `memo` - returns: `txn_id`
+
+## Programmatic Acceptance
+
+=== AC load-txn-round-trip ===
+Intent: A valid file stores every row with its own txn_id and amount in integer cents, and reports the loaded count.
+
+import csv
+import io
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+with db_session(dsn) as db:
+    db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;)
+    db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales receipts&quot;)
+
+csv_path = os.path.join(os.path.dirname(dsn), &quot;txns.csv&quot;)
+with open(csv_path, &quot;w&quot;) as handle:
+    handle.write(&quot;txn_id,date,account,category,amount,memo\n&quot;)
+    handle.write(&quot;7,2026-01-02,DRAWER1,SALES,155.26,sales day 1\n&quot;)
+    handle.write(&quot;8,2026-01-02,DRAWER1,SALES,-12.50,refund\n&quot;)
+
+exit_code, out, err = cli_runner(&quot;load&quot;, &quot;transactions&quot;, csv_path)
+print(out)
+print(err)
+assert exit_code == 0
+rows = list(csv.reader(io.StringIO(out)))
+assert rows[0] == [&quot;table&quot;, &quot;loaded&quot;]
+assert rows[1] == [&quot;transactions&quot;, &quot;2&quot;]
+
+with db_session(dsn) as db:
+    stored = sorted((row.txn_id, row.amount) for row in db.transactions.list())
+assert stored == [(7, 15526), (8, -1250)]
+=== END AC load-txn-round-trip ===
+
+=== AC load-txn-header-mismatch ===
+Intent: A file whose header reorders the transaction columns is rejected with exit 3 and stores no rows.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+with db_session(dsn) as db:
+    db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;)
+    db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales receipts&quot;)
+    before = len(db.transactions.list())
+
+csv_path = os.path.join(os.path.dirname(dsn), &quot;reordered.csv&quot;)
+with open(csv_path, &quot;w&quot;) as handle:
+    handle.write(&quot;txn_id,account,date,category,amount,memo\n&quot;)
+    handle.write(&quot;7,DRAWER1,2026-01-02,SALES,155.26,sales day 1\n&quot;)
+
+exit_code, out, err = cli_runner(&quot;load&quot;, &quot;transactions&quot;, csv_path)
+print(err)
+assert exit_code == 3
+assert out == &quot;&quot;
+
+with db_session(dsn) as db:
+    after = len(db.transactions.list())
+assert after == before
+=== END AC load-txn-header-mismatch ===
+
+=== AC load-txn-unknown-account-rejects-file ===
+Intent: One row naming an unknown account rejects the whole file, so the valid rows before it are not stored.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+with db_session(dsn) as db:
+    db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;)
+    db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales receipts&quot;)
+    before = len(db.transactions.list())
+
+csv_path = os.path.join(os.path.dirname(dsn), &quot;unknown.csv&quot;)
+with open(csv_path, &quot;w&quot;) as handle:
+    handle.write(&quot;txn_id,date,account,category,amount,memo\n&quot;)
+    handle.write(&quot;7,2026-01-02,DRAWER1,SALES,10.00,good row\n&quot;)
+    handle.write(&quot;8,2026-01-02,NOSUCH,SALES,10.00,unknown account\n&quot;)
+
+exit_code, out, err = cli_runner(&quot;load&quot;, &quot;transactions&quot;, csv_path)
+print(err)
+assert exit_code == 3
+assert out == &quot;&quot;
+
+with db_session(dsn) as db:
+    after = len(db.transactions.list())
+assert after == before
+=== END AC load-txn-unknown-account-rejects-file ===
+
+=== AC load-txn-duplicate-id ===
+Intent: A file whose txn_id already exists in the store is rejected with exit 3 and changes nothing.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+with db_session(dsn) as db:
+    db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;)
+    db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales receipts&quot;)
+    db.transactions.create(txn_id=7, date=&quot;2026-01-01&quot;, account=&quot;DRAWER1&quot;, category=&quot;SALES&quot;, amount=100, memo=&quot;&quot;)
+    before = len(db.transactions.list())
+
+csv_path = os.path.join(os.path.dirname(dsn), &quot;duplicate.csv&quot;)
+with open(csv_path, &quot;w&quot;) as handle:
+    handle.write(&quot;txn_id,date,account,category,amount,memo\n&quot;)
+    handle.write(&quot;7,2026-01-02,DRAWER1,SALES,10.00,clash\n&quot;)
+
+exit_code, out, err = cli_runner(&quot;load&quot;, &quot;transactions&quot;, csv_path)
+print(err)
+assert exit_code == 3
+assert out == &quot;&quot;
+
+with db_session(dsn) as db:
+    after = len(db.transactions.list())
+assert after == before
+=== END AC load-txn-duplicate-id ===
+
+=== AC load-txn-negative-balance ===
+Intent: A file that would leave an account below zero is rejected with exit 3 and stores no rows.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+with db_session(dsn) as db:
+    db.accounts.create(account=&quot;PETTY&quot;, name=&quot;Petty Cash&quot;)
+    db.categories.create(category=&quot;SUPPLY&quot;, description=&quot;Supplies&quot;)
+    before = len(db.transactions.list())
+
+csv_path = os.path.join(os.path.dirname(dsn), &quot;overdraw.csv&quot;)
+with open(csv_path, &quot;w&quot;) as handle:
+    handle.write(&quot;txn_id,date,account,category,amount,memo\n&quot;)
+    handle.write(&quot;9,2026-01-03,PETTY,SUPPLY,-1.00,overdraw\n&quot;)
+
+exit_code, out, err = cli_runner(&quot;load&quot;, &quot;transactions&quot;, csv_path)
+print(err)
+assert exit_code == 3
+assert out == &quot;&quot;
+
+with db_session(dsn) as db:
+    after = len(db.transactions.list())
+assert after == before
+=== END AC load-txn-negative-balance ===
+
+=== AC load-txn-unreadable-file ===
+Intent: A file path that does not exist exits 1 and writes nothing to standard output.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+missing = os.path.join(os.path.dirname(dsn), &quot;missing.csv&quot;)
+exit_code, out, err = cli_runner(&quot;load&quot;, &quot;transactions&quot;, missing)
+print(err)
+assert exit_code == 1
+assert out == &quot;&quot;
+=== END AC load-txn-unreadable-file ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A file with any rejected row stores no rows from that file.
+- Amounts are parsed to integer cents. No floating-point value reaches the database.
+- Application code reaches the database only through the declared repository operations.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-AccountAdd.md ===
+# FEATURE: Account Add
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Add an account with ledger account add, rejecting duplicates and invalid fields. |
+| Depends On  | DATABASE.md, FEATURE-CommandTransaction.md, FEATURE-ValidateText.md, FEATURE-CliDispatch.md, FEATURE-CliOutput.md, FEATURE-InitSchema.md |
+| Provides    | ledger account add |
+| Consumes    | accounts.get, accounts.create |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Adds one account row. The new account starts with no transactions and a balance of `0.00`.
+
+## Command
+
+`ledger account add &lt;code&gt; &lt;name&gt;`
+
+## Contract
+
+- `code` is 1 to 12 characters from `A-Z` and `0-9`. Any other value is rejected with exit 3.
+- `name` is 1 to 40 characters with no comma or newline. Any other value is rejected with exit 3.
+- A code that already exists is rejected with exit 3 and changes nothing.
+- On success, standard output is the header `account,name,transactions,balance` followed by the
+  row `&lt;code&gt;,&lt;name&gt;,0,0.00`.
+- Any failure writes nothing to standard output and one diagnostic line to standard error.
+- The command runs as one transaction through FEATURE-CommandTransaction.
+
+## Database Interface
+
+- `FEATURE-LEDGER-002` — read: check whether the code already exists - supplies: `account` - returns: `account`
+- `FEATURE-LEDGER-003` — write: create the account row - supplies: `account`, `name` - returns: `account`, `name`
+
+## Programmatic Acceptance
+
+=== AC acct-add-round-trip ===
+Intent: A valid add writes the account row, prints it in the CSV contract, and the stored row reads back with the same name.
+
+import csv
+import io
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+code, name = &quot;CASH9&quot;, &quot;Event Float&quot;
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, code, name)
+print(out)
+print(err)
+assert exit_code == 0
+rows = list(csv.reader(io.StringIO(out)))
+assert rows[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;]
+assert rows[1] == [code, name, &quot;0&quot;, &quot;0.00&quot;]
+
+with db_session(dsn) as db:
+    stored = db.accounts.get(account=code)
+assert stored.account == code
+assert stored.name == name
+=== END AC acct-add-round-trip ===
+
+=== AC acct-add-duplicate ===
+Intent: Adding a code that already exists exits 3, prints nothing, and leaves the original name unchanged.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+code, name = &quot;CASH9&quot;, &quot;Event Float&quot;
+assert cli_runner(&quot;account&quot;, &quot;add&quot;, code, name)[0] == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, code, &quot;Other Name&quot;)
+print(err)
+assert exit_code == 3
+assert out == &quot;&quot;
+
+with db_session(dsn) as db:
+    stored = db.accounts.get(account=code)
+assert stored.name == name
+=== END AC acct-add-duplicate ===
+
+=== AC acct-add-code-bounds ===
+Intent: A 12-character code is accepted; a 13-character code and a lowercase code are rejected with exit 3 and print nothing.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+code_max = &quot;A&quot; * 12
+code_over = &quot;A&quot; * 13
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, code_max, &quot;Max Code&quot;)
+assert exit_code == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, code_over, &quot;Over Code&quot;)
+print(err)
+assert exit_code == 3
+assert out == &quot;&quot;
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;lower9&quot;, &quot;Lower Code&quot;)
+print(err)
+assert exit_code == 3
+assert out == &quot;&quot;
+=== END AC acct-add-code-bounds ===
+
+=== AC acct-add-name-bounds ===
+Intent: A 40-character name is accepted; a 41-character name and a name containing a comma are rejected with exit 3.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+name_max = &quot;N&quot; * 40
+name_over = &quot;N&quot; * 41
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;NAMEMAX&quot;, name_max)
+assert exit_code == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;NAMEOVER&quot;, name_over)
+print(err)
+assert exit_code == 3
+assert out == &quot;&quot;
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;COMMA1&quot;, &quot;Float, Event&quot;)
+print(err)
+assert exit_code == 3
+assert out == &quot;&quot;
+=== END AC acct-add-name-bounds ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A failed add changes no row and prints nothing to standard output.
+- The new account&#x27;s balance is `0.00` and its transaction count is `0`; neither is accepted from input.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-AccountGet.md ===
+# FEATURE: Account Get
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Get one account with its transaction count and balance computed from the database. |
+| Depends On  | DATABASE.md, FEATURE-AccountAdd.md, FEATURE-ValidateText.md, FEATURE-CliDispatch.md, FEATURE-CliOutput.md, FEATURE-InitSchema.md |
+| Provides    | ledger account get |
+| Consumes    | accounts.get, transactions.list |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Writes the account row for one code. The transaction count and balance are computed by query from
+the stored transactions, never stored on the account.
+
+## Command
+
+`ledger account get &lt;code&gt;`
+
+## Contract
+
+- On success, standard output is the header `account,name,transactions,balance` followed by one row
+  `&lt;code&gt;,&lt;name&gt;,&lt;count&gt;,&lt;balance&gt;`. `balance` is the signed sum of the account&#x27;s transaction
+  amounts in integer cents, written with exactly two decimals.
+- A code that is well formed but absent exits 4 and writes nothing to standard output.
+- A code that is malformed under FEATURE-ValidateText exits 3 and writes nothing to standard output.
+  Validation precedes the lookup.
+- The command is read-only. It changes no table.
+
+## Database Interface
+
+- `FEATURE-LEDGER-002` — read: read the account row - supplies: `account` - returns: `account`, `name`
+
+## Programmatic Acceptance
+
+=== AC acct-get-after-add ===
+Intent: A newly added account reads back with zero transactions and a balance of 0.00.
+
+import csv
+import io
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+code, name = &quot;CASH9&quot;, &quot;Event Float&quot;
+assert cli_runner(&quot;account&quot;, &quot;add&quot;, code, name)[0] == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, code)
+print(out)
+print(err)
+assert exit_code == 0
+rows = list(csv.reader(io.StringIO(out)))
+assert rows[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;]
+assert rows[1] == [code, name, &quot;0&quot;, &quot;0.00&quot;]
+=== END AC acct-get-after-add ===
+
+=== AC acct-get-counts-and-balance ===
+Intent: The transaction count and balance are computed from stored transactions, so a stored 500.00 transaction reads back as one transaction with balance 500.00.
+
+import csv
+import io
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+code, name = &quot;DRAWER1&quot;, &quot;Front Drawer&quot;
+assert cli_runner(&quot;account&quot;, &quot;add&quot;, code, name)[0] == 0
+
+with db_session(dsn) as db:
+    db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales receipts&quot;)
+    db.transactions.create(txn_id=1, date=&quot;2026-01-02&quot;, account=code, category=&quot;SALES&quot;, amount=50000, memo=&quot;&quot;)
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, code)
+print(out)
+print(err)
+assert exit_code == 0
+rows = list(csv.reader(io.StringIO(out)))
+assert rows[1] == [code, name, &quot;1&quot;, &quot;500.00&quot;]
+=== END AC acct-get-counts-and-balance ===
+
+=== AC acct-get-absent ===
+Intent: A well-formed code that does not exist exits 4 and writes nothing to standard output.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;NOSUCH&quot;)
+print(err)
+assert exit_code == 4
+assert out == &quot;&quot;
+=== END AC acct-get-absent ===
+
+=== AC acct-get-malformed-code ===
+Intent: A lowercase code is rejected by validation with exit 3 before any lookup, and writes nothing to standard output.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;lower9&quot;)
+print(err)
+assert exit_code == 3
+assert out == &quot;&quot;
+=== END AC acct-get-malformed-code ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Account get never writes to any table.
+- The balance is never stored on the account row; it is computed from transactions on each read.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-AccountRename.md ===
+# FEATURE: Account Rename
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Rename an account without changing its code, transactions, or balance. |
+| Depends On  | DATABASE.md, FEATURE-CommandTransaction.md, FEATURE-ValidateText.md, FEATURE-AccountGet.md, FEATURE-CliDispatch.md, FEATURE-CliOutput.md |
+| Provides    | ledger account rename |
+| Consumes    | accounts.get, accounts.update |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Changes only the name of an existing account and writes the updated account row.
+
+## Command
+
+`ledger account rename &lt;code&gt; &lt;name&gt;`
+
+## Contract
+
+- The code must exist. An absent code exits 4 and changes nothing.
+- The new name is validated by FEATURE-ValidateText as 1 to 40 characters with no comma or newline.
+  An invalid name exits 3 and changes nothing.
+- On success, standard output is the header `account,name,transactions,balance` followed by the
+  updated row, with the transaction count and balance computed as in FEATURE-AccountGet.
+- The command runs as one transaction through FEATURE-CommandTransaction.
+
+## Database Interface
+
+- `FEATURE-LEDGER-002` — read: confirm the account exists - supplies: `account` - returns: `account`, `name`
+- `FEATURE-LEDGER-004` — write: store the new name - supplies: `account`, `name` - returns: `account`, `name`
+
+## Programmatic Acceptance
+
+=== AC acct-rename-round-trip ===
+Intent: Renaming an empty account writes the updated row and the stored name reads back as the new name.
+
+import csv
+import io
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+code, old_name, new_name = &quot;CASH9&quot;, &quot;Event Float&quot;, &quot;Event Cash Box&quot;
+assert cli_runner(&quot;account&quot;, &quot;add&quot;, code, old_name)[0] == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, new_name)
+print(out)
+print(err)
+assert exit_code == 0
+rows = list(csv.reader(io.StringIO(out)))
+assert rows[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;]
+assert rows[1] == [code, new_name, &quot;0&quot;, &quot;0.00&quot;]
+
+with db_session(dsn) as db:
+    stored = db.accounts.get(account=code)
+assert stored.name == new_name
+=== END AC acct-rename-round-trip ===
+
+=== AC acct-rename-keeps-transactions ===
+Intent: Renaming an account with a stored transaction leaves its transaction count and balance unchanged.
+
+import csv
+import io
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+code, old_name, new_name = &quot;DRAWER1&quot;, &quot;Front Drawer&quot;, &quot;Till One&quot;
+assert cli_runner(&quot;account&quot;, &quot;add&quot;, code, old_name)[0] == 0
+with db_session(dsn) as db:
+    db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales receipts&quot;)
+    db.transactions.create(txn_id=1, date=&quot;2026-01-02&quot;, account=code, category=&quot;SALES&quot;, amount=50000, memo=&quot;&quot;)
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, new_name)
+print(err)
+assert exit_code == 0
+rows = list(csv.reader(io.StringIO(out)))
+assert rows[1] == [code, new_name, &quot;1&quot;, &quot;500.00&quot;]
+=== END AC acct-rename-keeps-transactions ===
+
+=== AC acct-rename-absent ===
+Intent: Renaming an absent account exits 4, prints nothing, and creates no account.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, &quot;NOSUCH&quot;, &quot;Anything&quot;)
+print(err)
+assert exit_code == 4
+assert out == &quot;&quot;
+assert cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;NOSUCH&quot;)[0] == 4
+=== END AC acct-rename-absent ===
+
+=== AC acct-rename-invalid-name ===
+Intent: An empty name and a name containing a comma are rejected with exit 3, and the original name is kept.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+code, name = &quot;CASH9&quot;, &quot;Event Float&quot;
+assert cli_runner(&quot;account&quot;, &quot;add&quot;, code, name)[0] == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, &quot;&quot;)
+print(err)
+assert exit_code == 3
+assert out == &quot;&quot;
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, &quot;Float, Event&quot;)
+print(err)
+assert exit_code == 3
+assert out == &quot;&quot;
+
+with db_session(dsn) as db:
+    stored = db.accounts.get(account=code)
+assert stored.name == name
+=== END AC acct-rename-invalid-name ===
+
+=== AC acct-rename-name-bounds ===
+Intent: A 40-character name is accepted and a 41-character name is rejected with exit 3.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+code = &quot;CASH9&quot;
+assert cli_runner(&quot;account&quot;, &quot;add&quot;, code, &quot;Event Float&quot;)[0] == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, &quot;N&quot; * 40)
+print(err)
+assert exit_code == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, &quot;N&quot; * 41)
+print(err)
+assert exit_code == 3
+assert out == &quot;&quot;
+=== END AC acct-rename-name-bounds ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A rename never changes the account code, any transaction, or any balance.
+- A rejected rename leaves the stored name exactly as it was.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-AccountDelete.md ===
+# FEATURE: Account Delete
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Delete an account that has no transactions, and refuse otherwise. |
+| Depends On  | DATABASE.md, FEATURE-CommandTransaction.md, FEATURE-ValidateText.md, FEATURE-AccountGet.md, FEATURE-CliDispatch.md, FEATURE-CliOutput.md |
+| Provides    | ledger account delete |
+| Consumes    | accounts.get, accounts.delete, transactions.list |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Deletes one account row when no transaction refers to it.
+
+## Command
+
+`ledger account delete &lt;code&gt;`
+
+## Contract
+
+- An absent code exits 4 and changes nothing.
+- An account with one or more transactions is refused with exit 3 and changes nothing.
+- On success, standard output is the header `deleted` followed by the row `&lt;code&gt;`.
+- Any failure writes nothing to standard output and one diagnostic line to standard error.
+- The transaction check runs before the delete operation. The command runs as one transaction
+  through FEATURE-CommandTransaction.
+
+## Database Interface
+
+- `FEATURE-LEDGER-002` — read: confirm the account exists - supplies: `account` - returns: `account`
+- `FEATURE-LEDGER-005` — write: delete the account row - supplies: `account` - returns: `account`
+
+## Programmatic Acceptance
+
+=== AC acct-delete-empty ===
+Intent: Deleting an account with no transactions writes the deleted header and code, and the account is then absent.
+
+import csv
+import io
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+code = &quot;CASH9&quot;
+assert cli_runner(&quot;account&quot;, &quot;add&quot;, code, &quot;Event Float&quot;)[0] == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, code)
+print(out)
+print(err)
+assert exit_code == 0
+rows = list(csv.reader(io.StringIO(out)))
+assert rows == [[&quot;deleted&quot;], [code]]
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, code)
+assert exit_code == 4
+assert out == &quot;&quot;
+=== END AC acct-delete-empty ===
+
+=== AC acct-delete-refused-with-transactions ===
+Intent: An account with a stored transaction is refused with exit 3, prints nothing, and remains present with its transaction count unchanged.
+
+import csv
+import io
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+code, name = &quot;DRAWER1&quot;, &quot;Front Drawer&quot;
+assert cli_runner(&quot;account&quot;, &quot;add&quot;, code, name)[0] == 0
+with db_session(dsn) as db:
+    db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales receipts&quot;)
+    db.transactions.create(txn_id=1, date=&quot;2026-01-02&quot;, account=code, category=&quot;SALES&quot;, amount=50000, memo=&quot;&quot;)
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, code)
+print(err)
+assert exit_code == 3
+assert out == &quot;&quot;
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, code)
+assert exit_code == 0
+rows = list(csv.reader(io.StringIO(out)))
+assert rows[1] == [code, name, &quot;1&quot;, &quot;500.00&quot;]
+=== END AC acct-delete-refused-with-transactions ===
+
+=== AC acct-delete-absent ===
+Intent: Deleting an absent account exits 4 and prints nothing.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, &quot;NOSUCH&quot;)
+print(err)
+assert exit_code == 4
+assert out == &quot;&quot;
+=== END AC acct-delete-absent ===
+
+=== AC acct-delete-twice ===
+Intent: Deleting the same account a second time exits 4, because the account is already absent.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+assert cli_runner(&quot;init&quot;)[0] == 0
+
+code = &quot;CASH9&quot;
+assert cli_runner(&quot;account&quot;, &quot;add&quot;, code, &quot;Event Float&quot;)[0] == 0
+assert cli_runner(&quot;account&quot;, &quot;delete&quot;, code)[0] == 0
+
+exit_code, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, code)
+print(err)
+assert exit_code == 4
+assert out == &quot;&quot;
+=== END AC acct-delete-twice ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A refused delete changes no row.
+- An account row is never removed while any transaction names its code.
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

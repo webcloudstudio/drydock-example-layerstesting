@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/bin/test.sh</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/bin/test.sh</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/bin/test.sh">Raw file</a></div></header>
+<article class="doc"><pre>#!/bin/sh
+# LayersTesting Operation
+# Name: Run test suite
+# Type: batch
+
+# Activates the project environment and runs the declared test command (pytest -q).
+set -eu
+
+SCRIPT_DIR=$(cd &quot;$(dirname &quot;$0&quot;)&quot; &amp;&amp; pwd)
+PROJECT_DIR=$(cd &quot;$SCRIPT_DIR/..&quot; &amp;&amp; pwd)
+cd &quot;$PROJECT_DIR&quot;
+
+if [ ! -f .venv/bin/activate ]; then
+    echo &quot;error: .venv is missing; run sh bin/sync.sh first.&quot; &gt;&amp;2
+    exit 1
+fi
+
+set +u
+. .venv/bin/activate
+set -u
+exec pytest -q &quot;$@&quot;
+</pre></article>
+</main>
+</body>
+</html>

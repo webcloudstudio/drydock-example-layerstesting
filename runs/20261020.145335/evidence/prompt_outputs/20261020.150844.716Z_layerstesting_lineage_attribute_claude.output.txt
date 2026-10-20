@@ -1,0 +1,40 @@
+<requirement name="load-transactions-csv" stories="PERSIST-002,LOAD-003">
+txn_id,date,account,category,amount,memo
+</requirement>
+<requirement name="record-linked-transfers" stories="XFER-001">
+27,2026-01-14,DRAWER1,TRANSFER,-1000.00,transfer to SAFE
+28,2026-01-14,SAFE,TRANSFER,1000.00,transfer from DRAWER1
+</requirement>
+<requirement name="validate-date-format" stories="VALID-003">
+1,2026-01-01,SAFE,OPENING,5000.00,opening float
+</requirement>
+<requirement name="validate-amount-format" stories="VALID-002">
+1,2026-01-01,SAFE,OPENING,5000.00,opening float
+</requirement>
+<requirement name="validate-text-fields" stories="VALID-001">
+1,2026-01-01,SAFE,OPENING,5000.00,opening float
+</requirement>
+<unattached story="foundation"/>
+<unattached story="PERSIST-001"/>
+<unattached story="CLI-003"/>
+<unattached story="CLI-001"/>
+<unattached story="CLI-002"/>
+<unattached story="INTEG-001"/>
+<unattached story="INTEG-002"/>
+<unattached story="PERSIST-003"/>
+<unattached story="PERSIST-004"/>
+<unattached story="LOAD-001"/>
+<unattached story="LOAD-002"/>
+<unattached story="ACCT-001"/>
+<unattached story="ACCT-002"/>
+<unattached story="ACCT-003"/>
+<unattached story="ACCT-004"/>
+<unattached story="TXN-001"/>
+<unattached story="TXN-002"/>
+<unattached story="TXN-003"/>
+<unattached story="TXN-004"/>
+<unattached story="RPT-001"/>
+<unattached story="RPT-002"/>
+<unattached story="RPT-003"/>
+<unattached story="VERIFY-001"/>
+<unattached story="VERIFY-002"/>

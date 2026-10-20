@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/text_validation.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/text_validation.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/text_validation.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Text validation for codes, names, descriptions, and memos. Pure checks; no database access.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import re
+
+_CODE = re.compile(r&quot;[A-Z0-9]{1,12}&quot;)
+_LINE_BREAKS = (&quot;\n&quot;, &quot;\r&quot;)
+
+
+def check_code(text: str) -&gt; str:
+    &quot;&quot;&quot;Return ``text`` when it is 1 to 12 characters from A-Z and 0-9; otherwise raise ``ValueError``.&quot;&quot;&quot;
+    if not _CODE.fullmatch(text):
+        raise ValueError(f&quot;code must be 1 to 12 characters from A-Z and 0-9: {text!r}&quot;)
+    return text
+
+
+def check_name(text: str) -&gt; str:
+    &quot;&quot;&quot;Return ``text`` when it is 1 to 40 characters with no comma or line break; otherwise raise ``ValueError``.&quot;&quot;&quot;
+    if not 1 &lt;= len(text) &lt;= 40:
+        raise ValueError(f&quot;name must be 1 to 40 characters: {text!r}&quot;)
+    _reject_separators(text)
+    return text
+
+
+def check_memo(text: str) -&gt; str:
+    &quot;&quot;&quot;Return ``text`` when it is 0 to 60 characters with no comma or line break; otherwise raise ``ValueError``.&quot;&quot;&quot;
+    if len(text) &gt; 60:
+        raise ValueError(f&quot;memo must be 0 to 60 characters: {text!r}&quot;)
+    _reject_separators(text)
+    return text
+
+
+def _reject_separators(text: str) -&gt; None:
+    if &quot;,&quot; in text:
+        raise ValueError(f&quot;comma is not allowed: {text!r}&quot;)
+    if any(mark in text for mark in _LINE_BREAKS):
+        raise ValueError(f&quot;line break is not allowed: {text!r}&quot;)
+</pre></article>
+</main>
+</body>
+</html>

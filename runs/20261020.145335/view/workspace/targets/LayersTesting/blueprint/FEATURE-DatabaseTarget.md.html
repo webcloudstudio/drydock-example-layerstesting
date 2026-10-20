@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-DatabaseTarget.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-DatabaseTarget.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-DatabaseTarget.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Database Target</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Resolves the database target from the environment and opens it through the shipped persistence library.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md</td></tr><tr><td>Provides</td><td>resolve_database_target()</td></tr><tr><td>Consumes</td><td>open_database</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Every command needs one database target. <code>config.resolve_database_target()</code> returns the setting that applies by precedence: <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code>. The value is returned unchanged, including any <code>postgres://</code>, <code>postgresql://</code>, or <code>sqlite://</code> prefix, and is passed to <code>persistence.open_database</code> as the DSN.</p>
+<h2>Behavior</h2>
+<ul><li>If <code>DATABASE_URL</code> is set and non-empty, its value is the target.</li><li>Otherwise, if <code>DATABASE_PATH</code> is set and non-empty, its value is the target.</li><li>Otherwise the target is <code>data/app.db</code>.</li><li>The function reads the environment only. It opens no connection.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC target-precedence ===<br>Intent: DATABASE_URL takes precedence over DATABASE_PATH, which takes precedence over data/app.db, and each value is returned unchanged.</p>
+<p>import os from config import resolve_database_target</p>
+<p>for name in (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;): os.environ.pop(name, None) default_target = &quot;data/app.db&quot; assert resolve_database_target() == default_target</p>
+<p>path_value = &quot;scratch.db&quot; os.environ[&quot;DATABASE_PATH&quot;] = path_value assert resolve_database_target() == path_value</p>
+<p>url_value = &quot;sqlite://&quot; + path_value os.environ[&quot;DATABASE_URL&quot;] = url_value assert resolve_database_target() == url_value</p>
+<p>postgres_value = &quot;postgresql://ledger@localhost/ledger&quot; os.environ[&quot;DATABASE_URL&quot;] = postgres_value assert resolve_database_target() == postgres_value === END AC target-precedence ===</p>
+<p>=== AC target-opens-store ===<br>Intent: The resolved target opens through the shipped persistence library and yields an empty accounts table.</p>
+<p>import os import tempfile from pathlib import Path from config import resolve_database_target from persistence.testing import db_session</p>
+<p>os.environ.pop(&quot;DATABASE_URL&quot;, None) scratch_dir = tempfile.mkdtemp() path_value = str(Path(scratch_dir) / &quot;ledger.db&quot;) os.environ[&quot;DATABASE_PATH&quot;] = path_value target = resolve_database_target() assert target == path_value with db_session(target) as db: rows = db.accounts.list() print(rows) assert rows == [] === END AC target-opens-store ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The target is never opened by this module; only persistence opens connections.</li><li>No default target other than <code>data/app.db</code> is applied when either setting is present.</li></ul></article>
+</main>
+</body>
+</html>

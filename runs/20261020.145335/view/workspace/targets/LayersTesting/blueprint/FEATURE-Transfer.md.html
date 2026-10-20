@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Transfer.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Transfer.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Transfer.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Transfer Between Accounts</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Move a positive amount between two accounts as two linked TRANSFER transactions, or store neither.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-AccountAdd.md, FEATURE-CliDispatch.md, FEATURE-CliOutput.md, FEATURE-CommandTransaction.md, FEATURE-NonNegativeBalance.md, FEATURE-ValidateAmount.md, FEATURE-ValidateDate.md, FEATURE-ValidateText.md</td></tr><tr><td>Provides</td><td>ledger transfer</td></tr><tr><td>Consumes</td><td>db.accounts.get, db.transactions.list, db.transactions.create</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Records a movement of cash between two places, such as drawer to safe, as a matched pair of rows.</p>
+<h2>Command</h2>
+<p><code>ledger transfer &lt;from&gt; &lt;to&gt; &lt;amount&gt; &lt;date&gt;</code></p>
+<h2>Behavior</h2>
+<ul><li>Validate both account codes with FEATURE-ValidateText, the amount with FEATURE-ValidateAmount, and</li></ul>
+<p>the date with FEATURE-ValidateDate. A violation exits 3.</p>
+<ul><li>The amount must be positive. The two accounts must differ. Either rule failing exits 3.</li><li>An account that is not present exits 3.</li><li>Write two rows in category <code>TRANSFER</code>, both in one transaction. The outgoing row takes the next</li></ul>
+<p>id after the largest present; the incoming row takes the id after that.</p>
+<ul><li>Outgoing: the source account, a negative amount, memo <code>transfer to &lt;to&gt;</code>.</li><li>Incoming: the destination account, a positive amount, memo <code>transfer from &lt;from&gt;</code>.</li></ul>
+<ul><li>If either account balance would be below zero after both rows, per FEATURE-NonNegativeBalance,</li></ul>
+<p>the command exits 3 and neither row is stored.</p>
+<ul><li>On success, write the two rows as CSV per FEATURE-CliOutput, outgoing first.</li></ul>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC xfer-round-trip ===<br>Intent: A transfer stores two TRANSFER rows, outgoing first with the next two ids, with the linked memos and opposite signed amounts.</p>
+<h1>Exercises ledger transfer between two seeded accounts.</h1>
+<p>import os import tempfile</p>
+<p>from cli.testing import cli_runner from persistence import open_database from persistence.schema import AccountRow, CategoryRow, TransactionKey, TransactionRow from persistence.testing import db_session</p>
+<p>source = &quot;DRAWER1&quot; destination = &quot;SAFE&quot; category = &quot;SALES&quot; transfer_category = &quot;TRANSFER&quot; date = &quot;2026-04-03&quot; amount_in = &quot;50.00&quot; moved_amount = 5000 outgoing_id = 2 incoming_id = 3</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn with db_session(dsn) as db: db.accounts.create(AccountRow(account=source, name=&quot;Front Drawer&quot;)) db.accounts.create(AccountRow(account=destination, name=&quot;Store Safe&quot;)) db.categories.create(CategoryRow(category=category, description=&quot;Sales receipts&quot;)) db.categories.create(CategoryRow(category=transfer_category, description=&quot;Internal transfer&quot;)) db.transactions.create( TransactionRow(txn_id=1, date=date, account=source, category=category, amount=10000, memo=&quot;sale&quot;) )</p>
+<p>code, out, err = cli_runner(&quot;transfer&quot;, source, destination, amount_in, date) print(out) print(err) assert code == 0</p>
+<p>db = open_database(dsn) out_row = db.transactions.get(TransactionKey(txn_id=outgoing_id)) in_row = db.transactions.get(TransactionKey(txn_id=incoming_id)) assert out_row is not None assert in_row is not None assert out_row.account == source assert out_row.category == transfer_category assert out_row.amount == -moved_amount assert out_row.memo.split() == [&quot;transfer&quot;, &quot;to&quot;, destination] assert in_row.account == destination assert in_row.category == transfer_category assert in_row.amount == moved_amount assert in_row.memo.split() == [&quot;transfer&quot;, &quot;from&quot;, source] === END AC xfer-round-trip ===</p>
+<p>=== AC xfer-rejects-invalid-transfers ===<br>Intent: Each invalid transfer exits 3 and stores neither row.</p>
+<h1>Exercises ledger transfer with five rejected argument sets against one seeded transaction.</h1>
+<p>import os import tempfile</p>
+<p>from cli.testing import cli_runner from persistence import open_database from persistence.schema import AccountRow, CategoryRow, TransactionRow from persistence.testing import db_session</p>
+<p>source = &quot;DRAWER1&quot; destination = &quot;SAFE&quot; category = &quot;SALES&quot; date = &quot;2026-04-03&quot; seeded_amount = 10000 stored_before = 1 rejected_exit = 3</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn with db_session(dsn) as db: db.accounts.create(AccountRow(account=source, name=&quot;Front Drawer&quot;)) db.accounts.create(AccountRow(account=destination, name=&quot;Store Safe&quot;)) db.categories.create(CategoryRow(category=category, description=&quot;Sales receipts&quot;)) db.categories.create(CategoryRow(category=&quot;TRANSFER&quot;, description=&quot;Internal transfer&quot;)) db.transactions.create( TransactionRow(txn_id=1, date=date, account=source, category=category, amount=seeded_amount, memo=&quot;sale&quot;) )</p>
+<p>cases = [ (&quot;same account&quot;, source, source, &quot;50.00&quot;), (&quot;zero amount&quot;, source, destination, &quot;0.00&quot;), (&quot;negative amount&quot;, source, destination, &quot;-5.00&quot;), (&quot;unknown account&quot;, source, &quot;NOSUCH&quot;, &quot;50.00&quot;), (&quot;overdraws source&quot;, source, destination, &quot;500.00&quot;), ] for name, frm, to, amount_text in cases: code, out, err = cli_runner(&quot;transfer&quot;, frm, to, amount_text, date) print(name, code, err) assert code == rejected_exit assert len(open_database(dsn).transactions.list()) == stored_before === END AC xfer-rejects-invalid-transfers ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Do not store one of the two transfer rows without the other.</li><li>Do not hardcode the transfer ids; take them from the id sequence in the database.</li><li>Do not use floating point for the amount at any layer.</li><li>Do not let a transfer make either account balance negative.</li></ul></article>
+</main>
+</body>
+</html>

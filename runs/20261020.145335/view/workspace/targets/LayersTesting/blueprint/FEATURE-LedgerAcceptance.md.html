@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-LedgerAcceptance.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-LedgerAcceptance.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-LedgerAcceptance.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Ledger Acceptance</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>The finished ledger passes the complete supplied grader <code>sh sources/run.sh</code> with all 43 checks.</td></tr><tr><td>Depends On</td><td>FEATURE-TestSuite.md, ARCHITECTURE.md, DATABASE.md, FEATURE-CliEntry.md, FEATURE-CliDispatch.md, FEATURE-CliOutput.md, FEATURE-DatabaseTarget.md, FEATURE-InitSchema.md, FEATURE-CountRows.md, FEATURE-LoadAccounts.md, FEATURE-LoadCategories.md, FEATURE-LoadTransactions.md, FEATURE-AccountAdd.md, FEATURE-AccountGet.md, FEATURE-AccountRename.md, FEATURE-AccountDelete.md, FEATURE-TxnPost.md, FEATURE-TxnGet.md, FEATURE-TxnAmend.md, FEATURE-TxnDelete.md, FEATURE-Transfer.md, FEATURE-NonNegativeBalance.md, FEATURE-ReportBalances.md, FEATURE-ReportCategories.md, FEATURE-ReportMonthly.md</td></tr><tr><td>Provides</td><td>end-to-end grader pass</td></tr><tr><td>Consumes</td><td>ledger executable, sources/run.sh</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Terminal acceptance. Assembles the finished ledger and gates on the supplied grader, which is the sole verdict for project correctness.</p>
+<h2>Trigger</h2>
+<p><code>sh sources/run.sh</code> from the application root, run after every other story has closed.</p>
+<h2>Behavior</h2>
+<ul><li>The grader creates a fresh database, runs <code>ledger init</code>, loads the three seed files, and runs its</li></ul>
+<p>fixed sequence of 43 checks.</p>
+<ul><li>Each check compares one command&#x27;s exit code and standard output with the known answer.</li><li>The grader exits zero only when every check passes.</li></ul>
+<h2>Output</h2>
+<pre><code>LayersTesting: 43 passed, 0 failed (of 43)</code></pre>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC VERIFY-002-full-grader ===<br>Intent: The complete supplied grader exits zero with every check passing.<br>Suite: full<br>Requires: executable=sh; scope=test</p>
+<p>import os import subprocess import sys</p>
+<p>result = subprocess.run( [&quot;sh&quot;, &quot;sources/run.sh&quot;], capture_output=True, text=True, env={**os.environ}, ) print(result.stdout) print(result.stderr, file=sys.stderr) assert result.returncode == 0 === END AC VERIFY-002-full-grader ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li><code>sources/run.sh</code> is run as supplied; it is not modified, filtered, or reinterpreted.</li><li>No check invokes the grader in a list or dry-run mode.</li></ul></article>
+</main>
+</body>
+</html>

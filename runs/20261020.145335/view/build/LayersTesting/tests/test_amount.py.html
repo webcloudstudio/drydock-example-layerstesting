@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_amount.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_amount.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_amount.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Amount validation: input parses to integer cents without floating point; output has exactly two decimals.&quot;&quot;&quot;
+
+import pytest
+
+from cli.amount import format_amount, parse_amount
+
+
+# parse_amount
+
+
+@pytest.mark.parametrize(
+    (&quot;text&quot;, &quot;cents&quot;),
+    [
+        (&quot;12.5&quot;, 1250),
+        (&quot;-0.05&quot;, -5),
+        (&quot;7&quot;, 700),
+        (&quot;0.1&quot;, 10),
+        (&quot;-3&quot;, -300),
+        (&quot;1.10&quot;, 110),
+        (&quot;0.01&quot;, 1),
+        (&quot;-0.01&quot;, -1),
+        (&quot;1.00&quot;, 100),
+        (&quot;007&quot;, 700),
+        (&quot;99999999999999&quot;, 9999999999999900),
+    ],
+)
+def test_valid_amount_parses_to_signed_cents(text: str, cents: int) -&gt; None:
+    assert parse_amount(text) == cents
+
+
+def test_parse_returns_int_never_float() -&gt; None:
+    assert type(parse_amount(&quot;1.10&quot;)) is int
+    assert type(parse_amount(&quot;-7&quot;)) is int
+
+
+@pytest.mark.parametrize(
+    &quot;text&quot;,
+    [
+        &quot;0&quot;,
+        &quot;0.00&quot;,
+        &quot;-0&quot;,
+        &quot;-0.00&quot;,
+        &quot;0.0&quot;,
+        &quot;000&quot;,
+    ],
+)
+def test_zero_amount_is_rejected(text: str) -&gt; None:
+    with pytest.raises(ValueError):
+        parse_amount(text)
+
+
+@pytest.mark.parametrize(&quot;text&quot;, [&quot;1.234&quot;, &quot;0.001&quot;, &quot;-0.999&quot;, &quot;1.2345&quot;])
+def test_more_than_two_decimals_is_rejected(text: str) -&gt; None:
+    with pytest.raises(ValueError):
+        parse_amount(text)
+
+
+@pytest.mark.parametrize(
+    &quot;text&quot;,
+    [
+        &quot;1.&quot;,
+        &quot;.5&quot;,
+        &quot;1,00&quot;,
+        &quot;+5&quot;,
+        &quot;abc&quot;,
+        &quot;&quot;,
+        &quot; 1.00&quot;,
+        &quot;1.00 &quot;,
+        &quot;1\n&quot;,
+        &quot;1.5.0&quot;,
+        &quot;--1&quot;,
+        &quot;-&quot;,
+        &quot;-.5&quot;,
+        &quot;1e3&quot;,
+        &quot;１.００&quot;,
+    ],
+)
+def test_malformed_amount_is_rejected(text: str) -&gt; None:
+    with pytest.raises(ValueError):
+        parse_amount(text)
+
+
+# format_amount
+
+
+@pytest.mark.parametrize(
+    (&quot;cents&quot;, &quot;text&quot;),
+    [
+        (1250, &quot;12.50&quot;),
+        (-5, &quot;-0.05&quot;),
+        (10, &quot;0.10&quot;),
+        (500000, &quot;5000.00&quot;),
+        (-1250, &quot;-12.50&quot;),
+        (1, &quot;0.01&quot;),
+        (-1, &quot;-0.01&quot;),
+        (0, &quot;0.00&quot;),
+        (100, &quot;1.00&quot;),
+        (123456789, &quot;1234567.89&quot;),
+    ],
+)
+def test_cents_format_to_two_decimals(cents: int, text: str) -&gt; None:
+    assert format_amount(cents) == text
+
+
+def test_format_has_no_thousands_separator() -&gt; None:
+    assert &quot;,&quot; not in format_amount(123456789012)
+
+
+# round trip
+
+
+@pytest.mark.parametrize(&quot;text&quot;, [&quot;12.50&quot;, &quot;-0.05&quot;, &quot;0.10&quot;, &quot;5000.00&quot;, &quot;-12.50&quot;])
+def test_canonical_text_round_trips_unchanged(text: str) -&gt; None:
+    assert format_amount(parse_amount(text)) == text
+</pre></article>
+</main>
+</body>
+</html>

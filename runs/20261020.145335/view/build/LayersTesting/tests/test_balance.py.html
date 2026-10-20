@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_balance.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_balance.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_balance.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Non-negative balance: a balance below zero is rejected with exit code 3, and nothing is written.&quot;&quot;&quot;
+
+import pytest
+
+from balance import RejectedError, ensure_non_negative
+from persistence.testing import db_session
+
+
+def _seed(db, *, account: str = &quot;CASH1&quot;) -&gt; None:
+    db.categories.create(category=&quot;OPENING&quot;, description=&quot;Opening balance&quot;)
+    db.accounts.create(account=account, name=&quot;Till&quot;)
+
+
+def _txn(db, txn_id: int, amount: int, account: str = &quot;CASH1&quot;) -&gt; None:
+    db.transactions.create(
+        txn_id=txn_id, date=&quot;2026-01-01&quot;, account=account, category=&quot;OPENING&quot;, amount=amount, memo=&quot;&quot;
+    )
+
+
+def test_negative_balance_raises_with_exit_code_3() -&gt; None:
+    with db_session() as db:
+        _seed(db)
+        _txn(db, 1, -500)
+
+        with pytest.raises(RejectedError) as caught:
+            ensure_non_negative(db, [&quot;CASH1&quot;])
+
+        assert caught.value.exit_code == 3
+
+
+def test_zero_balance_does_not_raise() -&gt; None:
+    with db_session() as db:
+        _seed(db)
+        _txn(db, 1, 500)
+        _txn(db, 2, -500)
+
+        ensure_non_negative(db, [&quot;CASH1&quot;])
+
+
+def test_balance_is_sum_of_all_transactions() -&gt; None:
+    with db_session() as db:
+        _seed(db)
+        _txn(db, 1, 500)
+        _txn(db, 2, -200)
+
+        ensure_non_negative(db, [&quot;CASH1&quot;])
+        assert len(db.transactions.list()) == 2
+
+
+def test_balance_of_one_cent_below_zero_raises() -&gt; None:
+    with db_session() as db:
+        _seed(db)
+        _txn(db, 1, 499)
+        _txn(db, 2, -500)
+
+        with pytest.raises(RejectedError):
+            ensure_non_negative(db, [&quot;CASH1&quot;])
+
+
+def test_negative_amounts_summing_below_zero_raise() -&gt; None:
+    with db_session() as db:
+        _seed(db)
+        _txn(db, 1, -300)
+        _txn(db, 2, -300)
+
+        with pytest.raises(RejectedError):
+            ensure_non_negative(db, [&quot;CASH1&quot;])
+
+
+def test_account_with_no_transactions_has_zero_balance() -&gt; None:
+    with db_session() as db:
+        _seed(db)
+
+        ensure_non_negative(db, [&quot;CASH1&quot;])
+
+
+def test_empty_account_list_does_not_raise() -&gt; None:
+    with db_session() as db:
+        _seed(db)
+        _txn(db, 1, -500)
+
+        ensure_non_negative(db, [])
+
+
+def test_unknown_account_has_zero_balance() -&gt; None:
+    with db_session() as db:
+        _seed(db)
+
+        ensure_non_negative(db, [&quot;NOPE&quot;])
+
+
+def test_only_named_accounts_are_checked() -&gt; None:
+    with db_session() as db:
+        _seed(db)
+        db.accounts.create(account=&quot;BANK1&quot;, name=&quot;Bank&quot;)
+        _txn(db, 1, -500, account=&quot;CASH1&quot;)
+        _txn(db, 2, 900, account=&quot;BANK1&quot;)
+
+        ensure_non_negative(db, [&quot;BANK1&quot;])
+
+
+def test_negative_account_among_several_named_raises() -&gt; None:
+    with db_session() as db:
+        _seed(db)
+        db.accounts.create(account=&quot;BANK1&quot;, name=&quot;Bank&quot;)
+        _txn(db, 1, 900, account=&quot;BANK1&quot;)
+        _txn(db, 2, -500, account=&quot;CASH1&quot;)
+
+        with pytest.raises(RejectedError):
+            ensure_non_negative(db, [&quot;BANK1&quot;, &quot;CASH1&quot;])
+
+
+def test_duplicate_account_names_are_checked_once() -&gt; None:
+    with db_session() as db:
+        _seed(db)
+        _txn(db, 1, 100)
+
+        ensure_non_negative(db, [&quot;CASH1&quot;, &quot;CASH1&quot;])
+
+
+def test_rejection_changes_no_transaction_rows() -&gt; None:
+    with db_session() as db:
+        _seed(db)
+        _txn(db, 1, -500)
+        before = db.transactions.list()
+
+        with pytest.raises(RejectedError):
+            ensure_non_negative(db, [&quot;CASH1&quot;])
+
+        assert db.transactions.list() == before
+
+
+def test_accepted_check_changes_no_rows() -&gt; None:
+    with db_session() as db:
+        _seed(db)
+        _txn(db, 1, 500)
+        before = (db.accounts.list(), db.transactions.list())
+
+        ensure_non_negative(db, [&quot;CASH1&quot;])
+
+        assert (db.accounts.list(), db.transactions.list()) == before
+
+
+def test_check_reads_current_database_state_each_call() -&gt; None:
+    with db_session() as db:
+        _seed(db)
+        _txn(db, 1, 500)
+        ensure_non_negative(db, [&quot;CASH1&quot;])
+
+        _txn(db, 2, -600)
+
+        with pytest.raises(RejectedError):
+            ensure_non_negative(db, [&quot;CASH1&quot;])
+
+
+def test_large_integer_cents_are_summed_exactly() -&gt; None:
+    with db_session() as db:
+        _seed(db)
+        _txn(db, 1, 10**15 + 1)
+        _txn(db, 2, -(10**15))
+
+        ensure_non_negative(db, [&quot;CASH1&quot;])
+
+
+def test_rejected_error_is_an_exception() -&gt; None:
+    assert issubclass(RejectedError, Exception)
+</pre></article>
+</main>
+</body>
+</html>
