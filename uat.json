@@ -1,0 +1,25 @@
+{
+  "target": "LayersTesting",
+  "expect": {
+    "verdict": "PASSED"
+  },
+  "sources": [
+    "sources/INSTRUCTIONS.md",
+    "sources/seed_accounts.csv",
+    "sources/seed_categories.csv",
+    "sources/seed_transactions.csv",
+    "sources/seed_transactions_bad.csv",
+    "bin/run.sh"
+  ],
+  "updates": [],
+  "sea_trials": "inputs/SEA_TRIALS.md",
+  "technology_stack": "inputs/TECHNOLOGY_STACK_python.md",
+  "compass": "inputs/COMPASS.md",
+  "metadata": "inputs/METADATA.md",
+  "acceptance": {
+    "full": [
+      "sh",
+      "sources/run.sh"
+    ]
+  }
+}
