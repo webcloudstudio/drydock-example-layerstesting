@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-SCHEMA-LIFECYCLE.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-SCHEMA-LIFECYCLE.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-SCHEMA-LIFECYCLE.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Schema Lifecycle</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Initialize the ledger schema and report row counts for all required tables.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-CLI-FOUNDATION.md</td></tr><tr><td>Provides</td><td><code>ledger init</code>, <code>ledger count</code></td></tr><tr><td>Consumes</td><td>accounts repository, categories repository, transactions repository</td></tr></tbody></table></div>
+<h2>Behavior</h2>
+<p><code>ledger init</code> drops and recreates <code>accounts</code>, <code>categories</code>, and <code>transactions</code> as an atomic schema reset. It writes nothing to standard output.</p>
+<p><code>ledger count</code> emits the header <code>table,rows</code>, followed by the row counts in this fixed order:</p>
+<ol><li><code>accounts</code></li><li><code>categories</code></li><li><code>transactions</code></li></ol>
+<p>A database operational failure returns exit code <code>1</code>.</p>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC schema-init-empty ===<br>Intent: Initialization leaves all three declared tables empty and count reports their state.</p>
+<p>import csv import os import tempfile from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as directory: old = os.environ.get(&quot;DATABASE_PATH&quot;) os.environ[&quot;DATABASE_PATH&quot;] = os.path.join(directory, &quot;ledger.db&quot;) os.environ.pop(&quot;DATABASE_URL&quot;, None) try: init_code, init_out, init_err = cli_runner(&quot;init&quot;) assert init_code == 0 assert init_out == &quot;&quot;</p>
+<p>count_code, count_out, count_err = cli_runner(&quot;count&quot;) assert count_code == 0 rows = list(csv.reader(count_out.splitlines())) assert len(rows) == 4 assert rows[0] == [&quot;table&quot;, &quot;rows&quot;] assert [row[1] for row in rows[1:]] == [&quot;0&quot;, &quot;0&quot;, &quot;0&quot;] finally: if old is None: os.environ.pop(&quot;DATABASE_PATH&quot;, None) else: os.environ[&quot;DATABASE_PATH&quot;] = old === END AC schema-init-empty ===</p>
+<p>=== AC schema-reinitializes ===<br>Intent: A second initialization removes previously stored rows.</p>
+<p>import csv import os import tempfile from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as directory: old = os.environ.get(&quot;DATABASE_PATH&quot;) os.environ[&quot;DATABASE_PATH&quot;] = os.path.join(directory, &quot;ledger.db&quot;) os.environ.pop(&quot;DATABASE_URL&quot;, None) try: assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;TEMP&quot;, &quot;Temporary&quot;)[0] == 0 assert cli_runner(&quot;init&quot;)[0] == 0</p>
+<p>code, output, error = cli_runner(&quot;count&quot;) assert code == 0 rows = list(csv.reader(output.splitlines())) assert len(rows) == 4 assert [row[1] for row in rows[1:]] == [&quot;0&quot;, &quot;0&quot;, &quot;0&quot;] finally: if old is None: os.environ.pop(&quot;DATABASE_PATH&quot;, None) else: os.environ[&quot;DATABASE_PATH&quot;] = old === END AC schema-reinitializes ===</p>
+<p>=== AC schema-count-order ===<br>Intent: Count exposes exactly one row for each required table in the documented order.</p>
+<p>import csv import os import tempfile from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as directory: old = os.environ.get(&quot;DATABASE_PATH&quot;) os.environ[&quot;DATABASE_PATH&quot;] = os.path.join(directory, &quot;ledger.db&quot;) os.environ.pop(&quot;DATABASE_URL&quot;, None) try: assert cli_runner(&quot;init&quot;)[0] == 0 code, output, error = cli_runner(&quot;count&quot;) assert code == 0 rows = list(csv.reader(output.splitlines())) assert [row[0] for row in rows[1:]] == [&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;] finally: if old is None: os.environ.pop(&quot;DATABASE_PATH&quot;, None) else: os.environ[&quot;DATABASE_PATH&quot;] = old === END AC schema-count-order ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li><code>init</code> must not emit standard output.</li><li>Reinitialization must remove rows from all three tables.</li><li>Count values must come from database queries, not hardcoded report data.</li></ul></article>
+</main>
+</body>
+</html>

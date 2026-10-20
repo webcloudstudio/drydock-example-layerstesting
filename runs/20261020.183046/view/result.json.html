@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>result.json</title>
+<link rel="stylesheet" href="../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>result.json</h1><div class="filenav"><a href="../index.html">&larr; Report</a><a href="../result.json">Raw file</a></div></header>
+<article class="doc"><pre>{
+  &quot;acceptance_status&quot;: &quot;NOT_RUN&quot;,
+  &quot;assertions&quot;: {
+    &quot;failed&quot;: 1,
+    &quot;harness_defects&quot;: 0,
+    &quot;passed&quot;: 16,
+    &quot;product_defects&quot;: 1,
+    &quot;unverified&quot;: 0
+  },
+  &quot;attestations&quot;: [],
+  &quot;build_passes&quot;: 1,
+  &quot;commands&quot;: [
+    {
+      &quot;argv&quot;: [
+        &quot;/mnt/c/Users/barlo/projects/drydock/.venv/bin/python&quot;,
+        &quot;-m&quot;,
+        &quot;drydock&quot;,
+        &quot;init&quot;,
+        &quot;LayersTesting&quot;
+      ],
+      &quot;cwd&quot;: &quot;workspace&quot;,
+      &quot;elapsed_ms&quot;: 12391,
+      &quot;label&quot;: &quot;01-init&quot;,
+      &quot;llm_executions&quot;: [],
+      &quot;returncode&quot;: 0,
+      &quot;stderr_path&quot;: &quot;evidence/commands/01-init.stderr.log&quot;,
+      &quot;stdout_path&quot;: &quot;evidence/commands/01-init.stdout.log&quot;
+    },
+    {
+      &quot;argv&quot;: [
+        &quot;/mnt/c/Users/barlo/projects/drydock/.venv/bin/python&quot;,
+        &quot;-m&quot;,
+        &quot;drydock&quot;,
+        &quot;import&quot;,
+        &quot;LayersTesting&quot;,
+        &quot;sources&quot;,
+        &quot;--format&quot;,
+        &quot;markdown&quot;
+      ],
+      &quot;cwd&quot;: &quot;workspace&quot;,
+      &quot;elapsed_ms&quot;: 22269,
+      &quot;label&quot;: &quot;02-import-sources&quot;,
+      &quot;llm_executions&quot;: [],
+      &quot;returncode&quot;: 0,
+      &quot;stderr_path&quot;: &quot;evidence/commands/02-import-sources.stderr.log&quot;,
+      &quot;stdout_path&quot;: &quot;evidence/commands/02-import-sources.stdout.log&quot;
+    },
+    {
+      &quot;argv&quot;: [
+        &quot;/mnt/c/Users/barlo/projects/drydock/.venv/bin/python&quot;,
+        &quot;-m&quot;,
+        &quot;drydock&quot;,
+        &quot;analyze&quot;,
+        &quot;LayersTesting&quot;
+      ],
+      &quot;cwd&quot;: &quot;workspace&quot;,
+      &quot;elapsed_ms&quot;: 83363,
+      &quot;label&quot;: &quot;03-analyze&quot;,
+      &quot;llm_executions&quot;: [
+        &quot;20261020.183144.424Z-0272e658&quot;
+      ],
+      &quot;returncode&quot;: 0,
+      &quot;stderr_path&quot;: &quot;evidence/commands/03-analyze.stderr.log&quot;,
+      &quot;stdout_path&quot;: &quot;evidence/commands/03-analyze.stdout.log&quot;
+    },
+    {
+      &quot;argv&quot;: [
+        &quot;/mnt/c/Users/barlo/projects/drydock/.venv/bin/python&quot;,
+        &quot;-m&quot;,
+        &quot;drydock&quot;,
+        &quot;plan&quot;,
+        &quot;LayersTesting&quot;,
+        &quot;--override&quot;
+      ],
+      &quot;cwd&quot;: &quot;workspace&quot;,
+      &quot;elapsed_ms&quot;: 358906,
+      &quot;label&quot;: &quot;04-plan&quot;,
+      &quot;llm_executions&quot;: [
+        &quot;20261020.183327.963Z-de65e2be&quot;,
+        &quot;20261020.183355.392Z-b9421960&quot;,
+        &quot;20261020.183602.823Z-8800e27c&quot;,
+        &quot;20261020.183630.137Z-c117d718&quot;,
+        &quot;20261020.183705.328Z-59308f8b&quot;,
+        &quot;20261020.183725.313Z-4b796809&quot;,
+        &quot;20261020.183736.659Z-b25fe2b2&quot;,
+        &quot;20261020.183748.966Z-5acd6f76&quot;,
+        &quot;20261020.183756.163Z-f1bf9487&quot;,
+        &quot;20261020.183804.389Z-f64446d9&quot;,
+        &quot;20261020.183808.891Z-3f3deb27&quot;
+      ],
+      &quot;returncode&quot;: 0,
+      &quot;stderr_path&quot;: &quot;evidence/commands/04-plan.stderr.log&quot;,
+      &quot;stdout_path&quot;: &quot;evidence/commands/04-plan.stdout.log&quot;
+    },
+    {
+      &quot;argv&quot;: [
+        &quot;/mnt/c/Users/barlo/projects/drydock/.venv/bin/python&quot;,
+        &quot;-m&quot;,
+        &quot;drydock&quot;,
+        &quot;plan&quot;,
+        &quot;verify&quot;,
+        &quot;LayersTesting&quot;
+      ],
+      &quot;cwd&quot;: &quot;workspace&quot;,
+      &quot;elapsed_ms&quot;: 14006,
+      &quot;label&quot;: &quot;05-plan-verify&quot;,
+      &quot;llm_executions&quot;: [],
+      &quot;returncode&quot;: 0,
+      &quot;stderr_path&quot;: &quot;evidence/commands/05-plan-verify.stderr.log&quot;,
+      &quot;stdout_path&quot;: &quot;evidence/commands/05-plan-verify.stdout.log&quot;
+    },
+    {
+      &quot;argv&quot;: [
+        &quot;/mnt/c/Users/barlo/projects/drydock/.venv/bin/python&quot;,
+        &quot;-m&quot;,
+        &quot;drydock&quot;,
+        &quot;build&quot;,
+        &quot;status&quot;,
+        &quot;LayersTesting&quot;
+      ],
+      &quot;cwd&quot;: &quot;workspace&quot;,
+      &quot;elapsed_ms&quot;: 801,
+      &quot;label&quot;: &quot;06-after-plan-build-status&quot;,
+      &quot;llm_executions&quot;: [],
+      &quot;returncode&quot;: 0,
+      &quot;stderr_path&quot;: &quot;evidence/commands/06-after-plan-build-status.stderr.log&quot;,
+      &quot;stdout_path&quot;: &quot;evidence/commands/06-after-plan-build-status.stdout.log&quot;
+    },
+    {
+      &quot;argv&quot;: [
+        &quot;/mnt/c/Users/barlo/projects/drydock/.venv/bin/python&quot;,
+        &quot;-m&quot;,
+        &quot;drydock&quot;,
+        &quot;status&quot;,
+        &quot;LayersTesting&quot;
+      ],
+      &quot;cwd&quot;: &quot;workspace&quot;,
+      &quot;elapsed_ms&quot;: 2026,
+      &quot;label&quot;: &quot;07-after-plan-target-status&quot;,
+      &quot;llm_executions&quot;: [],
+      &quot;returncode&quot;: 0,
+      &quot;stderr_path&quot;: &quot;evidence/commands/07-after-plan-target-status.stderr.log&quot;,
+      &quot;stdout_path&quot;: &quot;evidence/commands/07-after-plan-target-status.stdout.log&quot;
+    },
+    {
+      &quot;argv&quot;: [
+        &quot;/mnt/c/Users/barlo/projects/drydock/.venv/bin/python&quot;,
+        &quot;-m&quot;,
+        &quot;drydock&quot;,
+        &quot;status&quot;
+      ],
+      &quot;cwd&quot;: &quot;workspace&quot;,
+      &quot;elapsed_ms&quot;: 1279,
+      &quot;label&quot;: &quot;08-after-plan-workspace-status&quot;,
+      &quot;llm_executions&quot;: [],
+      &quot;returncode&quot;: 0,
+      &quot;stderr_path&quot;: &quot;evidence/commands/08-after-plan-workspace-status.stderr.log&quot;,
+      &quot;stdout_path&quot;: &quot;evidence/commands/08-after-plan-workspace-status.stdout.log&quot;
+    },
+    {
+      &quot;argv&quot;: [
+        &quot;/mnt/c/Users/barlo/projects/drydock/.venv/bin/python&quot;,
+        &quot;-m&quot;,
+        &quot;drydock&quot;,
+        &quot;status&quot;,
+        &quot;LayersTesting&quot;,
+        &quot;--ready&quot;
+      ],
+      &quot;cwd&quot;: &quot;workspace&quot;,
+      &quot;elapsed_ms&quot;: 5724,
+      &quot;label&quot;: &quot;09-initial-ready&quot;,
+      &quot;llm_executions&quot;: [],
+      &quot;returncode&quot;: 0,
+      &quot;stderr_path&quot;: &quot;evidence/commands/09-initial-ready.stderr.log&quot;,
+      &quot;stdout_path&quot;: &quot;evidence/commands/09-initial-ready.stdout.log&quot;
+    },
+    {
+      &quot;argv&quot;: [
+        &quot;/mnt/c/Users/barlo/projects/drydock/.venv/bin/python&quot;,
+        &quot;-m&quot;,
+        &quot;drydock&quot;,
+        &quot;build&quot;,
+        &quot;LayersTesting&quot;,
+        &quot;--override&quot;,
+        &quot;--repair-attempts&quot;,
+        &quot;6&quot;
+      ],
+      &quot;cwd&quot;: &quot;workspace&quot;,
+      &quot;elapsed_ms&quot;: 722128,
+      &quot;label&quot;: &quot;10-initial-build-1&quot;,
+      &quot;llm_executions&quot;: [
+        &quot;20261020.184023.438Z-f4b70418&quot;,
+        &quot;20261020.184104.258Z-8e9a3538&quot;,
+        &quot;20261020.184310.662Z-40f20f68&quot;,
+        &quot;20261020.184435.996Z-62d4872c&quot;,
+        &quot;20261020.184602.647Z-eb37fd22&quot;,
+        &quot;20261020.184719.339Z-a7772979&quot;,
+        &quot;20261020.184925.634Z-07ccd435&quot;,
+        &quot;20261020.185011.302Z-be692017&quot;
+      ],
+      &quot;returncode&quot;: 1,
+      &quot;stderr_path&quot;: &quot;evidence/commands/10-initial-build-1.stderr.log&quot;,
+      &quot;stdout_path&quot;: &quot;evidence/commands/10-initial-build-1.stdout.log&quot;
+    },
+    {
+      &quot;argv&quot;: [
+        &quot;/mnt/c/Users/barlo/projects/drydock/.venv/bin/python&quot;,
+        &quot;-m&quot;,
+        &quot;drydock&quot;,
+        &quot;build&quot;,
+        &quot;status&quot;,
+        &quot;LayersTesting&quot;
+      ],
+      &quot;cwd&quot;: &quot;workspace&quot;,
+      &quot;elapsed_ms&quot;: 6084,
+      &quot;label&quot;: &quot;11-after-initial-build-build-status&quot;,
+      &quot;llm_executions&quot;: [],
+      &quot;returncode&quot;: 0,
+      &quot;stderr_path&quot;: &quot;evidence/commands/11-after-initial-build-build-status.stderr.log&quot;,
+      &quot;stdout_path&quot;: &quot;evidence/commands/11-after-initial-build-build-status.stdout.log&quot;
+    },
+    {
+      &quot;argv&quot;: [
+        &quot;/mnt/c/Users/barlo/projects/drydock/.venv/bin/python&quot;,
+        &quot;-m&quot;,
+        &quot;drydock&quot;,
+        &quot;status&quot;,
+        &quot;LayersTesting&quot;
+      ],
+      &quot;cwd&quot;: &quot;workspace&quot;,
+      &quot;elapsed_ms&quot;: 3315,
+      &quot;label&quot;: &quot;12-after-initial-build-target-status&quot;,
+      &quot;llm_executions&quot;: [],
+      &quot;returncode&quot;: 0,
+      &quot;stderr_path&quot;: &quot;evidence/commands/12-after-initial-build-target-status.stderr.log&quot;,
+      &quot;stdout_path&quot;: &quot;evidence/commands/12-after-initial-build-target-status.stdout.log&quot;
+    },
+    {
+      &quot;argv&quot;: [
+        &quot;/mnt/c/Users/barlo/projects/drydock/.venv/bin/python&quot;,
+        &quot;-m&quot;,
+        &quot;drydock&quot;,
+        &quot;status&quot;
+      ],
+      &quot;cwd&quot;: &quot;workspace&quot;,
+      &quot;elapsed_ms&quot;: 426,
+      &quot;label&quot;: &quot;13-after-initial-build-workspace-status&quot;,
+      &quot;llm_executions&quot;: [],
+      &quot;returncode&quot;: 0,
+      &quot;stderr_path&quot;: &quot;evidence/commands/13-after-initial-build-workspace-status.stderr.log&quot;,
+      &quot;stdout_path&quot;: &quot;evidence/commands/13-after-initial-build-workspace-status.stdout.log&quot;
+    }
+  ],
+  &quot;degraded&quot;: [
+    &quot;initial-build-1 exited 1&quot;
+  ],
+  &quot;elapsed_ms&quot;: 1245804,
+  &quot;environment&quot;: {
+    &quot;drydock_version&quot;: &quot;0.2.0&quot;,
+    &quot;effort&quot;: &quot;&quot;,
+    &quot;finished_at&quot;: &quot;2026-10-20T18:51:36.304543Z&quot;,
+    &quot;git_commit&quot;: &quot;cd6c155dae39fe9900d7a429ff4bd78a319c6349&quot;,
+    &quot;model&quot;: &quot;gpt-5.6-luna&quot;,
+    &quot;platform&quot;: &quot;Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.35&quot;,
+    &quot;provider&quot;: &quot;codex&quot;,
+    &quot;python_version&quot;: &quot;3.12.13&quot;,
+    &quot;requested_model&quot;: &quot;gpt-5.6-luna&quot;,
+    &quot;started_at&quot;: &quot;2026-10-20T18:30:49.980884Z&quot;
+  },
+  &quot;error&quot;: &quot;LayersTesting: stopped at initial-build-1: The build exited 1 with work still on the frontier. Diagnose the failing block from its evidence before rerunning; a score taken over a partial build grades the absence, not the product.&quot;,
+  &quot;evidence_dir&quot;: &quot;evidence&quot;,
+  &quot;execution_status&quot;: &quot;ERROR&quot;,
+  &quot;expected_verdict&quot;: &quot;PASSED&quot;,
+  &quot;fixture&quot;: &quot;LayersTesting&quot;,
+  &quot;observed_verdict&quot;: &quot;ERROR&quot;,
+  &quot;output_dir&quot;: &quot;.&quot;,
+  &quot;release_verdict&quot;: &quot;&quot;,
+  &quot;resumed_from&quot;: &quot;&quot;,
+  &quot;run_id&quot;: &quot;20261020.183046&quot;,
+  &quot;score_exit_codes&quot;: {},
+  &quot;status&quot;: &quot;failed&quot;,
+  &quot;target&quot;: &quot;LayersTesting&quot;,
+  &quot;usage&quot;: {
+    &quot;cached_input_tokens&quot;: 2889600,
+    &quot;calls&quot;: 20,
+    &quot;fresh_input_tokens&quot;: 489718,
+    &quot;input_tokens&quot;: 3379318,
+    &quot;invalid_records&quot;: 0,
+    &quot;llm_elapsed_ms&quot;: 875881,
+    &quot;output_tokens&quot;: 73393
+  }
+}
+</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/parser.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/parser.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/parser.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Argument parsing for the ledger command; no command behavior lives here.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import argparse
+
+
+def _arguments(parser: argparse.ArgumentParser) -&gt; None:
+    parser.add_argument(&quot;arguments&quot;, nargs=&quot;+&quot;, help=&quot;command arguments&quot;)
+
+
+def build_parser() -&gt; argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog=&quot;ledger&quot;, description=&quot;Cash ledger&quot;)
+    commands = parser.add_subparsers(dest=&quot;command&quot;, required=True)
+
+    init = commands.add_parser(&quot;init&quot;, help=&quot;initialize the ledger database&quot;)
+    init.set_defaults(operation=None)
+
+    commands.add_parser(&quot;count&quot;, help=&quot;count rows in ledger tables&quot;)
+
+    load = commands.add_parser(&quot;load&quot;, help=&quot;load ledger data from files&quot;)
+    _arguments(load)
+
+    transfer = commands.add_parser(&quot;transfer&quot;, help=&quot;transfer cash between accounts&quot;)
+    _arguments(transfer)
+
+    account = commands.add_parser(&quot;account&quot;, help=&quot;manage accounts&quot;)
+    account_commands = account.add_subparsers(dest=&quot;operation&quot;, required=True)
+    for name, help_text in (
+        (&quot;add&quot;, &quot;add an account&quot;),
+        (&quot;get&quot;, &quot;retrieve an account&quot;),
+        (&quot;rename&quot;, &quot;rename an account&quot;),
+        (&quot;delete&quot;, &quot;delete an account&quot;),
+    ):
+        child = account_commands.add_parser(name, help=help_text)
+        _arguments(child)
+
+    txn = commands.add_parser(&quot;txn&quot;, help=&quot;manage transactions&quot;)
+    txn_commands = txn.add_subparsers(dest=&quot;operation&quot;, required=True)
+    for name, help_text in (
+        (&quot;post&quot;, &quot;post a transaction&quot;),
+        (&quot;get&quot;, &quot;retrieve a transaction&quot;),
+        (&quot;amend&quot;, &quot;amend a transaction&quot;),
+        (&quot;delete&quot;, &quot;delete a transaction&quot;),
+    ):
+        child = txn_commands.add_parser(name, help=help_text)
+        _arguments(child)
+
+    report = commands.add_parser(&quot;report&quot;, help=&quot;produce ledger reports&quot;)
+    report_commands = report.add_subparsers(dest=&quot;operation&quot;, required=True)
+    for name, help_text in (
+        (&quot;balances&quot;, &quot;report account balances&quot;),
+        (&quot;categories&quot;, &quot;report category totals&quot;),
+        (&quot;monthly&quot;, &quot;report monthly totals&quot;),
+    ):
+        report_commands.add_parser(name, help=help_text)
+
+    return parser
+</pre></article>
+</main>
+</body>
+</html>

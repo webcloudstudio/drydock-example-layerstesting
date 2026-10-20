@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-2.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-2.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-2.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 2 · Foundational (block-2)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 10420</li><li>execution id: 20261020.184104.258Z-8e9a3538</li></ul>
+<h2>Stories built</h2>
+<ul><li>Establish the relational persistence contract for the cash ledger. (database) [story]</li><li>Provide the executable ledger command and command validation. (cli-foundation) [story]</li></ul>
+<h2>Reusable compacts</h2>
+<ul><li>DATABASE_compact.md</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 601)</li><li>compass: COMPASS.md (SP 755)</li><li>implements: DATABASE.md (SP 2104)</li><li>context: ARCHITECTURE_compact.md (SP 152)</li><li>stack: persistence.md (SP 2407)</li><li>stack: sqlite.md (SP 1818)</li><li>implements: FEATURE-CLI-FOUNDATION.md (SP 716)</li><li>context: DATABASE.md (SP 2104)</li><li>stack: cli.md (SP 1755)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>cli/<strong>init</strong>.py</li><li>cli/<strong>main</strong>.py</li><li>cli/commands.py</li><li>cli/parser.py</li><li>cli/testing.py</li><li>ledger_app/services.py</li><li>tests/test_cli_foundation.py</li><li>tests/test_persistence_contract.py</li><li>cli.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>RED: cli-help (FEATURE-CLI-FOUNDATION.md)</li></ul>
+<p>intent: The executable command surface provides successful help or usage entry points. return code: 1 stderr: Traceback (most recent call last): File &quot;cli-help.py&quot;, line 1, in &lt;module&gt; from cli.testing import cli_runner<br>ModuleNotFoundError: No module named &#x27;cli.testing&#x27;; &#x27;cli&#x27; is not a package</p>
+<ul><li>RED: cli-unknown-command (FEATURE-CLI-FOUNDATION.md)</li></ul>
+<p>intent: An unknown root command is rejected with the documented usage exit code. return code: 1 stderr: Traceback (most recent call last): File &quot;cli-unknown-command.py&quot;, line 1, in &lt;module&gt; from cli.testing import cli_runner<br>ModuleNotFoundError: No module named &#x27;cli.testing&#x27;; &#x27;cli&#x27; is not a package</p>
+<ul><li>RED: cli-unknown-report (FEATURE-CLI-FOUNDATION.md)</li></ul>
+<p>intent: An unknown report name is rejected with the documented usage exit code. return code: 1 stderr: Traceback (most recent call last): File &quot;cli-unknown-report.py&quot;, line 1, in &lt;module&gt; from cli.testing import cli_runner<br>ModuleNotFoundError: No module named &#x27;cli.testing&#x27;; &#x27;cli&#x27; is not a package</p>
+<ul><li>RED: cli-argument-validation (FEATURE-CLI-FOUNDATION.md)</li></ul>
+<p>intent: Missing required command arguments are rejected without standard output. return code: 1 stderr: Traceback (most recent call last): File &quot;cli-argument-validation.py&quot;, line 1, in &lt;module&gt; from cli.testing import cli_runner<br>ModuleNotFoundError: No module named &#x27;cli.testing&#x27;; &#x27;cli&#x27; is not a package</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: cli-help (FEATURE-CLI-FOUNDATION.md)</li></ul>
+<p>intent: The executable command surface provides successful help or usage entry points. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: cli-unknown-command (FEATURE-CLI-FOUNDATION.md)</li></ul>
+<p>intent: An unknown root command is rejected with the documented usage exit code. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: cli-unknown-report (FEATURE-CLI-FOUNDATION.md)</li></ul>
+<p>intent: An unknown report name is rejected with the documented usage exit code. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: cli-argument-validation (FEATURE-CLI-FOUNDATION.md)</li></ul>
+<p>intent: Missing required command arguments are rejected without standard output. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Build summary</h2>
+<p>&lt;reusable-compact filename=&quot;DATABASE.md&quot;&gt; Persistence uses generated <code>persistence.open_database(dsn)</code> only; DSN precedence is <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code>. SQLite is required locally; PostgreSQL remains supported. Amounts are integer cents.</p>
+<p>Tables:</p>
+<ul><li><code>accounts(account TEXT PRIMARY KEY NOT NULL, name VARCHAR(40) NOT NULL)</code></li><li><code>categories(category TEXT PRIMARY KEY NOT NULL, description VARCHAR(40) NOT NULL)</code></li><li><code>transactions(txn_id INTEGER PRIMARY KEY NOT NULL, date TEXT NOT NULL, account TEXT NOT NULL REFERENCES accounts(account), category TEXT NOT NULL REFERENCES categories(category), amount INTEGER NOT NULL, memo VARCHAR(60) NOT NULL)</code></li></ul>
+<p>Declared operations:</p>
+<ul><li>accounts: <code>list()</code>, <code>create(account, name)</code>, <code>get(account)</code>, <code>update(account, name)</code>, <code>delete(account)</code></li><li>categories: <code>list()</code>, <code>get(category)</code></li><li>transactions: <code>list()</code>, <code>create(txn_id, date, account, category, amount, memo)</code>, <code>get(txn_id)</code>, <code>update(txn_id, amount)</code>, <code>delete(txn_id)</code></li></ul>
+<p>Schema creation is idempotent via generated <code>schema.sql</code>; application startup must not create or alter schema. Application code must not import database drivers, use floating point for amounts, or bypass repositories. &lt;/reusable-compact&gt;</p>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>cli.py</li><li>cli/<strong>init</strong>.py</li><li>cli/<strong>main</strong>.py</li><li>cli/commands.py</li><li>cli/parser.py</li><li>cli/testing.py</li><li>ledger_app/services.py</li><li>tests/test_cli_foundation.py</li><li>tests/test_persistence_contract.py</li></ul>
+<p>SUMMARY: Implemented the importable <code>ledger</code> CLI package, command-family parsing, help, usage validation, dispatch boundary, and persistence round-trip tests. Project tests pass: 9 passed.</p>
+<p>BLOCKERS:</p>
+<ul><li>Full <code>sources/run.sh</code> remains incomplete for later ledger workflow blocks: 4 passed, 39 failed. No current-block acceptance checks failed.</li></ul></article>
+</main>
+</body>
+</html>

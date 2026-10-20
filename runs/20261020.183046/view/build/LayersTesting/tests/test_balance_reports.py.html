@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_balance_reports.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_balance_reports.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_balance_reports.py">Raw file</a></div></header>
+<article class="doc"><pre>from __future__ import annotations
+
+import csv
+
+from cli.testing import cli_runner
+
+
+def test_empty_and_ordered_accounts_are_reported(monkeypatch, tmp_path) -&gt; None:
+    monkeypatch.setenv(&quot;DATABASE_PATH&quot;, str(tmp_path / &quot;ledger.db&quot;))
+    monkeypatch.delenv(&quot;DATABASE_URL&quot;, raising=False)
+    assert cli_runner(&quot;init&quot;)[0] == 0
+    assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZED&quot;, &quot;Zed&quot;)[0] == 0
+    assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ALPHA&quot;, &quot;Alpha&quot;)[0] == 0
+    code, output, error = cli_runner(&quot;report&quot;, &quot;balances&quot;)
+    assert code == 0 and error == &quot;&quot;
+    rows = list(csv.reader(output.splitlines()))
+    assert rows[1] == [&quot;ALPHA&quot;, &quot;Alpha&quot;, &quot;0&quot;, &quot;0.00&quot;]
+    assert rows[2] == [&quot;ZED&quot;, &quot;Zed&quot;, &quot;0&quot;, &quot;0.00&quot;]
+    assert rows[3] == [&quot;TOTAL&quot;, &quot;&quot;, &quot;0&quot;, &quot;0.00&quot;]
+</pre></article>
+</main>
+</body>
+</html>

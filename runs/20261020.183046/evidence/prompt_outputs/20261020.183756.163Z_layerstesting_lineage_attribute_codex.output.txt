@@ -1,0 +1,21 @@
+<requirement name="seed-ledger-categories" stories="bulk-loading">
+category,description
+OPENING,Opening balance
+PAYROLL,Payroll
+REFUND,Customer refunds
+RENT,Rent
+SALES,Sales receipts
+SUPPLY,Supplies
+TRANSFER,Internal transfer
+</requirement>
+<unattached story="architecture"/>
+<unattached story="database"/>
+<unattached story="cli-foundation"/>
+<unattached story="schema-lifecycle"/>
+<unattached story="balance-reports"/>
+<unattached story="transaction-lifecycle"/>
+<unattached story="aggregate-reports"/>
+<unattached story="account-lifecycle"/>
+<unattached story="transfers"/>
+<unattached story="financial-invariants"/>
+<unattached story="conformance"/>

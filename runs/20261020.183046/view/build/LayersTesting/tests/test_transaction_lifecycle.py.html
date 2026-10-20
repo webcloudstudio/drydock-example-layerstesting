@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_transaction_lifecycle.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_transaction_lifecycle.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_transaction_lifecycle.py">Raw file</a></div></header>
+<article class="doc"><pre>from __future__ import annotations
+
+import csv
+
+from cli.testing import cli_runner
+
+
+def invoke(monkeypatch, tmp_path, *args: str):
+    monkeypatch.setenv(&quot;DATABASE_PATH&quot;, str(tmp_path / &quot;ledger.db&quot;))
+    monkeypatch.delenv(&quot;DATABASE_URL&quot;, raising=False)
+    return cli_runner(*args)
+
+
+def test_post_get_amend_delete_round_trip(monkeypatch, tmp_path) -&gt; None:
+    assert invoke(monkeypatch, tmp_path, &quot;init&quot;)[0] == 0
+    assert invoke(monkeypatch, tmp_path, &quot;account&quot;, &quot;add&quot;, &quot;CASH&quot;, &quot;Cash&quot;)[0] == 0
+    assert invoke(monkeypatch, tmp_path, &quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)[0] == 0
+
+    code, output, error = invoke(monkeypatch, tmp_path, &quot;txn&quot;, &quot;post&quot;, &quot;CASH&quot;, &quot;SALES&quot;, &quot;12.34&quot;, &quot;2026-01-02&quot;, &quot;sale&quot;)
+    assert code == 0 and error == &quot;&quot;
+    assert list(csv.reader(output.splitlines()))[1] == [&quot;1&quot;, &quot;2026-01-02&quot;, &quot;CASH&quot;, &quot;SALES&quot;, &quot;12.34&quot;, &quot;sale&quot;]
+
+    code, output, _ = invoke(monkeypatch, tmp_path, &quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;, &quot;10.00&quot;)
+    assert code == 0
+    assert list(csv.reader(output.splitlines()))[1][4] == &quot;10.00&quot;
+    assert invoke(monkeypatch, tmp_path, &quot;txn&quot;, &quot;delete&quot;, &quot;1&quot;)[0] == 0
+    assert invoke(monkeypatch, tmp_path, &quot;txn&quot;, &quot;get&quot;, &quot;1&quot;)[0] == 4
+
+
+def test_invalid_post_does_not_write(monkeypatch, tmp_path) -&gt; None:
+    assert invoke(monkeypatch, tmp_path, &quot;init&quot;)[0] == 0
+    assert invoke(monkeypatch, tmp_path, &quot;account&quot;, &quot;add&quot;, &quot;CASH&quot;, &quot;Cash&quot;)[0] == 0
+    code, output, _ = invoke(monkeypatch, tmp_path, &quot;txn&quot;, &quot;post&quot;, &quot;CASH&quot;, &quot;SALES&quot;, &quot;1.234&quot;, &quot;2026-01-01&quot;)
+    assert (code, output) == (3, &quot;&quot;)
+    code, output, _ = invoke(monkeypatch, tmp_path, &quot;count&quot;)
+    assert code == 0
+    assert list(csv.reader(output.splitlines()))[-1] == [&quot;transactions&quot;, &quot;0&quot;]
+
+
+def test_negative_post_is_rejected_without_changing_balance(monkeypatch, tmp_path) -&gt; None:
+    assert invoke(monkeypatch, tmp_path, &quot;init&quot;)[0] == 0
+    assert invoke(monkeypatch, tmp_path, &quot;account&quot;, &quot;add&quot;, &quot;CASH&quot;, &quot;Cash&quot;)[0] == 0
+    assert invoke(monkeypatch, tmp_path, &quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)[0] == 0
+    assert invoke(monkeypatch, tmp_path, &quot;txn&quot;, &quot;post&quot;, &quot;CASH&quot;, &quot;SALES&quot;, &quot;5.00&quot;, &quot;2026-01-01&quot;)[0] == 0
+
+    code, output, _ = invoke(
+        monkeypatch, tmp_path, &quot;txn&quot;, &quot;post&quot;, &quot;CASH&quot;, &quot;SALES&quot;, &quot;-6.00&quot;, &quot;2026-01-02&quot;
+    )
+    assert (code, output) == (3, &quot;&quot;)
+
+    code, output, _ = invoke(monkeypatch, tmp_path, &quot;report&quot;, &quot;balances&quot;)
+    assert code == 0
+    rows = list(csv.DictReader(output.splitlines()))
+    assert rows[0][&quot;transactions&quot;] == &quot;1&quot;
+    assert rows[0][&quot;balance&quot;] == &quot;5.00&quot;
+</pre></article>
+</main>
+</body>
+</html>

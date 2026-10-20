@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_schema_lifecycle.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_schema_lifecycle.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_schema_lifecycle.py">Raw file</a></div></header>
+<article class="doc"><pre>from __future__ import annotations
+
+import csv
+import os
+
+from cli.testing import cli_runner
+
+
+def _count_rows(output: str) -&gt; list[list[str]]:
+    return list(csv.reader(output.splitlines()))
+
+
+def test_init_creates_empty_schema_and_count_uses_documented_order(tmp_path) -&gt; None:
+    database_path = str(tmp_path / &quot;ledger.db&quot;)
+    old_path = os.environ.get(&quot;DATABASE_PATH&quot;)
+    old_url = os.environ.get(&quot;DATABASE_URL&quot;)
+    os.environ[&quot;DATABASE_PATH&quot;] = database_path
+    os.environ.pop(&quot;DATABASE_URL&quot;, None)
+    try:
+        code, output, error = cli_runner(&quot;init&quot;)
+        assert (code, output, error) == (0, &quot;&quot;, &quot;&quot;)
+
+        code, output, error = cli_runner(&quot;count&quot;)
+        assert code == 0
+        assert error == &quot;&quot;
+        assert _count_rows(output) == [
+            [&quot;table&quot;, &quot;rows&quot;],
+            [&quot;accounts&quot;, &quot;0&quot;],
+            [&quot;categories&quot;, &quot;0&quot;],
+            [&quot;transactions&quot;, &quot;0&quot;],
+        ]
+    finally:
+        if old_path is None:
+            os.environ.pop(&quot;DATABASE_PATH&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_PATH&quot;] = old_path
+        if old_url is None:
+            os.environ.pop(&quot;DATABASE_URL&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_URL&quot;] = old_url
+
+
+def test_init_removes_existing_account_rows(tmp_path) -&gt; None:
+    database_path = str(tmp_path / &quot;ledger.db&quot;)
+    old_path = os.environ.get(&quot;DATABASE_PATH&quot;)
+    old_url = os.environ.get(&quot;DATABASE_URL&quot;)
+    os.environ[&quot;DATABASE_PATH&quot;] = database_path
+    os.environ.pop(&quot;DATABASE_URL&quot;, None)
+    try:
+        assert cli_runner(&quot;init&quot;)[0] == 0
+        from persistence import open_database
+
+        with open_database(database_path) as database:
+            database.accounts.create(account=&quot;cash&quot;, name=&quot;Cash&quot;)
+
+        assert cli_runner(&quot;init&quot;)[0] == 0
+        code, output, _error = cli_runner(&quot;count&quot;)
+        assert code == 0
+        assert [row[1] for row in _count_rows(output)[1:]] == [&quot;0&quot;, &quot;0&quot;, &quot;0&quot;]
+    finally:
+        if old_path is None:
+            os.environ.pop(&quot;DATABASE_PATH&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_PATH&quot;] = old_path
+        if old_url is None:
+            os.environ.pop(&quot;DATABASE_URL&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_URL&quot;] = old_url
+</pre></article>
+</main>
+</body>
+</html>

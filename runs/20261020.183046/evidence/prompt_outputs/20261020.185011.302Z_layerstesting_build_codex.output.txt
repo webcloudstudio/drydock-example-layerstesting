@@ -1,0 +1,12 @@
+AC_BROKEN: transaction-post-read
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- tests/test_transaction_lifecycle.py
+
+SUMMARY:
+Added negative-balance regression coverage. Project tests pass: 19 passed. Terminal acceptance passes: 43/43.
+
+BLOCKERS:
+- `transaction-post-read` expects category loading to return exit 1, contradicting required behavior and terminal checks, where it returns 0.

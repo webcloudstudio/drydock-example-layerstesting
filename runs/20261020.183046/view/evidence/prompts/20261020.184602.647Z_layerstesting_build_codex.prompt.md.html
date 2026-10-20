@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompts/20261020.184602.647Z_layerstesting_build_codex.prompt.md</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompts/20261020.184602.647Z_layerstesting_build_codex.prompt.md</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompts/20261020.184602.647Z_layerstesting_build_codex.prompt.md">Raw file</a></div></header>
+<article class="doc"><h1>System Instructions</h1>
+<p>This prompt is divided into three sections:</p>
+<ol><li><strong>System Instructions</strong> (this section) — structural orientation only. Do not treat this</li></ol>
+<p>section as task input.</p>
+<ol><li><strong>Input Context</strong> — begins with the heading <code># Input Context</code>. All blocks are wrapped in</li></ol>
+<p><code>&lt;pblock&gt;</code> tags. Two block types:</p>
+<ul><li>File blocks: <code>&lt;pblock filename=&quot;&lt;name&gt;&quot; role=&quot;&lt;role&gt;&quot; guidance=&quot;...&quot;&gt;</code> — optional</li></ul>
+<p><code>guidance</code> attribute carries context-specific instructions; content is in a fenced block.</p>
+<ul><li>Metadata/section blocks: <code>&lt;pblock label=&quot;&lt;label&gt;&quot; kind=&quot;&lt;kind&gt;&quot;&gt;</code> — job parameters,</li></ul>
+<p>rules, instructions, or group headers.</p>
+<ol><li><strong>Agent Task</strong> — begins with the heading <code># Agent Task</code>. Defines your persona, constraints,</li></ol>
+<p>and required outputs. Read all input context before acting on this section.</p>
+<h1>Input Context</h1>
+<p>&lt;pblock label=&quot;Build block job&quot; kind=&quot;job&quot;&gt;</p>
+<h2>Build block job</h2>
+<ul><li>TARGET: LayersTesting</li><li>BUILD_DIRECTORY: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.183046/build/LayersTesting</li><li>WORKING_DIRECTORY: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.183046/build/LayersTesting</li><li>BUILD_BLOCK: Block 4 · Service (block-4)</li><li>STORIES: Load validated account, category, and transaction CSV files atomically. (bulk-loading)</li><li>DATE: 2026-10-20</li><li>BUILD_SCOPE: exactly one MANIFEST.md build block</li></ul>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock label=&quot;Stories in this block&quot; kind=&quot;section&quot;&gt;</p>
+<h2>Stories in this block</h2>
+<ul><li>Load validated account, category, and transaction CSV files atomically. (bulk-loading) [story]</li></ul>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock label=&quot;Files on disk&quot; kind=&quot;section&quot;&gt;</p>
+<h2>Files on disk in the build directory</h2>
+<ul><li>sources/run.sh</li><li>sources/seed_accounts.csv</li><li>sources/seed_categories.csv</li><li>sources/seed_transactions.csv</li><li>sources/seed_transactions_bad.csv</li></ul>
+<p>These are the only imported files present on disk. Every other file named in this prompt is supplied as prompt context and is not on disk; read it here and do not report it as a missing input.</p>
+<p>&lt;/pblock&gt;</p>
+<h2>COMPASS - Target Orientation</h2>
+<p>&lt;pblock filename=&quot;COMPASS.md&quot; role=&quot;compass&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.183046/workspace/targets/LayersTesting/COMPASS.md&quot; guidance=&quot;Important: This is the core project intent, constraints, and guardrails. It should have presecedence in conflicts.&quot;&gt;</p>
+<pre><code># COMPASS: LayersTesting
+
+## Compass
+
+Build a command-line cash ledger, an executable named `ledger` at the application root, as
+described in `sources/INSTRUCTIONS.md`. It keeps accounts, categories, and cash transactions in a
+relational database reached only through the shipped persistence library, rejects a failing command
+before it writes, enforces non-negative balances, and reports balances, category totals, and monthly totals.
+
+Correctness is measured by `sources/run.sh`: 43 checks of exit code and standard output against
+known answers computed from the seed files. The goal is every check passing.
+
+## Constraints
+
+- Implement in the language and database named under `## Stack` in `sources/INSTRUCTIONS.md`.
+- Provide an executable named `ledger` at the application root, invoked as `./ledger &lt;command&gt;`.
+- Read the database location from `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`.
+- Store amounts as integer cents.
+- Check every command in full before its first write.
+- Run without network access other than to a PostgreSQL server named by `DATABASE_URL`.
+- Diagnostics go to standard error and are never compared.
+
+## Guardrails
+
+- Do not modify, rewrite, regenerate, or substitute any file under `sources/`.
+- Do not read `sources/run.sh` or any seed file from application code. Seed files reach the
+  database only through `ledger load`.
+- Do not hardcode a report row, a count, or a total. Every value comes from a query.
+- Do not open a database driver outside the shipped persistence library.
+- Do not use floating point for money at any layer.
+
+## Verification Protocol
+
+| Story kind | Command | Asserts |
+|---|---|---|
+| Every behavioral story | `sh bin/test.sh` | exit `0` |
+| Terminal story (once, last) | `sh sources/run.sh` | exit `0` |
+
+&lt;!-- drydock:build-write-guardrail:start --&gt;
+## Build Write Guardrail
+
+- Authorized build directory: `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.183046/build/LayersTesting`
+- Authorized Target directory: `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.183046/workspace/targets/LayersTesting`
+- Build agents have permission to create, modify, and remove files required by the active build block inside these authorized directories.
+- No path outside these authorized directories may be modified.
+- Protected Drydock artifacts:
+  - `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.183046/workspace/targets/LayersTesting/blueprint/`
+  - `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.183046/workspace/targets/LayersTesting/MANIFEST.md`
+  - `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.183046/workspace/targets/LayersTesting/COMPASS.md`
+  - `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.183046/workspace/targets/LayersTesting/QuarterDeck/`
+  - `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.183046/workspace/targets/LayersTesting/evidence/`
+&lt;!-- drydock:build-write-guardrail:end --&gt;</code></pre>
+<p>&lt;/pblock&gt;</p>
+<h2>STACK - Technology HOW</h2>
+<p>&lt;pblock filename=&quot;python_compact.md&quot; role=&quot;stack&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/Rigging/languages/python/python_compact.md&quot;&gt;</p>
+<pre><code>&lt;!-- Compacted from Rigging/languages/python/python.md sha256=fe344456a351e3237cfe3bae2408a69758d401430b935f60c15f91b9a97e8016 on 2026-10-18 by Rigging maintenance --&gt;
+
+## Foundation Contract
+
+- source_root: ./
+- test_command: pytest -q
+- environment: `.venv`, created by `uv venv` and activated by launchers in `bin/`
+- dependencies: `pyproject.toml` and committed `uv.lock`
+
+The language foundation owns the project root, environment, dependency manifest, and test runner.
+Later foundations add their packages to this tree without replacing those contracts.
+
+### How do we execute and measure Acceptance Criteria in this language?
+
+An Acceptance Criterion (AC) is an executable check of Blueprint-required behavior. Use the
+existing Programmatic Acceptance format: a Python script with assertions against the built
+product. Drydock executes each criterion through `languages/python/acceptance/runner.py`; `pytest -q`
+runs the project test suite. Retain the criterion ID, observed values, stdout/stderr and result;
+an assertion failure fails the check. The harness reports failure operands and available case
+counts. Code coverage and persistence interactions require explicit instrumentation; record
+available observations as key/value data associated with the criterion. Missing observations
+are unknown, not proof that code or an interaction was unused.
+
+### How does this language provide the shared persistence contract?
+
+Use `stack/persistence.md`. Drydock copies `Rigging/languages/python/persistence/{db,sqlite,postgres}.py` and generates
+`persistence/{schema,__init__,testing}.py` plus `schema.sql` from `DATABASE.md`. Call
+`open_database(dsn)` and `db.&lt;table&gt;.&lt;operation&gt;(...)`; use `persistence.testing.db_session()`
+for criteria. SQLite uses the standard library; PostgreSQL needs `psycopg[binary]` in the project
+dependencies. Both engines ship together and the DSN selects the engine. Library verification
+lives in `tests/test_shipped_database.py`; a Target still verifies its own schema and operations.
+
+## Consumer Rules
+
+- Python &gt;=3.11; use modern type hints on public interfaces and named cross-package data shapes.
+- Centralize typed runtime settings; use Blueprint names and defaults. Keep secrets out of Git and logs.
+- Keep behavior in importable modules; launchers activate `.venv` and invoke modules.
+- Use pytest with isolated external state; all test gates run `pytest -q`.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;cli.md&quot; role=&quot;stack&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/Rigging/stack/cli.md&quot;&gt;</p>
+<pre><code># Command-Line Application
+
+**Type:** cli
+**Version:** 20260920 V1
+**Tier:** platform
+**Category:** Technologies
+**Foundation:** cli
+**Description:** Command-line application structure: entry point, argument parsing, exit codes, cross-platform launchers, and testing without spawning a process.
+
+Technology reference. This file does not change between projects.
+
+Prerequisites: `stack/common.md`, `languages/python/python.md`
+
+---
+
+## Foundation Contract
+
+The published shape of this foundation. Drydock synthesizes the story that builds it and every
+acceptance criterion writes against these names. Carried verbatim into `cli_compact.md`.
+
+- package: cli
+- entry: main(argv: list[str] | None = None) -&gt; int
+- fixture: cli_runner
+- fixture_source: cli/testing.py
+
+```python
+# cli/__init__.py
+def main(argv: list[str] | None = None) -&gt; int:
+    ...
+
+# cli/testing.py
+import contextlib
+import io
+from cli import main
+
+def cli_runner(*args: str) -&gt; tuple[int, str, str]:
+    &quot;&quot;&quot;Return (exit_code, stdout, stderr) without spawning a process.&quot;&quot;&quot;
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        code = main(list(args))
+    return code, out.getvalue(), err.getvalue()
+
+# conftest.py
+import pytest
+from cli import testing
+
+@pytest.fixture
+def cli_runner():
+    return testing.cli_runner
+```
+
+A criterion imports `cli_runner` from `cli.testing`, calls `cli_runner(&quot;status&quot;, &quot;--json&quot;)`, and
+asserts on the returned tuple. It does not call `subprocess.run`, which measures the installed
+console script and the shell rather than the code the story wrote.
+
+---
+
+## 1. Directory Layout
+
+**Rule**: Command code lives in `cli/`. The root holds only packaging and infrastructure files.
+
+```
+project/
+  pyproject.toml            # [project.scripts] declares the console script
+  cli/
+    __init__.py             # main() — the single entry point
+    commands.py             # one function per command; no argument parsing
+    parser.py               # argparse construction; no behavior
+  bin/
+    run.sh                  # bash launcher
+    run.ps1                 # PowerShell launcher
+  tests/
+```
+
+**Why**: Parsing, behavior, and launching are three contracts. Collapsing them produces a command
+that cannot be tested without a shell.
+
+---
+
+## 2. Entry Point and Exit Codes
+
+**Rule**: `main(argv=None) -&gt; int` parses, dispatches, and returns an exit code. It never calls
+`sys.exit` and never raises for an expected failure. The console script is the only caller that
+translates the return value into a process exit.
+
+```python
+# cli/__init__.py
+import sys
+from cli.parser import build_parser
+from cli import commands
+
+def main(argv: list[str] | None = None) -&gt; int:
+    args = build_parser().parse_args(argv)
+    try:
+        return commands.dispatch(args)
+    except OperationalError as exc:
+        print(f&quot;error: {exc}&quot;, file=sys.stderr)
+        return 1
+```
+
+```toml
+# pyproject.toml
+[project.scripts]
+mytool = &quot;cli:main&quot;
+```
+
+**Exit codes**: `0` success, `1` operational failure, `2` usage error. `argparse` already returns
+`2` for a usage error; do not override it.
+
+**Why**: A `main` that returns rather than exits is callable from a test in-process. A `main` that
+calls `sys.exit` forces every criterion to spawn a subprocess and measure the shell.
+
+---
+
+## 3. Parsing Is Separate From Behavior
+
+**Rule**: `parser.py` builds the `argparse` tree and returns it. `commands.py` holds one function
+per command taking plain arguments, not a `Namespace`. Neither imports the other.
+
+```python
+# cli/parser.py
+import argparse
+
+def build_parser() -&gt; argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog=&quot;mytool&quot;)
+    sub = parser.add_subparsers(dest=&quot;command&quot;, required=True)
+    status = sub.add_parser(&quot;status&quot;, help=&quot;Report current state&quot;)
+    status.add_argument(&quot;--json&quot;, action=&quot;store_true&quot;)
+    return parser
+```
+
+```python
+# cli/commands.py
+def status(*, as_json: bool) -&gt; int:
+    ...
+
+def dispatch(args) -&gt; int:
+    if args.command == &quot;status&quot;:
+        return status(as_json=args.json)
+    return 2
+```
+
+**Why**: Behavior tested through a `Namespace` is behavior tested through the parser. Separating
+them lets a criterion call `status(as_json=True)` directly.
+
+---
+
+## 4. Cross-Platform Launchers
+
+**Rule**: Ship both launchers. They locate the environment and invoke the package entry point;
+they contain no business logic. A launcher that makes a decision is a second implementation of the
+command.
+
+```bash
+#!/usr/bin/env bash
+# bin/run.sh — locate the environment and hand off. No business logic.
+set -euo pipefail
+ROOT=&quot;$(cd &quot;$(dirname &quot;${BASH_SOURCE[0]}&quot;)/..&quot; &amp;&amp; pwd)&quot;
+if [ -d &quot;$ROOT/.venv&quot; ]; then
+    source &quot;$ROOT/.venv/bin/activate&quot;
+fi
+exec python -m cli &quot;$@&quot;
+```
+
+```powershell
+# bin/run.ps1 — locate the environment and hand off. No business logic.
+$ErrorActionPreference = &quot;Stop&quot;
+$Root = Split-Path -Parent $PSScriptRoot
+$Activate = Join-Path $Root &quot;.venv\Scripts\Activate.ps1&quot;
+if (Test-Path $Activate) { &amp; $Activate }
+python -m cli @args
+exit $LASTEXITCODE
+```
+
+```python
+# cli/__main__.py — makes `python -m cli` work identically on both platforms
+import sys
+from cli import main
+
+sys.exit(main())
+```
+
+**Why**: `python -m cli` is the one invocation both launchers share, so the two scripts cannot
+drift in behavior — only in how they find the interpreter. `exit $LASTEXITCODE` is required in
+PowerShell; without it the exit code is discarded and a failing command reports success.
+
+---
+
+## 5. Output and Streams
+
+**Rule**: Results go to stdout, diagnostics to stderr. A `--json` mode prints one JSON document to
+stdout and nothing else. Never interleave progress text into a machine-readable stream.
+
+**Why**: A caller piping stdout to `jq` receives the progress lines too, and the command becomes
+unusable in a pipeline.
+
+---
+
+## 6. Testing Without a Process
+
+**Rule**: Test through `main([&quot;status&quot;, &quot;--json&quot;])` or the `cli_runner` fixture. Reserve
+`subprocess.run` for one packaging test asserting the installed console script exists and runs.
+
+```python
+def test_status_reports_json(cli_runner):
+    code, out, err = cli_runner(&quot;status&quot;, &quot;--json&quot;)
+    assert code == 0
+    assert json.loads(out)[&quot;state&quot;] == &quot;ready&quot;
+    assert err == &quot;&quot;
+```
+
+**Why**: In-process tests are fast, debuggable, and measure the code. Subprocess tests measure the
+installed environment, which is a different and much smaller question.
+
+---
+
+## Checklist
+
+- [ ] `cli/` package; `main(argv=None) -&gt; int` that returns rather than exits
+- [ ] `[project.scripts]` declares the console script
+- [ ] `cli/__main__.py` so `python -m cli` works
+- [ ] Both `bin/run.sh` and `bin/run.ps1`, neither holding logic; `.ps1` ends with `exit $LASTEXITCODE`
+- [ ] Parsing in `parser.py`, behavior in `commands.py`, no import between them
+- [ ] Exit codes `0` / `1` / `2` used consistently
+- [ ] Results on stdout, diagnostics on stderr, `--json` emits nothing else
+- [ ] Criteria use `cli_runner`; at most one subprocess test for packaging</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;sqlite.md&quot; role=&quot;stack&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md&quot;&gt;</p>
+<pre><code># SQLite
+
+**Type:** database
+**Version:** 20261018 V4
+**Tier:** platform
+**Category:** Persistence
+**Foundation:** database
+**Description:** SQLite as a Drydock store: what it enforces, what it ignores, and how a Target reaches it.
+
+Technology reference. This file does not change between projects.
+
+Prerequisite: `stack/persistence.md`
+
+---
+
+## Foundation Contract
+
+The published Python binding follows. Go callers use the language-native API in
+`languages/go/go.md`; Go tests run through the existing Blueprint AC container.
+Carried verbatim into `sqlite_compact.md`.
+
+- package: persistence
+- entry: open_database(dsn) -&gt; Database
+- fixture: db_session
+- fixture_source: persistence/testing.py
+
+### How is this engine configured and initialized?
+
+For the shipped Python binding, use the standard-library `sqlite3` driver and a file path or
+`sqlite://` DSN. Configuration resolves `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`.
+Drydock applies generated `schema.sql` at the DATABASE step and before acceptance runs. Declare
+schema changes in `DATABASE.md`; rebuilding applies idempotent creation statements, not a
+migration of existing tables. The engine owns connections and enables foreign keys.
+
+### How does this engine implement the shared persistence contract?
+
+The shipped Python binding is `Rigging/languages/python/persistence/sqlite.py`, used through `persistence.db` and
+`open_database(dsn)`. Call declared table operations and use `db_session()` for criteria; do not
+import the driver in application code. SQLite does not prove PostgreSQL length/type enforcement.
+Library verification is in `tests/test_shipped_database.py`; verify Target-specific operations
+separately. The Go binding is `languages/go/persistence/sqlite.go`, verified against this engine.
+Use `OpenDatabase(ctx, dsn)` and generated typed methods; `OpenSession(ctx, dsn, ddl)` supplies
+a test store. The Go library is linked as `drydock.local/persistence`. The detailed Python interface follows.
+
+**How the Python binding is built.** Drydock builds this foundation deterministically. No build agent writes,
+edits, or replaces any file listed below.
+
+1. Plan declares the store in `DATABASE.md`: every table, every column, and each access pattern&#x27;s
+   `Repository operation` as `&lt;table&gt;.&lt;verb&gt;`.
+2. Plan emits the story that implements `DATABASE.md`, with `persistence.md` and `sqlite.md` in
+   `stack:`. That story is the DATABASE step. Its builder writes no persistence code.
+3. Before that story&#x27;s step runs, Drydock writes the package into the build root, so a story in
+   the same step can import it:
+
+| Layer | File | Origin |
+|---|---|---|
+| Library | `persistence/db.py` | shipped `Rigging/languages/python/persistence/db.py`, copied unchanged: `Database`, statement construction, parameter binding, engine selection |
+| Engines | `persistence/sqlite.py`, `persistence/postgres.py` | shipped, copied unchanged; the DSN selects one at runtime |
+| Declaration | `persistence/schema.py` | generated from `DATABASE.md`: `SCHEMA` (tables, operations, row dataclasses) and `open_database(dsn)`; contains no SQL |
+| Interface | `persistence/__init__.py` | generated; exports `Database`, `PersistenceError`, `UnknownOperation`, `SCHEMA`, `open_database` |
+| Fixture | `persistence/testing.py` | generated; `db_session()` |
+| DDL | `schema.sql` | generated from `DATABASE.md`; `CREATE ... IF NOT EXISTS` throughout |
+
+4. Drydock applies `schema.sql` through `open_database` to the configured store — `DATABASE_URL`,
+   else `DATABASE_PATH`, else `data/app.db` — at the DATABASE step and again before every
+   acceptance run, so a criterion that drives the application through its own client finds the
+   declared tables.
+
+Every later story writes callers only: `route → service → db.&lt;table&gt;.&lt;verb&gt;(...)`. The package
+exposes one attribute per declared table and one method per declared operation. Changing the
+store means changing `DATABASE.md` and rebuilding.
+
+```python
+# persistence/testing.py — generated by Drydock
+@contextmanager
+def db_session(dsn: str | None = None) -&gt; Iterator[Database]: ...
+
+# application code
+from persistence import open_database
+
+db = open_database(config.database_path)
+
+# a criterion
+from persistence.testing import db_session
+
+with db_session() as db:
+    row = db.&lt;table&gt;.create(...)  # the declared Output row
+
+# conftest.py
+import pytest
+from persistence import testing
+
+@pytest.fixture
+def db_session():
+    with testing.db_session() as db:
+        yield db
+```
+
+`db_session()` opens `dsn`, or a fresh temporary SQLite store, with `schema.sql` applied. A
+criterion imports it from `persistence.testing` and uses it as a context manager —
+`with db_session() as db:` — against the built database layer, without pytest. The pytest suite
+receives the same store through the `conftest.py` fixture. Neither opens a connection of its
+own, and a criterion never imports `sqlite3`.
+
+---
+
+## You do not write the access layer
+
+Drydock generates the persistence package from `DATABASE.md` and copies the SQLite engine in
+unchanged. Connection handling, thread discipline, PRAGMAs, parameter binding, and row mapping all
+live there. A hand-written connection helper, cursor, or SQL string is a review failure.
+
+**By language**
+
+| Language | Adapter | What the build writes |
+|---|---|---|
+| Python | `Rigging/languages/python/persistence/sqlite.py`, shipped | callers only — `db.&lt;table&gt;.&lt;verb&gt;(...)` |
+| Go | `Rigging/languages/go/persistence/sqlite.go`, shipped | typed callers; declarations and fixtures are generated |
+| other languages | none yet | a Target declaring `DATABASE.md` fails before planning |
+
+## Role
+
+SQLite is the development and test engine. It is a file, it needs no server, and it opens from a
+plain path or a `sqlite://` DSN. Production relational storage is PostgreSQL; see
+`stack/postgres.md`.
+
+Both engines are copied into every build and selected at runtime from the DSN, so the same build
+runs SQLite in test and PostgreSQL in production without rebuilding.
+
+## What it enforces
+
+`PRIMARY KEY`, `NOT NULL`, `UNIQUE`, `DEFAULT`, and — with `PRAGMA foreign_keys=ON`, which the
+shipped engine sets — `REFERENCES`.
+
+## What it ignores
+
+**Column length.** SQLite has type affinity, not length. `VARCHAR(50)` parses and is stored as
+`TEXT`, and a 500-character value is accepted. The same declaration is emitted to PostgreSQL,
+which does enforce it, so **a length violation passes in test and fails in production.** Declare
+lengths for the production engine and do not rely on SQLite to catch them.
+
+**Type strictness.** Any value may be stored in any column. A test that passes on SQLite has not
+proven the column types.
+
+**`ALTER TABLE`.** Only `ADD COLUMN` and `RENAME` are supported; there is no `DROP COLUMN` before
+3.35, no type change, and no `ADD CONSTRAINT`. Within a release this never arises — the schema is
+built once, at the DATABASE build step, from `schema.sql`.
+
+## Guardrails
+
+- Never import `sqlite3` outside the generated `persistence/` package.
+- Never hold a `sqlite3.Connection` on an application object; the engine owns connection lifetime.
+- Never create or alter schema at application startup.
+- Never treat a green SQLite test as proof that column lengths or types hold in production.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<h2>CONTEXT - Read-Only Support</h2>
+<p>&lt;pblock filename=&quot;ARCHITECTURE_compact.md&quot; role=&quot;context&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.183046/workspace/targets/LayersTesting/blueprint/ARCHITECTURE_compact.md&quot;&gt;</p>
+<pre><code>&lt;!-- Compacted from ARCHITECTURE.md sha256=750530d15ea45e43f4b4233543217a74fc8c77f4775441af30ff82a665b44dbe on 2026-10-20 by drydock build agent --&gt;
+
+Python ledger layers: executable `ledger`; `cli` for parsing, dispatch, and exit mapping; `ledger_app.config` for `DATABASE_URL` → `DATABASE_PATH` → `data/app.db`; `ledger_app.services` for workflows and business rules; shipped `persistence` for all database access. Exit codes: 0 success, 1 operational failure, 2 usage error, 3 rejection, 4 not found. Application code must not import database drivers or read `sources/`. Amounts use integer cents.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;DATABASE_compact.md&quot; role=&quot;context&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.183046/workspace/targets/LayersTesting/blueprint/DATABASE_compact.md&quot;&gt;</p>
+<pre><code>&lt;!-- Compacted from DATABASE.md sha256=303bb0ec282f9b3375363468a39a228230a2468245669b4366732e6dfd6eb647 on 2026-10-20 by drydock build agent --&gt;
+
+Persistence uses generated `persistence.open_database(dsn)` only; DSN precedence is `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`. SQLite is required locally; PostgreSQL remains supported. Amounts are integer cents.
+
+Tables:
+- `accounts(account TEXT PRIMARY KEY NOT NULL, name VARCHAR(40) NOT NULL)`
+- `categories(category TEXT PRIMARY KEY NOT NULL, description VARCHAR(40) NOT NULL)`
+- `transactions(txn_id INTEGER PRIMARY KEY NOT NULL, date TEXT NOT NULL, account TEXT NOT NULL REFERENCES accounts(account), category TEXT NOT NULL REFERENCES categories(category), amount INTEGER NOT NULL, memo VARCHAR(60) NOT NULL)`
+
+Declared operations:
+- accounts: `list()`, `create(account, name)`, `get(account)`, `update(account, name)`, `delete(account)`
+- categories: `list()`, `get(category)`
+- transactions: `list()`, `create(txn_id, date, account, category, amount, memo)`, `get(txn_id)`, `update(txn_id, amount)`, `delete(txn_id)`
+
+Schema creation is idempotent via generated `schema.sql`; application startup must not create or alter schema. Application code must not import database drivers, use floating point for amounts, or bypass repositories.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<h2>IMPLEMENTS - Authoritative Step Specifications</h2>
+<p>&lt;pblock label=&quot;Implementation recency anchor&quot; kind=&quot;section&quot;&gt; The files in this section are the load-bearing specifications for this build block. Build these files exactly. Treat earlier sections as constraints and context.</p>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;FEATURE-BULK-LOADING.md&quot; role=&quot;implements&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.183046/workspace/targets/LayersTesting/blueprint/FEATURE-BULK-LOADING.md&quot; guidance=&quot;Feature Specification&quot;&gt;</p>
+<pre><code># FEATURE: Bulk Loading
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Load validated account, category, and transaction CSV files atomically. |
+| Depends On  | ARCHITECTURE.md, DATABASE.md, FEATURE-SCHEMA-LIFECYCLE.md |
+| Provides    | `ledger load accounts`, `ledger load categories`, `ledger load transactions` |
+| Consumes    | accounts repository, categories repository, transactions repository |
+
+## Behavior
+
+`ledger load &lt;table&gt; &lt;csv&gt;` accepts only the declared table names and exact headers:
+
+- accounts: `account,name`
+- categories: `category,description`
+- transactions: `txn_id,date,account,category,amount,memo`
+
+The loader validates every row before writing:
+
+- codes are one to twelve uppercase alphanumeric characters;
+- names and descriptions are one to forty characters;
+- memos are zero to sixty characters;
+- amounts are decimal input with at most two fractional digits and are converted to integer cents;
+- dates are real `YYYY-MM-DD` calendar dates;
+- keys are unique;
+- transaction references exist;
+- the resulting balance of every account is non-negative.
+
+A successful load reports the table and loaded row count. Any rejected load returns exit code `3` and leaves the target table unchanged.
+
+## Database Interface
+
+
+- None — persistence is owned by DATABASE.md, FEATURE-ACCOUNT-LIFECYCLE.md, FEATURE-TRANSACTION-LIFECYCLE.md.
+
+## Programmatic Acceptance
+
+=== AC bulk-load-valid-accounts ===
+Intent: A valid account CSV loads successfully and reports the supplied row count.
+
+import csv
+import os
+import tempfile
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as directory:
+    old = os.environ.get(&quot;DATABASE_PATH&quot;)
+    os.environ[&quot;DATABASE_PATH&quot;] = os.path.join(directory, &quot;ledger.db&quot;)
+    os.environ.pop(&quot;DATABASE_URL&quot;, None)
+    path = os.path.join(directory, &quot;accounts.csv&quot;)
+    rows = [[&quot;account&quot;, &quot;name&quot;], [&quot;A1&quot;, &quot;Main&quot;], [&quot;A2&quot;, &quot;Reserve&quot;]]
+    with open(path, &quot;w&quot;, newline=&quot;&quot;) as handle:
+        csv.writer(handle, lineterminator=&quot;\n&quot;).writerows(rows)
+    try:
+        assert cli_runner(&quot;init&quot;)[0] == 0
+        code, output, error = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path)
+        assert code == 0
+        loaded = list(csv.reader(output.splitlines()))
+        assert loaded[-1][1] == str(len(rows) - 1)
+    finally:
+        if old is None:
+            os.environ.pop(&quot;DATABASE_PATH&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_PATH&quot;] = old
+=== END AC bulk-load-valid-accounts ===
+
+=== AC bulk-load-invalid-row-is-atomic ===
+Intent: A malformed row rejects the complete account file without storing earlier valid rows.
+
+import csv
+import os
+import tempfile
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as directory:
+    old = os.environ.get(&quot;DATABASE_PATH&quot;)
+    os.environ[&quot;DATABASE_PATH&quot;] = os.path.join(directory, &quot;ledger.db&quot;)
+    os.environ.pop(&quot;DATABASE_URL&quot;, None)
+    path = os.path.join(directory, &quot;accounts.csv&quot;)
+    rows = [[&quot;account&quot;, &quot;name&quot;], [&quot;A1&quot;, &quot;Main&quot;], [&quot;bad-code!&quot;, &quot;Invalid&quot;]]
+    with open(path, &quot;w&quot;, newline=&quot;&quot;) as handle:
+        csv.writer(handle, lineterminator=&quot;\n&quot;).writerows(rows)
+    try:
+        assert cli_runner(&quot;init&quot;)[0] == 0
+        code, output, error = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path)
+        assert code == 3
+        assert output == &quot;&quot;
+        count_code, count_output, count_error = cli_runner(&quot;count&quot;)
+        assert count_code == 0
+        counts = list(csv.reader(count_output.splitlines()))
+        assert counts[1][1] == &quot;0&quot;
+    finally:
+        if old is None:
+            os.environ.pop(&quot;DATABASE_PATH&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_PATH&quot;] = old
+=== END AC bulk-load-invalid-row-is-atomic ===
+
+=== AC bulk-load-unknown-reference-is-atomic ===
+Intent: A transaction file with an unknown account is rejected before any transaction is written.
+
+import csv
+import os
+import tempfile
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as directory:
+    old = os.environ.get(&quot;DATABASE_PATH&quot;)
+    os.environ[&quot;DATABASE_PATH&quot;] = os.path.join(directory, &quot;ledger.db&quot;)
+    os.environ.pop(&quot;DATABASE_URL&quot;, None)
+    account_path = os.path.join(directory, &quot;accounts.csv&quot;)
+    category_path = os.path.join(directory, &quot;categories.csv&quot;)
+    transaction_path = os.path.join(directory, &quot;transactions.csv&quot;)
+    for path, rows in (
+        (account_path, [[&quot;account&quot;, &quot;name&quot;], [&quot;A1&quot;, &quot;Main&quot;]]),
+        (category_path, [[&quot;category&quot;, &quot;description&quot;], [&quot;SALES&quot;, &quot;Sales&quot;]]),
+        (transaction_path, [
+            [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;],
+            [&quot;1&quot;, &quot;2026-01-01&quot;, &quot;NOSUCH&quot;, &quot;SALES&quot;, &quot;1.00&quot;, &quot;bad&quot;],
+        ]),
+    ):
+        with open(path, &quot;w&quot;, newline=&quot;&quot;) as handle:
+            csv.writer(handle, lineterminator=&quot;\n&quot;).writerows(rows)
+    try:
+        assert cli_runner(&quot;init&quot;)[0] == 0
+        assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, account_path)[0] == 0
+        assert cli_runner(&quot;load&quot;, &quot;categories&quot;, category_path)[0] == 0
+        code, output, error = cli_runner(&quot;load&quot;, &quot;transactions&quot;, transaction_path)
+        assert code == 3
+        assert output == &quot;&quot;
+        count_code, count_output, count_error = cli_runner(&quot;count&quot;)
+        assert count_code == 0
+        counts = list(csv.reader(count_output.splitlines()))
+        assert counts[3][1] == &quot;0&quot;
+    finally:
+        if old is None:
+            os.environ.pop(&quot;DATABASE_PATH&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_PATH&quot;] = old
+=== END AC bulk-load-unknown-reference-is-atomic ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Loading must validate the entire file before its first write.
+- Failed loads must not partially modify any table.
+- The loader must not read or modify files under `sources/` from application code.
+- Amounts must be converted to integer cents without floating-point arithmetic.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock label=&quot;Build instructions&quot; kind=&quot;instructions&quot;&gt;</p>
+<h3>Build instructions for this block</h3>
+<h4>Load validated account, category, and transaction CSV files atomically. (bulk-loading)</h4>
+<p>Implement CSV header and row validation, code/name/memo/amount/date validation, duplicate detection, reference validation, integer-cent conversion, balance validation, and all-or-nothing loading for each supported table.</p>
+<p>&lt;/pblock&gt;</p>
+<h1>Agent Task</h1>
+<p>You are a Drydock build agent implementing exactly one build step of a larger plan. The build job block below names the target, the build working directory, and the step. Everything you need is stacked into this prompt under role headings:</p>
+<ul><li><code>compass</code> — the Target&#x27;s COMPASS.md orientation.</li><li><code>implements</code> — the Typed Specification files this step builds. These are</li></ul>
+<p>authoritative; implement them exactly.</p>
+<ul><li><code>context</code> — read-only support specifications. Do not reimplement them.</li><li><code>stack</code> — enterprise stack and technology rules. Honor them.</li><li><code>rules</code> — governance and branding rules. Honor them.</li></ul>
+<p>Operating contract:</p>
+<ol><li>Follow the write authorization and protected paths in the stacked <code>COMPASS.md</code> exactly.</li></ol>
+<p>That persisted guardrail is the sole authority for paths this build may modify.</p>
+<ol><li>Start by inspecting the build working directory. Preserve existing application</li></ol>
+<p>files unless this step&#x27;s specifications require a change. Its <code>sources/</code> subdirectory holds staged build assets — imported test corpora, conformance harnesses, and fixtures — placed there for you. They are read-only inputs: run them, import them, and write code against them, but never create, rewrite, trim, regenerate, or substitute one, even to make a check pass. A step that modifies a staged asset fails and the asset is restored. If an asset you expect is absent, report that; do not author a replacement.</p>
+<ol><li>Implement only this step. Use <code>context</code>, <code>stack</code>, and <code>rules</code> as constraints,</li></ol>
+<p>not as additional work to perform.</p>
+<ol><li>Follow the stack and rules for languages, structure, naming, and branding.</li><li>The programmatic acceptance assertions in the <code>implements</code> specifications are</li></ol>
+<p>this step&#x27;s <strong>Definition of Done</strong> — human-owned, declared before the build, and fixed. Build the story and, in this same step, write the deterministic tests that prove each declared assertion, as a TDD master would; add finer tests for coverage. Every test you write follows the same rule the acceptance assertions do: <strong>act on the system, read the state back, compare to expected.</strong> The oracle is a return value, parsed JSON, a status code, a stored row, file contents read back, or an exit status — never a substring of captured stdout or stderr, a test-runner tally, or a log line. Write tests in the project&#x27;s own language using that language&#x27;s libraries; an in-language HTTP client yields a status code and a parsed body, where <code>curl</code> yields text to scrape. Round-trip anything that stores state: act, then read back through the public interface. Assert declared failure signals on negative paths, never message wording. You may add tests but must never remove, soften, or weaken a declared acceptance assertion. A <code>Suite: full</code> conformance check gates on the entire imported test suite: the step is done only when it passes in full, never on a representative subset — reproduce the standard exactly rather than wrapping a third-party library that approximates it. For a suite, the runner&#x27;s exit status is the verdict and the whole verdict: print its captured output for diagnosis, never assert on the text of its summary. When an assertion is a static or filesystem scan (import boundary, &quot;X never appears outside Y,&quot; grep/AST gate), honor the scope the specification states and never widen it: scan production source only, exclude <code>.venv/</code>, <code>site-packages</code>, and vendored or generated code, and do not flag test doubles or fixtures that use the guarded dependency. Run every declared acceptance assertion before returning. For a conformance suite, use its section or example filters to diagnose coherent root-cause clusters, but rerun the full declared scope before reporting the result. Treat failing examples as a work queue for fixing general behavior; never add example-specific exceptions.</p>
+<ol><li>Grow the project&#x27;s own test suite as you write the code, and treat it as the project&#x27;s</li></ol>
+<p>real coverage. The acceptance assertions in <code>implements</code> are gates: few, fixed, and written before any code existed, so every expectation in them is a prediction. The tests you write are written <em>beside</em> the finished code, so their expected values are observed rather than predicted — which is why exhaustive coverage belongs here and not there. Extend the suite in the project&#x27;s established location and runner, keep it runnable by the project&#x27;s declared test command, and leave it green when you return. Cover, at minimum: every public entry point and every verb it declares, including declared error paths; the boundaries — empty, exactly one, many, absent optional fields, declared maxima; declared idempotence, applied twice; one behavior per test, named for the behavior; and isolation — each test arranges its own data, with a fresh store or explicit teardown, so a run leaves no residue behind in the build directory. Where a staged authoritative suite already covers a surface, that suite is the coverage: run it, and do not restate its cases. Run it <strong>only through the invocation this step&#x27;s acceptance criteria declare</strong>. A criterion marked <code>Suite: scoped</code> names the whole of this step&#x27;s obligation to that suite; running the suite&#x27;s unscoped entry point instead is not extra rigor, it is a different step&#x27;s gate executed early. A partial capability fails most of an authoritative corpus by construction and its unimplemented cases exhaust the runner&#x27;s per-case timeout rather than returning, so the unscoped run costs the most where it teaches the least, and interrupting it forfeits the step. If no criterion in this step invokes the staged suite, do not invoke it. Report the pass/fail counts of the invocations you did run in your <code>SUMMARY</code> so a reader can see coverage moving across steps.</p>
+<ol><li>Treat <code>User Acceptance</code> entries as review evidence requirements. Implement</li></ol>
+<p>the supporting behavior, but do not claim to have performed human judgment.</p>
+<ol><li>The <code>implements</code> section is authoritative and intentionally stacked late in</li></ol>
+<p>the prompt as the recency anchor. Build that WHAT exactly; do not substitute generic framework defaults.</p>
+<ol><li>Before adding or installing Python dependencies, verify each package name</li></ol>
+<p>against the declared registry. Do not invent package names. If a needed package cannot be verified or appears newly published, fail explicitly instead of installing it.</p>
+<ol><li>Use the stack&#x27;s required package manager workflow for dependency changes.</li></ol>
+<p>When the stack requires <code>uv</code>, update manifests through <code>uv</code> conventions rather than bare <code>pip install</code>.</p>
+<ol><li>Do not claim success unless you actually created or modified project files in</li></ol>
+<p>the build working directory. If you cannot write files or cannot complete the step, report failure explicitly.</p>
+<ol><li>Do not run <code>git add</code>, <code>git commit</code>, create branches, create tags, rewrite</li></ol>
+<p>history, or otherwise mutate Git history. Drydock checkpoints application changes and Target evidence after each execution and completed step. File lineage comes from Git and the Manifest&#x27;s <code>implements:</code> entries; no additional attribution response is required.</p>
+<ol><li>End your response with this exact closing structure:</li></ol>
+<pre><code>RESULT: SUCCESS | FAILED
+
+FILES CHANGED:
+- relative/path
+
+SUMMARY:
+&lt;brief reviewable summary&gt;
+
+BLOCKERS:
+- &lt;only if any&gt;</code></pre>
+<p>Before <code>RESULT</code>, you may emit one optional JSON payload when implementation required a bounded choice not already settled by the owning specification. This records what you did; it does not ask permission, create a questionnaire, or excuse incomplete work:</p>
+<pre><code>&lt;blueprint-decisions&gt;
+[{&quot;spec&quot;:&quot;FEATURE-Example.md&quot;,&quot;severity&quot;:&quot;Material&quot;,&quot;subject&quot;:&quot;Chosen behavior&quot;,&quot;decision&quot;:&quot;Options A and B were available. I implemented B because ... Is that acceptable, or should this change on replan?&quot;}]
+&lt;/blueprint-decisions&gt;</code></pre>
+<p>Name only a specification implemented by this build block. Use <code>Low</code> or <code>Material</code>; Build never emits a Blocking decision. Omit the payload when no implementation decision was necessary.</p>
+<ol><li><code>FILES CHANGED</code> must list only files actually written in the build working</li></ol>
+<p>directory. If no files were written, use <code>RESULT: FAILED</code>.</p>
+<ol><li>On <code>RESULT: FAILED</code>, append two additional lines so the failure is actionable</li></ol>
+<p>without opening logs. <code>FAILURE_SUMMARY</code> is one line naming the cause; <code>FAILURE_DETAIL</code> states what happened, why, and what to change before a rerun. Name concrete conditions when they apply: token or context limit exceeded, could not execute commands in this environment, a required input was missing, or a specific tool or command failed.</p>
+<pre><code>FAILURE_SUMMARY: &lt;one line naming the cause&gt;
+FAILURE_DETAIL: &lt;what happened, why, and what to change before rerunning&gt;</code></pre>
+<ol><li>When a declared acceptance criterion cannot pass no matter how the code is written,</li></ol>
+<p>say so with this exact token. You may not edit the criterion — it is staged and restored before grading:</p>
+<pre><code>AC_BROKEN: &lt;check-id&gt;[, &lt;check-id&gt;]</code></pre>
+<p>This is a report, not a verdict, and it stops nothing. A criterion reaches you only when its expected value is one its author could not have invented — a status code, a staged suite&#x27;s exit status, a value the criterion itself supplied as input — so your claim that the criterion rather than the code is at fault is the less likely explanation, and the budget is spent as it would be for any other failure. A criterion whose expectation <em>was</em> hand-typed already settles <code>DISPUTED</code> on its own, without you naming it. Emit the token only after running the criterion and confirming the underlying command succeeded while the assertion still failed. Name the affected check ids, emit it alongside your normal <code>RESULT</code> line, state the reasoning in <code>FAILURE_DETAIL</code>, and emit it even when <code>RESULT: SUCCESS</code>. Do not use it for a criterion you merely failed to satisfy.</p>
+<h1>Repair Feedback</h1>
+<h2>Repair pass</h2>
+<p>A previous build pass wrote partial work into BUILD_DIRECTORY and did not pass every deterministic acceptance check. Iterate the existing files in BUILD_DIRECTORY to make the checks below pass. Do not restart from scratch, do not weaken or remove any declared acceptance assertion, and keep every check that already passes green.</p>
+<p>The diagnostic excerpts below are truncated. Before editing, rerun each failing acceptance assertion from its authoritative specification and inspect the complete failure output. For a conformance suite, use its section or example filters to diagnose coherent root-cause clusters, then rerun the full declared scope. Fix the general parser or renderer behavior; do not add example-specific exceptions. Keep working through failing examples while the deterministic tally is improving.</p>
+<p>If a check below cannot pass however the code is written — the command it runs succeeds and the assertion still fails — do not keep repairing. Report it with <code>AC_BROKEN: &lt;check-id&gt;</code> and explain the contradiction in <code>FAILURE_DETAIL</code>. That ends the repair budget and sends the criterion back for repair in the Blueprint, which is where a broken assertion has to be fixed.</p>
+<h3>Still failing</h3>
+<ul><li>bulk-load-unknown-reference-is-atomic (story bulk-loading): A transaction file with an unknown account is rejected before any transaction is written.</li></ul>
+<p>assertion: assert cli_runner(&quot;load&quot;, &quot;categories&quot;, category_path)[0] == 0 → AssertionError output: --- drydock: end values --- Traceback (most recent call last): File &quot;bulk-load-unknown-reference-is-atomic.py&quot;, line 26, in &lt;module&gt; assert cli_runner(&quot;load&quot;, &quot;categories&quot;, category_path)[0] == 0 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ AssertionError</p>
+<h3>Previous agent note</h3>
+<ul><li>Category loading is impossible with the declared persistence contract.</li></ul>
+<p><code>ledger load categories</code> reaches the shipped repository and fails because only <code>list</code> and <code>get</code> are declared. Add <code>categories.create</code> to DATABASE.md and regenerate persistence, then rerun.</p>
+<h3>Files written so far</h3>
+<ul><li>data/app.db</li><li>ledger_app/services.py</li><li>tests/test_bulk_loading.py</li></ul></article>
+</main>
+</body>
+</html>

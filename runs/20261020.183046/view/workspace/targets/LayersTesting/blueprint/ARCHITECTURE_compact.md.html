@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/ARCHITECTURE_compact.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/ARCHITECTURE_compact.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/ARCHITECTURE_compact.md">Raw file</a></div></header>
+<article class="doc"><p>&lt;!-- Compacted from ARCHITECTURE.md sha256=750530d15ea45e43f4b4233543217a74fc8c77f4775441af30ff82a665b44dbe on 2026-10-20 by drydock build agent --&gt;</p>
+<p>Python ledger layers: executable <code>ledger</code>; <code>cli</code> for parsing, dispatch, and exit mapping; <code>ledger_app.config</code> for <code>DATABASE_URL</code> → <code>DATABASE_PATH</code> → <code>data/app.db</code>; <code>ledger_app.services</code> for workflows and business rules; shipped <code>persistence</code> for all database access. Exit codes: 0 success, 1 operational failure, 2 usage error, 3 rejection, 4 not found. Application code must not import database drivers or read <code>sources/</code>. Amounts use integer cents.</p></article>
+</main>
+</body>
+</html>

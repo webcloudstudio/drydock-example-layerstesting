@@ -1,0 +1,41 @@
+<requirement name="ledger-command" stories="cli-foundation">
+The deliverable is an executable named ledger at the application root.
+</requirement>
+<requirement name="database-configuration" stories="database">
+Database: DATABASE_URL when the caller sets it (for example a PostgreSQL DSN), otherwise a SQLite file in a fresh temporary directory.
+</requirement>
+<requirement name="schema-lifecycle" stories="schema-lifecycle">
+A. Schema lifecycle
+</requirement>
+<requirement name="bulk-load" stories="bulk-loading">
+B. Bulk load of the known dataset
+</requirement>
+<requirement name="balance-report" stories="balance-reports">
+C. Reports over the seeded rows
+</requirement>
+<requirement name="atomic-rejected-load" stories="bulk-loading">
+D. A rejected load changes nothing
+</requirement>
+<requirement name="account-lifecycle" stories="account-lifecycle">
+E. Account create, read, update, delete
+</requirement>
+<requirement name="transaction-lifecycle" stories="transaction-lifecycle">
+F. Transaction create, read, update, delete
+</requirement>
+<requirement name="atomic-transfers" stories="transfers">
+Transfers are atomic
+</requirement>
+<requirement name="non-negative-balances" stories="financial-invariants">
+no command leaves a negative balance
+</requirement>
+<requirement name="aggregate-reports" stories="aggregate-reports">
+Generate category and monthly ledger reports.
+</requirement>
+<requirement name="usage-errors" stories="cli-foundation">
+U. Usage errors
+</requirement>
+<requirement name="reinitialize-database" stories="schema-lifecycle">
+Z. Re-initialization drops every row
+</requirement>
+<unattached story="architecture"/>
+<unattached story="conformance"/>

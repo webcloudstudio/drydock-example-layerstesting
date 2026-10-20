@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/ARCHITECTURE.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/ARCHITECTURE.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/ARCHITECTURE.md">Raw file</a></div></header>
+<article class="doc"><h1>ARCHITECTURE: Ledger Application Architecture</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Define the layered Python architecture and boundaries for the cash ledger CLI.</td></tr><tr><td>Depends On</td><td>—</td></tr><tr><td>Provides</td><td>application module boundaries, configuration boundary, persistence boundary</td></tr><tr><td>Consumes</td><td>—</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>The application is a local command-line cash ledger. Its layers are:</p>
+<ul><li><code>ledger</code> — executable launcher at the application root.</li><li><code>cli</code> — argument parsing, command dispatch, usage validation, and exit-code mapping.</li><li><code>ledger_app.config</code> — database configuration resolution.</li><li><code>ledger_app.services</code> — validation, business rules, atomic workflows, and report calculations.</li><li><code>persistence</code> — the shipped database boundary; application code never opens a database driver directly.</li></ul>
+<p>Commands validate their complete input and business rules before the first write. Mutating workflows use one database transaction and either commit all changes or roll them back.</p>
+<h2>Module Ownership</h2>
+<div class="scroll"><table><thead><tr><th>Boundary</th><th>Owning module</th><th>Allowed dependency</th></tr></thead><tbody><tr><td>CLI parsing and dispatch</td><td><code>cli</code></td><td>configuration and services</td></tr><tr><td>Configuration</td><td><code>ledger_app.config</code></td><td>standard library only</td></tr><tr><td>Ledger workflows</td><td><code>ledger_app.services</code></td><td><code>persistence</code></td></tr><tr><td>Database access</td><td>shipped <code>persistence</code> package</td><td>database engine</td></tr><tr><td>Process entry point</td><td><code>ledger</code></td><td><code>cli.main</code></td></tr></tbody></table></div>
+<p>The CLI does not contain SQL or database-driver imports. Services call repository methods exposed by <code>persistence.open_database</code>.</p>
+<h2>Configuration</h2>
+<p>Resolve the database location in this order:</p>
+<ol><li><code>DATABASE_URL</code></li><li><code>DATABASE_PATH</code></li><li><code>data/app.db</code></li></ol>
+<p>The selected value is passed to <code>persistence.open_database</code>.</p>
+<h2>Error Contract</h2>
+<p>Map outcomes to the documented exit codes:</p>
+<ul><li><code>0</code> success</li><li><code>1</code> operational failure</li><li><code>2</code> usage error</li><li><code>3</code> rejected command</li><li><code>4</code> absent record</li></ul>
+<p>Diagnostics are written to standard error. Successful command data is written to standard output.</p>
+<h2>Technology Stack</h2>
+<ul><li>Python 3.11 or newer for the application and tests.</li><li>SQLite through the shipped Python persistence library.</li><li>POSIX shell for executable test launchers.</li><li>pytest for the project test suite.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC architecture-config-precedence ===<br>Intent: The configuration boundary exposes the documented database-source precedence.</p>
+<p>import os from ledger_app.config import database_dsn</p>
+<p>saved = {key: os.environ.get(key) for key in (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;)} try: os.environ[&quot;DATABASE_URL&quot;] = &quot;sqlite://url.db&quot; os.environ[&quot;DATABASE_PATH&quot;] = &quot;path.db&quot; assert database_dsn() == &quot;sqlite://url.db&quot;</p>
+<p>del os.environ[&quot;DATABASE_URL&quot;] assert database_dsn() == &quot;path.db&quot;</p>
+<p>del os.environ[&quot;DATABASE_PATH&quot;] assert database_dsn() == &quot;data/app.db&quot; finally: for key, value in saved.items(): if value is None: os.environ.pop(key, None) else: os.environ[key] = value === END AC architecture-config-precedence ===</p>
+<p>=== AC architecture-error-boundary ===<br>Intent: The application exposes distinct typed outcomes for usage, rejection, and not-found failures.</p>
+<p>from ledger_app.errors import NotFoundError, RejectedError, UsageError</p>
+<p>assert issubclass(UsageError, Exception) assert issubclass(RejectedError, Exception) assert issubclass(NotFoundError, Exception) assert len({UsageError, RejectedError, NotFoundError}) == 3 === END AC architecture-error-boundary ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Application code must not import <code>sqlite3</code>, PostgreSQL drivers, or any other database driver.</li><li>Application code must not read or embed files under <code>sources/</code>.</li><li>Amounts remain integer cents throughout the application.</li></ul></article>
+</main>
+</body>
+</html>

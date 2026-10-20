@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-CONFORMANCE.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-CONFORMANCE.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-CONFORMANCE.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Conformance Verification</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Provide the project test entry point and execute the complete supplied ledger conformance suite.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-ACCOUNT-LIFECYCLE.md, FEATURE-AGGREGATE-REPORTS.md, FEATURE-BALANCE-REPORTS.md, FEATURE-BULK-LOADING.md, FEATURE-CLI-FOUNDATION.md, FEATURE-FINANCIAL-INVARIANTS.md, FEATURE-SCHEMA-LIFECYCLE.md, FEATURE-TRANSACTION-LIFECYCLE.md, FEATURE-TRANSFERS.md</td></tr><tr><td>Provides</td><td>bin/test.sh, complete supplied conformance verification</td></tr><tr><td>Consumes</td><td>./ledger, accounts repository, categories repository, transactions repository</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>The project provides a POSIX-compatible <code>bin/test.sh</code> that runs the committed pytest suite from the application root. The terminal verification also runs <code>sh sources/run.sh</code> without filtering or reinterpretation. The supplied grader and seed files remain unchanged.</p>
+<h2>Test Harness</h2>
+<ul><li><code>bin/test.sh</code> runs <code>pytest -q</code> and exits zero only when the project test suite passes.</li><li><code>sources/run.sh</code> is the authoritative full conformance gate.</li><li>The conformance run uses a fresh database and validates initialization, loading, reports, lifecycle operations, transfers, atomic rejection, balance invariants, and usage errors.</li><li>Diagnostics from the harness are available for repair, while the harness exit status is the acceptance verdict.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>Requires: executable=sh; scope=test</p>
+<p>=== AC conformance-test-entrypoint ===<br>Intent: The project test entry point exists, is executable, and exits successfully.<br>Requires: executable=sh; scope=test</p>
+<p>import os import subprocess</p>
+<p>test_script = os.path.join(os.getcwd(), &quot;bin&quot;, &quot;test.sh&quot;) assert os.path.isfile(test_script) assert os.access(test_script, os.X_OK)</p>
+<p>result = subprocess.run( [&quot;sh&quot;, &quot;bin/test.sh&quot;], capture_output=True, text=True, ) print(result.stdout) print(result.stderr) assert result.returncode == 0 === END AC conformance-test-entrypoint ===</p>
+<p>=== AC conformance-full-suite ===<br>Intent: The terminal story passes the complete supplied ledger conformance suite without filtering.<br>Suite: full<br>Requires: executable=sh; scope=test</p>
+<p>import subprocess</p>
+<p>result = subprocess.run( [&quot;sh&quot;, &quot;sources/run.sh&quot;], capture_output=True, text=True, ) print(result.stdout) print(result.stderr) assert result.returncode == 0 === END AC conformance-full-suite ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Do not modify, rewrite, regenerate, or substitute any file under <code>sources/</code>.</li><li>Do not filter, skip, or reinterpret the supplied conformance suite.</li><li>Application code must not read the grader or seed files.</li><li>The complete supplied suite is run only as the terminal project verification.</li></ul></article>
+</main>
+</body>
+</html>

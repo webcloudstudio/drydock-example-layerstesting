@@ -1,0 +1,4 @@
+{"type":"thread.started","thread_id":"01a15a9b-397e-7e43-be10-4bbe9c25e11f"}
+{"type":"turn.started"}
+{"type":"item.completed","item":{"id":"item_0","type":"agent_message","text":"<unattached story=\"architecture\"/>\n<unattached story=\"database\"/>\n<unattached story=\"cli-foundation\"/>\n<unattached story=\"schema-lifecycle\"/>\n<unattached story=\"bulk-loading\"/>\n<unattached story=\"balance-reports\"/>\n<unattached story=\"transaction-lifecycle\"/>\n<unattached story=\"aggregate-reports\"/>\n<unattached story=\"account-lifecycle\"/>\n<unattached story=\"transfers\"/>\n<unattached story=\"financial-invariants\"/>\n<unattached story=\"conformance\"/>"}}
+{"type":"turn.completed","usage":{"input_tokens":15550,"cached_input_tokens":10240,"cache_write_input_tokens":0,"output_tokens":240,"reasoning_output_tokens":133}}

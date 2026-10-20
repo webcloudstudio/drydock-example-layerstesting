@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_architecture.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_architecture.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_architecture.py">Raw file</a></div></header>
+<article class="doc"><pre>from __future__ import annotations
+
+import os
+
+from ledger_app.config import database_dsn
+from ledger_app.errors import NotFoundError, RejectedError, UsageError
+
+
+def test_database_source_precedence() -&gt; None:
+    saved = {key: os.environ.get(key) for key in (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;)}
+    try:
+        os.environ[&quot;DATABASE_URL&quot;] = &quot;sqlite://url.db&quot;
+        os.environ[&quot;DATABASE_PATH&quot;] = &quot;path.db&quot;
+        assert database_dsn() == &quot;sqlite://url.db&quot;
+
+        del os.environ[&quot;DATABASE_URL&quot;]
+        assert database_dsn() == &quot;path.db&quot;
+
+        del os.environ[&quot;DATABASE_PATH&quot;]
+        assert database_dsn() == &quot;data/app.db&quot;
+    finally:
+        for key, value in saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
+def test_error_types_are_distinct_exception_boundaries() -&gt; None:
+    assert issubclass(UsageError, Exception)
+    assert issubclass(RejectedError, Exception)
+    assert issubclass(NotFoundError, Exception)
+    assert len({UsageError, RejectedError, NotFoundError}) == 3
+
+</pre></article>
+</main>
+</body>
+</html>

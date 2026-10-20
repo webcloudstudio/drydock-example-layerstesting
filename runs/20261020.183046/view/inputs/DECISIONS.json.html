@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>inputs/DECISIONS.json</title>
+<link rel="stylesheet" href="../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>inputs/DECISIONS.json</h1><div class="filenav"><a href="../../index.html">&larr; Report</a><a href="../../inputs/DECISIONS.json">Raw file</a></div></header>
+<article class="doc"><pre>[
+  {
+    &quot;id&quot;: &quot;Q-001&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;ARCHITECTURE.md&quot;,
+    &quot;story&quot;: &quot;architecture&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Application layering&quot;,
+    &quot;description&quot;: &quot;Choose the narrowest structure that keeps CLI parsing, business rules, and persistence access separate while preserving the shipped persistence boundary.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;layered&quot;,
+        &quot;label&quot;: &quot;Layered modules&quot;
+      },
+      {
+        &quot;value&quot;: &quot;single-module&quot;,
+        &quot;label&quot;: &quot;Single module&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;layered&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-002&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-CONFORMANCE.md&quot;,
+    &quot;story&quot;: &quot;conformance&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Test runner implementation&quot;,
+    &quot;description&quot;: &quot;Choose the project test command implementation for the required POSIX test entry point.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;pytest&quot;,
+        &quot;label&quot;: &quot;pytest via bin/test.sh&quot;
+      },
+      {
+        &quot;value&quot;: &quot;custom&quot;,
+        &quot;label&quot;: &quot;Custom test runner&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;pytest via bin/test.sh&quot;
+  },
+  {
+    &quot;id&quot;: &quot;build-feature-bulk-loading.md-category-creation-access&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;material&quot;,
+    &quot;origin&quot;: &quot;build&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-BULK-LOADING.md&quot;,
+    &quot;story&quot;: null,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Category creation access&quot;,
+    &quot;description&quot;: &quot;Added the missing generated categories.create operation required by the specified category loader.&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;Added the missing generated categories.create operation required by the specified category loader.&quot;
+  },
+  {
+    &quot;id&quot;: &quot;build-schema-derived-indexes&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;informational&quot;,
+    &quot;origin&quot;: &quot;build&quot;,
+    &quot;blueprint&quot;: &quot;DATABASE.md&quot;,
+    &quot;story&quot;: null,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Indexes derived from the persistence declaration&quot;,
+    &quot;description&quot;: &quot;The rendered schema indexes transactions(account); transactions(category). Each is implied by the declaration \u2014 a foreign key is looked up by its child column, and a read pattern&#x27;s Input fields are the predicate it filters on. Declare an `- INDEX (...)` bullet in DATABASE.md for any index this does not cover.&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;transactions(account); transactions(category)&quot;
+  }
+]
+</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/DATABASE_compact.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/DATABASE_compact.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/DATABASE_compact.md">Raw file</a></div></header>
+<article class="doc"><p>&lt;!-- Compacted from DATABASE.md sha256=303bb0ec282f9b3375363468a39a228230a2468245669b4366732e6dfd6eb647 on 2026-10-20 by drydock build agent --&gt;</p>
+<p>Persistence uses generated <code>persistence.open_database(dsn)</code> only; DSN precedence is <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code>. SQLite is required locally; PostgreSQL remains supported. Amounts are integer cents.</p>
+<p>Tables:</p>
+<ul><li><code>accounts(account TEXT PRIMARY KEY NOT NULL, name VARCHAR(40) NOT NULL)</code></li><li><code>categories(category TEXT PRIMARY KEY NOT NULL, description VARCHAR(40) NOT NULL)</code></li><li><code>transactions(txn_id INTEGER PRIMARY KEY NOT NULL, date TEXT NOT NULL, account TEXT NOT NULL REFERENCES accounts(account), category TEXT NOT NULL REFERENCES categories(category), amount INTEGER NOT NULL, memo VARCHAR(60) NOT NULL)</code></li></ul>
+<p>Declared operations:</p>
+<ul><li>accounts: <code>list()</code>, <code>create(account, name)</code>, <code>get(account)</code>, <code>update(account, name)</code>, <code>delete(account)</code></li><li>categories: <code>list()</code>, <code>get(category)</code></li><li>transactions: <code>list()</code>, <code>create(txn_id, date, account, category, amount, memo)</code>, <code>get(txn_id)</code>, <code>update(txn_id, amount)</code>, <code>delete(txn_id)</code></li></ul>
+<p>Schema creation is idempotent via generated <code>schema.sql</code>; application startup must not create or alter schema. Application code must not import database drivers, use floating point for amounts, or bypass repositories.</p></article>
+</main>
+</body>
+</html>

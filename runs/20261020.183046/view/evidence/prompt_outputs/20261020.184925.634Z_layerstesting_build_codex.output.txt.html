@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.184925.634Z_layerstesting_build_codex.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.184925.634Z_layerstesting_build_codex.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.184925.634Z_layerstesting_build_codex.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>AC_BROKEN: transaction-post-read
+
+RESULT: FAILED
+
+FILES CHANGED:
+- data/app.db
+- ledger_app/services.py
+- tests/test_balance_reports.py
+- tests/test_transaction_lifecycle.py
+
+SUMMARY:
+The exact acceptance check fails because loading the existing staged categories file correctly returns `0`, while the criterion requires `1`. Project tests pass: 18 passed. Terminal harness passes: 43 passed.
+
+BLOCKERS:
+- Acceptance expectation contradicts valid staged input and existing load behavior.
+
+FAILURE_SUMMARY: Broken transaction-post-read acceptance expectation
+FAILURE_DETAIL: `load categories sources/seed_categories.csv` succeeds and returns 0, persisting seven categories. Returning 1 would violate the bulk-loading and terminal checks; the criterion must be corrected before rerunning.</pre></article>
+</main>
+</body>
+</html>

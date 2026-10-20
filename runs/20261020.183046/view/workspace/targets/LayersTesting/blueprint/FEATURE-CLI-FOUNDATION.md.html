@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-CLI-FOUNDATION.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-CLI-FOUNDATION.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-CLI-FOUNDATION.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: CLI Foundation</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Provide the executable ledger command, dispatch documented commands, and reject invalid usage.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md</td></tr><tr><td>Provides</td><td><code>./ledger</code>, CLI command dispatch, usage validation</td></tr><tr><td>Consumes</td><td>accounts repository, categories repository, transactions repository</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>The application root contains an executable named <code>ledger</code>. It dispatches the documented command families:</p>
+<ul><li><code>init</code></li><li><code>count</code></li><li><code>load</code></li><li><code>account</code></li><li><code>txn</code></li><li><code>transfer</code></li><li><code>report</code></li></ul>
+<p>Unknown commands, unknown subcommands, unknown tables or reports, and incorrect argument counts return exit code <code>2</code>, write no standard output, and emit a diagnostic on standard error. Help or usage guidance is available for every command family and subcommand.</p>
+<p>The CLI delegates database work and business rules to application services and the shipped persistence package.</p>
+<h2>Command Surface</h2>
+<div class="scroll"><table><thead><tr><th>Command family</th><th>Supported operations</th></tr></thead><tbody><tr><td>Root</td><td><code>init</code>, <code>count</code>, <code>load</code>, <code>transfer</code></td></tr><tr><td>Account</td><td><code>add</code>, <code>get</code>, <code>rename</code>, <code>delete</code></td></tr><tr><td>Transaction</td><td><code>post</code>, <code>get</code>, <code>amend</code>, <code>delete</code></td></tr><tr><td>Report</td><td><code>balances</code>, <code>categories</code>, <code>monthly</code></td></tr></tbody></table></div>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by the command feature services.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC cli-help ===<br>Intent: The executable command surface provides successful help or usage entry points.</p>
+<p>from cli.testing import cli_runner</p>
+<p>for args in ((&quot;--help&quot;,), (&quot;account&quot;, &quot;--help&quot;), (&quot;txn&quot;, &quot;--help&quot;), (&quot;report&quot;, &quot;--help&quot;)): code, stdout, stderr = cli_runner(*args) assert code == 0 === END AC cli-help ===</p>
+<p>=== AC cli-unknown-command ===<br>Intent: An unknown root command is rejected with the documented usage exit code.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, stdout, stderr = cli_runner(&quot;frobnicate&quot;) assert code == 2 assert stdout == &quot;&quot; === END AC cli-unknown-command ===</p>
+<p>=== AC cli-unknown-report ===<br>Intent: An unknown report name is rejected with the documented usage exit code.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, stdout, stderr = cli_runner(&quot;report&quot;, &quot;nosuch&quot;) assert code == 2 assert stdout == &quot;&quot; === END AC cli-unknown-report ===</p>
+<p>=== AC cli-argument-validation ===<br>Intent: Missing required command arguments are rejected without standard output.</p>
+<p>from cli.testing import cli_runner</p>
+<p>for args in ((&quot;account&quot;,), (&quot;txn&quot;,), (&quot;load&quot;,), (&quot;transfer&quot;,), (&quot;report&quot;,)): code, stdout, stderr = cli_runner(*args) assert code == 2 assert stdout == &quot;&quot; === END AC cli-argument-validation ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The root executable must be named exactly <code>ledger</code> and be executable.</li><li>Diagnostics go to standard error and are not part of successful CSV output.</li><li>The CLI must not bypass the service or persistence boundaries.</li></ul></article>
+</main>
+</body>
+</html>

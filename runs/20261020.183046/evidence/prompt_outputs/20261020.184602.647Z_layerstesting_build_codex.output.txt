@@ -1,0 +1,16 @@
+<blueprint-decisions>
+[{"spec":"FEATURE-BULK-LOADING.md","severity":"Material","subject":"Category creation access","decision":"Added the missing generated categories.create operation required by the specified category loader."}]
+</blueprint-decisions>
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- persistence/schema.py
+
+SUMMARY:
+Implemented the missing category persistence operation. All three bulk-loading acceptance checks pass, and the project suite passes: 15 tests.
+
+The broader terminal harness reports 13 passed and 30 failures from later, out-of-scope ledger features.
+
+BLOCKERS:
+- None for this build block.

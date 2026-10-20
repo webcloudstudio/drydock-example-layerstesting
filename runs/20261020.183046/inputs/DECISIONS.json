@@ -1,0 +1,76 @@
+[
+  {
+    "id": "Q-001",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "ARCHITECTURE.md",
+    "story": "architecture",
+    "status": "recommended",
+    "archived": false,
+    "title": "Application layering",
+    "description": "Choose the narrowest structure that keeps CLI parsing, business rules, and persistence access separate while preserving the shipped persistence boundary.",
+    "options": [
+      {
+        "value": "layered",
+        "label": "Layered modules"
+      },
+      {
+        "value": "single-module",
+        "label": "Single module"
+      }
+    ],
+    "system_choice": "layered"
+  },
+  {
+    "id": "Q-002",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "FEATURE-CONFORMANCE.md",
+    "story": "conformance",
+    "status": "recommended",
+    "archived": false,
+    "title": "Test runner implementation",
+    "description": "Choose the project test command implementation for the required POSIX test entry point.",
+    "options": [
+      {
+        "value": "pytest",
+        "label": "pytest via bin/test.sh"
+      },
+      {
+        "value": "custom",
+        "label": "Custom test runner"
+      }
+    ],
+    "system_choice": "pytest via bin/test.sh"
+  },
+  {
+    "id": "build-feature-bulk-loading.md-category-creation-access",
+    "type": "text",
+    "severity": "material",
+    "origin": "build",
+    "blueprint": "FEATURE-BULK-LOADING.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Category creation access",
+    "description": "Added the missing generated categories.create operation required by the specified category loader.",
+    "options": [],
+    "system_choice": "Added the missing generated categories.create operation required by the specified category loader."
+  },
+  {
+    "id": "build-schema-derived-indexes",
+    "type": "text",
+    "severity": "informational",
+    "origin": "build",
+    "blueprint": "DATABASE.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Indexes derived from the persistence declaration",
+    "description": "The rendered schema indexes transactions(account); transactions(category). Each is implied by the declaration \u2014 a foreign key is looked up by its child column, and a read pattern's Input fields are the predicate it filters on. Declare an `- INDEX (...)` bullet in DATABASE.md for any index this does not cover.",
+    "options": [],
+    "system_choice": "transactions(account); transactions(category)"
+  }
+]

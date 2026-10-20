@@ -1,0 +1,150 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Build: LayersTesting
+scope: entire project
+frontier: architecture
+git: baseline LayersTesting 1219bcac966d
+git: baseline LayersTesting addf3fe46069
+
+BLOCK block-1  name="Block 1 · Foundational"  calls_max=7
+  story=architecture  "Define the ledger application architecture and module boundaries."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.184023.438Z-f4b70418
+    acceptance=2/2
+git: block-1 | python.md, ARCHITECTURE.md | call=1 | app=1316ed6bcb97 target=263463565e56
+
+  DONE  story=architecture  state=closed/verified  execution=20261020.184023.438Z-f4b70418  elapsed=39.0s
+git: block-1 | python.md, ARCHITECTURE.md | step_completed | app=unchanged target=edefbe1f94cd
+
+BLOCK block-2  name="Block 2 · Foundational"  calls_max=7
+  story=database  "Establish the relational persistence contract for the cash ledger."
+  story=cli-foundation  "Provide the executable ledger command and command validation."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.184104.258Z-8e9a3538
+    acceptance=4/4
+git: block-2 | DATABASE.md, FEATURE-CLI-FOUNDATION.md | call=1 | app=941baf3f513d target=cd3efc933822
+
+  DONE  story=database  state=closed/verified  execution=20261020.184104.258Z-8e9a3538  elapsed=2m02s
+git: block-2 | DATABASE.md, FEATURE-CLI-FOUNDATION.md | step_completed | app=unchanged target=4ffbc4e13023
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-3  name="Block 3 · Service"  calls_max=7
+  story=schema-lifecycle  "Initialize and inspect the ledger database schema."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.184310.662Z-40f20f68
+    acceptance=3/3
+git: block-3 | FEATURE-SCHEMA-LIFECYCLE.md | call=1 | app=70d66551d6e9 target=3eec2cded454
+
+  DONE  story=schema-lifecycle  state=closed/verified  execution=20261020.184310.662Z-40f20f68  elapsed=1m22s
+git: block-3 | FEATURE-SCHEMA-LIFECYCLE.md | step_completed | app=unchanged target=1312fb059e40
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-4  name="Block 4 · Service"  calls_max=7
+  story=bulk-loading  "Load validated account, category, and transaction CSV files atomically."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.184435.996Z-62d4872c
+    acceptance=2/3  failed=bulk-load-unknown-reference-is-atomic
+git: block-4 | FEATURE-BULK-LOADING.md | call=1 | app=f5a7a32353bc target=24dba6a874e2
+
+  [call 2/7]  kind=repair(1/6)  llm=codex/gpt-5.6-luna
+    fixing=bulk-load-unknown-reference-is-atomic
+    result=ok  rc=0  execution=20261020.184602.647Z-eb37fd22
+    acceptance=3/3
+git: block-4 | FEATURE-BULK-LOADING.md | call=2 | app=c87b812f01e8 target=4451e84eb15c
+
+  DONE  story=bulk-loading  state=closed/verified  execution=20261020.184602.647Z-eb37fd22  elapsed=2m41s
+git: block-4 | FEATURE-BULK-LOADING.md | step_completed | app=unchanged target=0cfd757c9818
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-5  name="Block 5 · Service"  calls_max=7
+  story=balance-reports  "Generate account balance reports from persisted ledger state."
+  story=transaction-lifecycle  "Manage posting, lookup, amendment, and deletion of transactions."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.184719.339Z-a7772979
+    acceptance=4/5  failed=transaction-post-read
+git: block-5 | FEATURE-BALANCE-REPORTS.md, FEATURE-TRANSACTION-LIFECYCLE.md | call=1 | app=7a3818d59b04 target=243b24e41731
+
+  [call 2/7]  kind=repair(1/6)  llm=codex/gpt-5.6-luna
+    fixing=transaction-post-read
+    result=ok  rc=0  execution=20261020.184925.634Z-07ccd435
+    acceptance=4/5  failed=transaction-post-read
+git: block-5 | FEATURE-BALANCE-REPORTS.md, FEATURE-TRANSACTION-LIFECYCLE.md | call=2 | app=unchanged target=353aa7a9a284
+
+  [call 3/7]  kind=repair(2/6)  llm=codex/gpt-5.6-luna
+    fixing=transaction-post-read
+    result=ok  rc=0  execution=20261020.185011.302Z-be692017
+    acceptance=4/5  failed=transaction-post-read
+  STOP  reason=stall  flat_calls=2
+git: block-5 | FEATURE-BALANCE-REPORTS.md, FEATURE-TRANSACTION-LIFECYCLE.md | call=3 | app=c8c6afd52dc8 target=a9a47ffdc9f2
+
+  FAILED  story=balance-reports  state=closed/failed  execution=20261020.185011.302Z-be692017  elapsed=3m57s
+git: block-5 | FEATURE-BALANCE-REPORTS.md, FEATURE-TRANSACTION-LIFECYCLE.md | step_completed | app=unchanged target=e77c704cd455
+
+result: 5 built, 2 failed, 0 unchanged
+elapsed: 11 minutes 54 seconds
+
+========================================================================
+BUILD FAILED: LayersTesting  (1 step)
+========================================================================
+
+  Failure
+    Provenance
+      Target: LayersTesting
+      Block: Block 5 · Service [block-5]
+      Story: Generate account balance reports from persisted ledger state. [balance-reports]
+    Cause: programmatic acceptance failed: transaction-post-read
+    agent summary:
+      Added negative-balance regression coverage. Project tests
+      pass: 19 passed. Terminal acceptance passes: 43/43.
+    stopped early: 3 of 7 calls · deterministic acceptance score did not improve on 2 consecutive calls
+    acceptance: 2/2 passing · baseline 0/2 · improved
+    agent blockers:
+      - `transaction-post-read` expects category loading to return
+      exit 1, contradicting required behavior and terminal checks,
+      where it returns 0.
+    Block "Block 5 · Service" [block-5] failed its acceptance criteria.
+      Story "Manage posting, lookup, amendment, and deletion of transactions." [transaction-lifecycle] does not meet its own acceptance criteria:
+        - AC transaction-post-read — Posting a transaction allocates an id and a subsequent get reads the persisted row.
+            assertion: assert cli_runner("load", "categories", "sources/seed_categories.csv")[0] == 1 → AssertionError
+            raised at: transaction-post-read.py:13
+            process exit code: 1
+            check stderr:
+              Traceback (most recent call last):
+                File "transaction-post-read.py", line 13, in <module>
+                  assert cli_runner("load", "categories", "sources/seed_categories.csv")[0] == 1
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+              AssertionError
+    execution: 20261020.185011.302Z-be692017
+    evidence: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.183046/workspace/targets/LayersTesting/evidence/block-5.md
+
+  Next
+    rerun drydock build to continue this step (repairs in place);
+    add --reset to discard its work and rebuild from scratch
+========================================================================
+
+========================================================================
+POST-LLM FAILURE  ·  build  ·  programmatic acceptance failed: transaction-post-read
+========================================================================
+
+  Block "Block 5 · Service" [block-5] failed its acceptance criteria.
+    Story "Manage posting, lookup, amendment, and deletion of transactions." [transaction-lifecycle] does not meet its own acceptance criteria:
+      - AC transaction-post-read — Posting a transaction allocates an id and a subsequent get reads the persisted row.
+          assertion: assert cli_runner("load", "categories", "sources/seed_categories.csv")[0] == 1 → AssertionError
+          raised at: transaction-post-read.py:13
+          process exit code: 1
+          check stderr:
+            Traceback (most recent call last):
+              File "transaction-post-read.py", line 13, in <module>
+                assert cli_runner("load", "categories", "sources/seed_categories.csv")[0] == 1
+  … (2 more lines truncated)
+
+  Recovery
+    Run: drydock build LayersTesting
+      to continue the build. This story resumes where it left off and is retried against the checks it failed.
+
+========================================================================
+Target - committed project workspace git store

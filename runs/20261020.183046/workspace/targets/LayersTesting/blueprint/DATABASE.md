@@ -1,0 +1,349 @@
+# DATABASE: Ledger Persistence Contract
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Define the relational persistence contract for accounts, categories, and cash transactions. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | accounts repository, categories repository, transactions repository |
+| Consumes    | application module boundaries |
+
+## Persistence Boundary
+
+All database access goes through the generated `persistence` package and its `open_database(dsn)` entry point. Application modules call declared repository methods only. The application never opens a database driver directly.
+
+The configured DSN is selected from `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`. SQLite is the required local backend. PostgreSQL DSNs remain supported by the shipped persistence engines.
+
+Amounts are stored as `INTEGER` cents.
+
+## Access Patterns
+
+### FEATURE-ACCOUNT-001 — List accounts
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-ACCOUNT-LIFECYCLE.md |
+| Access | read |
+| Repository operation | `accounts.list` |
+| Compatibility | unchanged |
+
+Input: `AccountListInput`
+
+| Field | Type | Notes |
+|---|---|---|
+| — | — | no fields |
+
+Output: `AccountListOutput`
+
+| Field | Type | Notes |
+|---|---|---|
+| account | text | account code |
+| name | text | account name |
+
+### FEATURE-ACCOUNT-002 — Create account
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-ACCOUNT-LIFECYCLE.md |
+| Access | write |
+| Repository operation | `accounts.create` |
+| Compatibility | unchanged |
+
+Input: `AccountCreateInput`
+
+| Field | Type | Notes |
+|---|---|---|
+| account | text | account code |
+| name | text | account name |
+
+Output: `AccountOutput`
+
+| Field | Type | Notes |
+|---|---|---|
+| account | text | account code |
+| name | text | account name |
+
+### FEATURE-ACCOUNT-003 — Retrieve account
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-ACCOUNT-LIFECYCLE.md |
+| Access | read |
+| Repository operation | `accounts.get` |
+| Compatibility | unchanged |
+
+Input: `AccountGetInput`
+
+| Field | Type | Notes |
+|---|---|---|
+| account | text | account code |
+
+Output: `AccountOutput`
+
+| Field | Type | Notes |
+|---|---|---|
+| account | text | account code |
+| name | text | account name |
+
+### FEATURE-ACCOUNT-004 — Rename account
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-ACCOUNT-LIFECYCLE.md |
+| Access | write |
+| Repository operation | `accounts.update` |
+| Compatibility | unchanged |
+
+Input: `AccountUpdateInput`
+
+| Field | Type | Notes |
+|---|---|---|
+| account | text | account code |
+| name | text | replacement name |
+
+Output: `AccountOutput`
+
+| Field | Type | Notes |
+|---|---|---|
+| account | text | account code |
+| name | text | updated name |
+
+### FEATURE-ACCOUNT-005 — Delete account
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-ACCOUNT-LIFECYCLE.md |
+| Access | write |
+| Repository operation | `accounts.delete` |
+| Compatibility | unchanged |
+
+Input: `AccountDeleteInput`
+
+| Field | Type | Notes |
+|---|---|---|
+| account | text | account code |
+
+Output: `DeleteOutput`
+
+| Field | Type | Notes |
+|---|---|---|
+| account | text | deleted account code |
+
+### FEATURE-CATEGORY-001 — List categories
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `categories.list` |
+| Compatibility | unchanged |
+
+Input: `CategoryListInput`
+
+| Field | Type | Notes |
+|---|---|---|
+| — | — | no fields |
+
+Output: `CategoryListOutput`
+
+| Field | Type | Notes |
+|---|---|---|
+| category | text | category code |
+| description | text | category description |
+
+### FEATURE-CATEGORY-002 — Retrieve category
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `categories.get` |
+| Compatibility | unchanged |
+
+Input: `CategoryGetInput`
+
+| Field | Type | Notes |
+|---|---|---|
+| category | text | category code |
+
+Output: `CategoryOutput`
+
+| Field | Type | Notes |
+|---|---|---|
+| category | text | category code |
+| description | text | category description |
+
+### FEATURE-TXN-001 — List transactions
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `transactions.list` |
+| Compatibility | unchanged |
+
+Input: `TransactionListInput`
+
+| Field | Type | Notes |
+|---|---|---|
+| — | — | no fields |
+
+Output: `TransactionOutput`
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | integer | transaction identifier |
+| date | text | ISO calendar date |
+| account | text | account code |
+| category | text | category code |
+| amount | integer | cents |
+| memo | text | transaction memo |
+
+### FEATURE-TXN-002 — Create transaction
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-TRANSACTION-LIFECYCLE.md |
+| Access | write |
+| Repository operation | `transactions.create` |
+| Compatibility | unchanged |
+
+Input: `TransactionCreateInput`
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | integer | transaction identifier |
+| date | text | ISO calendar date |
+| account | text | account code |
+| category | text | category code |
+| amount | integer | cents |
+| memo | text | transaction memo |
+
+Output: `TransactionOutput`
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | integer | transaction identifier |
+| date | text | ISO calendar date |
+| account | text | account code |
+| category | text | category code |
+| amount | integer | cents |
+| memo | text | transaction memo |
+
+### FEATURE-TXN-003 — Retrieve transaction
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-TRANSACTION-LIFECYCLE.md |
+| Access | read |
+| Repository operation | `transactions.get` |
+| Compatibility | unchanged |
+
+Input: `TransactionGetInput`
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | integer | transaction identifier |
+
+Output: `TransactionOutput`
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | integer | transaction identifier |
+| date | text | ISO calendar date |
+| account | text | account code |
+| category | text | category code |
+| amount | integer | cents |
+| memo | text | transaction memo |
+
+### FEATURE-TXN-004 — Update transaction amount
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-TRANSACTION-LIFECYCLE.md |
+| Access | write |
+| Repository operation | `transactions.update` |
+| Compatibility | unchanged |
+
+Input: `TransactionUpdateInput`
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | integer | transaction identifier |
+| amount | integer | replacement cents |
+
+Output: `TransactionOutput`
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | integer | transaction identifier |
+| date | text | ISO calendar date |
+| account | text | account code |
+| category | text | category code |
+| amount | integer | cents |
+| memo | text | transaction memo |
+
+### FEATURE-TXN-005 — Delete transaction
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-TRANSACTION-LIFECYCLE.md |
+| Access | write |
+| Repository operation | `transactions.delete` |
+| Compatibility | unchanged |
+
+Input: `TransactionDeleteInput`
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | integer | transaction identifier |
+
+Output: `DeleteTransactionOutput`
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | integer | deleted transaction identifier |
+
+## Schema
+
+## `accounts`
+
+| Field | Type | Notes |
+|---|---|---|
+| account | TEXT PK NOT NULL | account code |
+| name | VARCHAR(40) NOT NULL | account name |
+
+## `categories`
+
+| Field | Type | Notes |
+|---|---|---|
+| category | TEXT PK NOT NULL | category code |
+| description | VARCHAR(40) NOT NULL | category description |
+
+## `transactions`
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | INTEGER PK NOT NULL | transaction identifier |
+| date | TEXT NOT NULL | `YYYY-MM-DD` |
+| account | TEXT NOT NULL REFERENCES accounts(account) | account code |
+| category | TEXT NOT NULL REFERENCES categories(category) | category code |
+| amount | INTEGER NOT NULL | integer cents |
+| memo | VARCHAR(60) NOT NULL | transaction memo |
+
+## Initialization
+
+Schema creation is idempotent and uses the generated `schema.sql`. The `init` command explicitly drops and recreates all three tables in dependency-safe order.
+
+## Programmatic Acceptance
+
+- None. Drydock validates declared SQLite schema construction and connectivity invariants deterministically.
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- No application module may import a database driver.
+- No floating-point amount representation is permitted.
+- Every declared table is reached through at least one repository operation.

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_cli_foundation.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_cli_foundation.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_cli_foundation.py">Raw file</a></div></header>
+<article class="doc"><pre>from __future__ import annotations
+
+from cli.testing import cli_runner
+
+
+def test_help_is_available_for_command_families() -&gt; None:
+    for args in ((&quot;--help&quot;,), (&quot;account&quot;, &quot;--help&quot;), (&quot;txn&quot;, &quot;--help&quot;), (&quot;report&quot;, &quot;--help&quot;)):
+        code, _stdout, _stderr = cli_runner(*args)
+        assert code == 0
+
+
+def test_unknown_root_command_returns_usage_failure() -&gt; None:
+    code, stdout, _stderr = cli_runner(&quot;frobnicate&quot;)
+    assert code == 2
+    assert stdout == &quot;&quot;
+
+
+def test_unknown_report_returns_usage_failure() -&gt; None:
+    code, stdout, _stderr = cli_runner(&quot;report&quot;, &quot;nosuch&quot;)
+    assert code == 2
+    assert stdout == &quot;&quot;
+
+
+def test_command_families_require_their_arguments() -&gt; None:
+    for args in ((&quot;account&quot;,), (&quot;txn&quot;,), (&quot;load&quot;,), (&quot;transfer&quot;,), (&quot;report&quot;,)):
+        code, stdout, _stderr = cli_runner(*args)
+        assert code == 2
+        assert stdout == &quot;&quot;
+
+
+def test_declared_command_can_be_dispatched() -&gt; None:
+    code, stdout, stderr = cli_runner(&quot;init&quot;)
+    assert code == 0
+    assert stdout == &quot;&quot;
+    assert stderr == &quot;&quot;
+</pre></article>
+</main>
+</body>
+</html>

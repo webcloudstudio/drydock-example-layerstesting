@@ -1,0 +1,12 @@
+<unattached story="architecture"/>
+<unattached story="database"/>
+<unattached story="cli-foundation"/>
+<unattached story="schema-lifecycle"/>
+<unattached story="bulk-loading"/>
+<unattached story="balance-reports"/>
+<unattached story="transaction-lifecycle"/>
+<unattached story="aggregate-reports"/>
+<unattached story="account-lifecycle"/>
+<unattached story="transfers"/>
+<unattached story="financial-invariants"/>
+<unattached story="conformance"/>

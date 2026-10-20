@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/commands/11-after-initial-build-build-status.stdout.log</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/commands/11-after-initial-build-build-status.stdout.log</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/commands/11-after-initial-build-build-status.stdout.log">Raw file</a></div></header>
+<article class="doc"><pre>Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Next: drydock build LayersTesting
+
+Blueprint: LayersTesting
+Target: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.183046/workspace/targets/LayersTesting
+Rows: &lt;state&gt; &lt;type&gt;  &lt;Name&gt;  [&lt;id&gt;]   — pass [&lt;id&gt;] to --step
+Block: Build Block 1 · Foundational  [block-1]   — [built] story Define the ledger application architecture and module boundaries.  [architecture] — complete
+
+Block: Build Block 2 · Foundational  [block-2]   — 2/2 stories complete
+  [built]   story  Establish the relational persistence contract for the cash ledger.  [database]
+  [built]   story  Provide the executable ledger command and command validation.  [cli-foundation]
+Block: Build Block 3 · Service  [block-3]   — [built] story Initialize and inspect the ledger database schema.  [schema-lifecycle] — complete
+Block: Build Block 4 · Service  [block-4]   — [built] story Load validated account, category, and transaction CSV files atomically.  [bulk-loading] — complete
+
+Block: Build Block 5 · Service  [block-5]   — 0/2 stories complete
+  [FAILED]  story  Generate account balance reports from persisted ledger state.  [balance-reports]  &lt;- resume (repairs in place)
+  [FAILED]  story  Manage posting, lookup, amendment, and deletion of transactions.  [transaction-lifecycle]  &lt;- resume (repairs in place)
+
+Block: Build Block 6 · Service  [block-6]   — 0/1 stories complete
+  [pending] story  Generate category and monthly ledger reports.  [aggregate-reports]
+
+Block: Build Block 7 · Service  [block-7]   — 0/1 stories complete
+  [pending] story  Manage account creation, lookup, rename, and deletion.  [account-lifecycle]
+
+Block: Build Block 8 · Service  [block-8]   — 0/1 stories complete
+  [pending] story  Execute paired atomic transfers between accounts.  [transfers]
+
+Block: Build Block 9 · Service  [block-9]   — 0/1 stories complete
+  [pending] story  Enforce non-negative account balances across every mutation path.  [financial-invariants]
+
+Block: Build Block 10 · Service  [block-10]   — 0/1 stories complete
+  [pending] story  Provide automated tests and run the complete supplied ledger conformance suite.  [conformance]
+
+Steps: 12 total — 0 done, 5 built (await verify), 0 in review, 5 pending, 0 blocked by questions, 2 failed (0% complete)
+Buildable now: block-5
+Failed (resume with drydock build, or --step &lt;id&gt;; --reset discards work instead): balance-reports, transaction-lifecycle
+Target - committed project workspace git store
+</pre></article>
+</main>
+</body>
+</html>

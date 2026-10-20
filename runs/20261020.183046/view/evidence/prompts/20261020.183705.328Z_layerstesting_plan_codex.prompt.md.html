@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompts/20261020.183705.328Z_layerstesting_plan_codex.prompt.md</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompts/20261020.183705.328Z_layerstesting_plan_codex.prompt.md</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompts/20261020.183705.328Z_layerstesting_plan_codex.prompt.md">Raw file</a></div></header>
+<article class="doc"><p>&lt;pblock label=&quot;Plan artifact repair&quot; kind=&quot;repair&quot;&gt;</p>
+<h1>Plan Artifact Repair</h1>
+<p>Drydock accepted the Plan response shape but rejected the emitted Blueprint artifact(s) below. Repair only the deterministic defect. Preserve all unrelated content, contracts, headings, decisions, and acceptance assertions byte-for-byte where possible. Do not remove or weaken a valid assertion while adding a missing one. Every artifact with a programmatic surface retains at least two concrete Python acceptance assertions. Every DECISIONS.json is the sole decision disclosure surface; do not emit Markdown question sections.</p>
+<p>Emit each artifact below in exactly this form, and emit no other text:</p>
+<p>=== BEGIN ARTIFACT &lt;FILENAME&gt; === &lt;the complete file body&gt; === END ARTIFACT ===</p>
+<p>The filename appears once, in the opening delimiter. The closing delimiter is the constant token above and never carries a name.</p>
+<p>Emit exactly one such block for each of: DATABASE.md.</p>
+<p>Repair pass: 1</p>
+<p>Deterministic validation defect: Plan integrity check failed: DATABASE.md: accounts.account has unknown column modifier(s) &#x27;PRIMARY&#x27;, &#x27;KEY&#x27; — a type cell is <code>&lt;TYPE&gt; [PK] [NOT NULL] [UNIQUE] [DEFAULT &lt;literal&gt;] [REFERENCES &lt;table&gt;(&lt;column&gt;)]</code>, where &lt;TYPE&gt; is INTEGER, NUMERIC, REAL, TEXT, or VARCHAR(&lt;n&gt;), and &lt;literal&gt; is a single-quoted string, a number, NULL, CURRENT_TIMESTAMP, CURRENT_DATE, or CURRENT_TIME; brackets mark optional entries and are not written, as in <code>TEXT NOT NULL UNIQUE</code></p>
+<p>Every <code>| Owner |</code> names one of these Features, exactly as written, or <code>DATABASE.md</code> for a pattern no single Feature owns — a log or other surface several Features reach, which any Blueprint may then cite. There are no other legal values: a Screen, a service, a module, and a file not on this list are each a defect.</p>
+<ul><li>FEATURE-ACCOUNT-LIFECYCLE.md</li><li>FEATURE-AGGREGATE-REPORTS.md</li><li>FEATURE-BALANCE-REPORTS.md</li><li>FEATURE-BULK-LOADING.md</li><li>FEATURE-CLI-FOUNDATION.md</li><li>FEATURE-CONFORMANCE.md</li><li>FEATURE-FINANCIAL-INVARIANTS.md</li><li>FEATURE-SCHEMA-LIFECYCLE.md</li><li>FEATURE-TRANSACTION-LIFECYCLE.md</li><li>FEATURE-TRANSFERS.md</li></ul>
+<p>Normative Compass sections. They bind every assertion you write or retain, including one you add to satisfy the defect above.</p>
+<h2>Constraints</h2>
+<ul><li>Implement in the language and database named under <code>## Stack</code> in <code>sources/INSTRUCTIONS.md</code>.</li><li>Provide an executable named <code>ledger</code> at the application root, invoked as <code>./ledger &lt;command&gt;</code>.</li><li>Read the database location from <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code>.</li><li>Store amounts as integer cents.</li><li>Check every command in full before its first write.</li><li>Run without network access other than to a PostgreSQL server named by <code>DATABASE_URL</code>.</li><li>Diagnostics go to standard error and are never compared.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Do not modify, rewrite, regenerate, or substitute any file under <code>sources/</code>.</li><li>Do not read <code>sources/run.sh</code> or any seed file from application code. Seed files reach the</li></ul>
+<p>database only through <code>ledger load</code>.</p>
+<ul><li>Do not hardcode a report row, a count, or a total. Every value comes from a query.</li><li>Do not open a database driver outside the shipped persistence library.</li><li>Do not use floating point for money at any layer.</li></ul>
+<h2>Verification Protocol</h2>
+<div class="scroll"><table><thead><tr><th>Story kind</th><th>Command</th><th>Asserts</th></tr></thead><tbody><tr><td>Every behavioral story</td><td><code>sh bin/test.sh</code></td><td>exit <code>0</code></td></tr><tr><td>Terminal story (once, last)</td><td><code>sh sources/run.sh</code></td><td>exit <code>0</code></td></tr></tbody></table></div>
+<p>&lt;!-- drydock:build-write-guardrail:start --&gt;</p>
+<p>Original DATABASE.md, in the same form your reply must use: === BEGIN ARTIFACT DATABASE.md ===</p>
+<h1>DATABASE: Ledger Persistence Contract</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Define the relational persistence contract for accounts, categories, and cash transactions.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md</td></tr><tr><td>Provides</td><td>accounts repository, categories repository, transactions repository</td></tr><tr><td>Consumes</td><td>application module boundaries</td></tr></tbody></table></div>
+<h2>Questions</h2>
+<ul><li>None.</li></ul>
+<h2>Persistence Boundary</h2>
+<p>All database access goes through the generated <code>persistence</code> package and its <code>open_database(dsn)</code> entry point. Application modules call declared repository methods only. The application never opens a database driver directly.</p>
+<p>The configured DSN is selected from <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code>. SQLite is the required local backend. PostgreSQL DSNs remain supported by the shipped persistence engines.</p>
+<p>Amounts are stored as <code>INTEGER</code> cents.</p>
+<h2>Access Patterns</h2>
+<h3>FEATURE-ACCOUNT-001 — List accounts</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-ACCOUNT-LIFECYCLE.md</td></tr><tr><td>Access</td><td>read</td></tr><tr><td>Repository operation</td><td><code>accounts.list</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: <code>AccountListInput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>—</td><td>—</td><td>no fields</td></tr></tbody></table></div>
+<p>Output: <code>AccountListOutput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>account</td><td>text</td><td>account code</td></tr><tr><td>name</td><td>text</td><td>account name</td></tr></tbody></table></div>
+<h3>FEATURE-ACCOUNT-002 — Create account</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-ACCOUNT-LIFECYCLE.md</td></tr><tr><td>Access</td><td>write</td></tr><tr><td>Repository operation</td><td><code>accounts.create</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: <code>AccountCreateInput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>account</td><td>text</td><td>account code</td></tr><tr><td>name</td><td>text</td><td>account name</td></tr></tbody></table></div>
+<p>Output: <code>AccountOutput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>account</td><td>text</td><td>account code</td></tr><tr><td>name</td><td>text</td><td>account name</td></tr></tbody></table></div>
+<h3>FEATURE-ACCOUNT-003 — Retrieve account</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-ACCOUNT-LIFECYCLE.md</td></tr><tr><td>Access</td><td>read</td></tr><tr><td>Repository operation</td><td><code>accounts.get</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: <code>AccountGetInput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>account</td><td>text</td><td>account code</td></tr></tbody></table></div>
+<p>Output: <code>AccountOutput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>account</td><td>text</td><td>account code</td></tr><tr><td>name</td><td>text</td><td>account name</td></tr></tbody></table></div>
+<h3>FEATURE-ACCOUNT-004 — Rename account</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-ACCOUNT-LIFECYCLE.md</td></tr><tr><td>Access</td><td>write</td></tr><tr><td>Repository operation</td><td><code>accounts.update</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: <code>AccountUpdateInput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>account</td><td>text</td><td>account code</td></tr><tr><td>name</td><td>text</td><td>replacement name</td></tr></tbody></table></div>
+<p>Output: <code>AccountOutput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>account</td><td>text</td><td>account code</td></tr><tr><td>name</td><td>text</td><td>updated name</td></tr></tbody></table></div>
+<h3>FEATURE-ACCOUNT-005 — Delete account</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-ACCOUNT-LIFECYCLE.md</td></tr><tr><td>Access</td><td>write</td></tr><tr><td>Repository operation</td><td><code>accounts.delete</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: <code>AccountDeleteInput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>account</td><td>text</td><td>account code</td></tr></tbody></table></div>
+<p>Output: <code>DeleteOutput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>account</td><td>text</td><td>deleted account code</td></tr></tbody></table></div>
+<h3>FEATURE-CATEGORY-001 — List categories</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>DATABASE.md</td></tr><tr><td>Access</td><td>read</td></tr><tr><td>Repository operation</td><td><code>categories.list</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: <code>CategoryListInput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>—</td><td>—</td><td>no fields</td></tr></tbody></table></div>
+<p>Output: <code>CategoryListOutput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>category</td><td>text</td><td>category code</td></tr><tr><td>description</td><td>text</td><td>category description</td></tr></tbody></table></div>
+<h3>FEATURE-CATEGORY-002 — Retrieve category</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>DATABASE.md</td></tr><tr><td>Access</td><td>read</td></tr><tr><td>Repository operation</td><td><code>categories.get</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: <code>CategoryGetInput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>category</td><td>text</td><td>category code</td></tr></tbody></table></div>
+<p>Output: <code>CategoryOutput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>category</td><td>text</td><td>category code</td></tr><tr><td>description</td><td>text</td><td>category description</td></tr></tbody></table></div>
+<h3>FEATURE-TXN-001 — List transactions</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>DATABASE.md</td></tr><tr><td>Access</td><td>read</td></tr><tr><td>Repository operation</td><td><code>transactions.list</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: <code>TransactionListInput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>—</td><td>—</td><td>no fields</td></tr></tbody></table></div>
+<p>Output: <code>TransactionOutput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>txn_id</td><td>integer</td><td>transaction identifier</td></tr><tr><td>date</td><td>text</td><td>ISO calendar date</td></tr><tr><td>account</td><td>text</td><td>account code</td></tr><tr><td>category</td><td>text</td><td>category code</td></tr><tr><td>amount</td><td>integer</td><td>cents</td></tr><tr><td>memo</td><td>text</td><td>transaction memo</td></tr></tbody></table></div>
+<h3>FEATURE-TXN-002 — Create transaction</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-TRANSACTION-LIFECYCLE.md</td></tr><tr><td>Access</td><td>write</td></tr><tr><td>Repository operation</td><td><code>transactions.create</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: <code>TransactionCreateInput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>txn_id</td><td>integer</td><td>transaction identifier</td></tr><tr><td>date</td><td>text</td><td>ISO calendar date</td></tr><tr><td>account</td><td>text</td><td>account code</td></tr><tr><td>category</td><td>text</td><td>category code</td></tr><tr><td>amount</td><td>integer</td><td>cents</td></tr><tr><td>memo</td><td>text</td><td>transaction memo</td></tr></tbody></table></div>
+<p>Output: <code>TransactionOutput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>txn_id</td><td>integer</td><td>transaction identifier</td></tr><tr><td>date</td><td>text</td><td>ISO calendar date</td></tr><tr><td>account</td><td>text</td><td>account code</td></tr><tr><td>category</td><td>text</td><td>category code</td></tr><tr><td>amount</td><td>integer</td><td>cents</td></tr><tr><td>memo</td><td>text</td><td>transaction memo</td></tr></tbody></table></div>
+<h3>FEATURE-TXN-003 — Retrieve transaction</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-TRANSACTION-LIFECYCLE.md</td></tr><tr><td>Access</td><td>read</td></tr><tr><td>Repository operation</td><td><code>transactions.get</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: <code>TransactionGetInput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>txn_id</td><td>integer</td><td>transaction identifier</td></tr></tbody></table></div>
+<p>Output: <code>TransactionOutput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>txn_id</td><td>integer</td><td>transaction identifier</td></tr><tr><td>date</td><td>text</td><td>ISO calendar date</td></tr><tr><td>account</td><td>text</td><td>account code</td></tr><tr><td>category</td><td>text</td><td>category code</td></tr><tr><td>amount</td><td>integer</td><td>cents</td></tr><tr><td>memo</td><td>text</td><td>transaction memo</td></tr></tbody></table></div>
+<h3>FEATURE-TXN-004 — Update transaction amount</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-TRANSACTION-LIFECYCLE.md</td></tr><tr><td>Access</td><td>write</td></tr><tr><td>Repository operation</td><td><code>transactions.update</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: <code>TransactionUpdateInput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>txn_id</td><td>integer</td><td>transaction identifier</td></tr><tr><td>amount</td><td>integer</td><td>replacement cents</td></tr></tbody></table></div>
+<p>Output: <code>TransactionOutput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>txn_id</td><td>integer</td><td>transaction identifier</td></tr><tr><td>date</td><td>text</td><td>ISO calendar date</td></tr><tr><td>account</td><td>text</td><td>account code</td></tr><tr><td>category</td><td>text</td><td>category code</td></tr><tr><td>amount</td><td>integer</td><td>cents</td></tr><tr><td>memo</td><td>text</td><td>transaction memo</td></tr></tbody></table></div>
+<h3>FEATURE-TXN-005 — Delete transaction</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-TRANSACTION-LIFECYCLE.md</td></tr><tr><td>Access</td><td>write</td></tr><tr><td>Repository operation</td><td><code>transactions.delete</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: <code>TransactionDeleteInput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>txn_id</td><td>integer</td><td>transaction identifier</td></tr></tbody></table></div>
+<p>Output: <code>DeleteTransactionOutput</code></p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>txn_id</td><td>integer</td><td>deleted transaction identifier</td></tr></tbody></table></div>
+<h2>Schema</h2>
+<h2><code>accounts</code></h2>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>account</td><td>TEXT PRIMARY KEY NOT NULL</td><td>account code</td></tr><tr><td>name</td><td>VARCHAR(40) NOT NULL</td><td>account name</td></tr></tbody></table></div>
+<h2><code>categories</code></h2>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>category</td><td>TEXT PRIMARY KEY NOT NULL</td><td>category code</td></tr><tr><td>description</td><td>VARCHAR(40) NOT NULL</td><td>category description</td></tr></tbody></table></div>
+<h2><code>transactions</code></h2>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>txn_id</td><td>INTEGER PRIMARY KEY NOT NULL</td><td>transaction identifier</td></tr><tr><td>date</td><td>TEXT NOT NULL</td><td><code>YYYY-MM-DD</code></td></tr><tr><td>account</td><td>TEXT NOT NULL REFERENCES accounts(account)</td><td>account code</td></tr><tr><td>category</td><td>TEXT NOT NULL REFERENCES categories(category)</td><td>category code</td></tr><tr><td>amount</td><td>INTEGER NOT NULL</td><td>integer cents</td></tr><tr><td>memo</td><td>VARCHAR(60) NOT NULL</td><td>transaction memo</td></tr></tbody></table></div>
+<h2>Initialization</h2>
+<p>Schema creation is idempotent and uses the generated <code>schema.sql</code>. The <code>init</code> command explicitly drops and recreates all three tables in dependency-safe order.</p>
+<h2>Programmatic Acceptance</h2>
+<ul><li>None. Drydock owns SQLite schema construction and connectivity invariants deterministically.</li></ul>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>No application module may import a database driver.</li><li>No floating-point amount representation is permitted.</li><li>Every declared table is reached through at least one repository operation.</li></ul>
+<p>=== END ARTIFACT === &lt;/pblock&gt;</p></article>
+</main>
+</body>
+</html>

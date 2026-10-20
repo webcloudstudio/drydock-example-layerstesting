@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_persistence_contract.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_persistence_contract.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_persistence_contract.py">Raw file</a></div></header>
+<article class="doc"><pre>from __future__ import annotations
+
+from persistence.testing import db_session
+
+
+def test_declared_account_operations_round_trip() -&gt; None:
+    with db_session() as db:
+        created = db.accounts.create(account=&quot;cash&quot;, name=&quot;Cash&quot;)
+        assert created.account == &quot;cash&quot;
+        assert db.accounts.get(account=&quot;cash&quot;) == created
+        listed = db.accounts.list()
+        assert [(row.account, row.name) for row in listed] == [(&quot;cash&quot;, &quot;Cash&quot;)]
+
+        assert db.accounts.update(account=&quot;cash&quot;, name=&quot;Main cash&quot;) == 1
+        assert db.accounts.get(account=&quot;cash&quot;).name == &quot;Main cash&quot;
+        assert db.accounts.delete(account=&quot;cash&quot;) == 1
+        assert db.accounts.get(account=&quot;cash&quot;) is None
+
+
+def test_declared_category_and_transaction_operations_round_trip() -&gt; None:
+    with db_session() as db:
+        # Categories intentionally declare read operations only.
+        assert db.categories.list() == []
+        assert db.categories.get(category=&quot;food&quot;) is None
+
+        assert db.transactions.list() == []
+        assert db.transactions.get(txn_id=1) is None
+        assert db.transactions.update(txn_id=1, amount=-1300) == 0
+        assert db.transactions.delete(txn_id=1) == 0
+        assert db.transactions.get(txn_id=1) is None
+</pre></article>
+</main>
+</body>
+</html>

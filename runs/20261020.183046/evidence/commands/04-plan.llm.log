@@ -1,0 +1,54 @@
+--- llm 1/11 · plan · codex gpt-5.6-luna · 20261020.183327.963Z-de65e2be ---
+2026-10-20 14:33:28 EDT  Calling CODEX/gpt-5.6-luna (plan · topology)...
+  Completed CODEX/gpt-5.6-luna (plan · topology)  rc=0
+    elapsed=25.9s   cached=10,240 (19% hit)   uncached=44,707   out=3,358   tps=129.5
+
+--- llm 2/11 · plan · codex gpt-5.6-luna · 20261020.183355.392Z-b9421960 ---
+2026-10-20 14:33:55 EDT  Calling CODEX/gpt-5.6-luna (plan · blueprint batch 1)...
+  Completed CODEX/gpt-5.6-luna (plan · blueprint batch 1)  rc=0
+    elapsed=2m 7.0s   cached=10,240 (18% hit)   uncached=46,667   out=7,018   tps=55.2
+
+--- llm 3/11 · plan · codex gpt-5.6-luna · 20261020.183602.823Z-8800e27c ---
+2026-10-20 14:36:02 EDT  Calling CODEX/gpt-5.6-luna (plan · blueprint batch 2)...
+  Completed CODEX/gpt-5.6-luna (plan · blueprint batch 2)  rc=0
+    elapsed=27.0s   cached=10,240 (17% hit)   uncached=49,056   out=4,064   tps=150.4
+
+--- llm 4/11 · plan · codex gpt-5.6-luna · 20261020.183630.137Z-c117d718 ---
+2026-10-20 14:36:30 EDT  Calling CODEX/gpt-5.6-luna (plan · blueprint batch 3)...
+  Completed CODEX/gpt-5.6-luna (plan · blueprint batch 3)  rc=0
+    elapsed=24.6s   cached=10,240 (17% hit)   uncached=49,063   out=3,073   tps=124.9
+
+--- llm 5/11 · plan · codex gpt-5.6-luna · 20261020.183705.328Z-59308f8b ---
+2026-10-20 14:37:05 EDT  Calling CODEX/gpt-5.6-luna (plan · artifact repair)...
+  Completed CODEX/gpt-5.6-luna (plan · artifact repair)  rc=0
+    elapsed=14.2s   cached=10,240 (70% hit)   uncached=4,394   out=2,150   tps=151.6
+
+--- llm 6/11 · lineage_attribute · codex gpt-5.6-luna · 20261020.183725.313Z-4b796809 ---
+2026-10-20 14:37:25 EDT  Calling CODEX/gpt-5.6-luna (lineage_attribute)...
+  Completed CODEX/gpt-5.6-luna (lineage_attribute)  rc=0
+    elapsed=11.2s   cached=10,240 (70% hit)   uncached=4,305   out=1,264   tps=112.9
+
+--- llm 7/11 · lineage_attribute · codex gpt-5.6-luna · 20261020.183736.659Z-b25fe2b2 ---
+2026-10-20 14:37:36 EDT  Calling CODEX/gpt-5.6-luna (lineage_attribute)...
+  Completed CODEX/gpt-5.6-luna (lineage_attribute)  rc=0
+    elapsed=12.2s   cached=10,240 (67% hit)   uncached=5,043   out=1,036   tps=85.2
+
+--- llm 8/11 · lineage_attribute · codex gpt-5.6-luna · 20261020.183748.966Z-5acd6f76 ---
+2026-10-20 14:37:48 EDT  Calling CODEX/gpt-5.6-luna (lineage_attribute)...
+  Completed CODEX/gpt-5.6-luna (lineage_attribute)  rc=0
+    elapsed=7.1s   cached=10,240 (80% hit)   uncached=2,483   out=389   tps=54.6
+
+--- llm 9/11 · lineage_attribute · codex gpt-5.6-luna · 20261020.183756.163Z-f1bf9487 ---
+2026-10-20 14:37:56 EDT  Calling CODEX/gpt-5.6-luna (lineage_attribute)...
+  Completed CODEX/gpt-5.6-luna (lineage_attribute)  rc=0
+    elapsed=8.1s   cached=10,240 (80% hit)   uncached=2,497   out=488   tps=60.2
+
+--- llm 10/11 · lineage_attribute · codex gpt-5.6-luna · 20261020.183804.389Z-f64446d9 ---
+2026-10-20 14:38:04 EDT  Calling CODEX/gpt-5.6-luna (lineage_attribute)...
+  Completed CODEX/gpt-5.6-luna (lineage_attribute)  rc=0
+    elapsed=4.5s   cached=10,240 (66% hit)   uncached=5,310   out=240   tps=53.8
+
+--- llm 11/11 · lineage_attribute · codex gpt-5.6-luna · 20261020.183808.891Z-3f3deb27 ---
+2026-10-20 14:38:08 EDT  Calling CODEX/gpt-5.6-luna (lineage_attribute)...
+  Completed CODEX/gpt-5.6-luna (lineage_attribute)  rc=0
+    elapsed=13.1s   cached=10,240 (79% hit)   uncached=2,739   out=656   tps=50.0

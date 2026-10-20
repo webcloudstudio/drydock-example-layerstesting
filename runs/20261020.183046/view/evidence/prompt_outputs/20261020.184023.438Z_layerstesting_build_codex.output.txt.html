@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.184023.438Z_layerstesting_build_codex.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.184023.438Z_layerstesting_build_codex.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.184023.438Z_layerstesting_build_codex.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>&lt;reusable-compact filename=&quot;ARCHITECTURE.md&quot;&gt;
+Python ledger layers: executable `ledger`; `cli` for parsing, dispatch, and exit mapping; `ledger_app.config` for `DATABASE_URL` → `DATABASE_PATH` → `data/app.db`; `ledger_app.services` for workflows and business rules; shipped `persistence` for all database access. Exit codes: 0 success, 1 operational failure, 2 usage error, 3 rejection, 4 not found. Application code must not import database drivers or read `sources/`. Amounts use integer cents.
+&lt;/reusable-compact&gt;
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- ledger_app/__init__.py
+- ledger_app/config.py
+- ledger_app/errors.py
+- ledger_app/services.py
+- cli.py
+- ledger
+- pyproject.toml
+- uv.lock
+- .env.example
+- tests/test_architecture.py
+
+SUMMARY:
+Implemented the layered Python architecture, configuration precedence, typed error boundaries, CLI entry point, service dispatch boundary, executable launcher, tests, and lockfile. Declared acceptance assertions pass; project tests: 2 passed.
+
+BLOCKERS:
+- None</pre></article>
+</main>
+</body>
+</html>

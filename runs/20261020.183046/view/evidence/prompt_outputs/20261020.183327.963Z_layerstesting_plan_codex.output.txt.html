@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.183327.963Z_layerstesting_plan_codex.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.183327.963Z_layerstesting_plan_codex.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.183327.963Z_layerstesting_plan_codex.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT TOPOLOGY.md ===
+## Declarations
+
+## story architecture
+summary:      Define the ledger application architecture and module boundaries.
+type:         foundational
+kind:         capability
+phase:        1
+implements:   ARCHITECTURE.md
+stack:        python.md
+provides:     application module boundaries, configuration boundary, persistence boundary
+consumes:
+acceptance:   yes
+instructions: |
+  Define the Python application structure, configuration resolution, command routing,
+  service boundaries, and the rule that all database access goes through the shipped
+  persistence package.
+
+## story database
+summary:      Establish the relational persistence contract for the cash ledger.
+type:         foundational
+kind:         migration
+phase:        1
+implements:   DATABASE.md
+covers:       DATA-001
+context:      ARCHITECTURE.md
+stack:        persistence.md, sqlite.md, python.md
+provides:     accounts repository, categories repository, transactions repository
+consumes:     application module boundaries
+depends:      architecture
+accepts:      st-009
+acceptance:   yes
+instructions: |
+  Declare the accounts, categories, and transactions tables, integer-cent amounts,
+  foreign keys, repository operations, and database selection precedence. Use the
+  shipped persistence library and expose the generated repository contract to callers.
+
+## story cli-foundation
+summary:      Provide the executable ledger command and command validation.
+type:         foundational
+kind:         capability
+phase:        1
+implements:   FEATURE-CLI-FOUNDATION.md
+covers:       CLI-001
+context:      ARCHITECTURE.md, DATABASE.md
+stack:        cli.md, python.md
+provides:     ./ledger, CLI command dispatch, usage validation
+consumes:     accounts repository, categories repository, transactions repository
+depends:      database
+acceptance:   yes
+instructions: |
+  Implement the executable ledger entry point, command dispatch, argument-count
+  validation, unknown-command handling, and discoverable help or usage guidance for
+  every documented command and subcommand.
+
+## story schema-lifecycle
+summary:      Initialize and inspect the ledger database schema.
+type:         service
+kind:         migration
+phase:        1
+implements:   FEATURE-SCHEMA-LIFECYCLE.md
+covers:       CLI-002
+context:      ARCHITECTURE.md, DATABASE.md
+stack:        cli.md, sqlite.md, python.md
+provides:     ledger init, ledger count
+consumes:     accounts repository, categories repository, transactions repository
+depends:      cli-foundation
+accepts:      st-003
+acceptance:   yes
+instructions: |
+  Implement init so it drops and recreates all three tables atomically and emits no
+  output. Implement count with the required table order and row counts.
+
+## story bulk-loading
+summary:      Load validated account, category, and transaction CSV files atomically.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-BULK-LOADING.md
+covers:       DATA-002
+context:      ARCHITECTURE.md, DATABASE.md
+stack:        cli.md, sqlite.md, python.md
+provides:     ledger load accounts, ledger load categories, ledger load transactions
+consumes:     accounts repository, categories repository, transactions repository
+depends:      schema-lifecycle
+accepts:      st-004, st-007
+acceptance:   yes
+instructions: |
+  Implement CSV header and row validation, code/name/memo/amount/date validation,
+  duplicate detection, reference validation, integer-cent conversion, balance
+  validation, and all-or-nothing loading for each supported table.
+
+## story balance-reports
+summary:      Generate account balance reports from persisted ledger state.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-BALANCE-REPORTS.md
+covers:       REPORT-001
+context:      ARCHITECTURE.md, DATABASE.md
+stack:        cli.md, sqlite.md, python.md
+provides:     ledger report balances
+consumes:     accounts repository, transactions repository
+depends:      bulk-loading
+accepts:      st-005
+acceptance:   yes
+instructions: |
+  Implement the balances report using database queries. Order accounts by code,
+  include transaction counts and formatted balances, and emit the required total row.
+
+## story aggregate-reports
+summary:      Generate category and monthly ledger reports.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-AGGREGATE-REPORTS.md
+covers:       REPORT-002
+context:      ARCHITECTURE.md, DATABASE.md
+stack:        cli.md, sqlite.md, python.md
+provides:     ledger report categories, ledger report monthly
+consumes:     categories repository, transactions repository
+depends:      bulk-loading
+accepts:      st-005
+acceptance:   yes
+instructions: |
+  Implement category and monthly aggregation from persisted transactions, including
+  zero-transaction categories, ordering, inflow, outflow, net, and total rows.
+
+## story account-lifecycle
+summary:      Manage account creation, lookup, rename, and deletion.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-ACCOUNT-LIFECYCLE.md
+covers:       OPS-001
+context:      ARCHITECTURE.md, DATABASE.md
+stack:        cli.md, sqlite.md, python.md
+provides:     ledger account add, ledger account get, ledger account rename, ledger account delete
+consumes:     accounts repository, transactions repository
+depends:      cli-foundation
+accepts:      st-006, st-007
+acceptance:   yes
+instructions: |
+  Implement account CRUD operations with validation, duplicate handling, absent-record
+  exit code 4 behavior, in-use deletion protection, and the specified CSV output.
+
+## story transaction-lifecycle
+summary:      Manage posting, lookup, amendment, and deletion of transactions.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-TRANSACTION-LIFECYCLE.md
+covers:       OPS-002
+context:      ARCHITECTURE.md, DATABASE.md
+stack:        cli.md, sqlite.md, python.md
+provides:     ledger txn post, ledger txn get, ledger txn amend, ledger txn delete
+consumes:     accounts repository, categories repository, transactions repository
+depends:      cli-foundation
+accepts:      st-006, st-007, st-008
+acceptance:   yes
+instructions: |
+  Implement transaction posting, lookup, amendment, and deletion with ID allocation,
+  input validation, absent-record exit code 4 behavior, atomic rejection, and balance
+  protection.
+
+## story transfers
+summary:      Execute paired atomic transfers between accounts.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-TRANSFERS.md
+covers:       FIN-001
+context:      ARCHITECTURE.md, DATABASE.md
+stack:        cli.md, sqlite.md, python.md
+provides:     ledger transfer
+consumes:     accounts repository, categories repository, transactions repository
+depends:      transaction-lifecycle
+accepts:      st-007, st-008
+acceptance:   yes
+instructions: |
+  Implement transfers as one atomic operation that validates distinct existing
+  accounts, positive amount, date, available balance, consecutive IDs, TRANSFER
+  category, and required memos before writing either row.
+
+## story financial-invariants
+summary:      Enforce non-negative account balances across every mutation path.
+type:         service
+kind:         integration
+phase:        2
+implements:   FEATURE-FINANCIAL-INVARIANTS.md
+covers:       FIN-002
+context:      ARCHITECTURE.md, DATABASE.md
+stack:        cli.md, sqlite.md, python.md
+provides:     cross-command balance invariant enforcement
+consumes:     accounts repository, transactions repository
+depends:      bulk-loading, transaction-lifecycle, transfers
+accepts:      st-007, st-008
+acceptance:   yes
+instructions: |
+  Apply the non-negative balance invariant consistently to loads, posts, amendments,
+  deletes, and transfers. Ensure every rejected operation performs no writes and
+  returns exit code 3.
+
+## story conformance
+summary:      Provide automated tests and run the complete supplied ledger conformance suite.
+type:         service
+kind:         test harness
+phase:        3
+implements:   FEATURE-CONFORMANCE.md
+covers:       QA-001
+context:      ARCHITECTURE.md, DATABASE.md, sources/run.sh, sources/seed_accounts.csv, sources/seed_categories.csv, sources/seed_transactions.csv, sources/seed_transactions_bad.csv
+stack:        common.md, python.md, cli.md, sqlite.md
+provides:     bin/test.sh, complete supplied conformance verification
+consumes:     ./ledger, accounts repository, categories repository, transactions repository
+depends:      architecture, database, cli-foundation, schema-lifecycle, bulk-loading, balance-reports, aggregate-reports, account-lifecycle, transaction-lifecycle, transfers, financial-invariants
+accepts:      st-001, st-002, st-004, st-005, st-006, st-007, st-008, st-009
+acceptance:   yes
+instructions: |
+  Add the project&#x27;s pytest suite and POSIX-compatible bin/test.sh. Stage the supplied
+  grader and seed assets unchanged. As the terminal story, run the complete supplied
+  suite without filtering and require its successful exit status.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT DECISIONS.json ===
+[
+  {
+    &quot;id&quot;: &quot;Q-001&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;blueprint&quot;: &quot;ARCHITECTURE.md&quot;,
+    &quot;story&quot;: &quot;architecture&quot;,
+    &quot;title&quot;: &quot;Application layering&quot;,
+    &quot;description&quot;: &quot;Choose the narrowest structure that keeps CLI parsing, business rules, and persistence access separate while preserving the shipped persistence boundary.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;layered&quot;,
+        &quot;label&quot;: &quot;Layered modules&quot;
+      },
+      {
+        &quot;value&quot;: &quot;single-module&quot;,
+        &quot;label&quot;: &quot;Single module&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;layered&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-002&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-CONFORMANCE.md&quot;,
+    &quot;story&quot;: &quot;conformance&quot;,
+    &quot;title&quot;: &quot;Test runner implementation&quot;,
+    &quot;description&quot;: &quot;Choose the project test command implementation for the required POSIX test entry point.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;pytest&quot;,
+        &quot;label&quot;: &quot;pytest via bin/test.sh&quot;
+      },
+      {
+        &quot;value&quot;: &quot;custom&quot;,
+        &quot;label&quot;: &quot;Custom test runner&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;pytest via bin/test.sh&quot;
+  }
+]
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

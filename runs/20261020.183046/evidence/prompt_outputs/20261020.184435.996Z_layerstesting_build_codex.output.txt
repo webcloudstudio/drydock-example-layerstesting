@@ -1,0 +1,16 @@
+RESULT: FAILED
+
+AC_BROKEN: bulk-load-unknown-reference-is-atomic
+
+FILES CHANGED:
+- ledger_app/services.py
+- tests/test_bulk_loading.py
+
+SUMMARY:
+Implemented CSV validation, integer-cent conversion, atomic pre-validation, account/transaction loading, and tests. 15 tests pass; two declared acceptance checks pass.
+
+BLOCKERS:
+- `categories` declares no `create` persistence operation, so category loading cannot be implemented without violating the persistence guardrails.
+
+FAILURE_SUMMARY: Category loading is impossible with the declared persistence contract.
+FAILURE_DETAIL: `ledger load categories` reaches the shipped repository and fails because only `list` and `get` are declared. Add `categories.create` to DATABASE.md and regenerate persistence, then rerun.
