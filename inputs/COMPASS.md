@@ -4,8 +4,8 @@
 
 Build a command-line cash ledger, an executable named `ledger` at the application root, as
 described in `sources/INSTRUCTIONS.md`. It keeps accounts, categories, and cash transactions in a
-relational database reached only through the shipped persistence library, enforces atomic commands
-and non-negative balances, and reports balances, category totals, and monthly totals.
+relational database reached only through the shipped persistence library, rejects a failing command
+before it writes, enforces non-negative balances, and reports balances, category totals, and monthly totals.
 
 Correctness is measured by `sources/run.sh`: 43 checks of exit code and standard output against
 known answers computed from the seed files. The goal is every check passing.
@@ -16,7 +16,7 @@ known answers computed from the seed files. The goal is every check passing.
 - Provide an executable named `ledger` at the application root, invoked as `./ledger <command>`.
 - Read the database location from `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`.
 - Store amounts as integer cents.
-- Run every command as one database transaction.
+- Check every command in full before its first write.
 - Run without network access other than to a PostgreSQL server named by `DATABASE_URL`.
 - Diagnostics go to standard error and are never compared.
 

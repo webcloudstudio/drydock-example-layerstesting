@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/logs/20261020.162649.393Z_layerstesting_build_codex.stderr.log</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/logs/20261020.162649.393Z_layerstesting_build_codex.stderr.log</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../workspace/logs/20261020.162649.393Z_layerstesting_build_codex.stderr.log">Raw file</a></div></header>
+<article class="doc"><pre>2026-10-20T16:27:30.030469Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to read file to update /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/build/LayersTesting/persistence/schema.py: No such file or directory (os error 2)
+2026-10-20T16:27:58.945541Z ERROR codex_core::tools::router: error=exec_command failed: CreateProcess { message: &quot;Rejected(\&quot;`/bin/bash -lc &#x27;set -eu\\nDB=$(mktemp)\\nrm -f \\\&quot;$DB\\\&quot;\\nexport DATABASE_PATH=\\\&quot;$DB\\\&quot;\\n./ledger init &gt;/dev/null\\n[ \\\&quot;$(./ledger load accounts sources/seed_accounts.csv)\\\&quot; = &#x27;\\\&quot;&#x27;table,loaded\\naccounts,4&#x27; ]\\n[ \\\\\\\&quot;\\\&quot;&#x27;$(./ledger load categories sources/seed_categories.csv)\\\&quot; = &#x27;\\\&quot;&#x27;table,loaded\\ncategories,7&#x27; ]\\nif ./ledger load accounts sources/seed_accounts.csv &gt;/tmp/load-out 2&gt;/tmp/load-err; then exit 1; fi\\n[ \\\&quot;&#x27;! -s /tmp/load-out ]\\n[ \\\&quot;$(./ledger count | sed -n &#x27;\\\&quot;&#x27;2p&#x27;)\\\\\\\&quot; = &#x27;accounts,4&#x27; ]\\nif ./ledger load accounts sources/does-not-exist.csv &gt;/tmp/load-out 2&gt;/tmp/load-err; then exit 1; fi\\n[ \\\&quot;&#x27;! -s /tmp/load-out ]\\nrm -f \\\&quot;$DB\\\&quot; /tmp/load-out /tmp/load-err\\nsh sources/run.sh&#x27;` rejected: rm -f style commands are not permitted. Use a safer approach\&quot;)&quot; }
+</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,43 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Next: drydock build LayersTesting
+
+Blueprint: LayersTesting
+Target: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.155827/workspace/targets/LayersTesting
+Rows: <state> <type>  <Name>  [<id>]   — pass [<id>] to --step
+
+Block: Build Block 1 · Foundational  [block-1]   — 0/1 stories complete
+  [pending] story  Define the ledger architecture and application boundaries.  [architecture]  <- next
+
+Block: Build Block 2 · Foundational  [block-2]   — 0/2 stories complete
+  [pending] story  Implement the relational persistence contract for the ledger.  [persistence]
+  [pending] story  Provide the executable ledger command and command validation.  [cli-foundation]
+
+Block: Build Block 3 · Service  [block-3]   — 0/1 stories complete
+  [pending] story  Initialize and count the ledger schema.  [schema-lifecycle]
+
+Block: Build Block 4 · Service  [block-4]   — 0/1 stories complete
+  [pending] story  Load account and category CSV data atomically.  [account-category-load]
+
+Block: Build Block 5 · Service  [block-5]   — 0/1 stories complete
+  [pending] story  Load validated transaction CSV data atomically.  [transaction-load]
+
+Block: Build Block 6 · Service  [block-6]   — 0/1 stories complete
+  [pending] story  Manage account records and account lifecycle rules.  [account-operations]
+
+Block: Build Block 7 · Service  [block-7]   — 0/1 stories complete
+  [pending] story  Manage individual cash transactions.  [transaction-operations]
+
+Block: Build Block 8 · Service  [block-8]   — 0/1 stories complete
+  [pending] story  Execute atomic two-entry account transfers.  [transfers]
+
+Block: Build Block 9 · Service  [block-9]   — 0/3 stories complete
+  [pending] story  Report balances and transaction counts by account.  [balance-report]
+  [pending] story  Report transaction totals by calendar month.  [monthly-report]
+  [pending] story  Report transaction totals by category.  [category-report]
+
+Block: Build Block 10 · Service  [block-10]   — 0/2 stories complete
+  [pending] story  Provide the automated project test runner.  [project-tests]
+  [pending] story  Pass the supplied ledger conformance harness.  [conformance]
+
+Steps: 14 total — 0 done, 0 built (await verify), 0 in review, 14 pending, 0 blocked by questions, 0 failed (0% complete)
+Buildable now: block-1

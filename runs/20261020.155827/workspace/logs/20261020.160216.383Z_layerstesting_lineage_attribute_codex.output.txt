@@ -1,0 +1,33 @@
+<requirement name="schema-lifecycle" stories="persistence,schema-lifecycle">
+# ── A. Schema lifecycle ──────────────────────────────────────────────────────────────────
+</requirement>
+<requirement name="bulk-load-accounts-categories" stories="account-category-load">
+# ── B. Bulk load of the known dataset ────────────────────────────────────────────────────
+</requirement>
+<requirement name="bulk-load-transactions" stories="transaction-load">
+# ── B. Bulk load of the known dataset ────────────────────────────────────────────────────
+</requirement>
+<requirement name="balance-report" stories="balance-report">
+# ── C. Reports over the seeded rows ──────────────────────────────────────────────────────
+</requirement>
+<requirement name="category-report" stories="category-report">
+# ── C. Reports over the seeded rows ──────────────────────────────────────────────────────
+</requirement>
+<requirement name="monthly-report" stories="monthly-report">
+# ── C. Reports over the seeded rows ──────────────────────────────────────────────────────
+</requirement>
+<requirement name="account-operations" stories="account-operations">
+# ── E. Account create, read, update, delete ──────────────────────────────────────────────
+</requirement>
+<requirement name="transaction-operations" stories="transaction-operations">
+# ── F. Transaction create, read, update, delete ──────────────────────────────────────────
+</requirement>
+<requirement name="atomic-transfers" stories="transfers">
+# ── G. Transfers are atomic; no command leaves a negative balance ────────────────────────
+</requirement>
+<requirement name="command-validation" stories="cli-foundation">
+# ── U. Usage errors ──────────────────────────────────────────────────────────────────────
+</requirement>
+<unattached story="architecture"/>
+<unattached story="project-tests"/>
+<unattached story="conformance"/>

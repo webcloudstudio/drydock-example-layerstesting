@@ -1,0 +1,72 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Build: LayersTesting
+scope: entire project
+frontier: architecture
+git: baseline LayersTesting 391d63f6880f
+git: baseline LayersTesting db96d13ee92a
+
+BLOCK block-1  name="Block 1 · Foundational"  calls_max=7
+  story=architecture  "Define the ledger architecture and application boundaries."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.160400.584Z-98e7f549
+    acceptance=2/2
+git: block-1 | python.md, ARCHITECTURE.md | call=1 | app=4dd03f0746f4 target=85e6da5e315d
+
+  DONE  story=architecture  state=closed/verified  execution=20261020.160400.584Z-98e7f549  elapsed=1m04s
+git: block-1 | python.md, ARCHITECTURE.md | step_completed | app=unchanged target=2062a6eb3831
+WARNING: common_compact.md is stale (common.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/common.md
+
+BLOCK block-2  name="Block 2 · Foundational"  calls_max=7
+  story=persistence  "Implement the relational persistence contract for the ledger."
+  story=cli-foundation  "Provide the executable ledger command and command validation."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.160509.740Z-50fe13f8
+    acceptance=3/3
+git: block-2 | DATABASE.md, FEATURE-CLI-FOUNDATION.md | call=1 | app=4548ce142699 target=a7157f60ac4b
+
+  DONE  story=persistence  state=closed/verified  execution=20261020.160509.740Z-50fe13f8  elapsed=2m41s
+git: block-2 | DATABASE.md, FEATURE-CLI-FOUNDATION.md | step_completed | app=unchanged target=943d86fe9648
+WARNING: common_compact.md is stale (common.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/common.md
+WARNING: persistence_compact.md is stale (persistence.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/persistence.md
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-3  name="Block 3 · Service"  calls_max=7
+  story=schema-lifecycle  "Initialize and count the ledger schema."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.160752.768Z-b5882f97
+    acceptance=3/3
+git: block-3 | FEATURE-SCHEMA-LIFECYCLE.md | call=1 | app=a5b79b465fd4 target=ce28cabd64d9
+
+  DONE  story=schema-lifecycle  state=closed/verified  execution=20261020.160752.768Z-b5882f97  elapsed=1m08s
+git: block-3 | FEATURE-SCHEMA-LIFECYCLE.md | step_completed | app=unchanged target=0950bda56f02
+WARNING: common_compact.md is stale (common.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/common.md
+WARNING: persistence_compact.md is stale (persistence.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/persistence.md
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-4  name="Block 4 · Service"  calls_max=7
+  story=account-category-load  "Load account and category CSV data atomically."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.160903.596Z-4e5344b0
+    acceptance=3/3
+git: block-4 | FEATURE-ACCOUNT-CATEGORY-LOAD.md | call=1 | app=3a228ed0db7a target=444f2107ed9a
+
+  DONE  story=account-category-load  state=closed/verified  execution=20261020.160903.596Z-4e5344b0  elapsed=1m54s
+git: block-4 | FEATURE-ACCOUNT-CATEGORY-LOAD.md | step_completed | app=unchanged target=c62267f39383
+WARNING: common_compact.md is stale (common.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/common.md
+WARNING: persistence_compact.md is stale (persistence.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/persistence.md
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-5  name="Block 5 · Service"  calls_max=7
+  story=transaction-load  "Load validated transaction CSV data atomically."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.161054.897Z-948c2652
+    acceptance=0/3  failed=transaction-load-success,transaction-load-atomic,transaction-load-validation
+git: block-5 | FEATURE-TRANSACTION-LOAD.md | call=1 | app=94d6b03c46fb target=339ec36eee9b
+
+  [call 2/7]  kind=repair(1/6)  llm=codex/gpt-5.6-luna
+    fixing=transaction-load-success,transaction-load-atomic,transaction-load-validation

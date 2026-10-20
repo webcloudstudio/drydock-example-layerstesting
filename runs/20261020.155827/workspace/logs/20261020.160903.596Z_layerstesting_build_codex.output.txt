@@ -1,0 +1,21 @@
+<reusable-compact filename="seed_accounts.csv">
+Accounts CSV header: `account,name`. Seed rows use uppercase account codes and names.
+</reusable-compact>
+
+<reusable-compact filename="seed_categories.csv">
+Categories CSV header: `category,description`. Seed rows use uppercase category codes and descriptions.
+</reusable-compact>
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli.py
+- services.py
+- validation.py
+- tests/test_account_category_load.py
+
+SUMMARY:
+Implemented atomic account/category CSV loading with strict validation, duplicate detection, rollback, and correct exit codes. Tests passed: 12 project tests and 43/43 terminal checks.
+
+BLOCKERS:
+- None

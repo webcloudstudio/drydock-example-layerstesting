@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/logs/20261020.162841.276Z_layerstesting_build_codex.stderr.log</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/logs/20261020.162841.276Z_layerstesting_build_codex.stderr.log</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../workspace/logs/20261020.162841.276Z_layerstesting_build_codex.stderr.log">Raw file</a></div></header>
+<article class="doc"><pre>2026-10-20T16:29:05.929486Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to read file to update /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/build/LayersTesting/cli/__init__.py: No such file or directory (os error 2)
+2026-10-20T16:29:30.112880Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/build/LayersTesting/tests/test_bulk_loading.py:
+def test_header_and_missing_file_fail_without_stdout(tmp_path: Path):
+2026-10-20T16:29:45.464241Z ERROR codex_core::tools::router: error=exec_command failed: CreateProcess { message: &quot;Rejected(\&quot;`/bin/bash -lc &#x27;sh bin/test.sh &amp;&amp; tmpdir=$(mktemp -d) &amp;&amp; env DATABASE_PATH=\\\&quot;$tmpdir/ledger.db\\\&quot; ./ledger init &amp;&amp; env DATABASE_PATH=\\\&quot;$tmpdir/ledger.db\\\&quot; ./ledger load accounts sources/seed_accounts.csv &amp;&amp; env DATABASE_PATH=\\\&quot;$tmpdir/ledger.db\\\&quot; ./ledger load categories sources/seed_categories.csv &amp;&amp; env DATABASE_PATH=\\\&quot;$tmpdir/ledger.db\\\&quot; ./ledger load transactions sources/seed_transactions.csv &amp;&amp; env DATABASE_PATH=\\\&quot;$tmpdir/ledger.db\\\&quot; ./ledger count &amp;&amp; rm -rf \\\&quot;$tmpdir\\\&quot;&#x27;` rejected: rm -f style commands are not permitted. Use a safer approach\&quot;)&quot; }
+</pre></article>
+</main>
+</body>
+</html>

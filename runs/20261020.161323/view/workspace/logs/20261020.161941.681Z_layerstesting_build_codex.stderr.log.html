@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/logs/20261020.161941.681Z_layerstesting_build_codex.stderr.log</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/logs/20261020.161941.681Z_layerstesting_build_codex.stderr.log</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../workspace/logs/20261020.161941.681Z_layerstesting_build_codex.stderr.log">Raw file</a></div></header>
+<article class="doc"><pre>2026-10-20T16:20:29.055871Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/build/LayersTesting/config.py:
+def database_path(environ: dict[str, str] | None = None) -&gt; Path:
+    dsn = database_dsn(environ)
+    if dsn.startswith(&quot;sqlite:///&quot;):
+        return Path(dsn.removeprefix(&quot;sqlite:///&quot;)
+    return Path(dsn)
+</pre></article>
+</main>
+</body>
+</html>

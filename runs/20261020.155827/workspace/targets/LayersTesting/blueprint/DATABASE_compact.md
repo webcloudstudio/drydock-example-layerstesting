@@ -1,0 +1,3 @@
+<!-- Compacted from DATABASE.md sha256=ce1c8619372cef0c13ea14ac3da6444b6434acaef355f2bf314aac58921fc5b5 on 2026-10-20 by drydock build agent -->
+
+Relational ledger schema: `accounts(account PK, name)`, `categories(category PK, description)`, and `transactions(txn_id PK, date, account FK, category FK, amount INTEGER cents, memo)`. Use only `persistence.open_database(dsn)` and declared table operations. Enforce foreign keys, integer cents, idempotent schema initialization, and atomic commands. DSN precedence: `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`; PostgreSQL URLs select PostgreSQL, otherwise SQLite.

@@ -1,0 +1,295 @@
+=== BEGIN ARTIFACT DATABASE.md ===
+# DATABASE: Ledger Persistence
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Defines the relational schema and shipped-persistence operations for accounts, categories, and cash transactions. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | accounts table, categories table, transactions table, ledger persistence operations |
+| Consumes    | ledger application boundaries, configuration boundary, persistence boundary |
+
+## Questions
+
+- None.
+
+## Access Patterns
+
+### FEATURE-LEDGER-001 — Recreate ledger schema
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-SCHEMA-LIFECYCLE.md |
+| Access | write |
+| Repository operation | `accounts.delete` |
+| Compatibility | rebuild |
+
+Input: None.
+
+Output: None.
+
+### FEATURE-LEDGER-014 — Recreate ledger schema
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-SCHEMA-LIFECYCLE.md |
+| Access | write |
+| Repository operation | `categories.delete` |
+| Compatibility | rebuild |
+
+Input: None.
+
+Output: None.
+
+### FEATURE-LEDGER-015 — Recreate ledger schema
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-SCHEMA-LIFECYCLE.md |
+| Access | write |
+| Repository operation | `transactions.delete` |
+| Compatibility | rebuild |
+
+Input: None.
+
+Output: None.
+
+### FEATURE-LEDGER-002 — Count rows
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-SCHEMA-LIFECYCLE.md |
+| Access | read |
+| Repository operation | `accounts.list` |
+| Compatibility | unchanged |
+
+Input: None.
+
+Output: `table`, `rows`.
+
+### FEATURE-LEDGER-016 — Count rows
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-SCHEMA-LIFECYCLE.md |
+| Access | read |
+| Repository operation | `categories.list` |
+| Compatibility | unchanged |
+
+Input: None.
+
+Output: `table`, `rows`.
+
+### FEATURE-LEDGER-017 — Count rows
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-SCHEMA-LIFECYCLE.md |
+| Access | read |
+| Repository operation | `transactions.list` |
+| Compatibility | unchanged |
+
+Input: None.
+
+Output: `table`, `rows`.
+
+### FEATURE-LEDGER-003 — Manage accounts
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-ACCOUNT-OPERATIONS.md |
+| Access | read-write |
+| Repository operation | `accounts.create` |
+| Compatibility | unchanged |
+
+Input: `account`, `name`.
+
+Output: `account`, `name`.
+
+### FEATURE-LEDGER-004 — Read and update accounts
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-ACCOUNT-OPERATIONS.md |
+| Access | read-write |
+| Repository operation | `accounts.update` |
+| Compatibility | unchanged |
+
+Input: `account`, `name`.
+
+Output: `account`, `name`.
+
+### FEATURE-LEDGER-005 — Delete accounts
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-ACCOUNT-OPERATIONS.md |
+| Access | write |
+| Repository operation | `accounts.delete` |
+| Compatibility | unchanged |
+
+Input: `account`.
+
+Output: `account`.
+
+### FEATURE-LEDGER-006 — Manage categories
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-ACCOUNT-CATEGORY-LOAD.md |
+| Access | read-write |
+| Repository operation | `categories.create` |
+| Compatibility | unchanged |
+
+Input: `category`, `description`.
+
+Output: `category`, `description`.
+
+### FEATURE-LEDGER-007 — Read categories
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `categories.list` |
+| Compatibility | unchanged |
+
+Input: None.
+
+Output: `category`, `description`.
+
+### FEATURE-LEDGER-008 — Manage transactions
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-TRANSACTION-OPERATIONS.md |
+| Access | read-write |
+| Repository operation | `transactions.create` |
+| Compatibility | unchanged |
+
+Input: `txn_id`, `date`, `account`, `category`, `amount`, `memo`.
+
+Output: `txn_id`, `date`, `account`, `category`, `amount`, `memo`.
+
+### FEATURE-LEDGER-009 — Read and update transactions
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-TRANSACTION-OPERATIONS.md |
+| Access | read-write |
+| Repository operation | `transactions.update` |
+| Compatibility | unchanged |
+
+Input: `txn_id`, `amount`.
+
+Output: `txn_id`, `date`, `account`, `category`, `amount`, `memo`.
+
+### FEATURE-LEDGER-010 — Delete transactions
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-TRANSACTION-OPERATIONS.md |
+| Access | write |
+| Repository operation | `transactions.delete` |
+| Compatibility | unchanged |
+
+Input: `txn_id`.
+
+Output: `txn_id`.
+
+### FEATURE-LEDGER-011 — Query balances
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `accounts.list` |
+| Compatibility | unchanged |
+
+Input: None.
+
+Output: `account`, `name`, `transactions`, `balance`.
+
+### FEATURE-LEDGER-012 — Query category totals
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `categories.list` |
+| Compatibility | unchanged |
+
+Input: None.
+
+Output: `category`, `description`, `transactions`, `inflow`, `outflow`, `net`.
+
+### FEATURE-LEDGER-013 — Query monthly totals
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `transactions.list` |
+| Compatibility | unchanged |
+
+Input: None.
+
+Output: `month`, `transactions`, `inflow`, `outflow`, `net`.
+
+## Configuration
+
+The database DSN is resolved in this order:
+
+1. `DATABASE_URL`
+2. `DATABASE_PATH`
+3. `data/app.db`
+
+A `postgres://` or `postgresql://` URL selects PostgreSQL. Other values select SQLite, with an optional `sqlite://` prefix.
+
+## Schema
+
+## `accounts`
+
+| Field | Type | Notes |
+|---|---|---|
+| `account` | TEXT PRIMARY KEY NOT NULL | Account code. |
+| `name` | TEXT NOT NULL | Account name. |
+
+## `categories`
+
+| Field | Type | Notes |
+|---|---|---|
+| `category` | TEXT PRIMARY KEY NOT NULL | Category code. |
+| `description` | TEXT NOT NULL | Category description. |
+
+## `transactions`
+
+| Field | Type | Notes |
+|---|---|---|
+| `txn_id` | INTEGER PRIMARY KEY NOT NULL | Transaction identifier. |
+| `date` | TEXT NOT NULL | Calendar date in `YYYY-MM-DD` form. |
+| `account` | TEXT NOT NULL REFERENCES accounts(account) | Account code. |
+| `category` | TEXT NOT NULL REFERENCES categories(category) | Category code. |
+| `amount` | INTEGER NOT NULL | Signed amount in cents. |
+| `memo` | TEXT NOT NULL | Optional memo, empty when omitted. |
+
+## Persistence Interface
+
+Application callers use `open_database(dsn)` and declared operations on `db.accounts`, `db.categories`, and `db.transactions`. SQL, driver connections, and table access remain inside the shipped persistence package.
+
+## Programmatic Acceptance
+
+- None. Drydock owns generated schema construction and persistence connectivity invariants deterministically.
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- All database access must go through the shipped persistence library.
+- Amounts must remain integer cents; floating point is forbidden.
+- Foreign keys must enforce valid account and category references.
+- Schema creation must be idempotent.
+- Every command must execute as one transaction.
+=== END ARTIFACT ===

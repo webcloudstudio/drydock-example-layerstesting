@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.161502.621Z_layerstesting_plan_codex.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.161502.621Z_layerstesting_plan_codex.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.161502.621Z_layerstesting_plan_codex.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT FEATURE-Bulk-Transaction-Loading.md ===
+# FEATURE: Bulk Transaction Loading
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Loads validated transaction CSV files atomically into the ledger. |
+| Depends On  | DATABASE.md, FEATURE-Validation.md, FEATURE-Bulk-Reference-Loading.md |
+| Provides    | `ledger load transactions` |
+| Consumes    | domain validation, relational ledger schema, transaction persistence operations |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Load a transaction CSV file only after validating its complete contents, references, identifiers, and resulting account balances.
+
+## Workflow
+
+1. Validate the file header and every row.
+2. Reject duplicate transaction identifiers and invalid values.
+3. Resolve every account and category reference.
+4. Evaluate balances after applying the complete batch.
+5. Insert all rows in one transaction.
+6. Emit the loaded-row result only after commit.
+
+A rejected file changes no table.
+
+## Database Interface
+
+- `FEATURE-LEDGER-005` — write: create a transaction - supplies: `txn_id`, `date`, `account`, `category`, `amount`, `memo` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+- `FEATURE-LEDGER-006` — read: retrieve transaction references - supplies: `txn_id` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+
+## Programmatic Acceptance
+
+=== AC load-transactions-valid ===
+Intent: A valid transaction CSV is loaded and its supplied row count is reported.
+from pathlib import Path
+import csv
+import tempfile
+from cli.testing import cli_runner
+
+rows = [
+    [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;],
+    [&quot;1&quot;, &quot;2026-01-01&quot;, &quot;A&quot;, &quot;C&quot;, &quot;10.00&quot;, &quot;opening&quot;],
+]
+with tempfile.TemporaryDirectory() as directory:
+    path = Path(directory) / &quot;transactions.csv&quot;
+    path.write_text(&quot;\n&quot;.join(&quot;,&quot;.join(row) for row in rows) + &quot;\n&quot;)
+    code, stdout, stderr = cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(path))
+    parsed = list(csv.reader(stdout.splitlines()))
+    assert code == 0
+    assert parsed[0] == [&quot;table&quot;, &quot;loaded&quot;]
+    assert parsed[1] == [&quot;transactions&quot;, str(len(rows) - 1)]
+=== END AC load-transactions-valid ===
+
+=== AC load-transactions-invalid-is-atomic ===
+Intent: A transaction file with an unknown account is rejected before any row is written.
+from pathlib import Path
+import tempfile
+from cli.testing import cli_runner
+
+rows = [
+    &quot;txn_id,date,account,category,amount,memo&quot;,
+    &quot;1,2026-01-01,A,C,10.00,valid&quot;,
+    &quot;2,2026-01-01,NOSUCH,C,10.00,invalid&quot;,
+]
+with tempfile.TemporaryDirectory() as directory:
+    path = Path(directory) / &quot;transactions.csv&quot;
+    path.write_text(&quot;\n&quot;.join(rows) + &quot;\n&quot;)
+    code, stdout, stderr = cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(path))
+    assert code == 3
+    assert stdout == &quot;&quot;
+    count_code, count_stdout, count_stderr = cli_runner(&quot;count&quot;)
+    assert count_code == 0
+    assert &quot;transactions,0&quot; in count_stdout
+=== END AC load-transactions-invalid-is-atomic ===
+
+=== AC load-transactions-negative-balance ===
+Intent: A batch that would make an account balance negative is rejected.
+from pathlib import Path
+import tempfile
+from cli.testing import cli_runner
+
+rows = [
+    &quot;txn_id,date,account,category,amount,memo&quot;,
+    &quot;1,2026-01-01,A,C,-1.00,overdraw&quot;,
+]
+with tempfile.TemporaryDirectory() as directory:
+    path = Path(directory) / &quot;transactions.csv&quot;
+    path.write_text(&quot;\n&quot;.join(rows) + &quot;\n&quot;)
+    code, stdout, stderr = cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(path))
+    assert code == 3
+    assert stdout == &quot;&quot;
+=== END AC load-transactions-negative-balance ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Validate the entire file before the first insert.
+- Never read or modify supplied source fixtures from application code.
+- Store amounts as integer cents.
+- Preserve transaction identifiers supplied by the file.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Accounts.md ===
+# FEATURE: Accounts
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Provides account creation, retrieval, renaming, and deletion through the CLI. |
+| Depends On  | DATABASE.md, FEATURE-Validation.md, FEATURE-Bulk-Reference-Loading.md |
+| Provides    | `ledger account add`, `ledger account get`, `ledger account rename`, `ledger account delete` |
+| Consumes    | domain validation, relational ledger schema, account persistence operations |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Manage account records while deriving transaction counts and balances from persisted transactions.
+
+## Workflows
+
+- `account add` creates a unique validated account.
+- `account get` returns an existing account row.
+- `account rename` changes only the account name.
+- `account delete` removes an account only when it has no transactions.
+
+Missing accounts return exit code `4`; rejected changes return exit code `3`.
+
+## Database Interface
+
+- `FEATURE-LEDGER-001` — write: create an account - supplies: `account`, `name` - returns: `account`, `name`
+- `FEATURE-LEDGER-002` — read: retrieve an account - supplies: `account` - returns: `account`, `name`
+- `FEATURE-LEDGER-003` — write: update an account - supplies: `account`, `name` - returns: `account`, `name`
+- `FEATURE-LEDGER-004` — write: delete an account - supplies: `account` - returns: `deleted`
+
+## Programmatic Acceptance
+
+=== AC accounts-create-read ===
+Intent: An added account can be read back with its initial aggregate values.
+from cli.testing import cli_runner
+
+code, stdout, stderr = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Alpha&quot;)
+assert code == 0
+get_code, get_stdout, get_stderr = cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;A&quot;)
+assert get_code == 0
+assert &quot;A,Alpha,0,0.00&quot; in get_stdout
+=== END AC accounts-create-read ===
+
+=== AC accounts-rename ===
+Intent: Renaming an account changes its persisted name.
+from cli.testing import cli_runner
+
+add_code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Alpha&quot;)
+assert add_code == 0
+code, stdout, stderr = cli_runner(&quot;account&quot;, &quot;rename&quot;, &quot;A&quot;, &quot;Beta&quot;)
+assert code == 0
+get_code, get_stdout, get_stderr = cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;A&quot;)
+assert get_code == 0
+assert &quot;A,Beta,0,0.00&quot; in get_stdout
+=== END AC accounts-rename ===
+
+=== AC accounts-delete-and-not-found ===
+Intent: An unused account can be deleted and is subsequently absent.
+from cli.testing import cli_runner
+
+add_code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Alpha&quot;)
+assert add_code == 0
+delete_code, stdout, stderr = cli_runner(&quot;account&quot;, &quot;delete&quot;, &quot;A&quot;)
+assert delete_code == 0
+missing_code, missing_stdout, missing_stderr = cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;A&quot;)
+assert missing_code == 4
+assert missing_stdout == &quot;&quot;
+=== END AC accounts-delete-and-not-found ===
+
+=== AC accounts-in-use-rejected ===
+Intent: An account referenced by a transaction cannot be deleted.
+from cli.testing import cli_runner
+
+account_code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Alpha&quot;)
+category_code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)
+assert account_code == 0
+assert category_code == 0
+post_code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;SALES&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;)
+assert post_code == 0
+delete_code, delete_stdout, delete_stderr = cli_runner(&quot;account&quot;, &quot;delete&quot;, &quot;A&quot;)
+assert delete_code == 3
+assert delete_stdout == &quot;&quot;
+=== END AC accounts-in-use-rejected ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Account codes and names obey the shared validation rules.
+- Account balances and transaction counts are query-derived.
+- Failed account operations write no output to standard output and change no data.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Transaction-Posting.md ===
+# FEATURE: Transaction Posting
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Posts and retrieves individual ledger transactions. |
+| Depends On  | DATABASE.md, FEATURE-Accounts.md, FEATURE-Bulk-Transaction-Loading.md, FEATURE-Validation.md |
+| Provides    | `ledger txn post`, `ledger txn get` |
+| Consumes    | domain validation, relational ledger schema, transaction persistence operations |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Post a new transaction with the next available identifier and retrieve transactions by identifier.
+
+## Workflows
+
+`txn post` validates the account, category, amount, date, memo, and resulting balance before inserting. The identifier is one greater than the current maximum, or `1` when empty. `txn get` returns the persisted transaction or exit code `4` when absent.
+
+## Database Interface
+
+- `FEATURE-LEDGER-005` — write: create a transaction - supplies: `txn_id`, `date`, `account`, `category`, `amount`, `memo` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+- `FEATURE-LEDGER-006` — read: retrieve transaction - supplies: `txn_id` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+
+## Programmatic Acceptance
+
+=== AC transaction-post-read ===
+Intent: A posted transaction is persisted and can be retrieved by its assigned identifier.
+from cli.testing import cli_runner
+
+account_code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Alpha&quot;)
+category_code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)
+assert account_code == 0
+assert category_code == 0
+post_code, post_stdout, post_stderr = cli_runner(
+    &quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;SALES&quot;, &quot;1.25&quot;, &quot;2026-01-01&quot;, &quot;sale&quot;
+)
+assert post_code == 0
+get_code, get_stdout, get_stderr = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;)
+assert get_code == 0
+assert &quot;1,2026-01-01,A,SALES,1.25,sale&quot; in get_stdout
+=== END AC transaction-post-read ===
+
+=== AC transaction-next-id ===
+Intent: A second posted transaction receives the next identifier.
+from cli.testing import cli_runner
+
+account_code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Alpha&quot;)
+category_code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)
+assert account_code == 0
+assert category_code == 0
+first_code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;SALES&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;)
+second_code, second_stdout, second_stderr = cli_runner(
+    &quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;SALES&quot;, &quot;2.00&quot;, &quot;2026-01-02&quot;
+)
+assert first_code == 0
+assert second_code == 0
+assert &quot;2,2026-01-02,A,SALES,2.00,&quot; in second_stdout
+=== END AC transaction-next-id ===
+
+=== AC transaction-invalid-reference ===
+Intent: Posting with an unknown category is rejected without output.
+from cli.testing import cli_runner
+
+account_code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Alpha&quot;)
+assert account_code == 0
+code, stdout, stderr = cli_runner(
+    &quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;NOSUCH&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;
+)
+assert code == 3
+assert stdout == &quot;&quot;
+=== END AC transaction-invalid-reference ===
+
+=== AC transaction-invalid-amount ===
+Intent: Posting an amount with more than two decimal places is rejected.
+from cli.testing import cli_runner
+
+account_code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Alpha&quot;)
+category_code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)
+assert account_code == 0
+assert category_code == 0
+code, stdout, stderr = cli_runner(
+    &quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;SALES&quot;, &quot;1.234&quot;, &quot;2026-01-01&quot;
+)
+assert code == 3
+assert stdout == &quot;&quot;
+=== END AC transaction-invalid-amount ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Never use floating-point money arithmetic.
+- Validate all inputs before inserting.
+- Return only persisted transaction rows.
+- Preserve exact two-decimal output formatting.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Transaction-Mutation.md ===
+# FEATURE: Transaction Mutation
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Amends and deletes transactions while preserving ledger invariants. |
+| Depends On  | DATABASE.md, FEATURE-Transaction-Posting.md, FEATURE-Validation.md |
+| Provides    | `ledger txn amend`, `ledger txn delete` |
+| Consumes    | domain validation, relational ledger schema, transaction persistence operations |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Change or remove transactions only after validating existence and the resulting account balances.
+
+## Workflows
+
+`txn amend` changes only the amount and returns the complete updated row. `txn delete` removes an existing transaction and returns the deletion result. Missing identifiers return `4`; rejected changes return `3`.
+
+## Database Interface
+
+- `FEATURE-LEDGER-007` — write: update a transaction amount - supplies: `txn_id`, `amount` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+- `FEATURE-LEDGER-008` — write: delete a transaction - supplies: `txn_id` - returns: `deleted`
+
+## Programmatic Acceptance
+
+=== AC transaction-amend-readback ===
+Intent: Amending a transaction changes its amount while preserving its other fields.
+from cli.testing import cli_runner
+
+account_code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Alpha&quot;)
+category_code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)
+assert account_code == 0
+assert category_code == 0
+post_code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;SALES&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;, &quot;sale&quot;)
+assert post_code == 0
+amend_code, amend_stdout, amend_stderr = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;, &quot;2.50&quot;)
+assert amend_code == 0
+get_code, get_stdout, get_stderr = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;)
+assert get_code == 0
+assert &quot;1,2026-01-01,A,SALES,2.50,sale&quot; in get_stdout
+=== END AC transaction-amend-readback ===
+
+=== AC transaction-delete-readback ===
+Intent: Deleting a transaction removes it from the public transaction interface.
+from cli.testing import cli_runner
+
+account_code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Alpha&quot;)
+category_code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)
+assert account_code == 0
+assert category_code == 0
+post_code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;SALES&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;)
+assert post_code == 0
+delete_code, delete_stdout, delete_stderr = cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;1&quot;)
+assert delete_code == 0
+get_code, get_stdout, get_stderr = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;)
+assert get_code == 4
+assert get_stdout == &quot;&quot;
+=== END AC transaction-delete-readback ===
+
+=== AC transaction-amend-negative-balance ===
+Intent: An amendment that would make an account negative is rejected without changing the transaction.
+from cli.testing import cli_runner
+
+account_code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Alpha&quot;)
+category_code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)
+assert account_code == 0
+assert category_code == 0
+post_code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;SALES&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;)
+assert post_code == 0
+amend_code, amend_stdout, amend_stderr = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;, &quot;-2.00&quot;)
+assert amend_code == 3
+assert amend_stdout == &quot;&quot;
+get_code, get_stdout, get_stderr = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;)
+assert get_code == 0
+assert &quot;1,2026-01-01,A,SALES,1.00,&quot; in get_stdout
+=== END AC transaction-amend-negative-balance ===
+
+=== AC transaction-missing-id ===
+Intent: Amending or deleting an absent transaction returns the not-found exit code.
+from cli.testing import cli_runner
+
+amend_code, amend_stdout, amend_stderr = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;999&quot;, &quot;1.00&quot;)
+delete_code, delete_stdout, delete_stderr = cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;999&quot;)
+assert amend_code == 4
+assert delete_code == 4
+assert amend_stdout == &quot;&quot;
+assert delete_stdout == &quot;&quot;
+=== END AC transaction-missing-id ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Amend only the amount; preserve date, account, category, and memo.
+- Preflight the resulting balance before writing.
+- A rejected amendment or deletion changes no data.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Transfers.md ===
+# FEATURE: Transfers
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Transfers funds atomically between two ledger accounts. |
+| Depends On  | DATABASE.md, FEATURE-Accounts.md, FEATURE-Transaction-Posting.md, FEATURE-Validation.md |
+| Provides    | `ledger transfer` |
+| Consumes    | domain validation, relational ledger schema, transaction persistence operations |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Move a positive amount between distinct accounts using two consecutive `TRANSFER` transactions.
+
+## Workflow
+
+The outgoing row uses the next transaction identifier, a negative amount, and memo `transfer to &lt;account&gt;`. The incoming row uses the following identifier, a positive amount, and memo `transfer from &lt;account&gt;`. Both rows are committed together only after validating all inputs and resulting balances.
+
+## Database Interface
+
+- `FEATURE-LEDGER-005` — write: create transaction - supplies: `txn_id`, `date`, `account`, `category`, `amount`, `memo` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+
+## Programmatic Acceptance
+
+=== AC transfer-creates-pair ===
+Intent: A valid transfer creates consecutive outgoing and incoming transaction rows.
+from cli.testing import cli_runner
+
+for account in (&quot;A&quot;, &quot;B&quot;):
+    code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, account, account)
+    assert code == 0
+category_code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)
+assert category_code == 0
+seed_code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;SALES&quot;, &quot;10.00&quot;, &quot;2026-01-01&quot;)
+assert seed_code == 0
+code, stdout, stderr = cli_runner(&quot;transfer&quot;, &quot;A&quot;, &quot;B&quot;, &quot;5.00&quot;, &quot;2026-01-02&quot;)
+assert code == 0
+assert &quot;2,2026-01-02,A,TRANSFER,-5.00,transfer to B&quot; in stdout
+assert &quot;3,2026-01-02,B,TRANSFER,5.00,transfer from A&quot; in stdout
+=== END AC transfer-creates-pair ===
+
+=== AC transfer-insufficient-balance ===
+Intent: A transfer that would overdraw the source account is rejected atomically.
+from cli.testing import cli_runner
+
+for account in (&quot;A&quot;, &quot;B&quot;):
+    code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, account, account)
+    assert code == 0
+category_code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)
+assert category_code == 0
+seed_code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;SALES&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;)
+assert seed_code == 0
+code, stdout, stderr = cli_runner(&quot;transfer&quot;, &quot;A&quot;, &quot;B&quot;, &quot;2.00&quot;, &quot;2026-01-02&quot;)
+assert code == 3
+assert stdout == &quot;&quot;
+count_code, count_stdout, count_stderr = cli_runner(&quot;count&quot;)
+assert count_code == 0
+assert &quot;transactions,1&quot; in count_stdout
+=== END AC transfer-insufficient-balance ===
+
+=== AC transfer-same-account ===
+Intent: A transfer between the same account is rejected.
+from cli.testing import cli_runner
+
+account_code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Alpha&quot;)
+category_code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)
+assert account_code == 0
+assert category_code == 0
+seed_code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;SALES&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;)
+assert seed_code == 0
+code, stdout, stderr = cli_runner(&quot;transfer&quot;, &quot;A&quot;, &quot;A&quot;, &quot;1.00&quot;, &quot;2026-01-02&quot;)
+assert code == 3
+assert stdout == &quot;&quot;
+=== END AC transfer-same-account ===
+
+=== AC transfer-invalid-amount ===
+Intent: A transfer with a non-positive amount is rejected.
+from cli.testing import cli_runner
+
+for account in (&quot;A&quot;, &quot;B&quot;):
+    code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, account, account)
+    assert code == 0
+category_code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)
+assert category_code == 0
+code, stdout, stderr = cli_runner(&quot;transfer&quot;, &quot;A&quot;, &quot;B&quot;, &quot;0.00&quot;, &quot;2026-01-02&quot;)
+assert code == 3
+assert stdout == &quot;&quot;
+=== END AC transfer-invalid-amount ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Transfer amounts must be positive.
+- Source and destination accounts must differ and exist.
+- Both rows are written atomically or neither is written.
+- No account balance may become negative.
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

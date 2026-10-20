@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.161330.209Z_layerstesting_analyze_codex.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.161330.209Z_layerstesting_analyze_codex.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.161330.209Z_layerstesting_analyze_codex.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT ANALYSIS.md ===
+# Blueprint Analysis: drydock Layers Testing Uat Case
+
+## Commander Expectations
+
+- assert the cash ledger provides reliable command-line account, transaction, loading, transfer, and reporting workflows over persistent relational data.
+
+## Crew
+
+| Crew | Charge |
+|---|---|
+| Commander | Defines intent and decides what done means. |
+| Team Lead | Confirms epic completeness and stakeholder expectations. |
+| Planning Crew | Authors atomic specifications and the ordered Manifest. |
+| Shipyard Crew | Builds the tickets without synchronous Commander access. |
+
+## Story List
+
+### Feature: Persistence Foundation
+
+| ID | Story | High-level AC |
+|---|---|---|
+| PERSIST-001 | Provide database configuration and persistence boundary | The application uses `DATABASE_URL`, fallback database settings, and the shipped persistence library without direct driver access. |
+| PERSIST-002 | Initialize and count the ledger schema | `ledger init` recreates the three tables empty, and `ledger count` reports their row counts in the required CSV format. |
+| PERSIST-003 | Validate and persist amounts, dates, and identifiers | The persistence layer stores integer cents and enforces the supplied code, text, amount, date, key, and relationship rules. |
+
+### Feature: Bulk Ledger Loading
+
+| ID | Story | High-level AC |
+|---|---|---|
+| LOAD-001 | Load account and category CSV files | Valid account and category files load atomically and report the table and loaded row count. |
+| LOAD-002 | Load transaction CSV files atomically | Valid transaction files load atomically; invalid rows reject the complete batch without changing any table. |
+
+### Feature: Ledger Operations
+
+| ID | Story | High-level AC |
+|---|---|---|
+| LEDGER-001 | Create, read, rename, and delete accounts | Account commands return the specified account CSV row, refuse duplicate or in-use accounts, and report absent accounts with exit code 4. |
+| LEDGER-002 | Post and read transactions | Posting validates references and input values, assigns the next transaction id, and returns the new transaction row. |
+| LEDGER-003 | Amend and delete transactions | Amend and delete operations preserve atomicity, enforce non-negative balances, and report absent ids with exit code 4. |
+| LEDGER-004 | Transfer funds atomically | Transfers create consecutive outgoing and incoming rows with the required category, amounts, and memos, or make no change when rejected. |
+
+### Feature: Ledger Reporting
+
+| ID | Story | High-level AC |
+|---|---|---|
+| REPORT-001 | Report balances by account | The balances report lists accounts by code with transaction counts, balances, and a correct total. |
+| REPORT-002 | Report totals by category | The category report includes every category, computes inflow, outflow, and net totals, and emits the required total row. |
+| REPORT-003 | Report totals by month | The monthly report lists transaction-bearing months in ascending order and computes correct aggregate totals. |
+
+### Feature: Delivery Verification
+
+| ID | Story | High-level AC |
+|---|---|---|
+| VERIFY-001 | Provide scoped automated tests | `bin/test.sh` runs the project&#x27;s automated tests and exits zero only when all tests pass. |
+| VERIFY-002 | Pass the supplied conformance harness | The complete supplied harness runs unfiltered and every supplied case passes. |
+
+## Surfaced Acceptance Criteria
+
+| ID | Story ID | Criterion |
+|---|---|---|
+| AC-001 | PERSIST-002 | Successful commands emit CSV with the specified headers, row ordering, line endings, and no trailing spaces; failing commands emit no standard output. |
+| AC-002 | LEDGER-001 | The CLI provides help text for each command and sub-command, including usage and error behavior. |
+| AC-003 | REPORT-001 | An empty initialized ledger produces valid zero-row balance output with the required total row. |
+| AC-004 | REPORT-002 | An empty initialized ledger still reports defined categories when categories exist, including zero-valued totals. |
+| AC-005 | REPORT-003 | A ledger with no transactions reports no month rows and emits a zero-valued total row. |
+
+## Relationship Model
+
+| Source or group | Relationship type | Related source or group | Evidence | Delivery implication |
+|---|---|---|---|---|
+| `sources/INSTRUCTIONS.md` | instruction-to-test | `sources/run.sh` | The instructions define commands, outputs, exit codes, and harness execution. | Author implementation stories against the normative contract and reserve full verification for the terminal story. |
+| `sources/run.sh` | test-kit-to-implementation | ledger executable | The harness invokes `./ledger` through the fixed command sequence. | The executable and exact stdout/exit-code behavior are release-critical. |
+| `sources/run.sh` | test-kit-to-implementation | `sources/seed_*.csv` | The harness loads all seed files and the bad transaction fixture. | Stage the harness and every fixture it opens. |
+| `sources/seed_accounts.csv`, `sources/seed_categories.csv`, `sources/seed_transactions.csv` | fixture-to-implementation | loading and reporting stories | The fixtures establish known rows and report totals. | Load and report behavior must be tested against database-derived results. |
+| `sources/seed_transactions_bad.csv` | fixture-to-implementation | `LOAD-002` | The fixture contains an unknown account on its final row. | Validate the complete batch before writing any row. |
+| `bin/test.sh` | test-kit-to-implementation | all implementation stories | The project instructions require a POSIX test runner covering commands and rules. | Build focused tests before the terminal conformance gate. |
+
+## Source Roles
+
+| Path | Role | Plan disposition | Build disposition |
+|---|---|---|---|
+| `sources/INSTRUCTIONS.md` | normative specification and conformance test suite | prompt-only | none |
+| `sources/run.sh` | conformance harness | stage | stage |
+| `sources/seed_accounts.csv` | asset | stage | stage |
+| `sources/seed_categories.csv` | asset | stage | stage |
+| `sources/seed_transactions.csv` | asset | stage | stage |
+| `sources/seed_transactions_bad.csv` | asset | stage | stage |
+
+## Planning Instructions
+
+### Delivery Shape
+
+The system is a local executable CLI backed by a relational SQLite database through the shipped persistence library. Inputs are command arguments and CSV files; outputs are deterministic CSV reports or diagnostics. The required flow is schema initialization, validated loading and mutation, reporting, focused tests, then complete conformance verification.
+
+### Story Realization Map
+
+| Story ID | Blueprint scope | Evidence | Related files | Delivery type |
+|---|---|---|---|---|
+| PERSIST-001 | Database configuration and store boundary | `sources/INSTRUCTIONS.md` Database | application persistence package | capability, integration |
+| PERSIST-002 | Schema lifecycle and counts | `sources/INSTRUCTIONS.md` Commands | `sources/run.sh` A, Z | capability, acceptance contract |
+| PERSIST-003 | Domain validation and integer-cent persistence | `sources/INSTRUCTIONS.md` Rules | `sources/run.sh` F, G | capability |
+| LOAD-001 | Account/category import | `sources/INSTRUCTIONS.md` load command | seed account/category CSVs | capability, fixture |
+| LOAD-002 | Atomic transaction import | `sources/INSTRUCTIONS.md` atomicity rule | `sources/seed_transactions_bad.csv`, `sources/run.sh` D | capability, fixture |
+| LEDGER-001 | Account lifecycle | `sources/INSTRUCTIONS.md` account commands | `sources/run.sh` E | capability |
+| LEDGER-002 | Transaction posting and retrieval | `sources/INSTRUCTIONS.md` transaction commands | `sources/run.sh` F | capability |
+| LEDGER-003 | Transaction amendment and deletion | `sources/INSTRUCTIONS.md` transaction commands | `sources/run.sh` F, G | capability |
+| LEDGER-004 | Atomic transfers | `sources/INSTRUCTIONS.md` transfer command | `sources/run.sh` G | capability |
+| REPORT-001 | Balance report | `sources/INSTRUCTIONS.md` reports | `sources/run.sh` C, H | capability |
+| REPORT-002 | Category report | `sources/INSTRUCTIONS.md` reports | `sources/run.sh` C, H | capability |
+| REPORT-003 | Monthly report | `sources/INSTRUCTIONS.md` reports | `sources/run.sh` C, H | capability |
+| VERIFY-001 | Project test runner | `sources/INSTRUCTIONS.md` Tests | `bin/test.sh` | test harness |
+| VERIFY-002 | Full supplied conformance run | `sources/run.sh` | `sources/run.sh`, staged fixtures | acceptance contract |
+
+### Test and Acceptance Strategy
+
+Implementation stories use focused tests for their command, validation, persistence, and report behavior. `VERIFY-001` runs the project test suite through `bin/test.sh` and remains scoped to the automated tests. `VERIFY-002` is the single terminal full-suite story and runs `sh sources/run.sh` unfiltered with `Suite: full`.
+
+### Sequencing and Dependencies
+
+Build the persistence boundary and schema before command handlers. Implement validation before loaders and mutations. Stage fixtures before verification. Reports depend on the completed persistence queries and mutation rules. `VERIFY-001` follows implementation stories; `VERIFY-002` depends on every implementation and test-runner story.
+
+### Source Conflicts and Gaps
+
+No unresolved source conflicts or blockers. The source defines a local CLI and SQLite runtime; no external service, authentication, web interface, or deployment workflow is required by the supplied contract.
+
+## Analysis Notes
+
+generated: 2026-10-20
+blueprint: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/workspace/targets/LayersTesting/blueprint
+
+Quality: Ready
+  blockers: 0
+  questions: 0
+  features: 5
+  stories: 14
+  stack: Python 3.11+, SQLite, shipped persistence library, SQLAlchemy, Alembic
+  display_name: not proposed
+  short_description: not proposed
+
+None.
+=== END ARTIFACT ===
+
+=== BEGIN ARTIFACT SEA_TRIALS.md ===
+# Sea Trials: LayersTesting
+
+## st-001: Supplied grader passes
+
+Type: technical
+Required: yes
+Criterion: The completed ledger shall make the supplied conformance harness pass every supplied case.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Command: [&quot;sh&quot;, &quot;sources/run.sh&quot;]
+Pattern: ubiquitous
+
+## st-002: Test suite passes
+
+Type: technical
+Required: yes
+Criterion: The application shall provide a POSIX-compatible `bin/test.sh` that exits zero when every automated test passes.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: ubiquitous
+
+## st-003: Initialization creates an empty schema
+
+Type: behavioral
+Required: yes
+Criterion: When `ledger init` runs, the application shall drop and recreate the accounts, categories, and transactions tables so that `ledger count` reports zero rows in each.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: event
+
+## st-004: Seed files load exactly
+
+Type: behavioral
+Required: yes
+Criterion: When the three seed files are loaded into an initialized database, the application shall report 4 accounts, 7 categories, and 120 transactions.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: event
+
+## st-005: Reports match the known answers
+
+Type: behavioral
+Required: yes
+Criterion: The application shall compute balances, category, and monthly reports from the database and match the known answers in `sources/run.sh` byte for byte.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: ubiquitous
+
+## st-006: Accounts and transactions support lifecycle operations
+
+Type: behavioral
+Required: yes
+Criterion: The application shall add, get, rename, and delete accounts and post, get, amend, and delete transactions, reporting an absent record with exit code 4.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: ubiquitous
+
+## st-007: Rejected commands are atomic
+
+Type: behavioral
+Required: yes
+Criterion: If a load, post, amend, delete, or transfer is rejected, then the application shall exit 3 and leave every table exactly as it was.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: unwanted
+
+## st-008: Account balances never go negative
+
+Type: behavioral
+Required: yes
+Criterion: If a command would leave any account balance below zero, then the application shall reject it with exit code 3.
+Testability: deterministic
+Verification: proof
+Pattern: unwanted
+
+## st-009: Persistence uses the shipped library
+
+Type: technical
+Required: yes
+Criterion: The application shall reach the database only through the shipped persistence library selected by `DATABASE_URL`, with amounts stored as integer cents.
+Testability: judgeable
+Verification: llm
+Pattern: ubiquitous
+=== END ARTIFACT ===
+
+=== BEGIN ARTIFACT TECHNOLOGY_STACK.md ===
+# Technology Stack
+
+| Technology | Rigging | Notes |
+|---|---|---|
+| Python 3.11+ | python.md | Required implementation language and runtime. |
+| SQLAlchemy | sqlalchemy.md | Relational persistence implementation behind the shipped persistence boundary. |
+| Alembic | alembic.md | Schema lifecycle support for the relational persistence layer. |
+| SQLite | sqlite.md | Required database for the supplied build and tests. |
+| POSIX shell | common.md | Required for the executable wrapper and `bin/test.sh`. |
+| Shipped persistence library | — | All application database access must pass through this library and its generated relational layer. |
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,23 @@
+<reusable-compact filename="seed_accounts.csv">
+CSV header: `account,name`. Seed accounts: DRAWER1 (Front Drawer), DRAWER2 (Back Drawer), PETTY (Petty Cash), SAFE (Store Safe).
+</reusable-compact>
+
+<reusable-compact filename="seed_categories.csv">
+CSV header: `category,description`. Seed categories: OPENING, PAYROLL, REFUND, RENT, SALES, SUPPLY, TRANSFER.
+</reusable-compact>
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli/__init__.py
+- services.py
+- persistence/schema.py
+- persistence/__init__.py
+- tests/test_persistence_boundary.py
+- tests/test_bulk_loading.py
+
+SUMMARY:
+Implemented atomic account/category CSV validation and loading, required output, duplicate rejection, error handling, and tests. Block tests: 15 passed. Full harness remains incomplete for other build blocks: 13/43 passed.
+
+BLOCKERS:
+- None for this build block.

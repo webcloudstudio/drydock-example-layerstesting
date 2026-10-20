@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/logs/20261020.162505.310Z_layerstesting_build_codex.stderr.log</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/logs/20261020.162505.310Z_layerstesting_build_codex.stderr.log</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../workspace/logs/20261020.162505.310Z_layerstesting_build_codex.stderr.log">Raw file</a></div></header>
+<article class="doc"><pre>2026-10-20T16:25:42.285171Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to read /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/build/LayersTesting/build_marker.tmp: No such file or directory (os error 2)
+2026-10-20T16:25:58.857776Z ERROR codex_core::tools::router: error=exec_command failed: CreateProcess { message: &quot;Rejected(\&quot;`/bin/bash -lc &#x27;tmp=$(mktemp -d); export DATABASE_PATH=\\\&quot;$tmp/ledger.db\\\&quot;; ./ledger init; ./ledger account add VALID1 &#x27;\\\&quot;&#x27;Valid Account&#x27;; set +e; for args in &#x27;VALID1 SALES 1.234 2026-01-01&#x27; &#x27;VALID1 SALES 1.00 2026-02-30&#x27; &#x27;VALID1 SALES -1.00 2026-01-01&#x27; &#x27;VALID1 UNKNOWN1 1.00 2026-01-01&#x27;; do ./ledger txn post \\\&quot;&#x27;$args &gt;\\\&quot;$tmp/out\\\&quot; 2&gt;\\\&quot;$tmp/err\\\&quot;; rc=$?; printf &#x27;\\\&quot;&#x27;rc=%s st…17 chars truncated…\\\\\\\\n&#x27; \\\\\\\&quot;\\\&quot;&#x27;$rc\\\&quot; \\\&quot;$(cat \\\&quot;$tmp/out\\\&quot;)\\\&quot; \\\&quot;$(cat \\\&quot;$tmp/err\\\&quot;)\\\&quot;; done; before=$(./ledger count); ./ledger txn post VALID1 UNKNOWN1 1.00 2026-01-01 &gt;/dev/null 2&gt;/dev/null; after=$(./ledger count); printf &#x27;\\\&quot;&#x27;count unchanged=%s\\\\\\\\n&#x27; \\\\\\\&quot;\\\&quot;&#x27;$(test \\\&quot;$before\\\&quot; = \\\&quot;$after\\\&quot; &amp;&amp; echo yes || echo no)\\\&quot;; rm -rf \\\&quot;$tmp\\\&quot;&#x27;` rejected: rm -f style commands are not permitted. Use a safer approach\&quot;)&quot; }
+</pre></article>
+</main>
+</body>
+</html>

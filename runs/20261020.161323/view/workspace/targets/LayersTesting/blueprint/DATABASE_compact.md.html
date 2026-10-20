@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/DATABASE_compact.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/DATABASE_compact.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/DATABASE_compact.md">Raw file</a></div></header>
+<article class="doc"><p>&lt;!-- Compacted from DATABASE.md sha256=ff2f418d172d52e874121e5a5ae842b9b7bcba38f70b6718f8f7cd77643be755 on 2026-10-20 by drydock build agent --&gt;</p>
+<p>Database DSN precedence: <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code>. PostgreSQL DSNs use PostgreSQL; other values use SQLite paths, including <code>sqlite://</code>.</p>
+<p>Schema tables: <code>accounts(account PK, name)</code>, <code>categories(category PK, description)</code>, and <code>transactions(txn_id PK, date, account FK, category FK, amount integer cents, memo)</code>. Foreign keys are enforced.</p>
+<p>Persistence access is exclusively through <code>persistence.open_database(dsn)</code> and declared typed table operations. Initialization is idempotent and supports recreating all tables. Writes are atomic and fully validated before mutation. No floating-point monetary values.</p></article>
+</main>
+</body>
+</html>

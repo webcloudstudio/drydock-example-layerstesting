@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-3.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-3.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-3.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 3 · Service (block-3)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 7838</li><li>execution id: 20261020.162402.491Z-7085ae7d</li></ul>
+<h2>Stories built</h2>
+<ul><li>Initialize the ledger schema and report table counts. (persist-002) [story]</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 601)</li><li>compass: COMPASS.md (SP 755)</li><li>implements: FEATURE-Persistence-Lifecycle.md (SP 648)</li><li>context: ARCHITECTURE_compact.md (SP 203)</li><li>context: DATABASE_compact.md (SP 197)</li><li>stack: common.md (SP 1812)</li><li>stack: sqlite.md (SP 1818)</li><li>stack: cli.md (SP 1755)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>cli/<strong>init</strong>.py</li><li>data/app.db</li><li>services.py</li><li>tests/test_architecture.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>GREEN (prepassed): persistence-init-clears-state (FEATURE-Persistence-Lifecycle.md)</li></ul>
+<p>intent: Initialization succeeds and the subsequent count observes the empty ledger state. return code: 0</p>
+<ul><li>RED: persistence-count-contract (FEATURE-Persistence-Lifecycle.md)</li></ul>
+<p>intent: Count returns a successful structured result for the three declared tables. return code: 1 stderr: --- drydock: values at failure --- lines = [&#x27;table,count&#x27;, &#x27;accounts,0&#x27;, &#x27;categories,0&#x27;, &#x27;transactions,0&#x27;] --- drydock: end values --- Traceback (most recent call last): File &quot;persistence-count-contract.py&quot;, line 8, in &lt;module&gt; assert lines[0].split(&quot;,&quot;) == [&quot;table&quot;, &quot;rows&quot;] ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ AssertionError</p>
+<ul><li>RED: persistence-reinitialization (FEATURE-Persistence-Lifecycle.md)</li></ul>
+<p>intent: Reinitialization removes previously persisted rows. return code: 1 stderr: --- drydock: values at failure --- account_code = 2 --- drydock: end values --- Traceback (most recent call last): File &quot;persistence-reinitialization.py&quot;, line 7, in &lt;module&gt; assert account_code == 0 ^^^^^^^^^^^^^^^^^ AssertionError</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: persistence-init-clears-state (FEATURE-Persistence-Lifecycle.md)</li></ul>
+<p>intent: Initialization succeeds and the subsequent count observes the empty ledger state. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: persistence-count-contract (FEATURE-Persistence-Lifecycle.md)</li></ul>
+<p>intent: Count returns a successful structured result for the three declared tables. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: persistence-reinitialization (FEATURE-Persistence-Lifecycle.md)</li></ul>
+<p>intent: Reinitialization removes previously persisted rows. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Repair attempts</h2>
+<ul><li>attempt 0 (initial build): failed; 2/3 checks model=gpt-5.6-luna; execution 20261020.162240.515Z-3a598d06; reason: programmatic acceptance failed: persistence-reinitialization</li><li>attempt 1 (repair 1): built; 3/3 checks model=gpt-5.6-luna; execution 20261020.162402.491Z-7085ae7d</li></ul>
+<h2>Build summary</h2>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>cli/<strong>init</strong>.py</li><li>services.py</li><li>tests/test_architecture.py</li></ul>
+<p>SUMMARY: Implemented <code>account add</code> prerequisite and verified lifecycle initialization/count behavior. All 7 project tests and acceptance assertions pass.</p>
+<p>BLOCKERS:</p>
+<ul><li>None</li></ul></article>
+</main>
+</body>
+</html>

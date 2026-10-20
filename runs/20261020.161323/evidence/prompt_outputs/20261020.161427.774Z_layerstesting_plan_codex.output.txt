@@ -1,0 +1,820 @@
+=== BEGIN ARTIFACT ARCHITECTURE.md ===
+# ARCHITECTURE: Ledger Application Boundaries
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Defines the command-line ledger boundaries, configuration flow, and persistence ownership. |
+| Depends On  | — |
+| Provides    | application module boundaries, configuration boundary, persistence boundary |
+| Consumes    | — |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The application is a Python 3.11+ command-line executable named `ledger`. It accepts commands and arguments, validates complete operations before writing, and emits deterministic CSV on success. Diagnostics are written to standard error.
+
+## Modules and Ownership
+
+| Boundary | Owner | Responsibility |
+|---|---|---|
+| Executable | `ledger` | Application-root entry point and process exit status |
+| CLI | `cli` | Argument parsing, command dispatch, output formatting, and error mapping |
+| Configuration | CLI/application configuration module | Resolve `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db` |
+| Validation | Domain validation module | Codes, text fields, amounts, dates, identifiers, references, and balance rules |
+| Services | Ledger command services | Atomic preflight, mutations, account lifecycle, loading, transfers, and reports |
+| Persistence | `persistence` | Exclusive database access through generated shipped operations |
+| Test runner | `bin/test.sh` | Invoke the project pytest suite from the application root |
+
+Application code must not import or open a database driver directly. Services call the shipped persistence package and keep database details behind that boundary.
+
+## Command Groups
+
+- Lifecycle: `ledger init`, `ledger count`
+- Loading: `ledger load accounts`, `ledger load categories`, `ledger load transactions`
+- Accounts: `ledger account add`, `get`, `rename`, `delete`
+- Transactions: `ledger txn post`, `get`, `amend`, `delete`
+- Transfer: `ledger transfer`
+- Reports: `ledger report balances`, `categories`, `monthly`
+
+## Error Contract
+
+Exit status `0` indicates success, `1` operational failure, `2` usage error, `3` rejected input or business rule, and `4` absent account or transaction. Successful commands write CSV except `init`; failures write no standard output and one diagnostic line to standard error.
+
+## Technology Stack
+
+- Python 3.11 or newer implements the application and tests.
+- SQLite is the local relational database.
+- The shipped Python persistence library is the only database access boundary.
+- The CLI is the root executable interface.
+- pytest runs the automated suite.
+- POSIX shell runs `bin/test.sh` and the supplied conformance harness.
+
+## Programmatic Acceptance
+
+=== AC architecture-cli-boundary ===
+Intent: The built CLI exposes the declared lifecycle commands through its public runner.
+from cli.testing import cli_runner
+
+init_code, init_out, init_err = cli_runner("init")
+assert init_code == 0
+assert init_out == ""
+assert isinstance(init_err, str)
+
+count_code, count_out, count_err = cli_runner("count")
+assert count_code == 0
+assert count_out
+assert isinstance(count_err, str)
+=== END AC architecture-cli-boundary ===
+
+=== AC architecture-usage-boundary ===
+Intent: Unknown commands use the declared usage-error exit status and produce no standard output.
+from cli.testing import cli_runner
+
+expected_code = 2
+code, out, err = cli_runner("unknown-command")
+assert code == expected_code
+assert out == ""
+assert isinstance(err, str)
+=== END AC architecture-usage-boundary ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Application code never reads or modifies files under `sources/`.
+- Application code never opens a database driver outside the shipped persistence library.
+- Amounts remain integer cents throughout the application.
+- A rejected command performs no write.
+- Reports derive all values from persisted data.
+
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT DATABASE.md ===
+# DATABASE: Ledger Persistence Contract
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Defines the relational ledger schema, configuration resolution, and typed persistence operations. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | DATABASE_URL resolution, DATABASE_PATH fallback, relational ledger schema, persistence operations |
+| Consumes    | application module boundaries, configuration boundary, persistence boundary |
+
+## Questions
+
+- None.
+
+## Configuration
+
+Resolve the database DSN in this order:
+
+1. `DATABASE_URL`
+2. `DATABASE_PATH`
+3. `data/app.db`
+
+A `postgres://` or `postgresql://` value selects PostgreSQL. Any other value is a SQLite path, optionally prefixed with `sqlite://`. Application callers use `persistence.open_database(dsn)` and never open a driver directly.
+
+## Access Patterns
+
+### FEATURE-PERSISTENCE-001 — Initialize schema
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | write |
+| Repository operation | `schema.initialize` |
+| Compatibility | rebuild |
+
+Input: `InitializationInput`
+
+| Field | Type |
+|---|---|
+| `drop_existing` | boolean |
+
+Output: `InitializationResult`
+
+| Field | Type |
+|---|---|
+| `initialized` | boolean |
+
+### FEATURE-PERSISTENCE-002 — Count ledger tables
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `accounts.count`, `categories.count`, `transactions.count` |
+| Compatibility | unchanged |
+
+Input: `CountInput`
+
+| Field | Type |
+|---|---|
+| `—` | — |
+
+Output: `TableCounts`
+
+| Field | Type |
+|---|---|
+| `accounts` | integer |
+| `categories` | integer |
+| `transactions` | integer |
+
+### FEATURE-LEDGER-001 — Create account
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Accounts.md |
+| Access | write |
+| Repository operation | `accounts.create` |
+| Compatibility | data |
+
+Input: `AccountInput`
+
+| Field | Type |
+|---|---|
+| `account` | VARCHAR(12) |
+| `name` | VARCHAR(40) |
+
+Output: `AccountRow`
+
+| Field | Type |
+|---|---|
+| `account` | VARCHAR(12) |
+| `name` | VARCHAR(40) |
+
+### FEATURE-LEDGER-002 — Retrieve account
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Accounts.md |
+| Access | read |
+| Repository operation | `accounts.get` |
+| Compatibility | unchanged |
+
+Input: `AccountKey`
+
+| Field | Type |
+|---|---|
+| `account` | VARCHAR(12) |
+
+Output: `AccountRow`
+
+| Field | Type |
+|---|---|
+| `account` | VARCHAR(12) |
+| `name` | VARCHAR(40) |
+
+### FEATURE-LEDGER-003 — Update account
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Accounts.md |
+| Access | write |
+| Repository operation | `accounts.update` |
+| Compatibility | data |
+
+Input: `AccountUpdate`
+
+| Field | Type |
+|---|---|
+| `account` | VARCHAR(12) |
+| `name` | VARCHAR(40) |
+
+Output: `AccountRow`
+
+| Field | Type |
+|---|---|
+| `account` | VARCHAR(12) |
+| `name` | VARCHAR(40) |
+
+### FEATURE-LEDGER-004 — Delete account
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Accounts.md |
+| Access | write |
+| Repository operation | `accounts.delete` |
+| Compatibility | data |
+
+Input: `AccountKey`
+
+| Field | Type |
+|---|---|
+| `account` | VARCHAR(12) |
+
+Output: `DeletionResult`
+
+| Field | Type |
+|---|---|
+| `deleted` | boolean |
+
+### FEATURE-LEDGER-005 — Create transaction
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Transaction-Posting.md |
+| Access | write |
+| Repository operation | `transactions.create` |
+| Compatibility | data |
+
+Input: `TransactionInput`
+
+| Field | Type |
+|---|---|
+| `txn_id` | integer |
+| `date` | VARCHAR(10) |
+| `account` | VARCHAR(12) |
+| `category` | VARCHAR(12) |
+| `amount` | integer |
+| `memo` | VARCHAR(60) |
+
+Output: `TransactionRow`
+
+| Field | Type |
+|---|---|
+| `txn_id` | integer |
+| `date` | VARCHAR(10) |
+| `account` | VARCHAR(12) |
+| `category` | VARCHAR(12) |
+| `amount` | integer |
+| `memo` | VARCHAR(60) |
+
+### FEATURE-LEDGER-006 — Retrieve transaction
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Transaction-Posting.md |
+| Access | read |
+| Repository operation | `transactions.get` |
+| Compatibility | unchanged |
+
+Input: `TransactionKey`
+
+| Field | Type |
+|---|---|
+| `txn_id` | integer |
+
+Output: `TransactionRow`
+
+| Field | Type |
+|---|---|
+| `txn_id` | integer |
+| `date` | VARCHAR(10) |
+| `account` | VARCHAR(12) |
+| `category` | VARCHAR(12) |
+| `amount` | integer |
+| `memo` | VARCHAR(60) |
+
+### FEATURE-LEDGER-007 — Update transaction
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Transaction-Mutation.md |
+| Access | write |
+| Repository operation | `transactions.update` |
+| Compatibility | data |
+
+Input: `TransactionAmountUpdate`
+
+| Field | Type |
+|---|---|
+| `txn_id` | integer |
+| `amount` | integer |
+
+Output: `TransactionRow`
+
+| Field | Type |
+|---|---|
+| `txn_id` | integer |
+| `date` | VARCHAR(10) |
+| `account` | VARCHAR(12) |
+| `category` | VARCHAR(12) |
+| `amount` | integer |
+| `memo` | VARCHAR(60) |
+
+### FEATURE-LEDGER-008 — Delete transaction
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Transaction-Mutation.md |
+| Access | write |
+| Repository operation | `transactions.delete` |
+| Compatibility | data |
+
+Input: `TransactionKey`
+
+| Field | Type |
+|---|---|
+| `txn_id` | integer |
+
+Output: `DeletionResult`
+
+| Field | Type |
+|---|---|
+| `deleted` | boolean |
+
+### FEATURE-REPORT-001 — Aggregate account balances
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Balance-Reports.md |
+| Access | read |
+| Repository operation | `accounts.list` |
+| Compatibility | unchanged |
+
+Input: `AccountReportFilter`
+
+| Field | Type |
+|---|---|
+| `—` | — |
+
+Output: `AccountBalanceRow`
+
+| Field | Type |
+|---|---|
+| `account` | VARCHAR(12) |
+| `name` | VARCHAR(40) |
+| `transactions` | integer |
+| `balance` | integer |
+
+### FEATURE-REPORT-002 — Aggregate category totals
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Category-Reports.md |
+| Access | read |
+| Repository operation | `categories.list` |
+| Compatibility | unchanged |
+
+Input: `CategoryReportFilter`
+
+| Field | Type |
+|---|---|
+| `—` | — |
+
+Output: `CategoryTotalRow`
+
+| Field | Type |
+|---|---|
+| `category` | VARCHAR(12) |
+| `description` | VARCHAR(40) |
+| `transactions` | integer |
+| `inflow` | integer |
+| `outflow` | integer |
+| `net` | integer |
+
+### FEATURE-REPORT-003 — Aggregate monthly totals
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Monthly-Reports.md |
+| Access | read |
+| Repository operation | `transactions.list` |
+| Compatibility | unchanged |
+
+Input: `MonthlyReportFilter`
+
+| Field | Type |
+|---|---|
+| `—` | — |
+
+Output: `MonthlyTotalRow`
+
+| Field | Type |
+|---|---|
+| `month` | VARCHAR(7) |
+| `transactions` | integer |
+| `inflow` | integer |
+| `outflow` | integer |
+| `net` | integer |
+
+## Schema
+
+## `accounts`
+
+| Field | Type | Notes |
+|---|---|---|
+| `account` | VARCHAR(12) NOT NULL [PK] | Uppercase alphanumeric account code |
+| `name` | VARCHAR(40) NOT NULL | Account name |
+
+## `categories`
+
+| Field | Type | Notes |
+|---|---|---|
+| `category` | VARCHAR(12) NOT NULL [PK] | Uppercase alphanumeric category code |
+| `description` | VARCHAR(40) NOT NULL | Category description |
+
+## `transactions`
+
+| Field | Type | Notes |
+|---|---|---|
+| `txn_id` | INTEGER NOT NULL [PK] | Transaction identifier |
+| `date` | VARCHAR(10) NOT NULL | Real calendar date in `YYYY-MM-DD` form |
+| `account` | VARCHAR(12) NOT NULL REFERENCES accounts(account) | Account code |
+| `category` | VARCHAR(12) NOT NULL REFERENCES categories(category) | Category code |
+| `amount` | INTEGER NOT NULL | Signed amount in cents |
+| `memo` | VARCHAR(60) NOT NULL | Transaction memo |
+
+## Persistence Rules
+
+All writes are preceded by complete validation. Foreign keys are enforced. Transactions are atomic. Amounts are represented only as integers in persistence and formatted to two decimal places at the CLI boundary.
+
+## Programmatic Acceptance
+
+- None. Drydock owns SQLite schema construction, generated persistence operations, and connectivity invariants deterministically.
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- No application module may import a database driver.
+- Every declared table is reached through a declared repository operation.
+- No floating-point amount is stored or used for ledger arithmetic.
+- Schema initialization is idempotent and recreates the three ledger tables when requested.
+
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Persistence-Lifecycle.md ===
+# FEATURE: Persistence Lifecycle
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Provides schema initialization and deterministic table-count commands. |
+| Depends On  | ARCHITECTURE.md, DATABASE.md |
+| Provides    | ledger init, ledger count |
+| Consumes    | relational ledger schema, persistence operations |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The lifecycle commands establish a known empty ledger and expose row counts for all three tables.
+
+## Workflows
+
+### Initialize
+
+`ledger init` drops and recreates `accounts`, `categories`, and `transactions`. It writes no standard output on success.
+
+### Count
+
+`ledger count` reports:
+
+- `table,rows`
+- `accounts`
+- `categories`
+- `transactions`
+
+Rows always appear in that order.
+
+## Programmatic Acceptance
+
+=== AC persistence-init-clears-state ===
+Intent: Initialization succeeds and the subsequent count observes the empty ledger state.
+from cli.testing import cli_runner
+
+init_code, init_out, init_err = cli_runner("init")
+assert init_code == 0
+assert init_out == ""
+
+count_code, count_out, count_err = cli_runner("count")
+assert count_code == 0
+assert count_out
+assert isinstance(count_err, str)
+=== END AC persistence-init-clears-state ===
+
+=== AC persistence-count-contract ===
+Intent: Count returns a successful structured result for the three declared tables.
+from cli.testing import cli_runner
+
+code, output, err = cli_runner("count")
+assert code == 0
+lines = output.splitlines()
+expected_line_count = 4
+assert len(lines) == expected_line_count
+assert lines[0].split(",") == ["table", "rows"]
+assert [line.split(",")[0] for line in lines[1:]] == ["accounts", "categories", "transactions"]
+assert isinstance(err, str)
+=== END AC persistence-count-contract ===
+
+=== AC persistence-reinitialization ===
+Intent: Reinitialization removes previously persisted rows.
+from cli.testing import cli_runner
+
+init_code, _, _ = cli_runner("init")
+assert init_code == 0
+
+account_code, _, _ = cli_runner("account", "add", "TEMP1", "Temporary")
+assert account_code == 0
+
+reset_code, reset_out, reset_err = cli_runner("init")
+assert reset_code == 0
+assert reset_out == ""
+
+count_code, count_out, count_err = cli_runner("count")
+assert count_code == 0
+assert "TEMP1" not in count_out
+assert isinstance(reset_err, str)
+assert isinstance(count_err, str)
+=== END AC persistence-reinitialization ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- `init` emits no standard output.
+- `count` uses the exact header and table order.
+- Initialization recreates all three tables.
+- A failed lifecycle command emits no standard output.
+
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Validation.md ===
+# FEATURE: Ledger Validation
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Defines shared validation and atomic preflight rules for ledger commands. |
+| Depends On  | ARCHITECTURE.md, DATABASE.md, FEATURE-Persistence-Lifecycle.md |
+| Provides    | domain validation, integer-cent amount parsing, date validation, balance validation |
+| Consumes    | relational ledger schema, persistence operations |
+
+## Questions
+
+- None.
+
+## Purpose
+
+All commands validate their complete input and all resulting business rules before their first write.
+
+## Validation Rules
+
+- Codes are 1–12 uppercase alphanumeric characters.
+- Names and descriptions are 1–40 characters.
+- Memos are 0–60 characters.
+- Names, descriptions, and memos contain no comma or newline.
+- Input amounts match `-?DIGITS[.D[D]]`, have at most two decimal places, and are nonzero.
+- Stored amounts are integer cents.
+- Dates are real calendar dates in `YYYY-MM-DD`.
+- Account and category references must exist.
+- Transaction ids must be valid and unique where created.
+- No resulting account balance may be negative.
+- A rejected operation writes nothing.
+
+## Atomic Preflight
+
+Loaders, posts, amendments, deletes, and transfers first validate all rows and calculate affected balances. Only after the full operation passes may the service call persistence writes, using one transaction for multi-row operations.
+
+## Programmatic Acceptance
+
+=== AC validation-invalid-amount ===
+Intent: Invalid decimal precision is rejected with the declared rejection status and no output.
+from cli.testing import cli_runner
+
+init_code, _, _ = cli_runner("init")
+assert init_code == 0
+account_code, _, _ = cli_runner("account", "add", "VALID1", "Valid Account")
+assert account_code == 0
+
+code, out, err = cli_runner("txn", "post", "VALID1", "SALES", "1.234", "2026-01-01")
+expected_code = 3
+assert code == expected_code
+assert out == ""
+assert isinstance(err, str)
+=== END AC validation-invalid-amount ===
+
+=== AC validation-invalid-date ===
+Intent: Nonexistent calendar dates are rejected with the declared rejection status.
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("txn", "post", "VALID1", "SALES", "1.00", "2026-02-30")
+expected_code = 3
+assert code == expected_code
+assert out == ""
+assert isinstance(err, str)
+=== END AC validation-invalid-date ===
+
+=== AC validation-negative-balance ===
+Intent: A command that would make an account balance negative is rejected without standard output.
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("txn", "post", "VALID1", "SALES", "-1.00", "2026-01-01")
+expected_code = 3
+assert code == expected_code
+assert out == ""
+assert isinstance(err, str)
+=== END AC validation-negative-balance ===
+
+=== AC validation-unknown-reference ===
+Intent: Unknown account or category references are rejected before a transaction is written.
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("txn", "post", "VALID1", "UNKNOWN1", "1.00", "2026-01-01")
+expected_code = 3
+assert code == expected_code
+assert out == ""
+assert isinstance(err, str)
+=== END AC validation-unknown-reference ===
+
+=== AC validation-atomic-rejection ===
+Intent: A rejected transaction leaves the persisted transaction count unchanged.
+from cli.testing import cli_runner
+
+before_code, before_out, _ = cli_runner("count")
+assert before_code == 0
+before_count = before_out.splitlines()[-1].split(",")[1]
+
+reject_code, reject_out, _ = cli_runner("txn", "post", "VALID1", "UNKNOWN1", "1.00", "2026-01-01")
+assert reject_code == 3
+assert reject_out == ""
+
+after_code, after_out, _ = cli_runner("count")
+assert after_code == 0
+after_count = after_out.splitlines()[-1].split(",")[1]
+assert after_count == before_count
+=== END AC validation-atomic-rejection ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Validation precedes every write.
+- Rejected commands leave every table unchanged.
+- Balance checks use integer cents.
+- Floating-point arithmetic is prohibited.
+- Error messages are diagnostics only and are not part of the output contract.
+
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Bulk-Reference-Loading.md ===
+# FEATURE: Bulk Reference Loading
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Loads account and category CSV files atomically after complete validation. |
+| Depends On  | ARCHITECTURE.md, DATABASE.md, FEATURE-Persistence-Lifecycle.md, FEATURE-Validation.md |
+| Provides    | ledger load accounts, ledger load categories |
+| Consumes    | domain validation, relational ledger schema, persistence operations |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The reference loaders import accounts and categories from CSV files whose headers exactly match the declared column order.
+
+## Workflows
+
+`ledger load accounts <csv>` expects `account,name`. `ledger load categories <csv>` expects `category,description`. The entire file is parsed and validated before any row is inserted.
+
+Successful loading emits:
+
+```text
+table,loaded
+<table>,<rows>
+```
+
+Duplicate keys, malformed rows, invalid text, unreadable files, or mismatched headers reject the command without partial writes.
+
+## Programmatic Acceptance
+
+=== AC reference-load-accounts ===
+Intent: The account fixture loads through the public command and reports a successful result.
+from cli.testing import cli_runner
+from pathlib import Path
+
+init_code, _, _ = cli_runner("init")
+assert init_code == 0
+
+path = str(Path("sources/seed_accounts.csv"))
+code, output, err = cli_runner("load", "accounts", path)
+assert code == 0
+assert output
+assert isinstance(err, str)
+
+count_code, count_output, _ = cli_runner("count")
+assert count_code == 0
+assert count_output.splitlines()[1].split(",")[1] == "4"
+=== END AC reference-load-accounts ===
+
+=== AC reference-load-categories ===
+Intent: The category fixture loads through the public command and produces seven persisted categories.
+from cli.testing import cli_runner
+from pathlib import Path
+
+init_code, _, _ = cli_runner("init")
+assert init_code == 0
+
+path = str(Path("sources/seed_categories.csv"))
+code, output, err = cli_runner("load", "categories", path)
+assert code == 0
+assert output
+assert isinstance(err, str)
+
+count_code, count_output, _ = cli_runner("count")
+assert count_code == 0
+assert count_output.splitlines()[2].split(",")[1] == "7"
+=== END AC reference-load-categories ===
+
+=== AC reference-load-rejects-duplicate ===
+Intent: A duplicate reference load is rejected without changing the existing account count.
+from cli.testing import cli_runner
+from pathlib import Path
+
+init_code, _, _ = cli_runner("init")
+assert init_code == 0
+
+path = str(Path("sources/seed_accounts.csv"))
+first_code, _, _ = cli_runner("load", "accounts", path)
+assert first_code == 0
+
+second_code, second_out, second_err = cli_runner("load", "accounts", path)
+expected_code = 3
+assert second_code == expected_code
+assert second_out == ""
+assert isinstance(second_err, str)
+
+count_code, count_output, _ = cli_runner("count")
+assert count_code == 0
+assert count_output.splitlines()[1].split(",")[1] == "4"
+=== END AC reference-load-rejects-duplicate ===
+
+=== AC reference-load-header-validation ===
+Intent: A missing or unreadable reference file is rejected without standard output.
+from cli.testing import cli_runner
+
+code, output, err = cli_runner("load", "accounts", "sources/does-not-exist.csv")
+expected_code = 1
+assert code == expected_code
+assert output == ""
+assert isinstance(err, str)
+=== END AC reference-load-header-validation ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Only the declared reference-table headers and columns are accepted.
+- The complete file is validated before the first write.
+- Duplicate or invalid rows reject the entire batch.
+- The application does not read seed files except when explicitly invoked through `ledger load`.
+- Diagnostics go to standard error and are excluded from CSV comparisons.
+
+=== END ARTIFACT ===

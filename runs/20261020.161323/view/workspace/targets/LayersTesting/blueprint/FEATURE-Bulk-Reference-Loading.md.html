@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Bulk-Reference-Loading.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Bulk-Reference-Loading.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Bulk-Reference-Loading.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Bulk Reference Loading</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Loads account and category CSV files atomically after complete validation.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-Persistence-Lifecycle.md, FEATURE-Validation.md</td></tr><tr><td>Provides</td><td>ledger load accounts, ledger load categories</td></tr><tr><td>Consumes</td><td>domain validation, relational ledger schema, persistence operations</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>The reference loaders import accounts and categories from CSV files whose headers exactly match the declared column order.</p>
+<h2>Workflows</h2>
+<p><code>ledger load accounts &lt;csv&gt;</code> expects <code>account,name</code>. <code>ledger load categories &lt;csv&gt;</code> expects <code>category,description</code>. The entire file is parsed and validated before any row is inserted.</p>
+<p>Successful loading emits:</p>
+<pre><code>table,loaded
+&lt;table&gt;,&lt;rows&gt;</code></pre>
+<p>Duplicate keys, malformed rows, invalid text, unreadable files, or mismatched headers reject the command without partial writes.</p>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC reference-load-accounts ===<br>Intent: The account fixture loads through the public command and reports a successful result. from cli.testing import cli_runner from pathlib import Path</p>
+<p>init_code, _, _ = cli_runner(&quot;init&quot;) assert init_code == 0</p>
+<p>path = str(Path(&quot;sources/seed_accounts.csv&quot;)) code, output, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path) assert code == 0 assert output assert isinstance(err, str)</p>
+<p>count_code, count_output, _ = cli_runner(&quot;count&quot;) assert count_code == 0 assert count_output.splitlines()[1].split(&quot;,&quot;)[1] == &quot;4&quot; === END AC reference-load-accounts ===</p>
+<p>=== AC reference-load-categories ===<br>Intent: The category fixture loads through the public command and produces seven persisted categories. from cli.testing import cli_runner from pathlib import Path</p>
+<p>init_code, _, _ = cli_runner(&quot;init&quot;) assert init_code == 0</p>
+<p>path = str(Path(&quot;sources/seed_categories.csv&quot;)) code, output, err = cli_runner(&quot;load&quot;, &quot;categories&quot;, path) assert code == 0 assert output assert isinstance(err, str)</p>
+<p>count_code, count_output, _ = cli_runner(&quot;count&quot;) assert count_code == 0 assert count_output.splitlines()[2].split(&quot;,&quot;)[1] == &quot;7&quot; === END AC reference-load-categories ===</p>
+<p>=== AC reference-load-rejects-duplicate ===<br>Intent: A duplicate reference load is rejected without changing the existing account count. from cli.testing import cli_runner from pathlib import Path</p>
+<p>init_code, _, _ = cli_runner(&quot;init&quot;) assert init_code == 0</p>
+<p>path = str(Path(&quot;sources/seed_accounts.csv&quot;)) first_code, _, _ = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path) assert first_code == 0</p>
+<p>second_code, second_out, second_err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path) expected_code = 3 assert second_code == expected_code assert second_out == &quot;&quot; assert isinstance(second_err, str)</p>
+<p>count_code, count_output, _ = cli_runner(&quot;count&quot;) assert count_code == 0 assert count_output.splitlines()[1].split(&quot;,&quot;)[1] == &quot;4&quot; === END AC reference-load-rejects-duplicate ===</p>
+<p>=== AC reference-load-header-validation ===<br>Intent: A missing or unreadable reference file is rejected without standard output. from cli.testing import cli_runner</p>
+<p>code, output, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, &quot;sources/does-not-exist.csv&quot;) expected_code = 1 assert code == expected_code assert output == &quot;&quot; assert isinstance(err, str) === END AC reference-load-header-validation ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Only the declared reference-table headers and columns are accepted.</li><li>The complete file is validated before the first write.</li><li>Duplicate or invalid rows reject the entire batch.</li><li>The application does not read seed files except when explicitly invoked through <code>ledger load</code>.</li><li>Diagnostics go to standard error and are excluded from CSV comparisons.</li></ul></article>
+</main>
+</body>
+</html>

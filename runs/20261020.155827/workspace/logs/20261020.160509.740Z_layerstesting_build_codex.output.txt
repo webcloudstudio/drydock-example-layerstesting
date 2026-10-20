@@ -1,0 +1,18 @@
+<reusable-compact filename="DATABASE.md">
+Relational ledger schema: `accounts(account PK, name)`, `categories(category PK, description)`, and `transactions(txn_id PK, date, account FK, category FK, amount INTEGER cents, memo)`. Use only `persistence.open_database(dsn)` and declared table operations. Enforce foreign keys, integer cents, idempotent schema initialization, and atomic commands. DSN precedence: `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`; PostgreSQL URLs select PostgreSQL, otherwise SQLite.
+</reusable-compact>
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli.py
+- services.py
+- reports.py
+- persistence/db.py
+- persistence/schema.py
+
+SUMMARY:
+Implemented persistence operations, transactional services, CLI validation, CSV loading, CRUD, transfers, and reports. `pytest -q` passes; staged harness passes 43/43 checks.
+
+BLOCKERS:
+- None

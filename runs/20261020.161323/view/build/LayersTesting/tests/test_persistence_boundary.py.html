@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_persistence_boundary.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_persistence_boundary.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_persistence_boundary.py">Raw file</a></div></header>
+<article class="doc"><pre>from pathlib import Path
+
+import pytest
+
+from config import Config, database_dsn, database_path
+from persistence import PersistenceError
+from persistence.testing import db_session
+
+
+def test_database_configuration_precedence_and_defaults() -&gt; None:
+    assert Config.load({}).database_url == &quot;data/app.db&quot;
+    assert database_dsn({&quot;DATABASE_PATH&quot;: &quot;fallback.db&quot;}) == &quot;fallback.db&quot;
+    assert database_dsn({&quot;DATABASE_URL&quot;: &quot;postgresql://db/ledger&quot;, &quot;DATABASE_PATH&quot;: &quot;ignored.db&quot;}) == &quot;postgresql://db/ledger&quot;
+    assert database_path({&quot;DATABASE_PATH&quot;: &quot;sqlite://var/ledger.db&quot;}) == Path(&quot;var/ledger.db&quot;)
+
+
+def test_declared_tables_round_trip_through_persistence_boundary() -&gt; None:
+    with db_session() as db:
+        account = db.accounts.create(account=&quot;CASH&quot;, name=&quot;Cash&quot;)
+
+        assert account.account == &quot;CASH&quot;
+        assert db.accounts.get(account=&quot;CASH&quot;) == account
+
+
+def test_undeclared_operations_are_rejected_by_the_boundary() -&gt; None:
+    with db_session() as db:
+        with pytest.raises(PersistenceError):
+            db.categories.update(category=&quot;SALES&quot;, description=&quot;Sales&quot;)
+</pre></article>
+</main>
+</body>
+</html>

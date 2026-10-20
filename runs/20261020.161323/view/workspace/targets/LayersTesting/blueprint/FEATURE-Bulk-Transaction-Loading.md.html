@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Bulk-Transaction-Loading.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Bulk-Transaction-Loading.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Bulk-Transaction-Loading.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Bulk Transaction Loading</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Loads validated transaction CSV files atomically into the ledger.</td></tr><tr><td>Depends On</td><td>DATABASE.md, FEATURE-Validation.md, FEATURE-Bulk-Reference-Loading.md</td></tr><tr><td>Provides</td><td><code>ledger load transactions</code></td></tr><tr><td>Consumes</td><td>domain validation, relational ledger schema, transaction persistence operations</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Load a transaction CSV file only after validating its complete contents, references, identifiers, and resulting account balances.</p>
+<h2>Workflow</h2>
+<ol><li>Validate the file header and every row.</li><li>Reject duplicate transaction identifiers and invalid values.</li><li>Resolve every account and category reference.</li><li>Evaluate balances after applying the complete batch.</li><li>Insert all rows in one transaction.</li><li>Emit the loaded-row result only after commit.</li></ol>
+<p>A rejected file changes no table.</p>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md, FEATURE-Accounts.md, FEATURE-Balance-Reports.md, FEATURE-Category-Reports.md, FEATURE-Monthly-Reports.md, FEATURE-Transaction-Mutation.md, FEATURE-Transaction-Posting.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC load-transactions-valid ===<br>Intent: A valid transaction CSV is loaded and its supplied row count is reported. from pathlib import Path import csv import tempfile from cli.testing import cli_runner</p>
+<p>rows = [ [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;], [&quot;1&quot;, &quot;2026-01-01&quot;, &quot;A&quot;, &quot;C&quot;, &quot;10.00&quot;, &quot;opening&quot;], ] with tempfile.TemporaryDirectory() as directory: path = Path(directory) / &quot;transactions.csv&quot; path.write_text(&quot;\n&quot;.join(&quot;,&quot;.join(row) for row in rows) + &quot;\n&quot;) code, stdout, stderr = cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(path)) parsed = list(csv.reader(stdout.splitlines())) assert code == 0 assert parsed[0] == [&quot;table&quot;, &quot;loaded&quot;] assert parsed[1] == [&quot;transactions&quot;, str(len(rows) - 1)] === END AC load-transactions-valid ===</p>
+<p>=== AC load-transactions-invalid-is-atomic ===<br>Intent: A transaction file with an unknown account is rejected before any row is written. from pathlib import Path import tempfile from cli.testing import cli_runner</p>
+<p>rows = [ &quot;txn_id,date,account,category,amount,memo&quot;, &quot;1,2026-01-01,A,C,10.00,valid&quot;, &quot;2,2026-01-01,NOSUCH,C,10.00,invalid&quot;, ] with tempfile.TemporaryDirectory() as directory: path = Path(directory) / &quot;transactions.csv&quot; path.write_text(&quot;\n&quot;.join(rows) + &quot;\n&quot;) code, stdout, stderr = cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(path)) assert code == 3 assert stdout == &quot;&quot; count_code, count_stdout, count_stderr = cli_runner(&quot;count&quot;) assert count_code == 0 assert &quot;transactions,0&quot; in count_stdout === END AC load-transactions-invalid-is-atomic ===</p>
+<p>=== AC load-transactions-negative-balance ===<br>Intent: A batch that would make an account balance negative is rejected. from pathlib import Path import tempfile from cli.testing import cli_runner</p>
+<p>rows = [ &quot;txn_id,date,account,category,amount,memo&quot;, &quot;1,2026-01-01,A,C,-1.00,overdraw&quot;, ] with tempfile.TemporaryDirectory() as directory: path = Path(directory) / &quot;transactions.csv&quot; path.write_text(&quot;\n&quot;.join(rows) + &quot;\n&quot;) code, stdout, stderr = cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(path)) assert code == 3 assert stdout == &quot;&quot; === END AC load-transactions-negative-balance ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Validate the entire file before the first insert.</li><li>Never read or modify supplied source fixtures from application code.</li><li>Store amounts as integer cents.</li><li>Preserve transaction identifiers supplied by the file.</li></ul></article>
+</main>
+</body>
+</html>

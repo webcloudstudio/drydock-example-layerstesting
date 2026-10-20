@@ -1,0 +1,13 @@
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli/__init__.py
+- services.py
+- validation.py
+- tests/test_validation.py
+
+SUMMARY:
+Implemented shared validation, integer-cent amount parsing, date checks, reference validation, atomic rejection behavior, and `txn post`. All tests pass: 11 passed.
+
+BLOCKERS:
+- None

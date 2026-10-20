@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Accounts.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Accounts.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Accounts.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Accounts</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Provides account creation, retrieval, renaming, and deletion through the CLI.</td></tr><tr><td>Depends On</td><td>DATABASE.md, FEATURE-Validation.md, FEATURE-Bulk-Reference-Loading.md</td></tr><tr><td>Provides</td><td><code>ledger account add</code>, <code>ledger account get</code>, <code>ledger account rename</code>, <code>ledger account delete</code></td></tr><tr><td>Consumes</td><td>domain validation, relational ledger schema, account persistence operations</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Manage account records while deriving transaction counts and balances from persisted transactions.</p>
+<h2>Workflows</h2>
+<ul><li><code>account add</code> creates a unique validated account.</li><li><code>account get</code> returns an existing account row.</li><li><code>account rename</code> changes only the account name.</li><li><code>account delete</code> removes an account only when it has no transactions.</li></ul>
+<p>Missing accounts return exit code <code>4</code>; rejected changes return exit code <code>3</code>.</p>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-LEDGER-001</code> — write: create an account - supplies: <code>account</code>, <code>name</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-LEDGER-002</code> — read: retrieve an account - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-LEDGER-003</code> — write: update an account - supplies: <code>account</code>, <code>name</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-LEDGER-004</code> — write: delete an account - supplies: <code>account</code> - returns: <code>deleted</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC accounts-create-read ===<br>Intent: An added account can be read back with its initial aggregate values. from cli.testing import cli_runner</p>
+<p>code, stdout, stderr = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Alpha&quot;) assert code == 0 get_code, get_stdout, get_stderr = cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;A&quot;) assert get_code == 0 assert &quot;A,Alpha,0,0.00&quot; in get_stdout === END AC accounts-create-read ===</p>
+<p>=== AC accounts-rename ===<br>Intent: Renaming an account changes its persisted name. from cli.testing import cli_runner</p>
+<p>add_code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Alpha&quot;) assert add_code == 0 code, stdout, stderr = cli_runner(&quot;account&quot;, &quot;rename&quot;, &quot;A&quot;, &quot;Beta&quot;) assert code == 0 get_code, get_stdout, get_stderr = cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;A&quot;) assert get_code == 0 assert &quot;A,Beta,0,0.00&quot; in get_stdout === END AC accounts-rename ===</p>
+<p>=== AC accounts-delete-and-not-found ===<br>Intent: An unused account can be deleted and is subsequently absent. from cli.testing import cli_runner</p>
+<p>add_code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Alpha&quot;) assert add_code == 0 delete_code, stdout, stderr = cli_runner(&quot;account&quot;, &quot;delete&quot;, &quot;A&quot;) assert delete_code == 0 missing_code, missing_stdout, missing_stderr = cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;A&quot;) assert missing_code == 4 assert missing_stdout == &quot;&quot; === END AC accounts-delete-and-not-found ===</p>
+<p>=== AC accounts-in-use-rejected ===<br>Intent: An account referenced by a transaction cannot be deleted. from cli.testing import cli_runner</p>
+<p>account_code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Alpha&quot;) category_code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;) assert account_code == 0 assert category_code == 0 post_code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;SALES&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;) assert post_code == 0 delete_code, delete_stdout, delete_stderr = cli_runner(&quot;account&quot;, &quot;delete&quot;, &quot;A&quot;) assert delete_code == 3 assert delete_stdout == &quot;&quot; === END AC accounts-in-use-rejected ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Account codes and names obey the shared validation rules.</li><li>Account balances and transaction counts are query-derived.</li><li>Failed account operations write no output to standard output and change no data.</li></ul></article>
+</main>
+</body>
+</html>

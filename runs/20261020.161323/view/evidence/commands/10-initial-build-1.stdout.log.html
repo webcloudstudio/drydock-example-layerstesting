@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/commands/10-initial-build-1.stdout.log</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/commands/10-initial-build-1.stdout.log</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/commands/10-initial-build-1.stdout.log">Raw file</a></div></header>
+<article class="doc"><pre>Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Build: LayersTesting
+scope: entire project
+frontier: architecture
+git: baseline LayersTesting cbc740aeb4f4
+git: baseline LayersTesting c53a8e1d5795
+
+BLOCK block-1  name=&quot;Block 1 · Foundational&quot;  calls_max=7
+  story=architecture  &quot;Define the ledger application boundaries and technology usage.&quot;
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.161837.365Z-cfd3a552
+    acceptance=2/2
+git: block-1 | python.md, ARCHITECTURE.md | call=1 | app=84b309ee4659 target=d2477e31f5e3
+
+  DONE  story=architecture  state=closed/verified  execution=20261020.161837.365Z-cfd3a552  elapsed=1m02s
+git: block-1 | python.md, ARCHITECTURE.md | step_completed | app=unchanged target=8f703fe1839f
+WARNING: common_compact.md is stale (common.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/common.md
+
+BLOCK block-2  name=&quot;Block 2 · Foundational&quot;  calls_max=7
+  story=persist-001  &quot;Provide database configuration and the shipped persistence boundary.&quot;
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.161941.681Z-25085663
+git: block-2 | DATABASE.md | call=1 | app=f9e7509738a5 target=45554266a597
+
+  [call 2/7]  kind=repair(1/6)  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.162113.828Z-f33c708c
+git: block-2 | DATABASE.md | call=2 | app=ffed32c4f8b7 target=dcd9861fd2fd
+
+  DONE  story=persist-001  state=closed/verified  execution=20261020.162113.828Z-f33c708c  elapsed=2m54s
+git: block-2 | DATABASE.md | step_completed | app=unchanged target=211f5129c596
+WARNING: common_compact.md is stale (common.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/common.md
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-3  name=&quot;Block 3 · Service&quot;  calls_max=7
+  story=persist-002  &quot;Initialize the ledger schema and report table counts.&quot;
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.162240.515Z-3a598d06
+    acceptance=2/3  failed=persistence-reinitialization
+git: block-3 | FEATURE-Persistence-Lifecycle.md | call=1 | app=e92603c23d58 target=206b6c4772cb
+
+  [call 2/7]  kind=repair(1/6)  llm=codex/gpt-5.6-luna
+    fixing=persistence-reinitialization
+    result=ok  rc=0  execution=20261020.162402.491Z-7085ae7d
+    acceptance=3/3
+git: block-3 | FEATURE-Persistence-Lifecycle.md | call=2 | app=a59438a49794 target=446574015c16
+
+  DONE  story=persist-002  state=closed/verified  execution=20261020.162402.491Z-7085ae7d  elapsed=2m21s
+git: block-3 | FEATURE-Persistence-Lifecycle.md | step_completed | app=unchanged target=5bbefe3f2ddc
+WARNING: common_compact.md is stale (common.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/common.md
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-4  name=&quot;Block 4 · Service&quot;  calls_max=7
+  story=persist-003  &quot;Validate ledger identifiers, values, dates, and relationships.&quot;
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.162505.310Z-f8d7313e
+    acceptance=5/5
+git: block-4 | FEATURE-Validation.md | call=1 | app=962fbdc8266c target=4c23746b9d2f
+
+  DONE  story=persist-003  state=closed/verified  execution=20261020.162505.310Z-f8d7313e  elapsed=1m41s
+git: block-4 | FEATURE-Validation.md | step_completed | app=unchanged target=a1f14c667156
+WARNING: common_compact.md is stale (common.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/common.md
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-5  name=&quot;Block 5 · Service&quot;  calls_max=7
+  story=load-001  &quot;Load account and category CSV files atomically.&quot;
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.162649.393Z-b6d27a68
+    acceptance=4/4
+git: block-5 | FEATURE-Bulk-Reference-Loading.md | call=1 | app=278e12d7516e target=87c46b25c754
+
+  DONE  story=load-001  state=closed/verified  execution=20261020.162649.393Z-b6d27a68  elapsed=1m50s
+git: block-5 | FEATURE-Bulk-Reference-Loading.md | step_completed | app=unchanged target=f72a52fe3e86
+WARNING: common_compact.md is stale (common.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/common.md
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-6  name=&quot;Block 6 · Service&quot;  calls_max=7
+  story=load-002  &quot;Load transaction CSV files with complete-batch validation.&quot;
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.162841.276Z-61c83a92
+    acceptance=2/3  failed=load-transactions-valid
+git: block-6 | FEATURE-Bulk-Transaction-Loading.md | call=1 | app=a805892f5eb6 target=461e001de659
+
+  [call 2/7]  kind=repair(1/6)  llm=codex/gpt-5.6-luna
+    fixing=load-transactions-valid
+    result=ok  rc=0  execution=20261020.163030.466Z-48a46389
+    acceptance=2/3  failed=load-transactions-valid
+git: block-6 | FEATURE-Bulk-Transaction-Loading.md | call=2 | app=unchanged target=753283752ca5
+
+  [call 3/7]  kind=repair(2/6)  llm=codex/gpt-5.6-luna
+    fixing=load-transactions-valid
+    result=ok  rc=0  execution=20261020.163149.505Z-484bd8c8
+    acceptance=2/3  failed=load-transactions-valid
+  STOP  reason=stall  flat_calls=2
+git: block-6 | FEATURE-Bulk-Transaction-Loading.md | call=3 | app=unchanged target=83a91f3675ab
+
+  FAILED  story=load-002  state=closed/failed  execution=20261020.163149.505Z-484bd8c8  elapsed=4m03s
+git: block-6 | FEATURE-Bulk-Transaction-Loading.md | step_completed | app=unchanged target=6ad32c6a6a40
+
+result: 5 built, 1 failed, 0 unchanged
+elapsed: 14 minutes 26 seconds
+
+========================================================================
+BUILD FAILED: LayersTesting  (1 step)
+========================================================================
+
+  Failure
+    Provenance
+      Target: LayersTesting
+      Block: Block 6 · Service [block-6]
+      Story: Load transaction CSV files with complete-batch validation. [load-002]
+    Cause: programmatic acceptance failed: load-transactions-valid
+    agent summary:
+      The loader passes the project test suite (18 tests) and all
+      transaction-loading cases when prerequisite
+      accounts/categories exist. The authoritative valid-load
+      acceptance fails because it submits references `A` and `C`
+      without creating them first; the loader correctly rejects
+      those unknown references with exit code 3.
+    stopped early: 3 of 7 calls · deterministic acceptance score did not improve on 2 consecutive calls
+    acceptance: 2/3 passing · baseline 0/3 · improved
+    Assertion
+      Acceptance checks:
+      Acceptance: load-transactions-valid
+      Intent: A valid transaction CSV is loaded and its supplied row count is reported.
+      Source: FEATURE-Bulk-Transaction-Loading.md
+      Code: assert code == 0
+    Result
+      Process exit code: 1
+      Error: AssertionError
+      Stderr:
+          File &quot;load-transactions-valid.py&quot;, line 15, in &lt;module&gt;
+            assert code == 0
+                   ^^^^^^^^^
+        AssertionError
+    Recovery
+      Run: drydock build LayersTesting
+        to continue the build. This story resumes where it left off and is
+        retried against the checks it failed.
+    agent blockers:
+      - The `load-transactions-valid` acceptance setup omits
+      required account/category fixtures. Making unknown
+      references succeed would violate the specification and break
+      atomic invalid-reference validation.
+    execution: 20261020.163149.505Z-484bd8c8
+    evidence: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/workspace/targets/LayersTesting/evidence/block-6.md
+
+  Next
+    Run: drydock build LayersTesting
+      to continue the build. This story resumes where it left off and is
+      retried against the checks it failed.
+========================================================================
+
+========================================================================
+POST-LLM FAILURE  ·  build  ·  programmatic acceptance failed: load-transactions-valid
+========================================================================
+
+  Block &quot;Block 6 · Service&quot; [block-6] failed its acceptance criteria.
+    Story &quot;Load transaction CSV files with complete-batch validation.&quot; [load-002] does not meet its own acceptance criteria:
+      - AC load-transactions-valid — A valid transaction CSV is loaded and its supplied row count is reported.
+          assertion: assert code == 0 → AssertionError
+          raised at: load-transactions-valid.py:15
+          process exit code: 1
+          values at failure:
+            code = 3
+          check stderr:
+            Traceback (most recent call last):
+              File &quot;load-transactions-valid.py&quot;, line 15, in &lt;module&gt;
+                assert code == 0
+                       ^^^^^^^^^
+            AssertionError
+
+  Recovery
+    Run: drydock build LayersTesting
+      to continue the build. This story resumes where it left off and is retried against the checks it failed.
+
+========================================================================
+Target - committed project workspace git store
+</pre></article>
+</main>
+</body>
+</html>

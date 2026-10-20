@@ -1,0 +1,6 @@
+2026-10-20T16:20:29.055871Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/build/LayersTesting/config.py:
+def database_path(environ: dict[str, str] | None = None) -> Path:
+    dsn = database_dsn(environ)
+    if dsn.startswith("sqlite:///"):
+        return Path(dsn.removeprefix("sqlite:///")
+    return Path(dsn)

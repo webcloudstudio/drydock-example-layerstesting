@@ -63,12 +63,12 @@ generated from `DATABASE.md`. Application code never opens a database driver dir
 
 ## Rules
 
-1. **Every command is one database transaction.** A command that fails for any reason leaves
-   every table exactly as it was. A load that rejects row 11 stores none of rows 1 to 10. A
-   transfer stores both of its rows or neither.
+1. **A rejected command changes nothing.** A command checks every input and rule before its
+   first write. A load that rejects row 11 stores none of rows 1 to 10. A transfer stores both of
+   its rows or neither.
 2. **No command leaves an account balance below zero.** An account's balance is the sum of its
    transaction amounts. Posting, amending, deleting, transferring, and loading are all subject to
-   this rule, checked after the command's changes and before it commits.
+   this rule, checked before the command writes anything.
 3. **Codes** (`account`, `category`) are 1 to 12 characters from `A-Z` and `0-9`.
 4. **Names and descriptions** are 1 to 40 characters. **Memos** are 0 to 60 characters. None of
    them contains a comma or a newline.

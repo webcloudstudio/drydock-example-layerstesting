@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Transfers.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Transfers.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Transfers.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Transfers</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Transfers funds atomically between two ledger accounts.</td></tr><tr><td>Depends On</td><td>DATABASE.md, FEATURE-Accounts.md, FEATURE-Transaction-Posting.md, FEATURE-Validation.md</td></tr><tr><td>Provides</td><td><code>ledger transfer</code></td></tr><tr><td>Consumes</td><td>domain validation, relational ledger schema, transaction persistence operations</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Move a positive amount between distinct accounts using two consecutive <code>TRANSFER</code> transactions.</p>
+<h2>Workflow</h2>
+<p>The outgoing row uses the next transaction identifier, a negative amount, and memo <code>transfer to &lt;account&gt;</code>. The incoming row uses the following identifier, a positive amount, and memo <code>transfer from &lt;account&gt;</code>. Both rows are committed together only after validating all inputs and resulting balances.</p>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md, FEATURE-Accounts.md, FEATURE-Balance-Reports.md, FEATURE-Category-Reports.md, FEATURE-Monthly-Reports.md, FEATURE-Transaction-Mutation.md, FEATURE-Transaction-Posting.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC transfer-creates-pair ===<br>Intent: A valid transfer creates consecutive outgoing and incoming transaction rows. from cli.testing import cli_runner</p>
+<p>for account in (&quot;A&quot;, &quot;B&quot;): code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, account, account) assert code == 0 category_code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;) assert category_code == 0 seed_code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;SALES&quot;, &quot;10.00&quot;, &quot;2026-01-01&quot;) assert seed_code == 0 code, stdout, stderr = cli_runner(&quot;transfer&quot;, &quot;A&quot;, &quot;B&quot;, &quot;5.00&quot;, &quot;2026-01-02&quot;) assert code == 0 assert &quot;2,2026-01-02,A,TRANSFER,-5.00,transfer to B&quot; in stdout assert &quot;3,2026-01-02,B,TRANSFER,5.00,transfer from A&quot; in stdout === END AC transfer-creates-pair ===</p>
+<p>=== AC transfer-insufficient-balance ===<br>Intent: A transfer that would overdraw the source account is rejected atomically. from cli.testing import cli_runner</p>
+<p>for account in (&quot;A&quot;, &quot;B&quot;): code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, account, account) assert code == 0 category_code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;) assert category_code == 0 seed_code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;SALES&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;) assert seed_code == 0 code, stdout, stderr = cli_runner(&quot;transfer&quot;, &quot;A&quot;, &quot;B&quot;, &quot;2.00&quot;, &quot;2026-01-02&quot;) assert code == 3 assert stdout == &quot;&quot; count_code, count_stdout, count_stderr = cli_runner(&quot;count&quot;) assert count_code == 0 assert &quot;transactions,1&quot; in count_stdout === END AC transfer-insufficient-balance ===</p>
+<p>=== AC transfer-same-account ===<br>Intent: A transfer between the same account is rejected. from cli.testing import cli_runner</p>
+<p>account_code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Alpha&quot;) category_code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;) assert account_code == 0 assert category_code == 0 seed_code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;SALES&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;) assert seed_code == 0 code, stdout, stderr = cli_runner(&quot;transfer&quot;, &quot;A&quot;, &quot;A&quot;, &quot;1.00&quot;, &quot;2026-01-02&quot;) assert code == 3 assert stdout == &quot;&quot; === END AC transfer-same-account ===</p>
+<p>=== AC transfer-invalid-amount ===<br>Intent: A transfer with a non-positive amount is rejected. from cli.testing import cli_runner</p>
+<p>for account in (&quot;A&quot;, &quot;B&quot;): code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, account, account) assert code == 0 category_code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;) assert category_code == 0 code, stdout, stderr = cli_runner(&quot;transfer&quot;, &quot;A&quot;, &quot;B&quot;, &quot;0.00&quot;, &quot;2026-01-02&quot;) assert code == 3 assert stdout == &quot;&quot; === END AC transfer-invalid-amount ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Transfer amounts must be positive.</li><li>Source and destination accounts must differ and exist.</li><li>Both rows are written atomically or neither is written.</li><li>No account balance may become negative.</li></ul></article>
+</main>
+</body>
+</html>

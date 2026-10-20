@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/ARCHITECTURE_compact.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/ARCHITECTURE_compact.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/ARCHITECTURE_compact.md">Raw file</a></div></header>
+<article class="doc"><p>&lt;!-- Compacted from ARCHITECTURE.md sha256=3360d390c466fa255f8f9444b762fc3f8aa3b3549fc965de9deb50e710830b50 on 2026-10-20 by drydock build agent --&gt;</p>
+<ul><li>Python 3.11+ CLI executable: <code>./ledger &lt;command&gt;</code>.</li><li>Boundaries: executable, CLI, configuration, validation, services, persistence, test runner.</li><li>Resolve database via <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code>.</li><li>Persistence is exclusively through the shipped <code>persistence</code> package.</li><li>Commands include lifecycle, loading, accounts, transactions, transfers, and reports.</li><li>Exit codes: 0 success, 1 operational failure, 2 usage error, 3 rejected input/business rule, 4 absent entity.</li><li>Successful commands emit deterministic CSV; failures emit no stdout and diagnostics on stderr.</li><li>Amounts use integer cents; rejected commands perform no writes.</li></ul></article>
+</main>
+</body>
+</html>

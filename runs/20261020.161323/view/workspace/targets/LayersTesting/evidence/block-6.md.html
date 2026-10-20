@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-6.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-6.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-6.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 6 · Service (block-6)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/failed</li><li>story points (combined assembled cost): 9669</li><li>execution id: 20261020.163149.505Z-484bd8c8</li></ul>
+<h2>Stories built</h2>
+<ul><li>Load transaction CSV files with complete-batch validation. (load-002) [story]</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 601)</li><li>compass: COMPASS.md (SP 755)</li><li>implements: FEATURE-Bulk-Transaction-Loading.md (SP 912)</li><li>context: seed_transactions.csv (SP 1425)</li><li>context: seed_transactions_bad.csv (SP 141)</li><li>context: ARCHITECTURE_compact.md (SP 203)</li><li>context: DATABASE_compact.md (SP 197)</li><li>stack: common.md (SP 1812)</li><li>stack: sqlite.md (SP 1818)</li><li>stack: cli.md (SP 1755)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>cli/<strong>init</strong>.py</li><li>services.py</li><li>tests/test_bulk_loading.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>RED: load-transactions-valid (FEATURE-Bulk-Transaction-Loading.md)</li></ul>
+<p>intent: A valid transaction CSV is loaded and its supplied row count is reported. return code: 1 stderr: --- drydock: values at failure --- code = 2 --- drydock: end values --- Traceback (most recent call last): File &quot;load-transactions-valid.py&quot;, line 15, in &lt;module&gt; assert code == 0 ^^^^^^^^^ AssertionError</p>
+<ul><li>RED: load-transactions-invalid-is-atomic (FEATURE-Bulk-Transaction-Loading.md)</li></ul>
+<p>intent: A transaction file with an unknown account is rejected before any row is written. return code: 1 stderr: --- drydock: values at failure --- code = 2 --- drydock: end values --- Traceback (most recent call last): File &quot;load-transactions-invalid-is-atomic.py&quot;, line 14, in &lt;module&gt; assert code == 3 ^^^^^^^^^ AssertionError</p>
+<ul><li>RED: load-transactions-negative-balance (FEATURE-Bulk-Transaction-Loading.md)</li></ul>
+<p>intent: A batch that would make an account balance negative is rejected. return code: 1 stderr: --- drydock: values at failure --- code = 2 --- drydock: end values --- Traceback (most recent call last): File &quot;load-transactions-negative-balance.py&quot;, line 13, in &lt;module&gt; assert code == 3 ^^^^^^^^^ AssertionError</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>FAIL: load-transactions-valid (FEATURE-Bulk-Transaction-Loading.md)</li></ul>
+<p>intent: A valid transaction CSV is loaded and its supplied row count is reported. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 1 stderr: --- drydock: values at failure --- code = 3 --- drydock: end values --- Traceback (most recent call last): File &quot;load-transactions-valid.py&quot;, line 15, in &lt;module&gt; assert code == 0 ^^^^^^^^^ AssertionError</p>
+<ul><li>PASS: load-transactions-invalid-is-atomic (FEATURE-Bulk-Transaction-Loading.md)</li></ul>
+<p>intent: A transaction file with an unknown account is rejected before any row is written. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: load-transactions-negative-balance (FEATURE-Bulk-Transaction-Loading.md)</li></ul>
+<p>intent: A batch that would make an account balance negative is rejected. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Repair attempts</h2>
+<ul><li>attempt 0 (initial build): failed; 2/3 checks model=gpt-5.6-luna; execution 20261020.162841.276Z-61c83a92; reason: programmatic acceptance failed: load-transactions-valid</li><li>attempt 1 (repair 1): failed; 2/3 checks model=gpt-5.6-luna; execution 20261020.163030.466Z-48a46389; reason: programmatic acceptance failed: load-transactions-valid</li><li>attempt 2 (repair 2): failed; 2/3 checks model=gpt-5.6-luna; execution 20261020.163149.505Z-484bd8c8; stopped: deterministic acceptance score did not improve on 2 consecutive calls; reason: programmatic acceptance failed: load-transactions-valid</li></ul>
+<h2>Agent self-report (advisory)</h2>
+<p>The build agent declared a failure. This is advisory only; the programmatic acceptance above is the authority for this block&#x27;s outcome.</p>
+<ul><li>summary: Valid-load acceptance omits prerequisite reference data.</li><li>detail:</li></ul>
+<p>The command returns exit code 3 because account A and category C do not exist. The implementation succeeds when those references are loaded first; the acceptance criterion must initialize them before loading the transaction.</p>
+<h2>Failure</h2>
+<ul><li>summary: programmatic acceptance failed: load-transactions-valid</li><li>detail:</li></ul>
+<p>Block &quot;Block 6 · Service&quot; [block-6] failed its acceptance criteria. Story &quot;Load transaction CSV files with complete-batch validation.&quot; [load-002] does not meet its own acceptance criteria:</p>
+<ul><li>AC load-transactions-valid — A valid transaction CSV is loaded and its supplied row count is reported.</li></ul>
+<p>assertion: assert code == 0 → AssertionError raised at: load-transactions-valid.py:15 process exit code: 1 values at failure: code = 3 check stderr: Traceback (most recent call last): File &quot;load-transactions-valid.py&quot;, line 15, in &lt;module&gt; assert code == 0 ^^^^^^^^^ AssertionError</p>
+<h2>Build summary</h2>
+<p>&lt;reusable-compact filename=&quot;seed_transactions.csv&quot;&gt;<br>Transaction CSV schema: <code>txn_id,date,account,category,amount,memo</code>. IDs are positive integers; dates use <code>YYYY-MM-DD</code>; amounts are decimal currency values stored as integer cents. Rows reference existing accounts/categories and include sales, refunds, transfers, supplies, payroll, and rent across 2026-01 through 2026-03. &lt;/reusable-compact&gt;</p>
+<p>&lt;reusable-compact filename=&quot;seed_transactions_bad.csv&quot;&gt; Transaction CSV uses the same six-column schema. Rows 201–210 reference <code>DRAWER1</code> and are valid individually; row 211 references nonexistent account <code>NOSUCH</code>. Complete-batch validation must reject the entire file and persist zero rows. &lt;/reusable-compact&gt;</p>
+<p>RESULT: FAILED</p>
+<p>FILES CHANGED:</p>
+<ul><li>cli/<strong>init</strong>.py</li><li>services.py</li><li>tests/test_bulk_loading.py</li></ul>
+<p>SUMMARY: The loader passes the project test suite (18 tests) and all transaction-loading cases when prerequisite accounts/categories exist. The authoritative valid-load acceptance fails because it submits references <code>A</code> and <code>C</code> without creating them first; the loader correctly rejects those unknown references with exit code 3.</p>
+<p>BLOCKERS:</p>
+<ul><li>The <code>load-transactions-valid</code> acceptance setup omits required account/category fixtures. Making unknown references succeed would violate the specification and break atomic invalid-reference validation.</li></ul>
+<p>FAILURE_SUMMARY: Valid-load acceptance omits prerequisite reference data.<br>FAILURE_DETAIL: The command returns exit code 3 because account A and category C do not exist. The implementation succeeds when those references are loaded first; the acceptance criterion must initialize them before loading the transaction.</p></article>
+</main>
+</body>
+</html>

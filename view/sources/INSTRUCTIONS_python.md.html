@@ -29,10 +29,10 @@
 <div class="scroll"><table><thead><tr><th>Table</th><th>Columns</th><th>Keys</th></tr></thead><tbody><tr><td><code>accounts</code></td><td><code>account</code> text, <code>name</code> text</td><td>primary key <code>account</code></td></tr><tr><td><code>categories</code></td><td><code>category</code> text, <code>description</code> text</td><td>primary key <code>category</code></td></tr><tr><td><code>transactions</code></td><td><code>txn_id</code> integer, <code>date</code> text <code>YYYY-MM-DD</code>, <code>account</code> text, <code>category</code> text, <code>amount</code> integer cents, <code>memo</code> text</td><td>primary key <code>txn_id</code>; <code>account</code> references <code>accounts</code>; <code>category</code> references <code>categories</code></td></tr></tbody></table></div>
 <p>All database access goes through the shipped persistence library and the relational layer generated from <code>DATABASE.md</code>. Application code never opens a database driver directly.</p>
 <h2>Rules</h2>
-<ol><li><strong>Every command is one database transaction.</strong> A command that fails for any reason leaves</li></ol>
-<p>every table exactly as it was. A load that rejects row 11 stores none of rows 1 to 10. A transfer stores both of its rows or neither.</p>
+<ol><li><strong>A rejected command changes nothing.</strong> A command checks every input and rule before its</li></ol>
+<p>first write. A load that rejects row 11 stores none of rows 1 to 10. A transfer stores both of its rows or neither.</p>
 <ol><li><strong>No command leaves an account balance below zero.</strong> An account&#x27;s balance is the sum of its</li></ol>
-<p>transaction amounts. Posting, amending, deleting, transferring, and loading are all subject to this rule, checked after the command&#x27;s changes and before it commits.</p>
+<p>transaction amounts. Posting, amending, deleting, transferring, and loading are all subject to this rule, checked before the command writes anything.</p>
 <ol><li><strong>Codes</strong> (<code>account</code>, <code>category</code>) are 1 to 12 characters from <code>A-Z</code> and <code>0-9</code>.</li><li><strong>Names and descriptions</strong> are 1 to 40 characters. <strong>Memos</strong> are 0 to 60 characters. None of</li></ol>
 <p>them contains a comma or a newline.</p>
 <ol><li><strong>Amounts</strong> on input match <code>-?DIGITS[.D[D]]</code>: at most two decimal places, never zero. On output</li></ol>

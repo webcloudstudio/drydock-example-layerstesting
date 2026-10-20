@@ -1,0 +1,15 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+plan verify: LayersTesting
+  42 acceptance criteria in 15 files: every one can run
+  ⚠  FEATURE-Balance-Reports.md [balances-report-round-trip]: expects 'account,name,transactions,balance', a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Balance-Reports.md [balances-report-empty]: expects 'account,name,transactions,balance', a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Balance-Reports.md [balances-report-empty]: expects 'TOTAL,,0,0.00', a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Category-Reports.md [category-report-includes-unused]: expects 'category,description,transactions,inflow,outflow,net', a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Category-Reports.md [category-report-empty]: expects 'category,description,transactions,inflow,outflow,net', a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Category-Reports.md [category-report-empty]: expects 'TOTAL,,0,0.00,0.00,0.00', a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Monthly-Reports.md [monthly-report-grouping]: expects 'month,transactions,inflow,outflow,net', a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Monthly-Reports.md [monthly-report-empty]: expects 'month,transactions,inflow,outflow,net', a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Monthly-Reports.md [monthly-report-grouping]: expects '2026-04,1,10.00,0.00,10.00', a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Monthly-Reports.md [monthly-report-grouping]: expects '2026-06,1,0.00,3.25,-3.25', a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Monthly-Reports.md [monthly-report-grouping]: expects 'TOTAL,2,10.00,3.25,6.75', a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Monthly-Reports.md [monthly-report-empty]: expects 'TOTAL,0,0.00,0.00,0.00', a value re-typed rather than derived from the input or read back from the system

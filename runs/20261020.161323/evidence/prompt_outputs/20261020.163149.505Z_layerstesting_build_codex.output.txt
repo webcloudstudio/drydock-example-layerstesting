@@ -1,0 +1,23 @@
+<reusable-compact filename="seed_transactions.csv">
+Transaction CSV schema: `txn_id,date,account,category,amount,memo`. IDs are positive integers; dates use `YYYY-MM-DD`; amounts are decimal currency values stored as integer cents. Rows reference existing accounts/categories and include sales, refunds, transfers, supplies, payroll, and rent across 2026-01 through 2026-03.
+</reusable-compact>
+
+<reusable-compact filename="seed_transactions_bad.csv">
+Transaction CSV uses the same six-column schema. Rows 201–210 reference `DRAWER1` and are valid individually; row 211 references nonexistent account `NOSUCH`. Complete-batch validation must reject the entire file and persist zero rows.
+</reusable-compact>
+
+RESULT: FAILED
+
+FILES CHANGED:
+- cli/__init__.py
+- services.py
+- tests/test_bulk_loading.py
+
+SUMMARY:
+The loader passes the project test suite (18 tests) and all transaction-loading cases when prerequisite accounts/categories exist. The authoritative valid-load acceptance fails because it submits references `A` and `C` without creating them first; the loader correctly rejects those unknown references with exit code 3.
+
+BLOCKERS:
+- The `load-transactions-valid` acceptance setup omits required account/category fixtures. Making unknown references succeed would violate the specification and break atomic invalid-reference validation.
+
+FAILURE_SUMMARY: Valid-load acceptance omits prerequisite reference data.
+FAILURE_DETAIL: The command returns exit code 3 because account A and category C do not exist. The implementation succeeds when those references are loaded first; the acceptance criterion must initialize them before loading the transaction.

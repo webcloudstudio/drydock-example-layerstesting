@@ -1,0 +1,14 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Analyzing Blueprint: LayersTesting
+Running analysis...
+2026-10-20 11:58:39 EDT  Calling CODEX/gpt-5.6-luna (analyze)...
+  Completed CODEX/gpt-5.6-luna (analyze)  rc=0
+
+  ANALYSIS.md   →  ANALYSIS.md
+  SEA_TRIALS.md →  SEA_TRIALS.md
+  commanders_chair  →  QuarterDeck/commanders_chair.html  (lifecycle: analyzed)
+
+Quality: ✓  Ready  (5 features · 13 stories · 0 questionnaires · 0 blockers)
+
+Next step: drydock plan LayersTesting
+Target - committed project workspace git store

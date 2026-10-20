@@ -1,0 +1,45 @@
+<requirement name="ledger-entrypoint" stories="architecture">
+The deliverable is an executable named ledger at the application root.
+</requirement>
+<requirement name="database-configuration" stories="persist-001">
+Database: DATABASE_URL when the caller sets it (for example a PostgreSQL DSN), otherwise a
+SQLite file in a fresh temporary directory.
+</requirement>
+<requirement name="schema-lifecycle" stories="persist-002">
+Schema lifecycle
+</requirement>
+<requirement name="bulk-reference-loading" stories="load-001">
+Bulk load of the known dataset
+</requirement>
+<requirement name="bulk-transaction-loading" stories="load-002">
+Load transaction CSV files with complete-batch validation.
+</requirement>
+<requirement name="rejected-load-preserves-data" stories="persist-003">
+A rejected load changes nothing
+</requirement>
+<requirement name="account-lifecycle" stories="ledger-001">
+Account create, read, update, delete
+</requirement>
+<requirement name="transaction-posting" stories="ledger-002">
+Transaction create, read, update, delete
+</requirement>
+<requirement name="transaction-mutation" stories="ledger-003">
+Transaction create, read, update, delete
+</requirement>
+<requirement name="atomic-transfers" stories="ledger-004">
+Transfers are atomic; no command leaves a negative balance
+</requirement>
+<requirement name="balance-reports" stories="report-001">
+Reports over the seeded rows
+</requirement>
+<requirement name="category-reports" stories="report-002">
+Reports over the seeded rows
+</requirement>
+<requirement name="monthly-reports" stories="report-003">
+Reports over the seeded rows
+</requirement>
+<requirement name="reinitialization-clears-data" stories="persist-002">
+Re-initialization drops every row
+</requirement>
+<unattached story="verify-001"/>
+<unattached story="verify-002"/>

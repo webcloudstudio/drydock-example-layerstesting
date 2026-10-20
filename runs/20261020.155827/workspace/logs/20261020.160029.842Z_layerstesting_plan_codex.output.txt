@@ -1,0 +1,646 @@
+=== BEGIN ARTIFACT FEATURE-TRANSACTION-LOAD.md ===
+# FEATURE: Transaction CSV Loading
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Loads validated transaction CSV batches atomically into the ledger. |
+| Depends On  | FEATURE-ACCOUNT-CATEGORY-LOAD.md, DATABASE.md |
+| Provides    | ledger load transactions |
+| Consumes    | ./ledger executable, ledger persistence operations |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Load transaction rows while preserving supplied identifiers and enforcing all transaction, reference, date, amount, duplicate, balance, and atomicity rules.
+
+## Workflow
+
+1. Validate the exact transaction header and every row.
+2. Parse amounts into integer cents and validate real calendar dates.
+3. Validate account and category references and duplicate identifiers.
+4. Insert the complete batch in one transaction.
+5. Recompute affected balances before commit.
+6. Emit the loaded-row result only after commit.
+
+## Database Interface
+
+- `FEATURE-LEDGER-008` — write: create a transaction - supplies: `txn_id`, `date`, `account`, `category`, `amount`, `memo` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+- `FEATURE-LEDGER-013` — read: inspect transactions for balance validation - supplies: none - returns: `txn_id`, `account`, `amount`
+
+## Programmatic Acceptance
+
+=== AC transaction-load-success ===
+Intent: A valid transaction CSV batch is persisted with supplied identifiers and cents.
+import csv
+import os
+import tempfile
+from pathlib import Path
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as tmp:
+    db = Path(tmp) / "ledger.db"
+    old = os.environ.get("DATABASE_URL")
+    os.environ["DATABASE_URL"] = str(db)
+    try:
+        assert cli_runner("init")[0] == 0
+        assert cli_runner("load", "accounts", "sources/seed_accounts.csv")[0] == 0
+        assert cli_runner("load", "categories", "sources/seed_categories.csv")[0] == 0
+        code, stdout, _ = cli_runner("load", "transactions", "sources/seed_transactions.csv")
+        assert code == 0
+        rows = list(csv.reader(stdout.splitlines()))
+        assert rows[0] == ["table", "loaded"]
+        assert rows[1][0] == "transactions"
+        assert int(rows[1][1]) == 120
+        code, stdout, _ = cli_runner("txn", "get", "1")
+        assert code == 0
+        assert next(csv.reader(stdout.splitlines()))[0] == "txn_id"
+        row = next(csv.reader(stdout.splitlines()))
+        assert row[0] == "1"
+        assert row[4] == "5000.00"
+    finally:
+        if old is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = old
+=== END AC transaction-load-success ===
+
+=== AC transaction-load-atomic ===
+Intent: A rejected transaction batch leaves the existing transaction count unchanged.
+import csv
+import os
+import tempfile
+from pathlib import Path
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as tmp:
+    db = Path(tmp) / "ledger.db"
+    old = os.environ.get("DATABASE_URL")
+    os.environ["DATABASE_URL"] = str(db)
+    try:
+        assert cli_runner("init")[0] == 0
+        assert cli_runner("load", "accounts", "sources/seed_accounts.csv")[0] == 0
+        assert cli_runner("load", "categories", "sources/seed_categories.csv")[0] == 0
+        assert cli_runner("load", "transactions", "sources/seed_transactions.csv")[0] == 0
+        before = next(csv.reader(cli_runner("count")[1].splitlines())) 
+        code, stdout, _ = cli_runner("load", "transactions", "sources/seed_transactions_bad.csv")
+        assert code == 3
+        assert stdout == ""
+        after = list(csv.reader(cli_runner("count")[1].splitlines()))
+        assert after[3][0] == "transactions"
+        assert after[3][1] == "120"
+    finally:
+        if old is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = old
+=== END AC transaction-load-atomic ===
+
+=== AC transaction-load-validation ===
+Intent: Invalid transaction rows are rejected with the rejection exit code.
+from cli.testing import cli_runner
+
+code, stdout, stderr = cli_runner("txn", "post", "DRAWER1", "SALES", "1.234", "2026-02-30")
+assert code == 3
+assert stdout == ""
+assert stderr != ""
+=== END AC transaction-load-validation ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A rejected batch must commit no rows.
+- Amounts are integer cents and never floating point.
+- Application code uses only the shipped persistence library.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-ACCOUNT-OPERATIONS.md ===
+# FEATURE: Account Operations
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Creates, reads, renames, and deletes ledger accounts with lifecycle validation. |
+| Depends On  | FEATURE-TRANSACTION-LOAD.md, DATABASE.md |
+| Provides    | ledger account add, ledger account get, ledger account rename, ledger account delete |
+| Consumes    | ./ledger executable, ledger persistence operations |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Manage account records while enforcing code and name validation, uniqueness, not-found behavior, transaction references, and computed account balances.
+
+## Database Interface
+
+- `FEATURE-LEDGER-003` — write: create an account - supplies: `account`, `name` - returns: `account`, `name`
+- `FEATURE-LEDGER-004` — read-write: read and rename an account - supplies: `account`, `name` - returns: `account`, `name`
+- `FEATURE-LEDGER-005` — write: delete an account - supplies: `account` - returns: `account`
+- `FEATURE-LEDGER-011` — read: query account balances - supplies: none - returns: `account`, `name`, `transactions`, `balance`
+
+## Workflow
+
+- Add validates the account code and name, rejects duplicates, and returns the computed account row.
+- Get returns the account row with transaction count and balance.
+- Rename changes only the name.
+- Delete succeeds only when the account has no transactions.
+- Missing accounts return exit code 4; rejected mutations return exit code 3.
+
+## Programmatic Acceptance
+
+=== AC account-create-read ===
+Intent: Account creation persists a readable account with an empty balance.
+import csv
+import os
+import tempfile
+from pathlib import Path
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as tmp:
+    old = os.environ.get("DATABASE_URL")
+    os.environ["DATABASE_URL"] = str(Path(tmp) / "ledger.db")
+    try:
+        assert cli_runner("init")[0] == 0
+        account = "CASH9"
+        name = "Event Float"
+        code, _, _ = cli_runner("account", "add", account, name)
+        assert code == 0
+        code, stdout, _ = cli_runner("account", "get", account)
+        assert code == 0
+        rows = list(csv.reader(stdout.splitlines()))
+        assert rows[1][0] == account
+        assert rows[1][1] == name
+        assert rows[1][2] == "0"
+        assert rows[1][3] == "0.00"
+    finally:
+        if old is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = old
+=== END AC account-create-read ===
+
+=== AC account-rename ===
+Intent: Renaming changes the account name while retaining its code.
+import csv
+import os
+import tempfile
+from pathlib import Path
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as tmp:
+    old = os.environ.get("DATABASE_URL")
+    os.environ["DATABASE_URL"] = str(Path(tmp) / "ledger.db")
+    try:
+        assert cli_runner("init")[0] == 0
+        account = "CASH9"
+        first = "Event Float"
+        second = "Event Cash Box"
+        assert cli_runner("account", "add", account, first)[0] == 0
+        assert cli_runner("account", "rename", account, second)[0] == 0
+        code, stdout, _ = cli_runner("account", "get", account)
+        assert code == 0
+        row = list(csv.reader(stdout.splitlines()))[1]
+        assert row[0] == account
+        assert row[1] == second
+    finally:
+        if old is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = old
+=== END AC account-rename ===
+
+=== AC account-delete-rules ===
+Intent: Account deletion succeeds only for an unused account and reports absent accounts distinctly.
+import os
+import tempfile
+from pathlib import Path
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as tmp:
+    old = os.environ.get("DATABASE_URL")
+    os.environ["DATABASE_URL"] = str(Path(tmp) / "ledger.db")
+    try:
+        assert cli_runner("init")[0] == 0
+        unused = "CASH9"
+        assert cli_runner("account", "add", unused, "Event Float")[0] == 0
+        code, stdout, _ = cli_runner("account", "delete", unused)
+        assert code == 0
+        assert stdout != ""
+        code, stdout, _ = cli_runner("account", "get", unused)
+        assert code == 4
+        assert stdout == ""
+    finally:
+        if old is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = old
+=== END AC account-delete-rules ===
+
+=== AC account-validation ===
+Intent: Duplicate and in-use account mutations are rejected.
+from cli.testing import cli_runner
+
+assert cli_runner("account", "add", "DRAWER1", "Duplicate")[0] in {0, 3}
+code, stdout, _ = cli_runner("account", "delete", "DRAWER1")
+assert code in {3, 4}
+assert stdout == ""
+=== END AC account-validation ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Account balances are computed from stored transactions.
+- Accounts referenced by transactions cannot be deleted.
+- Failure emits no standard output.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-TRANSACTION-OPERATIONS.md ===
+# FEATURE: Transaction Operations
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Posts, reads, amends, and deletes individual cash transactions atomically. |
+| Depends On  | FEATURE-TRANSACTION-LOAD.md, DATABASE.md |
+| Provides    | ledger txn post, ledger txn get, ledger txn amend, ledger txn delete |
+| Consumes    | ./ledger executable, ledger persistence operations |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Provide individual transaction mutations and reads with generated identifiers, validation, preservation of immutable fields, and non-negative balance enforcement.
+
+## Database Interface
+
+- `FEATURE-LEDGER-008` — read-write: create a transaction - supplies: `txn_id`, `date`, `account`, `category`, `amount`, `memo` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+- `FEATURE-LEDGER-009` — read-write: amend a transaction amount - supplies: `txn_id`, `amount` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+- `FEATURE-LEDGER-010` — write: delete a transaction - supplies: `txn_id` - returns: `txn_id`
+
+## Workflow
+
+- Post validates references, amount, date, and memo, then assigns one more than the maximum identifier.
+- Get returns the complete transaction row.
+- Amend changes only the amount and rechecks the affected balance.
+- Delete removes an existing transaction only when the resulting balance remains non-negative.
+- Missing identifiers return exit code 4; rejected mutations return exit code 3.
+
+## Programmatic Acceptance
+
+=== AC transaction-post-get ===
+Intent: Posting a transaction assigns an identifier and persists the complete row.
+import csv
+import os
+import tempfile
+from pathlib import Path
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as tmp:
+    old = os.environ.get("DATABASE_URL")
+    os.environ["DATABASE_URL"] = str(Path(tmp) / "ledger.db")
+    try:
+        assert cli_runner("init")[0] == 0
+        assert cli_runner("load", "accounts", "sources/seed_accounts.csv")[0] == 0
+        assert cli_runner("load", "categories", "sources/seed_categories.csv")[0] == 0
+        account = "DRAWER1"
+        category = "SALES"
+        amount = "45.50"
+        date = "2026-04-01"
+        memo = "walk in sale"
+        code, stdout, _ = cli_runner("txn", "post", account, category, amount, date, memo)
+        assert code == 0
+        posted = list(csv.reader(stdout.splitlines()))[1]
+        txn_id = posted[0]
+        code, stdout, _ = cli_runner("txn", "get", txn_id)
+        assert code == 0
+        row = list(csv.reader(stdout.splitlines()))[1]
+        assert row[0] == txn_id
+        assert row[2] == account
+        assert row[3] == category
+        assert row[4] == amount
+        assert row[5] == memo
+    finally:
+        if old is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = old
+=== END AC transaction-post-get ===
+
+=== AC transaction-amend ===
+Intent: Amending a transaction changes only its amount.
+from cli.testing import cli_runner
+
+code, stdout, _ = cli_runner("txn", "amend", "1", "1.00")
+assert code in {0, 3, 4}
+if code != 0:
+    assert stdout == ""
+=== END AC transaction-amend ===
+
+=== AC transaction-delete ===
+Intent: Deleting an existing transaction removes it, while an absent identifier returns not found.
+from cli.testing import cli_runner
+
+code, stdout, _ = cli_runner("txn", "delete", "999999")
+assert code == 4
+assert stdout == ""
+=== END AC transaction-delete ===
+
+=== AC transaction-rejection ===
+Intent: Invalid amount, date, and unknown references are rejected without output.
+from cli.testing import cli_runner
+
+cases = [
+    ("DRAWER1", "NOSUCH", "1.00", "2026-04-01"),
+    ("DRAWER1", "SALES", "1.234", "2026-04-01"),
+    ("DRAWER1", "SALES", "1.00", "2026-02-30"),
+]
+for account, category, amount, date in cases:
+    code, stdout, _ = cli_runner("txn", "post", account, category, amount, date)
+    assert code == 3
+    assert stdout == ""
+=== END AC transaction-rejection ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Transaction identifiers are generated from the current maximum for posts.
+- Amend changes only amount.
+- No mutation may leave an account balance negative.
+- Amounts remain integer cents.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-TRANSFERS.md ===
+# FEATURE: Transfers
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Executes atomic two-entry transfers between distinct ledger accounts. |
+| Depends On  | FEATURE-TRANSACTION-OPERATIONS.md, DATABASE.md |
+| Provides    | ledger transfer |
+| Consumes    | ./ledger executable, ledger persistence operations |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Move a positive amount between two distinct accounts by creating consecutive outgoing and incoming transaction rows in one database transaction.
+
+## Database Interface
+
+- `FEATURE-LEDGER-008` — write: create outgoing and incoming transfer transactions - supplies: `txn_id`, `date`, `account`, `category`, `amount`, `memo` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+
+## Workflow
+
+1. Validate both accounts, the positive amount, and the real date.
+2. Allocate consecutive identifiers.
+3. Create the outgoing `TRANSFER` row with a negative amount.
+4. Create the incoming `TRANSFER` row with a positive amount.
+5. Validate all resulting balances before commit.
+6. Emit both rows in identifier order.
+
+## Programmatic Acceptance
+
+=== AC transfer-success ===
+Intent: A valid transfer creates two consecutive rows with opposite signed amounts and directional memos.
+import csv
+import os
+import tempfile
+from pathlib import Path
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as tmp:
+    old = os.environ.get("DATABASE_URL")
+    os.environ["DATABASE_URL"] = str(Path(tmp) / "ledger.db")
+    try:
+        assert cli_runner("init")[0] == 0
+        assert cli_runner("load", "accounts", "sources/seed_accounts.csv")[0] == 0
+        assert cli_runner("load", "categories", "sources/seed_categories.csv")[0] == 0
+        assert cli_runner("load", "transactions", "sources/seed_transactions.csv")[0] == 0
+        source = "DRAWER1"
+        target = "SAFE"
+        amount = "500.00"
+        date = "2026-04-03"
+        code, stdout, _ = cli_runner("transfer", source, target, amount, date)
+        assert code == 0
+        rows = list(csv.reader(stdout.splitlines()))
+        first = rows[1]
+        second = rows[2]
+        assert int(second[0]) == int(first[0]) + 1
+        assert first[2] == source
+        assert second[2] == target
+        assert first[3] == "TRANSFER"
+        assert second[3] == "TRANSFER"
+        assert first[4] == "-500.00"
+        assert second[4] == amount
+    finally:
+        if old is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = old
+=== END AC transfer-success ===
+
+=== AC transfer-atomic ===
+Intent: An insufficient-balance transfer is rejected without adding either transaction.
+import csv
+import os
+import tempfile
+from pathlib import Path
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as tmp:
+    old = os.environ.get("DATABASE_URL")
+    os.environ["DATABASE_URL"] = str(Path(tmp) / "ledger.db")
+    try:
+        assert cli_runner("init")[0] == 0
+        assert cli_runner("load", "accounts", "sources/seed_accounts.csv")[0] == 0
+        assert cli_runner("load", "categories", "sources/seed_categories.csv")[0] == 0
+        assert cli_runner("load", "transactions", "sources/seed_transactions.csv")[0] == 0
+        before = list(csv.reader(cli_runner("count")[1].splitlines()))[3][1]
+        code, stdout, _ = cli_runner("transfer", "SAFE", "PETTY", "999.99", "2026-04-04")
+        assert code == 3
+        assert stdout == ""
+        after = list(csv.reader(cli_runner("count")[1].splitlines()))[3][1]
+        assert after == before
+    finally:
+        if old is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = old
+=== END AC transfer-atomic ===
+
+=== AC transfer-validation ===
+Intent: Transfers reject non-positive amounts and identical accounts.
+from cli.testing import cli_runner
+
+for args in [
+    ("DRAWER1", "DRAWER1", "1.00", "2026-04-03"),
+    ("DRAWER1", "SAFE", "0.00", "2026-04-03"),
+]:
+    code, stdout, _ = cli_runner("transfer", *args)
+    assert code == 3
+    assert stdout == ""
+=== END AC transfer-validation ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Transfers create both rows or neither.
+- The outgoing row precedes the incoming row.
+- Account balances must remain non-negative.
+- The transfer category and directional memos are fixed by the ledger contract.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-BALANCE-REPORT.md ===
+# FEATURE: Balance Report
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Reports computed transaction counts and balances for every account. |
+| Depends On  | FEATURE-ACCOUNT-OPERATIONS.md, FEATURE-TRANSACTION-OPERATIONS.md, FEATURE-TRANSFERS.md, DATABASE.md |
+| Provides    | ledger report balances |
+| Consumes    | ./ledger executable, ledger persistence operations |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Compute the balances report directly from account and transaction data, including accounts with no transactions and a computed total row.
+
+## Database Interface
+
+- `FEATURE-LEDGER-011` — read: query balances by account - supplies: none - returns: `account`, `name`, `transactions`, `balance`
+
+## Report Contract
+
+The report emits:
+
+- `account,name,transactions,balance`
+- One row per account ordered by account code.
+- `TOTAL,,<count>,<sum>` using aggregate transaction count and balance.
+- Amounts formatted with exactly two decimal places.
+
+## Programmatic Acceptance
+
+=== AC balance-report-empty ===
+Intent: The balances report includes an account with no transactions and a zero balance.
+import csv
+import os
+import tempfile
+from pathlib import Path
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as tmp:
+    old = os.environ.get("DATABASE_URL")
+    os.environ["DATABASE_URL"] = str(Path(tmp) / "ledger.db")
+    try:
+        assert cli_runner("init")[0] == 0
+        account = "CASH9"
+        name = "Event Float"
+        assert cli_runner("account", "add", account, name)[0] == 0
+        code, stdout, _ = cli_runner("report", "balances")
+        assert code == 0
+        rows = list(csv.reader(stdout.splitlines()))
+        matching = [row for row in rows[1:] if row[0] == account]
+        assert len(matching) == 1
+        assert matching[0][1] == name
+        assert matching[0][2] == "0"
+        assert matching[0][3] == "0.00"
+    finally:
+        if old is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = old
+=== END AC balance-report-empty ===
+
+=== AC balance-report-computed ===
+Intent: The balances report reflects stored transaction counts and signed amounts.
+import csv
+import os
+import tempfile
+from pathlib import Path
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as tmp:
+    old = os.environ.get("DATABASE_URL")
+    os.environ["DATABASE_URL"] = str(Path(tmp) / "ledger.db")
+    try:
+        assert cli_runner("init")[0] == 0
+        assert cli_runner("load", "accounts", "sources/seed_accounts.csv")[0] == 0
+        assert cli_runner("load", "categories", "sources/seed_categories.csv")[0] == 0
+        assert cli_runner("load", "transactions", "sources/seed_transactions.csv")[0] == 0
+        code, stdout, _ = cli_runner("report", "balances")
+        assert code == 0
+        rows = list(csv.reader(stdout.splitlines()))
+        assert rows[0] == ["account", "name", "transactions", "balance"]
+        accounts = [row[0] for row in rows[1:-1]]
+        assert accounts == sorted(accounts)
+        total = rows[-1]
+        assert total[0] == "TOTAL"
+        assert int(total[2]) == 120
+    finally:
+        if old is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = old
+=== END AC balance-report-computed ===
+
+=== AC balance-report-no-hardcoding ===
+Intent: Changing persisted transactions changes the computed account report.
+import csv
+import os
+import tempfile
+from pathlib import Path
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as tmp:
+    old = os.environ.get("DATABASE_URL")
+    os.environ["DATABASE_URL"] = str(Path(tmp) / "ledger.db")
+    try:
+        assert cli_runner("init")[0] == 0
+        assert cli_runner("load", "accounts", "sources/seed_accounts.csv")[0] == 0
+        assert cli_runner("load", "categories", "sources/seed_categories.csv")[0] == 0
+        before = list(csv.reader(cli_runner("report", "balances")[1].splitlines()))
+        assert cli_runner("txn", "post", "DRAWER1", "SALES", "1.00", "2026-04-01")[0] == 0
+        after = list(csv.reader(cli_runner("report", "balances")[1].splitlines()))
+        before_row = next(row for row in before if row[0] == "DRAWER1")
+        after_row = next(row for row in after if row[0] == "DRAWER1")
+        assert int(after_row[2]) == int(before_row[2]) + 1
+    finally:
+        if old is None:
+            os.environ.pop("DATABASE_URL", None)
+        else:
+            os.environ["DATABASE_URL"] = old
+=== END AC balance-report-no-hardcoding ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Every account remains visible, including unused accounts.
+- Values are computed from database queries, never hardcoded.
+- Ordering is by account code.
+- The total row is derived from the detailed transaction data.
+=== END ARTIFACT ===

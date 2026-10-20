@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompts/20261020.163030.466Z_layerstesting_build_codex.prompt.md</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompts/20261020.163030.466Z_layerstesting_build_codex.prompt.md</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompts/20261020.163030.466Z_layerstesting_build_codex.prompt.md">Raw file</a></div></header>
+<article class="doc"><h1>System Instructions</h1>
+<p>This prompt is divided into three sections:</p>
+<ol><li><strong>System Instructions</strong> (this section) — structural orientation only. Do not treat this</li></ol>
+<p>section as task input.</p>
+<ol><li><strong>Input Context</strong> — begins with the heading <code># Input Context</code>. All blocks are wrapped in</li></ol>
+<p><code>&lt;pblock&gt;</code> tags. Two block types:</p>
+<ul><li>File blocks: <code>&lt;pblock filename=&quot;&lt;name&gt;&quot; role=&quot;&lt;role&gt;&quot; guidance=&quot;...&quot;&gt;</code> — optional</li></ul>
+<p><code>guidance</code> attribute carries context-specific instructions; content is in a fenced block.</p>
+<ul><li>Metadata/section blocks: <code>&lt;pblock label=&quot;&lt;label&gt;&quot; kind=&quot;&lt;kind&gt;&quot;&gt;</code> — job parameters,</li></ul>
+<p>rules, instructions, or group headers.</p>
+<ol><li><strong>Agent Task</strong> — begins with the heading <code># Agent Task</code>. Defines your persona, constraints,</li></ol>
+<p>and required outputs. Read all input context before acting on this section.</p>
+<h1>Input Context</h1>
+<p>&lt;pblock label=&quot;Build block job&quot; kind=&quot;job&quot;&gt;</p>
+<h2>Build block job</h2>
+<ul><li>TARGET: LayersTesting</li><li>BUILD_DIRECTORY: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/build/LayersTesting</li><li>WORKING_DIRECTORY: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/build/LayersTesting</li><li>BUILD_BLOCK: Block 6 · Service (block-6)</li><li>STORIES: Load transaction CSV files with complete-batch validation. (load-002)</li><li>DATE: 2026-10-20</li><li>BUILD_SCOPE: exactly one MANIFEST.md build block</li></ul>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock label=&quot;Stories in this block&quot; kind=&quot;section&quot;&gt;</p>
+<h2>Stories in this block</h2>
+<ul><li>Load transaction CSV files with complete-batch validation. (load-002) [story]</li></ul>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock label=&quot;Files on disk&quot; kind=&quot;section&quot;&gt;</p>
+<h2>Files on disk in the build directory</h2>
+<ul><li>sources/run.sh</li><li>sources/seed_accounts.csv</li><li>sources/seed_categories.csv</li><li>sources/seed_transactions.csv</li><li>sources/seed_transactions_bad.csv</li></ul>
+<p>These are the only imported files present on disk. Every other file named in this prompt is supplied as prompt context and is not on disk; read it here and do not report it as a missing input.</p>
+<p>&lt;/pblock&gt;</p>
+<h2>COMPASS - Target Orientation</h2>
+<p>&lt;pblock filename=&quot;COMPASS.md&quot; role=&quot;compass&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/workspace/targets/LayersTesting/COMPASS.md&quot; guidance=&quot;Important: This is the core project intent, constraints, and guardrails. It should have presecedence in conflicts.&quot;&gt;</p>
+<pre><code># COMPASS: LayersTesting
+
+## Compass
+
+Build a command-line cash ledger, an executable named `ledger` at the application root, as
+described in `sources/INSTRUCTIONS.md`. It keeps accounts, categories, and cash transactions in a
+relational database reached only through the shipped persistence library, rejects a failing command
+before it writes, enforces non-negative balances, and reports balances, category totals, and monthly totals.
+
+Correctness is measured by `sources/run.sh`: 43 checks of exit code and standard output against
+known answers computed from the seed files. The goal is every check passing.
+
+## Constraints
+
+- Implement in the language and database named under `## Stack` in `sources/INSTRUCTIONS.md`.
+- Provide an executable named `ledger` at the application root, invoked as `./ledger &lt;command&gt;`.
+- Read the database location from `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`.
+- Store amounts as integer cents.
+- Check every command in full before its first write.
+- Run without network access other than to a PostgreSQL server named by `DATABASE_URL`.
+- Diagnostics go to standard error and are never compared.
+
+## Guardrails
+
+- Do not modify, rewrite, regenerate, or substitute any file under `sources/`.
+- Do not read `sources/run.sh` or any seed file from application code. Seed files reach the
+  database only through `ledger load`.
+- Do not hardcode a report row, a count, or a total. Every value comes from a query.
+- Do not open a database driver outside the shipped persistence library.
+- Do not use floating point for money at any layer.
+
+## Verification Protocol
+
+| Story kind | Command | Asserts |
+|---|---|---|
+| Every behavioral story | `sh bin/test.sh` | exit `0` |
+| Terminal story (once, last) | `sh sources/run.sh` | exit `0` |
+
+&lt;!-- drydock:build-write-guardrail:start --&gt;
+## Build Write Guardrail
+
+- Authorized build directory: `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/build/LayersTesting`
+- Authorized Target directory: `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/workspace/targets/LayersTesting`
+- Build agents have permission to create, modify, and remove files required by the active build block inside these authorized directories.
+- No path outside these authorized directories may be modified.
+- Protected Drydock artifacts:
+  - `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/workspace/targets/LayersTesting/blueprint/`
+  - `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/workspace/targets/LayersTesting/MANIFEST.md`
+  - `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/workspace/targets/LayersTesting/COMPASS.md`
+  - `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/workspace/targets/LayersTesting/QuarterDeck/`
+  - `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/workspace/targets/LayersTesting/evidence/`
+&lt;!-- drydock:build-write-guardrail:end --&gt;</code></pre>
+<p>&lt;/pblock&gt;</p>
+<h2>STACK - Technology HOW</h2>
+<p>&lt;pblock filename=&quot;python_compact.md&quot; role=&quot;stack&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/Rigging/languages/python/python_compact.md&quot;&gt;</p>
+<pre><code>&lt;!-- Compacted from Rigging/languages/python/python.md sha256=fe344456a351e3237cfe3bae2408a69758d401430b935f60c15f91b9a97e8016 on 2026-10-18 by Rigging maintenance --&gt;
+
+## Foundation Contract
+
+- source_root: ./
+- test_command: pytest -q
+- environment: `.venv`, created by `uv venv` and activated by launchers in `bin/`
+- dependencies: `pyproject.toml` and committed `uv.lock`
+
+The language foundation owns the project root, environment, dependency manifest, and test runner.
+Later foundations add their packages to this tree without replacing those contracts.
+
+### How do we execute and measure Acceptance Criteria in this language?
+
+An Acceptance Criterion (AC) is an executable check of Blueprint-required behavior. Use the
+existing Programmatic Acceptance format: a Python script with assertions against the built
+product. Drydock executes each criterion through `languages/python/acceptance/runner.py`; `pytest -q`
+runs the project test suite. Retain the criterion ID, observed values, stdout/stderr and result;
+an assertion failure fails the check. The harness reports failure operands and available case
+counts. Code coverage and persistence interactions require explicit instrumentation; record
+available observations as key/value data associated with the criterion. Missing observations
+are unknown, not proof that code or an interaction was unused.
+
+### How does this language provide the shared persistence contract?
+
+Use `stack/persistence.md`. Drydock copies `Rigging/languages/python/persistence/{db,sqlite,postgres}.py` and generates
+`persistence/{schema,__init__,testing}.py` plus `schema.sql` from `DATABASE.md`. Call
+`open_database(dsn)` and `db.&lt;table&gt;.&lt;operation&gt;(...)`; use `persistence.testing.db_session()`
+for criteria. SQLite uses the standard library; PostgreSQL needs `psycopg[binary]` in the project
+dependencies. Both engines ship together and the DSN selects the engine. Library verification
+lives in `tests/test_shipped_database.py`; a Target still verifies its own schema and operations.
+
+## Consumer Rules
+
+- Python &gt;=3.11; use modern type hints on public interfaces and named cross-package data shapes.
+- Centralize typed runtime settings; use Blueprint names and defaults. Keep secrets out of Git and logs.
+- Keep behavior in importable modules; launchers activate `.venv` and invoke modules.
+- Use pytest with isolated external state; all test gates run `pytest -q`.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;common.md&quot; role=&quot;stack&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/Rigging/stack/common.md&quot;&gt;</p>
+<pre><code># Common Best Practices
+
+**Type:** guidance
+**Version:** 20260320 V1  
+**Category:** Technologies
+**Description:** Common development patterns shared across all stack configurations
+
+Always included regardless of technology stack. Covers project structure conventions, shell scripts, metadata files, git hygiene, and development workflow. This file does not change between projects.
+
+---
+
+## 1. Project Directory Layout
+
+**Rule**: Every project follows a predictable directory structure.
+
+```
+project-name/
+├── bin/                # Operation scripts (see Shell Scripts section)
+├── data/               # Runtime data (DB, logs, backups) — gitignored
+│   ├── logs/           # Script and process output logs
+│   └── backups/        # Database and file backups
+├── docs/               # Project documentation
+├── tests/              # Test suite
+├── PROJECT/            # Build specification (optional, for specification-driven projects)
+├── .env                # Environment config — gitignored
+├── .env.example        # Template with placeholder values — committed
+├── .gitignore
+├── CLAUDE.md           # AI agent instructions
+└── Links.md            # External links
+```
+
+Additional directories depend on the stack (e.g., `templates/`, `static/`, `migrations/`).
+
+**Why**: Consistent layout lets any developer or AI agent locate files instantly.
+
+---
+
+## 2. Shell Scripts (bin/ Directory)
+
+**Rule**: All user-facing operations live in `bin/` as bash scripts with standardized headers, logging, and error handling.
+
+### Script Template
+
+```bash
+#!/bin/bash
+# CommandCenter Operation
+# Name: Human Readable Name
+# Type: daemon|batch
+# Port: 8000
+
+# --- Standard Preamble ---
+set -euo pipefail
+SCRIPT_DIR=&quot;$(cd &quot;$(dirname &quot;${BASH_SOURCE[0]}&quot;)&quot; &amp;&amp; pwd)&quot;
+PROJECT_DIR=&quot;$(cd &quot;$SCRIPT_DIR/..&quot; &amp;&amp; pwd)&quot;
+LOG_DIR=&quot;$PROJECT_DIR/data/logs&quot;
+mkdir -p &quot;$LOG_DIR&quot;
+
+TIMESTAMP=$(date &#x27;+%Y-%m-%d_%H%M%S&#x27;)
+SCRIPT_NAME=$(basename &quot;$0&quot; .sh)
+LOG_FILE=&quot;$LOG_DIR/${SCRIPT_NAME}_${TIMESTAMP}.log&quot;
+
+echo &quot;=== $SCRIPT_NAME started at $(date &#x27;+%Y-%m-%d %H:%M:%S&#x27;) ===&quot; | tee &quot;$LOG_FILE&quot;
+echo &quot;Arguments: $*&quot; | tee -a &quot;$LOG_FILE&quot;
+echo &quot;Working dir: $PROJECT_DIR&quot; | tee -a &quot;$LOG_FILE&quot;
+echo &quot;---&quot; | tee -a &quot;$LOG_FILE&quot;
+
+cd &quot;$PROJECT_DIR&quot;
+
+# --- Your Commands Here ---
+# All output goes to both console and log file via tee
+your_command 2&gt;&amp;1 | tee -a &quot;$LOG_FILE&quot;
+
+echo &quot;=== $SCRIPT_NAME finished at $(date &#x27;+%Y-%m-%d %H:%M:%S&#x27;) ===&quot; | tee -a &quot;$LOG_FILE&quot;
+```
+
+### Header Fields
+
+The first comment block is parsed by Command Center&#x27;s scanner for auto-discovery:
+
+| Field | Required | Values | Description |
+|-------|----------|--------|-------------|
+| `# CommandCenter Operation` | Yes | literal | Marks script as discoverable |
+| `# Name:` | Yes | free text | Display name in UI |
+| `# Type:` | No | `daemon` or `batch` | Default: `batch`. Daemons stay running. |
+| `# Port:` | No | integer | Port number for daemon services |
+
+Scripts without the `# CommandCenter Operation` header are still valid scripts but won&#x27;t appear in Command Center&#x27;s UI.
+
+### Standard Scripts
+
+Every project should have these scripts (where applicable):
+
+| Script | Type | Purpose |
+|--------|------|---------|
+| `bin/start.sh` | daemon | Start the dev server |
+| `bin/stop.sh` | batch | Stop the dev server |
+| `bin/test.sh` | batch | Run test suite |
+| `bin/build.sh` | batch | Build/compile the project |
+| `bin/deploy.sh` | batch | Deploy to production |
+| `bin/backup.sh` | batch | Backup data/database |
+
+### Logging Pattern
+
+- All stdout and stderr captured via `tee` to `data/logs/`
+- Log filename includes script name and timestamp: `start_2026-03-07_143022.log`
+- First lines of log always record: timestamp, arguments, working directory
+- These logs are viewable from Command Center&#x27;s Process Monitor
+
+**Why**: Standardized scripts make every project operable the same way. Log capture enables monitoring, alerting, and post-mortem analysis.
+
+---
+
+## 3. External Links (Links.md)
+
+**Rule**: Every project maintains a `Links.md` file at its root with a markdown table of relevant URLs.
+
+```markdown
+| Label | URL |
+|-------|-----|
+| Local Dev | http://localhost:5001 |
+| Production | https://example.com |
+| Docs | https://docs.example.com |
+| GitHub | https://github.com/user/repo |
+```
+
+Rules:
+- One table, two columns: Label and URL
+- Labels are short and descriptive
+- Command Center&#x27;s scanner reads this on startup and stores links in the project&#x27;s `extra` JSON
+- Links appear in the project&#x27;s configuration page
+
+**Why**: Centralizes all project URLs in one discoverable, parseable location. Both AI agents and Command Center consume it.
+
+---
+
+## 4. CLAUDE.md Convention
+
+**Rule**: Every project has a `CLAUDE.md` at its root following this section structure:
+
+1. `## Project Overview` — What the project does, key features
+2. `## Architecture` — Tech stack, key files, patterns
+3. `## Dev Commands` — Bash commands to run the project (in a code block)
+4. `## Service Endpoints` — URLs: `- Label: https://url`
+5. `## Bookmarks` — Grouped links: `### Group` then `- [Title](URL)`
+
+Section rename rules — always use the standard name:
+- `## Commands` / `## Development Commands` / `## Build Commands` → `## Dev Commands`
+- `## Overview` / `## Project Purpose` → `## Project Overview`
+- `## Stack` → `## Architecture`
+
+**Why**: Consistent structure lets AI agents parse project context reliably.
+
+---
+
+## 5. Git Hygiene
+
+**Rule**: Maintain a comprehensive `.gitignore`. Never commit secrets, generated files, or runtime data.
+
+```gitignore
+# Runtime
+data/
+*.db
+*.log
+
+# Environment
+.env
+venv/
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+
+# OS
+.DS_Store
+Thumbs.db
+```
+
+Rules:
+- `data/` — runtime databases, logs, backups, uploads
+- `.env` — secrets and local config
+- Commit `.env.example` with placeholder values
+- Write imperative commit messages: &quot;Add health endpoint&quot; not &quot;Added health endpoint&quot;
+
+**Why**: Clean repos are cloneable and runnable. No secrets in history.
+
+---
+
+## 6. Development Workflow
+
+**Rule**: Follow these rules when working in any git-managed project.
+
+1. **Always commit changes immediately** after completing a task if the task has no errors
+2. **Commit messages** should have descriptive text (no AI/tool mentions)
+3. **DO NOT push** — only commit to local git
+4. **NO co-authored-by lines** in commits
+5. **Always end code change responses with a restart notice** for any project that runs a web server:
+   - If only templates/CSS/static files changed: &quot;No restart needed — browser refresh is enough.&quot;
+   - If any Python/JS server files changed: &quot;Restart required — run the start script or equivalent.&quot;
+
+**Why**: Consistent workflow prevents accidental pushes, keeps commit history clean, and ensures developers know when to restart.
+
+---
+
+## Summary Checklist
+
+- [ ] Standard directory layout with `bin/`, `data/`, `docs/`, `tests/`
+- [ ] Shell scripts in `bin/` with CommandCenter headers and tee logging
+- [ ] `Links.md` for external URLs
+- [ ] `CLAUDE.md` following section convention
+- [ ] `.env.example` committed, `.env` gitignored
+- [ ] Comprehensive `.gitignore`
+- [ ] Commit immediately, don&#x27;t push, no AI mentions</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;sqlite.md&quot; role=&quot;stack&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md&quot;&gt;</p>
+<pre><code># SQLite
+
+**Type:** database
+**Version:** 20261018 V4
+**Tier:** platform
+**Category:** Persistence
+**Foundation:** database
+**Description:** SQLite as a Drydock store: what it enforces, what it ignores, and how a Target reaches it.
+
+Technology reference. This file does not change between projects.
+
+Prerequisite: `stack/persistence.md`
+
+---
+
+## Foundation Contract
+
+The published Python binding follows. Go callers use the language-native API in
+`languages/go/go.md`; Go tests run through the existing Blueprint AC container.
+Carried verbatim into `sqlite_compact.md`.
+
+- package: persistence
+- entry: open_database(dsn) -&gt; Database
+- fixture: db_session
+- fixture_source: persistence/testing.py
+
+### How is this engine configured and initialized?
+
+For the shipped Python binding, use the standard-library `sqlite3` driver and a file path or
+`sqlite://` DSN. Configuration resolves `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`.
+Drydock applies generated `schema.sql` at the DATABASE step and before acceptance runs. Declare
+schema changes in `DATABASE.md`; rebuilding applies idempotent creation statements, not a
+migration of existing tables. The engine owns connections and enables foreign keys.
+
+### How does this engine implement the shared persistence contract?
+
+The shipped Python binding is `Rigging/languages/python/persistence/sqlite.py`, used through `persistence.db` and
+`open_database(dsn)`. Call declared table operations and use `db_session()` for criteria; do not
+import the driver in application code. SQLite does not prove PostgreSQL length/type enforcement.
+Library verification is in `tests/test_shipped_database.py`; verify Target-specific operations
+separately. The Go binding is `languages/go/persistence/sqlite.go`, verified against this engine.
+Use `OpenDatabase(ctx, dsn)` and generated typed methods; `OpenSession(ctx, dsn, ddl)` supplies
+a test store. The Go library is linked as `drydock.local/persistence`. The detailed Python interface follows.
+
+**How the Python binding is built.** Drydock builds this foundation deterministically. No build agent writes,
+edits, or replaces any file listed below.
+
+1. Plan declares the store in `DATABASE.md`: every table, every column, and each access pattern&#x27;s
+   `Repository operation` as `&lt;table&gt;.&lt;verb&gt;`.
+2. Plan emits the story that implements `DATABASE.md`, with `persistence.md` and `sqlite.md` in
+   `stack:`. That story is the DATABASE step. Its builder writes no persistence code.
+3. Before that story&#x27;s step runs, Drydock writes the package into the build root, so a story in
+   the same step can import it:
+
+| Layer | File | Origin |
+|---|---|---|
+| Library | `persistence/db.py` | shipped `Rigging/languages/python/persistence/db.py`, copied unchanged: `Database`, statement construction, parameter binding, engine selection |
+| Engines | `persistence/sqlite.py`, `persistence/postgres.py` | shipped, copied unchanged; the DSN selects one at runtime |
+| Declaration | `persistence/schema.py` | generated from `DATABASE.md`: `SCHEMA` (tables, operations, row dataclasses) and `open_database(dsn)`; contains no SQL |
+| Interface | `persistence/__init__.py` | generated; exports `Database`, `PersistenceError`, `UnknownOperation`, `SCHEMA`, `open_database` |
+| Fixture | `persistence/testing.py` | generated; `db_session()` |
+| DDL | `schema.sql` | generated from `DATABASE.md`; `CREATE ... IF NOT EXISTS` throughout |
+
+4. Drydock applies `schema.sql` through `open_database` to the configured store — `DATABASE_URL`,
+   else `DATABASE_PATH`, else `data/app.db` — at the DATABASE step and again before every
+   acceptance run, so a criterion that drives the application through its own client finds the
+   declared tables.
+
+Every later story writes callers only: `route → service → db.&lt;table&gt;.&lt;verb&gt;(...)`. The package
+exposes one attribute per declared table and one method per declared operation. Changing the
+store means changing `DATABASE.md` and rebuilding.
+
+```python
+# persistence/testing.py — generated by Drydock
+@contextmanager
+def db_session(dsn: str | None = None) -&gt; Iterator[Database]: ...
+
+# application code
+from persistence import open_database
+
+db = open_database(config.database_path)
+
+# a criterion
+from persistence.testing import db_session
+
+with db_session() as db:
+    row = db.&lt;table&gt;.create(...)  # the declared Output row
+
+# conftest.py
+import pytest
+from persistence import testing
+
+@pytest.fixture
+def db_session():
+    with testing.db_session() as db:
+        yield db
+```
+
+`db_session()` opens `dsn`, or a fresh temporary SQLite store, with `schema.sql` applied. A
+criterion imports it from `persistence.testing` and uses it as a context manager —
+`with db_session() as db:` — against the built database layer, without pytest. The pytest suite
+receives the same store through the `conftest.py` fixture. Neither opens a connection of its
+own, and a criterion never imports `sqlite3`.
+
+---
+
+## You do not write the access layer
+
+Drydock generates the persistence package from `DATABASE.md` and copies the SQLite engine in
+unchanged. Connection handling, thread discipline, PRAGMAs, parameter binding, and row mapping all
+live there. A hand-written connection helper, cursor, or SQL string is a review failure.
+
+**By language**
+
+| Language | Adapter | What the build writes |
+|---|---|---|
+| Python | `Rigging/languages/python/persistence/sqlite.py`, shipped | callers only — `db.&lt;table&gt;.&lt;verb&gt;(...)` |
+| Go | `Rigging/languages/go/persistence/sqlite.go`, shipped | typed callers; declarations and fixtures are generated |
+| other languages | none yet | a Target declaring `DATABASE.md` fails before planning |
+
+## Role
+
+SQLite is the development and test engine. It is a file, it needs no server, and it opens from a
+plain path or a `sqlite://` DSN. Production relational storage is PostgreSQL; see
+`stack/postgres.md`.
+
+Both engines are copied into every build and selected at runtime from the DSN, so the same build
+runs SQLite in test and PostgreSQL in production without rebuilding.
+
+## What it enforces
+
+`PRIMARY KEY`, `NOT NULL`, `UNIQUE`, `DEFAULT`, and — with `PRAGMA foreign_keys=ON`, which the
+shipped engine sets — `REFERENCES`.
+
+## What it ignores
+
+**Column length.** SQLite has type affinity, not length. `VARCHAR(50)` parses and is stored as
+`TEXT`, and a 500-character value is accepted. The same declaration is emitted to PostgreSQL,
+which does enforce it, so **a length violation passes in test and fails in production.** Declare
+lengths for the production engine and do not rely on SQLite to catch them.
+
+**Type strictness.** Any value may be stored in any column. A test that passes on SQLite has not
+proven the column types.
+
+**`ALTER TABLE`.** Only `ADD COLUMN` and `RENAME` are supported; there is no `DROP COLUMN` before
+3.35, no type change, and no `ADD CONSTRAINT`. Within a release this never arises — the schema is
+built once, at the DATABASE build step, from `schema.sql`.
+
+## Guardrails
+
+- Never import `sqlite3` outside the generated `persistence/` package.
+- Never hold a `sqlite3.Connection` on an application object; the engine owns connection lifetime.
+- Never create or alter schema at application startup.
+- Never treat a green SQLite test as proof that column lengths or types hold in production.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;cli.md&quot; role=&quot;stack&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/Rigging/stack/cli.md&quot;&gt;</p>
+<pre><code># Command-Line Application
+
+**Type:** cli
+**Version:** 20260920 V1
+**Tier:** platform
+**Category:** Technologies
+**Foundation:** cli
+**Description:** Command-line application structure: entry point, argument parsing, exit codes, cross-platform launchers, and testing without spawning a process.
+
+Technology reference. This file does not change between projects.
+
+Prerequisites: `stack/common.md`, `languages/python/python.md`
+
+---
+
+## Foundation Contract
+
+The published shape of this foundation. Drydock synthesizes the story that builds it and every
+acceptance criterion writes against these names. Carried verbatim into `cli_compact.md`.
+
+- package: cli
+- entry: main(argv: list[str] | None = None) -&gt; int
+- fixture: cli_runner
+- fixture_source: cli/testing.py
+
+```python
+# cli/__init__.py
+def main(argv: list[str] | None = None) -&gt; int:
+    ...
+
+# cli/testing.py
+import contextlib
+import io
+from cli import main
+
+def cli_runner(*args: str) -&gt; tuple[int, str, str]:
+    &quot;&quot;&quot;Return (exit_code, stdout, stderr) without spawning a process.&quot;&quot;&quot;
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        code = main(list(args))
+    return code, out.getvalue(), err.getvalue()
+
+# conftest.py
+import pytest
+from cli import testing
+
+@pytest.fixture
+def cli_runner():
+    return testing.cli_runner
+```
+
+A criterion imports `cli_runner` from `cli.testing`, calls `cli_runner(&quot;status&quot;, &quot;--json&quot;)`, and
+asserts on the returned tuple. It does not call `subprocess.run`, which measures the installed
+console script and the shell rather than the code the story wrote.
+
+---
+
+## 1. Directory Layout
+
+**Rule**: Command code lives in `cli/`. The root holds only packaging and infrastructure files.
+
+```
+project/
+  pyproject.toml            # [project.scripts] declares the console script
+  cli/
+    __init__.py             # main() — the single entry point
+    commands.py             # one function per command; no argument parsing
+    parser.py               # argparse construction; no behavior
+  bin/
+    run.sh                  # bash launcher
+    run.ps1                 # PowerShell launcher
+  tests/
+```
+
+**Why**: Parsing, behavior, and launching are three contracts. Collapsing them produces a command
+that cannot be tested without a shell.
+
+---
+
+## 2. Entry Point and Exit Codes
+
+**Rule**: `main(argv=None) -&gt; int` parses, dispatches, and returns an exit code. It never calls
+`sys.exit` and never raises for an expected failure. The console script is the only caller that
+translates the return value into a process exit.
+
+```python
+# cli/__init__.py
+import sys
+from cli.parser import build_parser
+from cli import commands
+
+def main(argv: list[str] | None = None) -&gt; int:
+    args = build_parser().parse_args(argv)
+    try:
+        return commands.dispatch(args)
+    except OperationalError as exc:
+        print(f&quot;error: {exc}&quot;, file=sys.stderr)
+        return 1
+```
+
+```toml
+# pyproject.toml
+[project.scripts]
+mytool = &quot;cli:main&quot;
+```
+
+**Exit codes**: `0` success, `1` operational failure, `2` usage error. `argparse` already returns
+`2` for a usage error; do not override it.
+
+**Why**: A `main` that returns rather than exits is callable from a test in-process. A `main` that
+calls `sys.exit` forces every criterion to spawn a subprocess and measure the shell.
+
+---
+
+## 3. Parsing Is Separate From Behavior
+
+**Rule**: `parser.py` builds the `argparse` tree and returns it. `commands.py` holds one function
+per command taking plain arguments, not a `Namespace`. Neither imports the other.
+
+```python
+# cli/parser.py
+import argparse
+
+def build_parser() -&gt; argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog=&quot;mytool&quot;)
+    sub = parser.add_subparsers(dest=&quot;command&quot;, required=True)
+    status = sub.add_parser(&quot;status&quot;, help=&quot;Report current state&quot;)
+    status.add_argument(&quot;--json&quot;, action=&quot;store_true&quot;)
+    return parser
+```
+
+```python
+# cli/commands.py
+def status(*, as_json: bool) -&gt; int:
+    ...
+
+def dispatch(args) -&gt; int:
+    if args.command == &quot;status&quot;:
+        return status(as_json=args.json)
+    return 2
+```
+
+**Why**: Behavior tested through a `Namespace` is behavior tested through the parser. Separating
+them lets a criterion call `status(as_json=True)` directly.
+
+---
+
+## 4. Cross-Platform Launchers
+
+**Rule**: Ship both launchers. They locate the environment and invoke the package entry point;
+they contain no business logic. A launcher that makes a decision is a second implementation of the
+command.
+
+```bash
+#!/usr/bin/env bash
+# bin/run.sh — locate the environment and hand off. No business logic.
+set -euo pipefail
+ROOT=&quot;$(cd &quot;$(dirname &quot;${BASH_SOURCE[0]}&quot;)/..&quot; &amp;&amp; pwd)&quot;
+if [ -d &quot;$ROOT/.venv&quot; ]; then
+    source &quot;$ROOT/.venv/bin/activate&quot;
+fi
+exec python -m cli &quot;$@&quot;
+```
+
+```powershell
+# bin/run.ps1 — locate the environment and hand off. No business logic.
+$ErrorActionPreference = &quot;Stop&quot;
+$Root = Split-Path -Parent $PSScriptRoot
+$Activate = Join-Path $Root &quot;.venv\Scripts\Activate.ps1&quot;
+if (Test-Path $Activate) { &amp; $Activate }
+python -m cli @args
+exit $LASTEXITCODE
+```
+
+```python
+# cli/__main__.py — makes `python -m cli` work identically on both platforms
+import sys
+from cli import main
+
+sys.exit(main())
+```
+
+**Why**: `python -m cli` is the one invocation both launchers share, so the two scripts cannot
+drift in behavior — only in how they find the interpreter. `exit $LASTEXITCODE` is required in
+PowerShell; without it the exit code is discarded and a failing command reports success.
+
+---
+
+## 5. Output and Streams
+
+**Rule**: Results go to stdout, diagnostics to stderr. A `--json` mode prints one JSON document to
+stdout and nothing else. Never interleave progress text into a machine-readable stream.
+
+**Why**: A caller piping stdout to `jq` receives the progress lines too, and the command becomes
+unusable in a pipeline.
+
+---
+
+## 6. Testing Without a Process
+
+**Rule**: Test through `main([&quot;status&quot;, &quot;--json&quot;])` or the `cli_runner` fixture. Reserve
+`subprocess.run` for one packaging test asserting the installed console script exists and runs.
+
+```python
+def test_status_reports_json(cli_runner):
+    code, out, err = cli_runner(&quot;status&quot;, &quot;--json&quot;)
+    assert code == 0
+    assert json.loads(out)[&quot;state&quot;] == &quot;ready&quot;
+    assert err == &quot;&quot;
+```
+
+**Why**: In-process tests are fast, debuggable, and measure the code. Subprocess tests measure the
+installed environment, which is a different and much smaller question.
+
+---
+
+## Checklist
+
+- [ ] `cli/` package; `main(argv=None) -&gt; int` that returns rather than exits
+- [ ] `[project.scripts]` declares the console script
+- [ ] `cli/__main__.py` so `python -m cli` works
+- [ ] Both `bin/run.sh` and `bin/run.ps1`, neither holding logic; `.ps1` ends with `exit $LASTEXITCODE`
+- [ ] Parsing in `parser.py`, behavior in `commands.py`, no import between them
+- [ ] Exit codes `0` / `1` / `2` used consistently
+- [ ] Results on stdout, diagnostics on stderr, `--json` emits nothing else
+- [ ] Criteria use `cli_runner`; at most one subprocess test for packaging</code></pre>
+<p>&lt;/pblock&gt;</p>
+<h2>CONTEXT - Read-Only Support</h2>
+<p>&lt;pblock filename=&quot;seed_transactions.csv&quot; role=&quot;context&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/workspace/targets/LayersTesting/blueprint/seed_transactions.csv&quot;&gt;</p>
+<pre><code>txn_id,date,account,category,amount,memo
+1,2026-01-01,SAFE,OPENING,5000.00,opening float
+2,2026-01-01,PETTY,OPENING,200.00,opening float
+3,2026-01-02,DRAWER1,SALES,155.26,sales day 1
+4,2026-01-02,DRAWER2,SALES,83.11,sales day 1
+5,2026-01-03,DRAWER1,SALES,160.51,sales day 2
+6,2026-01-03,DRAWER2,SALES,86.21,sales day 2
+7,2026-01-04,DRAWER1,SALES,165.76,sales day 3
+8,2026-01-04,DRAWER2,SALES,89.31,sales day 3
+9,2026-01-05,DRAWER1,SALES,171.01,sales day 4
+10,2026-01-05,DRAWER2,SALES,92.41,sales day 4
+11,2026-01-06,DRAWER1,SALES,176.26,sales day 5
+12,2026-01-06,DRAWER2,SALES,95.51,sales day 5
+13,2026-01-07,DRAWER1,SALES,181.51,sales day 6
+14,2026-01-07,DRAWER2,SALES,98.61,sales day 6
+15,2026-01-08,DRAWER1,SALES,186.76,sales day 7
+16,2026-01-08,DRAWER2,SALES,101.71,sales day 7
+17,2026-01-09,DRAWER1,SALES,192.01,sales day 8
+18,2026-01-09,DRAWER2,SALES,104.81,sales day 8
+19,2026-01-10,DRAWER1,SALES,197.26,sales day 9
+20,2026-01-10,DRAWER2,SALES,107.91,sales day 9
+21,2026-01-11,DRAWER1,SALES,202.51,sales day 10
+22,2026-01-11,DRAWER2,SALES,111.01,sales day 10
+23,2026-01-12,DRAWER1,REFUND,-12.50,refund
+24,2026-01-12,DRAWER2,REFUND,-7.25,refund
+25,2026-01-13,DRAWER1,REFUND,-9.99,refund
+26,2026-01-13,DRAWER2,REFUND,-4.01,refund
+27,2026-01-14,DRAWER1,TRANSFER,-1000.00,transfer to SAFE
+28,2026-01-14,SAFE,TRANSFER,1000.00,transfer from DRAWER1
+29,2026-01-14,DRAWER2,TRANSFER,-500.00,transfer to SAFE
+30,2026-01-14,SAFE,TRANSFER,500.00,transfer from DRAWER2
+31,2026-01-15,SAFE,TRANSFER,-200.00,transfer to PETTY
+32,2026-01-15,PETTY,TRANSFER,200.00,transfer from SAFE
+33,2026-01-16,PETTY,SUPPLY,-35.40,supplies
+34,2026-01-17,PETTY,SUPPLY,-42.10,supplies
+35,2026-01-18,PETTY,SUPPLY,-18.75,supplies
+36,2026-01-19,PETTY,SUPPLY,-60.00,supplies
+37,2026-01-20,PETTY,SUPPLY,-25.00,supplies
+38,2026-01-21,SAFE,PAYROLL,-1200.00,payroll week 1
+39,2026-01-28,SAFE,PAYROLL,-1200.00,payroll week 2
+40,2026-01-28,SAFE,RENT,-900.00,rent
+41,2026-02-01,SAFE,SALES,500.00,deposit
+42,2026-02-01,PETTY,SALES,20.00,deposit
+43,2026-02-02,DRAWER1,SALES,155.27,sales day 1
+44,2026-02-02,DRAWER2,SALES,83.12,sales day 1
+45,2026-02-03,DRAWER1,SALES,160.52,sales day 2
+46,2026-02-03,DRAWER2,SALES,86.22,sales day 2
+47,2026-02-04,DRAWER1,SALES,165.77,sales day 3
+48,2026-02-04,DRAWER2,SALES,89.32,sales day 3
+49,2026-02-05,DRAWER1,SALES,171.02,sales day 4
+50,2026-02-05,DRAWER2,SALES,92.42,sales day 4
+51,2026-02-06,DRAWER1,SALES,176.27,sales day 5
+52,2026-02-06,DRAWER2,SALES,95.52,sales day 5
+53,2026-02-07,DRAWER1,SALES,181.52,sales day 6
+54,2026-02-07,DRAWER2,SALES,98.62,sales day 6
+55,2026-02-08,DRAWER1,SALES,186.77,sales day 7
+56,2026-02-08,DRAWER2,SALES,101.72,sales day 7
+57,2026-02-09,DRAWER1,SALES,192.02,sales day 8
+58,2026-02-09,DRAWER2,SALES,104.82,sales day 8
+59,2026-02-10,DRAWER1,SALES,197.27,sales day 9
+60,2026-02-10,DRAWER2,SALES,107.92,sales day 9
+61,2026-02-11,DRAWER1,SALES,202.52,sales day 10
+62,2026-02-11,DRAWER2,SALES,111.02,sales day 10
+63,2026-02-12,DRAWER1,REFUND,-12.50,refund
+64,2026-02-12,DRAWER2,REFUND,-7.25,refund
+65,2026-02-13,DRAWER1,REFUND,-9.99,refund
+66,2026-02-13,DRAWER2,REFUND,-4.01,refund
+67,2026-02-14,DRAWER1,TRANSFER,-1000.00,transfer to SAFE
+68,2026-02-14,SAFE,TRANSFER,1000.00,transfer from DRAWER1
+69,2026-02-14,DRAWER2,TRANSFER,-500.00,transfer to SAFE
+70,2026-02-14,SAFE,TRANSFER,500.00,transfer from DRAWER2
+71,2026-02-15,SAFE,TRANSFER,-200.00,transfer to PETTY
+72,2026-02-15,PETTY,TRANSFER,200.00,transfer from SAFE
+73,2026-02-16,PETTY,SUPPLY,-35.40,supplies
+74,2026-02-17,PETTY,SUPPLY,-42.10,supplies
+75,2026-02-18,PETTY,SUPPLY,-18.75,supplies
+76,2026-02-19,PETTY,SUPPLY,-60.00,supplies
+77,2026-02-20,PETTY,SUPPLY,-25.00,supplies
+78,2026-02-21,SAFE,PAYROLL,-1200.00,payroll week 1
+79,2026-02-28,SAFE,PAYROLL,-1200.00,payroll week 2
+80,2026-02-28,SAFE,RENT,-900.00,rent
+81,2026-03-01,SAFE,SALES,750.00,deposit
+82,2026-03-01,PETTY,SALES,30.00,deposit
+83,2026-03-02,DRAWER1,SALES,155.28,sales day 1
+84,2026-03-02,DRAWER2,SALES,83.13,sales day 1
+85,2026-03-03,DRAWER1,SALES,160.53,sales day 2
+86,2026-03-03,DRAWER2,SALES,86.23,sales day 2
+87,2026-03-04,DRAWER1,SALES,165.78,sales day 3
+88,2026-03-04,DRAWER2,SALES,89.33,sales day 3
+89,2026-03-05,DRAWER1,SALES,171.03,sales day 4
+90,2026-03-05,DRAWER2,SALES,92.43,sales day 4
+91,2026-03-06,DRAWER1,SALES,176.28,sales day 5
+92,2026-03-06,DRAWER2,SALES,95.53,sales day 5
+93,2026-03-07,DRAWER1,SALES,181.53,sales day 6
+94,2026-03-07,DRAWER2,SALES,98.63,sales day 6
+95,2026-03-08,DRAWER1,SALES,186.78,sales day 7
+96,2026-03-08,DRAWER2,SALES,101.73,sales day 7
+97,2026-03-09,DRAWER1,SALES,192.03,sales day 8
+98,2026-03-09,DRAWER2,SALES,104.83,sales day 8
+99,2026-03-10,DRAWER1,SALES,197.28,sales day 9
+100,2026-03-10,DRAWER2,SALES,107.93,sales day 9
+101,2026-03-11,DRAWER1,SALES,202.53,sales day 10
+102,2026-03-11,DRAWER2,SALES,111.03,sales day 10
+103,2026-03-12,DRAWER1,REFUND,-12.50,refund
+104,2026-03-12,DRAWER2,REFUND,-7.25,refund
+105,2026-03-13,DRAWER1,REFUND,-9.99,refund
+106,2026-03-13,DRAWER2,REFUND,-4.01,refund
+107,2026-03-14,DRAWER1,TRANSFER,-1000.00,transfer to SAFE
+108,2026-03-14,SAFE,TRANSFER,1000.00,transfer from DRAWER1
+109,2026-03-14,DRAWER2,TRANSFER,-500.00,transfer to SAFE
+110,2026-03-14,SAFE,TRANSFER,500.00,transfer from DRAWER2
+111,2026-03-15,SAFE,TRANSFER,-200.00,transfer to PETTY
+112,2026-03-15,PETTY,TRANSFER,200.00,transfer from SAFE
+113,2026-03-16,PETTY,SUPPLY,-35.40,supplies
+114,2026-03-17,PETTY,SUPPLY,-42.10,supplies
+115,2026-03-18,PETTY,SUPPLY,-18.75,supplies
+116,2026-03-19,PETTY,SUPPLY,-60.00,supplies
+117,2026-03-20,PETTY,SUPPLY,-25.00,supplies
+118,2026-03-21,SAFE,PAYROLL,-1200.00,payroll week 1
+119,2026-03-28,SAFE,PAYROLL,-1200.00,payroll week 2
+120,2026-03-28,SAFE,RENT,-900.00,rent</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;seed_transactions_bad.csv&quot; role=&quot;context&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/workspace/targets/LayersTesting/blueprint/seed_transactions_bad.csv&quot;&gt;</p>
+<pre><code>txn_id,date,account,category,amount,memo
+201,2026-04-01,DRAWER1,SALES,10.00,bad batch 1
+202,2026-04-01,DRAWER1,SALES,10.00,bad batch 2
+203,2026-04-01,DRAWER1,SALES,10.00,bad batch 3
+204,2026-04-01,DRAWER1,SALES,10.00,bad batch 4
+205,2026-04-01,DRAWER1,SALES,10.00,bad batch 5
+206,2026-04-01,DRAWER1,SALES,10.00,bad batch 6
+207,2026-04-01,DRAWER1,SALES,10.00,bad batch 7
+208,2026-04-01,DRAWER1,SALES,10.00,bad batch 8
+209,2026-04-01,DRAWER1,SALES,10.00,bad batch 9
+210,2026-04-01,DRAWER1,SALES,10.00,bad batch 10
+211,2026-04-01,NOSUCH,SALES,10.00,unknown account</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;ARCHITECTURE_compact.md&quot; role=&quot;context&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/workspace/targets/LayersTesting/blueprint/ARCHITECTURE_compact.md&quot;&gt;</p>
+<pre><code>&lt;!-- Compacted from ARCHITECTURE.md sha256=3360d390c466fa255f8f9444b762fc3f8aa3b3549fc965de9deb50e710830b50 on 2026-10-20 by drydock build agent --&gt;
+
+- Python 3.11+ CLI executable: `./ledger &lt;command&gt;`.
+- Boundaries: executable, CLI, configuration, validation, services, persistence, test runner.
+- Resolve database via `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`.
+- Persistence is exclusively through the shipped `persistence` package.
+- Commands include lifecycle, loading, accounts, transactions, transfers, and reports.
+- Exit codes: 0 success, 1 operational failure, 2 usage error, 3 rejected input/business rule, 4 absent entity.
+- Successful commands emit deterministic CSV; failures emit no stdout and diagnostics on stderr.
+- Amounts use integer cents; rejected commands perform no writes.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;DATABASE_compact.md&quot; role=&quot;context&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/workspace/targets/LayersTesting/blueprint/DATABASE_compact.md&quot;&gt;</p>
+<pre><code>&lt;!-- Compacted from DATABASE.md sha256=ff2f418d172d52e874121e5a5ae842b9b7bcba38f70b6718f8f7cd77643be755 on 2026-10-20 by drydock build agent --&gt;
+
+Database DSN precedence: `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`. PostgreSQL DSNs use PostgreSQL; other values use SQLite paths, including `sqlite://`.
+
+Schema tables: `accounts(account PK, name)`, `categories(category PK, description)`, and `transactions(txn_id PK, date, account FK, category FK, amount integer cents, memo)`. Foreign keys are enforced.
+
+Persistence access is exclusively through `persistence.open_database(dsn)` and declared typed table operations. Initialization is idempotent and supports recreating all tables. Writes are atomic and fully validated before mutation. No floating-point monetary values.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<h2>IMPLEMENTS - Authoritative Step Specifications</h2>
+<p>&lt;pblock label=&quot;Implementation recency anchor&quot; kind=&quot;section&quot;&gt; The files in this section are the load-bearing specifications for this build block. Build these files exactly. Treat earlier sections as constraints and context.</p>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;FEATURE-Bulk-Transaction-Loading.md&quot; role=&quot;implements&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/workspace/targets/LayersTesting/blueprint/FEATURE-Bulk-Transaction-Loading.md&quot; guidance=&quot;Feature Specification&quot;&gt;</p>
+<pre><code># FEATURE: Bulk Transaction Loading
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Loads validated transaction CSV files atomically into the ledger. |
+| Depends On  | DATABASE.md, FEATURE-Validation.md, FEATURE-Bulk-Reference-Loading.md |
+| Provides    | `ledger load transactions` |
+| Consumes    | domain validation, relational ledger schema, transaction persistence operations |
+
+## Purpose
+
+Load a transaction CSV file only after validating its complete contents, references, identifiers, and resulting account balances.
+
+## Workflow
+
+1. Validate the file header and every row.
+2. Reject duplicate transaction identifiers and invalid values.
+3. Resolve every account and category reference.
+4. Evaluate balances after applying the complete batch.
+5. Insert all rows in one transaction.
+6. Emit the loaded-row result only after commit.
+
+A rejected file changes no table.
+
+## Database Interface
+
+
+- None — persistence is owned by DATABASE.md, FEATURE-Accounts.md, FEATURE-Balance-Reports.md, FEATURE-Category-Reports.md, FEATURE-Monthly-Reports.md, FEATURE-Transaction-Mutation.md, FEATURE-Transaction-Posting.md.
+
+## Programmatic Acceptance
+
+=== AC load-transactions-valid ===
+Intent: A valid transaction CSV is loaded and its supplied row count is reported.
+from pathlib import Path
+import csv
+import tempfile
+from cli.testing import cli_runner
+
+rows = [
+    [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;],
+    [&quot;1&quot;, &quot;2026-01-01&quot;, &quot;A&quot;, &quot;C&quot;, &quot;10.00&quot;, &quot;opening&quot;],
+]
+with tempfile.TemporaryDirectory() as directory:
+    path = Path(directory) / &quot;transactions.csv&quot;
+    path.write_text(&quot;\n&quot;.join(&quot;,&quot;.join(row) for row in rows) + &quot;\n&quot;)
+    code, stdout, stderr = cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(path))
+    parsed = list(csv.reader(stdout.splitlines()))
+    assert code == 0
+    assert parsed[0] == [&quot;table&quot;, &quot;loaded&quot;]
+    assert parsed[1] == [&quot;transactions&quot;, str(len(rows) - 1)]
+=== END AC load-transactions-valid ===
+
+=== AC load-transactions-invalid-is-atomic ===
+Intent: A transaction file with an unknown account is rejected before any row is written.
+from pathlib import Path
+import tempfile
+from cli.testing import cli_runner
+
+rows = [
+    &quot;txn_id,date,account,category,amount,memo&quot;,
+    &quot;1,2026-01-01,A,C,10.00,valid&quot;,
+    &quot;2,2026-01-01,NOSUCH,C,10.00,invalid&quot;,
+]
+with tempfile.TemporaryDirectory() as directory:
+    path = Path(directory) / &quot;transactions.csv&quot;
+    path.write_text(&quot;\n&quot;.join(rows) + &quot;\n&quot;)
+    code, stdout, stderr = cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(path))
+    assert code == 3
+    assert stdout == &quot;&quot;
+    count_code, count_stdout, count_stderr = cli_runner(&quot;count&quot;)
+    assert count_code == 0
+    assert &quot;transactions,0&quot; in count_stdout
+=== END AC load-transactions-invalid-is-atomic ===
+
+=== AC load-transactions-negative-balance ===
+Intent: A batch that would make an account balance negative is rejected.
+from pathlib import Path
+import tempfile
+from cli.testing import cli_runner
+
+rows = [
+    &quot;txn_id,date,account,category,amount,memo&quot;,
+    &quot;1,2026-01-01,A,C,-1.00,overdraw&quot;,
+]
+with tempfile.TemporaryDirectory() as directory:
+    path = Path(directory) / &quot;transactions.csv&quot;
+    path.write_text(&quot;\n&quot;.join(rows) + &quot;\n&quot;)
+    code, stdout, stderr = cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(path))
+    assert code == 3
+    assert stdout == &quot;&quot;
+=== END AC load-transactions-negative-balance ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Validate the entire file before the first insert.
+- Never read or modify supplied source fixtures from application code.
+- Store amounts as integer cents.
+- Preserve transaction identifiers supplied by the file.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock label=&quot;Build instructions&quot; kind=&quot;instructions&quot;&gt;</p>
+<h3>Build instructions for this block</h3>
+<h4>Load transaction CSV files with complete-batch validation. (load-002)</h4>
+<p>Implement atomic transaction-file loading. Validate headers, identifiers, dates, amounts, references, duplicate transaction ids, and resulting balances for the complete batch before inserting any row.</p>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock label=&quot;Reusable compact request&quot; kind=&quot;section&quot;&gt;</p>
+<h2>Reusable compacts</h2>
+<p>The Blueprint sources below are consumed as context by later Manifest blocks. In this same response, extract their consumer-facing contract surface. Preserve interfaces, schemas, constraints, configuration, and cross-file obligations; drop implementation narrative and repetition. Do not write these files yourself.</p>
+<p>Before the required RESULT block, emit one optional payload per source exactly as: &lt;reusable-compact filename=&quot;SOURCE.md&quot;&gt; compact content &lt;/reusable-compact&gt;</p>
+<p>Emit no payload when a source has no useful technical surface. These payloads are advisory and do not change the required build result or file-change report.</p>
+<p>Sources eligible for reusable compaction:</p>
+<ul><li>seed_transactions.csv</li><li>seed_transactions_bad.csv</li></ul>
+<p>&lt;/pblock&gt;</p>
+<h1>Agent Task</h1>
+<p>You are a Drydock build agent implementing exactly one build step of a larger plan. The build job block below names the target, the build working directory, and the step. Everything you need is stacked into this prompt under role headings:</p>
+<ul><li><code>compass</code> — the Target&#x27;s COMPASS.md orientation.</li><li><code>implements</code> — the Typed Specification files this step builds. These are</li></ul>
+<p>authoritative; implement them exactly.</p>
+<ul><li><code>context</code> — read-only support specifications. Do not reimplement them.</li><li><code>stack</code> — enterprise stack and technology rules. Honor them.</li><li><code>rules</code> — governance and branding rules. Honor them.</li></ul>
+<p>Operating contract:</p>
+<ol><li>Follow the write authorization and protected paths in the stacked <code>COMPASS.md</code> exactly.</li></ol>
+<p>That persisted guardrail is the sole authority for paths this build may modify.</p>
+<ol><li>Start by inspecting the build working directory. Preserve existing application</li></ol>
+<p>files unless this step&#x27;s specifications require a change. Its <code>sources/</code> subdirectory holds staged build assets — imported test corpora, conformance harnesses, and fixtures — placed there for you. They are read-only inputs: run them, import them, and write code against them, but never create, rewrite, trim, regenerate, or substitute one, even to make a check pass. A step that modifies a staged asset fails and the asset is restored. If an asset you expect is absent, report that; do not author a replacement.</p>
+<ol><li>Implement only this step. Use <code>context</code>, <code>stack</code>, and <code>rules</code> as constraints,</li></ol>
+<p>not as additional work to perform.</p>
+<ol><li>Follow the stack and rules for languages, structure, naming, and branding.</li><li>The programmatic acceptance assertions in the <code>implements</code> specifications are</li></ol>
+<p>this step&#x27;s <strong>Definition of Done</strong> — human-owned, declared before the build, and fixed. Build the story and, in this same step, write the deterministic tests that prove each declared assertion, as a TDD master would; add finer tests for coverage. Every test you write follows the same rule the acceptance assertions do: <strong>act on the system, read the state back, compare to expected.</strong> The oracle is a return value, parsed JSON, a status code, a stored row, file contents read back, or an exit status — never a substring of captured stdout or stderr, a test-runner tally, or a log line. Write tests in the project&#x27;s own language using that language&#x27;s libraries; an in-language HTTP client yields a status code and a parsed body, where <code>curl</code> yields text to scrape. Round-trip anything that stores state: act, then read back through the public interface. Assert declared failure signals on negative paths, never message wording. You may add tests but must never remove, soften, or weaken a declared acceptance assertion. A <code>Suite: full</code> conformance check gates on the entire imported test suite: the step is done only when it passes in full, never on a representative subset — reproduce the standard exactly rather than wrapping a third-party library that approximates it. For a suite, the runner&#x27;s exit status is the verdict and the whole verdict: print its captured output for diagnosis, never assert on the text of its summary. When an assertion is a static or filesystem scan (import boundary, &quot;X never appears outside Y,&quot; grep/AST gate), honor the scope the specification states and never widen it: scan production source only, exclude <code>.venv/</code>, <code>site-packages</code>, and vendored or generated code, and do not flag test doubles or fixtures that use the guarded dependency. Run every declared acceptance assertion before returning. For a conformance suite, use its section or example filters to diagnose coherent root-cause clusters, but rerun the full declared scope before reporting the result. Treat failing examples as a work queue for fixing general behavior; never add example-specific exceptions.</p>
+<ol><li>Grow the project&#x27;s own test suite as you write the code, and treat it as the project&#x27;s</li></ol>
+<p>real coverage. The acceptance assertions in <code>implements</code> are gates: few, fixed, and written before any code existed, so every expectation in them is a prediction. The tests you write are written <em>beside</em> the finished code, so their expected values are observed rather than predicted — which is why exhaustive coverage belongs here and not there. Extend the suite in the project&#x27;s established location and runner, keep it runnable by the project&#x27;s declared test command, and leave it green when you return. Cover, at minimum: every public entry point and every verb it declares, including declared error paths; the boundaries — empty, exactly one, many, absent optional fields, declared maxima; declared idempotence, applied twice; one behavior per test, named for the behavior; and isolation — each test arranges its own data, with a fresh store or explicit teardown, so a run leaves no residue behind in the build directory. Where a staged authoritative suite already covers a surface, that suite is the coverage: run it, and do not restate its cases. Run it <strong>only through the invocation this step&#x27;s acceptance criteria declare</strong>. A criterion marked <code>Suite: scoped</code> names the whole of this step&#x27;s obligation to that suite; running the suite&#x27;s unscoped entry point instead is not extra rigor, it is a different step&#x27;s gate executed early. A partial capability fails most of an authoritative corpus by construction and its unimplemented cases exhaust the runner&#x27;s per-case timeout rather than returning, so the unscoped run costs the most where it teaches the least, and interrupting it forfeits the step. If no criterion in this step invokes the staged suite, do not invoke it. Report the pass/fail counts of the invocations you did run in your <code>SUMMARY</code> so a reader can see coverage moving across steps.</p>
+<ol><li>Treat <code>User Acceptance</code> entries as review evidence requirements. Implement</li></ol>
+<p>the supporting behavior, but do not claim to have performed human judgment.</p>
+<ol><li>The <code>implements</code> section is authoritative and intentionally stacked late in</li></ol>
+<p>the prompt as the recency anchor. Build that WHAT exactly; do not substitute generic framework defaults.</p>
+<ol><li>Before adding or installing Python dependencies, verify each package name</li></ol>
+<p>against the declared registry. Do not invent package names. If a needed package cannot be verified or appears newly published, fail explicitly instead of installing it.</p>
+<ol><li>Use the stack&#x27;s required package manager workflow for dependency changes.</li></ol>
+<p>When the stack requires <code>uv</code>, update manifests through <code>uv</code> conventions rather than bare <code>pip install</code>.</p>
+<ol><li>Do not claim success unless you actually created or modified project files in</li></ol>
+<p>the build working directory. If you cannot write files or cannot complete the step, report failure explicitly.</p>
+<ol><li>Do not run <code>git add</code>, <code>git commit</code>, create branches, create tags, rewrite</li></ol>
+<p>history, or otherwise mutate Git history. Drydock checkpoints application changes and Target evidence after each execution and completed step. File lineage comes from Git and the Manifest&#x27;s <code>implements:</code> entries; no additional attribution response is required.</p>
+<ol><li>End your response with this exact closing structure:</li></ol>
+<pre><code>RESULT: SUCCESS | FAILED
+
+FILES CHANGED:
+- relative/path
+
+SUMMARY:
+&lt;brief reviewable summary&gt;
+
+BLOCKERS:
+- &lt;only if any&gt;</code></pre>
+<p>Before <code>RESULT</code>, you may emit one optional JSON payload when implementation required a bounded choice not already settled by the owning specification. This records what you did; it does not ask permission, create a questionnaire, or excuse incomplete work:</p>
+<pre><code>&lt;blueprint-decisions&gt;
+[{&quot;spec&quot;:&quot;FEATURE-Example.md&quot;,&quot;severity&quot;:&quot;Material&quot;,&quot;subject&quot;:&quot;Chosen behavior&quot;,&quot;decision&quot;:&quot;Options A and B were available. I implemented B because ... Is that acceptable, or should this change on replan?&quot;}]
+&lt;/blueprint-decisions&gt;</code></pre>
+<p>Name only a specification implemented by this build block. Use <code>Low</code> or <code>Material</code>; Build never emits a Blocking decision. Omit the payload when no implementation decision was necessary.</p>
+<ol><li><code>FILES CHANGED</code> must list only files actually written in the build working</li></ol>
+<p>directory. If no files were written, use <code>RESULT: FAILED</code>.</p>
+<ol><li>On <code>RESULT: FAILED</code>, append two additional lines so the failure is actionable</li></ol>
+<p>without opening logs. <code>FAILURE_SUMMARY</code> is one line naming the cause; <code>FAILURE_DETAIL</code> states what happened, why, and what to change before a rerun. Name concrete conditions when they apply: token or context limit exceeded, could not execute commands in this environment, a required input was missing, or a specific tool or command failed.</p>
+<pre><code>FAILURE_SUMMARY: &lt;one line naming the cause&gt;
+FAILURE_DETAIL: &lt;what happened, why, and what to change before rerunning&gt;</code></pre>
+<ol><li>When a declared acceptance criterion cannot pass no matter how the code is written,</li></ol>
+<p>say so with this exact token. You may not edit the criterion — it is staged and restored before grading:</p>
+<pre><code>AC_BROKEN: &lt;check-id&gt;[, &lt;check-id&gt;]</code></pre>
+<p>This is a report, not a verdict, and it stops nothing. A criterion reaches you only when its expected value is one its author could not have invented — a status code, a staged suite&#x27;s exit status, a value the criterion itself supplied as input — so your claim that the criterion rather than the code is at fault is the less likely explanation, and the budget is spent as it would be for any other failure. A criterion whose expectation <em>was</em> hand-typed already settles <code>DISPUTED</code> on its own, without you naming it. Emit the token only after running the criterion and confirming the underlying command succeeded while the assertion still failed. Name the affected check ids, emit it alongside your normal <code>RESULT</code> line, state the reasoning in <code>FAILURE_DETAIL</code>, and emit it even when <code>RESULT: SUCCESS</code>. Do not use it for a criterion you merely failed to satisfy.</p>
+<h1>Repair Feedback</h1>
+<h2>Repair pass</h2>
+<p>A previous build pass wrote partial work into BUILD_DIRECTORY and did not pass every deterministic acceptance check. Iterate the existing files in BUILD_DIRECTORY to make the checks below pass. Do not restart from scratch, do not weaken or remove any declared acceptance assertion, and keep every check that already passes green.</p>
+<p>The diagnostic excerpts below are truncated. Before editing, rerun each failing acceptance assertion from its authoritative specification and inspect the complete failure output. For a conformance suite, use its section or example filters to diagnose coherent root-cause clusters, then rerun the full declared scope. Fix the general parser or renderer behavior; do not add example-specific exceptions. Keep working through failing examples while the deterministic tally is improving.</p>
+<p>If a check below cannot pass however the code is written — the command it runs succeeds and the assertion still fails — do not keep repairing. Report it with <code>AC_BROKEN: &lt;check-id&gt;</code> and explain the contradiction in <code>FAILURE_DETAIL</code>. That ends the repair budget and sends the criterion back for repair in the Blueprint, which is where a broken assertion has to be fixed.</p>
+<h3>Still failing</h3>
+<ul><li>load-transactions-valid (story load-002): A valid transaction CSV is loaded and its supplied row count is reported.</li></ul>
+<p>assertion: assert code == 0 → AssertionError output: --- drydock: end values --- Traceback (most recent call last): File &quot;load-transactions-valid.py&quot;, line 15, in &lt;module&gt; assert code == 0 ^^^^^^^^^ AssertionError</p>
+<h3>Files written so far</h3>
+<ul><li>cli/<strong>init</strong>.py</li><li>services.py</li><li>tests/test_bulk_loading.py</li></ul></article>
+</main>
+</body>
+</html>

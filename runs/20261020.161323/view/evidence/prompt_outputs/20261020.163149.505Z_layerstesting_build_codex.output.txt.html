@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.163149.505Z_layerstesting_build_codex.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.163149.505Z_layerstesting_build_codex.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.163149.505Z_layerstesting_build_codex.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>&lt;reusable-compact filename=&quot;seed_transactions.csv&quot;&gt;
+Transaction CSV schema: `txn_id,date,account,category,amount,memo`. IDs are positive integers; dates use `YYYY-MM-DD`; amounts are decimal currency values stored as integer cents. Rows reference existing accounts/categories and include sales, refunds, transfers, supplies, payroll, and rent across 2026-01 through 2026-03.
+&lt;/reusable-compact&gt;
+
+&lt;reusable-compact filename=&quot;seed_transactions_bad.csv&quot;&gt;
+Transaction CSV uses the same six-column schema. Rows 201–210 reference `DRAWER1` and are valid individually; row 211 references nonexistent account `NOSUCH`. Complete-batch validation must reject the entire file and persist zero rows.
+&lt;/reusable-compact&gt;
+
+RESULT: FAILED
+
+FILES CHANGED:
+- cli/__init__.py
+- services.py
+- tests/test_bulk_loading.py
+
+SUMMARY:
+The loader passes the project test suite (18 tests) and all transaction-loading cases when prerequisite accounts/categories exist. The authoritative valid-load acceptance fails because it submits references `A` and `C` without creating them first; the loader correctly rejects those unknown references with exit code 3.
+
+BLOCKERS:
+- The `load-transactions-valid` acceptance setup omits required account/category fixtures. Making unknown references succeed would violate the specification and break atomic invalid-reference validation.
+
+FAILURE_SUMMARY: Valid-load acceptance omits prerequisite reference data.
+FAILURE_DETAIL: The command returns exit code 3 because account A and category C do not exist. The implementation succeeds when those references are loaded first; the acceptance criterion must initialize them before loading the transaction.</pre></article>
+</main>
+</body>
+</html>

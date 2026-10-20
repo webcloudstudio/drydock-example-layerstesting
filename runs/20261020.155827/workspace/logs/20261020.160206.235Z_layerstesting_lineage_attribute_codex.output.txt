@@ -1,0 +1,43 @@
+<requirement name="ledger-executable">
+The product is an executable named `ledger` at the application root.
+</requirement>
+<requirement name="persistence-contract" stories="persistence">
+It stores everything in a relational database through the shipped persistence library, and every command either completes in full or changes nothing.
+</requirement>
+<requirement name="conformance-harness" stories="conformance">
+`sources/run.sh` is the scoring entry point.
+</requirement>
+<requirement name="command-validation" stories="cli-foundation">
+The contract below is the same for every language and database: the same commands, the same output, and the same exit codes.
+</requirement>
+<requirement name="schema-lifecycle" stories="schema-lifecycle">
+`ledger init` | Drops all three tables if present and creates them empty. Nothing written.
+</requirement>
+<requirement name="account-category-load" stories="account-category-load">
+`ledger load <table> <csv>` | Loads `accounts`, `categories`, or `transactions` from a file whose header matches the table's columns in the order above. Writes `table,loaded` and `<table>,<rows>`.
+</requirement>
+<requirement name="transaction-load" stories="transaction-load">
+A loaded transaction keeps the `txn_id` from its file.
+</requirement>
+<requirement name="account-operations" stories="account-operations">
+`ledger account add <code> <name>` | The new account row.
+</requirement>
+<requirement name="transaction-operations" stories="transaction-operations">
+`ledger txn post <account> <category> <amount> <date> [<memo>]` | The new transaction row.
+</requirement>
+<requirement name="transfers" stories="transfers">
+`ledger transfer <from> <to> <amount> <date>` | Two transaction rows in category `TRANSFER`: `-amount` on `<from>` with memo `transfer to <to>`, then `+amount` on `<to>` with memo `transfer from <from>`. The amount is positive and the accounts differ.
+</requirement>
+<requirement name="balance-report" stories="balance-report">
+`ledger report balances` | `account,name,transactions,balance` per account ordered by code, then `TOTAL,,<count>,<sum>`.
+</requirement>
+<requirement name="monthly-report" stories="monthly-report">
+`ledger report monthly` | `month,transactions,inflow,outflow,net` per `YYYY-MM` that has transactions, ascending, then `TOTAL,<count>,<inflow>,<outflow>,<net>`.
+</requirement>
+<requirement name="category-report" stories="category-report">
+`ledger report categories` | `category,description,transactions,inflow,outflow,net` per category ordered by code, including categories with no transactions, then `TOTAL,,<count>,<inflow>,<outflow>,<net>`.
+</requirement>
+<requirement name="automated-tests" stories="project-tests">
+The completed application provides a POSIX-compatible `bin/test.sh` that runs its own automated test suite from the application root and exits zero only when every test passes.
+</requirement>
+<unattached story="architecture"/>

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Category-Reports.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Category-Reports.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Category-Reports.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Category Reports</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Reports persisted transaction totals for every category, including unused categories.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-Transaction-Posting.md</td></tr><tr><td>Provides</td><td>ledger report categories</td></tr><tr><td>Consumes</td><td><code>categories.list</code>, <code>transactions.list</code></td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>The category report aggregates transactions by category while retaining categories with no transactions. It reports transaction count, inflow, outflow, and net values in integer cents formatted as currency.</p>
+<h2>Workflow</h2>
+<p><code>ledger report categories</code> emits categories ordered by code followed by a database-derived <code>TOTAL</code> row.</p>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC category-report-includes-unused ===<br>Intent: The category report includes unused categories and derives totals from persisted transactions.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, _, _ = cli_runner(&quot;init&quot;) assert code == 0</p>
+<p>code, _, _ = cli_runner(&quot;load&quot;, &quot;accounts&quot;, &quot;sources/seed_accounts.csv&quot;) assert code == 0</p>
+<p>code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;) assert code == 0</p>
+<p>code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;DRAWER1&quot;, &quot;SALES&quot;, &quot;25.00&quot;, &quot;2026-04-01&quot;) assert code == 0</p>
+<p>code, stdout, _ = cli_runner(&quot;report&quot;, &quot;categories&quot;) assert code == 0 rows = stdout.splitlines() assert rows[0] == &quot;category,description,transactions,inflow,outflow,net&quot; assert any(row.startswith(&quot;SALES,Sales receipts,&quot;) for row in rows) assert any(row.startswith(&quot;OPENING,Opening balance,0,0.00,0.00,0.00&quot;) for row in rows) assert rows[-1].startswith(&quot;TOTAL,,&quot;) === END AC category-report-includes-unused ===</p>
+<p>=== AC category-report-empty ===<br>Intent: An initialized ledger with categories but no transactions reports zero-valued category totals.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, _, _ = cli_runner(&quot;init&quot;) assert code == 0</p>
+<p>code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;) assert code == 0</p>
+<p>code, stdout, _ = cli_runner(&quot;report&quot;, &quot;categories&quot;) assert code == 0 rows = stdout.splitlines() assert rows[0] == &quot;category,description,transactions,inflow,outflow,net&quot; assert len(rows) == 9 assert rows[-1] == &quot;TOTAL,,0,0.00,0.00,0.00&quot; === END AC category-report-empty ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Include every persisted category, even when it has no transactions.</li><li>Compute inflow, outflow, and net from integer-cent transaction amounts.</li><li>Order category rows by category code and derive the total row from queried data.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-REPORT-002</code> — read: categories.list - supplies: <code>—</code> - returns: <code>category</code>, <code>description</code>, <code>transactions</code>, <code>inflow</code>, <code>outflow</code>, <code>net</code></li></ul></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,27 @@
+<reusable-compact filename="ARCHITECTURE.md">
+Python CLI ledger with executable `ledger`; configuration precedence is `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`. CLI routing, validation, transactional services, reporting, and persistence are separate boundaries. All database access goes through `persistence.open_database`; amounts use integer cents; commands are atomic; reports query stored data.
+</reusable-compact>
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- .env.example
+- .gitignore
+- bin/test.sh
+- cli.py
+- config.py
+- ledger
+- persistence/__init__.py
+- persistence/db.py
+- pyproject.toml
+- reports.py
+- services.py
+- tests/test_architecture.py
+- uv.lock
+- validation.py
+
+SUMMARY:
+Implemented the foundational Python CLI architecture, executable launcher, configuration precedence, transactional persistence boundary, validation, reporting, and deterministic tests. All 4 tests and declared architecture acceptance checks pass.
+
+BLOCKERS:
+- None

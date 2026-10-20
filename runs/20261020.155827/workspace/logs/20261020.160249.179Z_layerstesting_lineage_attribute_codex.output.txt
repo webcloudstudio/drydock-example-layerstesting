@@ -1,0 +1,16 @@
+<requirement name="reject-unknown-account-batch" stories="transaction-load">
+211,2026-04-01,NOSUCH,SALES,10.00,unknown account
+</requirement>
+<unattached story="architecture"/>
+<unattached story="persistence"/>
+<unattached story="cli-foundation"/>
+<unattached story="schema-lifecycle"/>
+<unattached story="account-category-load"/>
+<unattached story="account-operations"/>
+<unattached story="transaction-operations"/>
+<unattached story="transfers"/>
+<unattached story="balance-report"/>
+<unattached story="monthly-report"/>
+<unattached story="category-report"/>
+<unattached story="project-tests"/>
+<unattached story="conformance"/>

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.161533.955Z_layerstesting_plan_codex.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.161533.955Z_layerstesting_plan_codex.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.161533.955Z_layerstesting_plan_codex.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT FEATURE-Balance-Reports.md ===
+# FEATURE: Balance Reports
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Reports persisted account balances, transaction counts, and ledger totals. |
+| Depends On  | ARCHITECTURE.md, DATABASE.md, FEATURE-Accounts.md, FEATURE-Transaction-Posting.md, FEATURE-Transaction-Mutation.md, FEATURE-Transfers.md |
+| Provides    | ledger report balances |
+| Consumes    | `accounts.list`, `transactions.list` |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The balances report reads every account and its persisted transactions, orders accounts by code, formats balances as decimal currency, and appends a database-derived total row.
+
+## Workflow
+
+`ledger report balances` emits the header, one row per account ordered by account code, and `TOTAL,,&lt;transaction count&gt;,&lt;sum&gt;`.
+
+Empty ledgers still emit the header and zero-valued total row.
+
+## Programmatic Acceptance
+
+=== AC balances-report-round-trip ===
+Intent: The balances command reports accounts, counts, balances, and a total from persisted state.
+
+from cli.testing import cli_runner
+
+code, _, _ = cli_runner(&quot;init&quot;)
+assert code == 0
+
+account_code = &quot;REPORT1&quot;
+account_name = &quot;Report Drawer&quot;
+category_code = &quot;SALES&quot;
+amount = &quot;12.34&quot;
+date = &quot;2026-04-01&quot;
+
+code, _, _ = cli_runner(&quot;load&quot;, &quot;accounts&quot;, &quot;sources/seed_accounts.csv&quot;)
+assert code == 0
+
+code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)
+assert code == 0
+
+code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, account_code, account_name)
+assert code == 0
+
+code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, account_code, category_code, amount, date)
+assert code == 0
+
+code, stdout, _ = cli_runner(&quot;report&quot;, &quot;balances&quot;)
+assert code == 0
+rows = stdout.splitlines()
+assert rows[0] == &quot;account,name,transactions,balance&quot;
+assert any(row.startswith(f&quot;{account_code},{account_name},1,&quot;) for row in rows)
+assert rows[-1].startswith(&quot;TOTAL,,&quot;)
+=== END AC balances-report-round-trip ===
+
+=== AC balances-report-empty ===
+Intent: An initialized empty ledger produces a valid zero-row balances report.
+
+from cli.testing import cli_runner
+
+code, _, _ = cli_runner(&quot;init&quot;)
+assert code == 0
+
+code, stdout, _ = cli_runner(&quot;report&quot;, &quot;balances&quot;)
+assert code == 0
+rows = stdout.splitlines()
+assert rows[0] == &quot;account,name,transactions,balance&quot;
+assert rows[-1] == &quot;TOTAL,,0,0.00&quot;
+=== END AC balances-report-empty ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Compute every value from persisted queries; do not hardcode report rows or totals.
+- Use integer cents for all aggregation and format currency only at the CLI boundary.
+- Emit accounts ordered by account code and include the total row.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Category-Reports.md ===
+# FEATURE: Category Reports
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Reports persisted transaction totals for every category, including unused categories. |
+| Depends On  | ARCHITECTURE.md, DATABASE.md, FEATURE-Transaction-Posting.md |
+| Provides    | ledger report categories |
+| Consumes    | `categories.list`, `transactions.list` |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The category report aggregates transactions by category while retaining categories with no transactions. It reports transaction count, inflow, outflow, and net values in integer cents formatted as currency.
+
+## Workflow
+
+`ledger report categories` emits categories ordered by code followed by a database-derived `TOTAL` row.
+
+## Programmatic Acceptance
+
+=== AC category-report-includes-unused ===
+Intent: The category report includes unused categories and derives totals from persisted transactions.
+
+from cli.testing import cli_runner
+
+code, _, _ = cli_runner(&quot;init&quot;)
+assert code == 0
+
+code, _, _ = cli_runner(&quot;load&quot;, &quot;accounts&quot;, &quot;sources/seed_accounts.csv&quot;)
+assert code == 0
+
+code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)
+assert code == 0
+
+code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;DRAWER1&quot;, &quot;SALES&quot;, &quot;25.00&quot;, &quot;2026-04-01&quot;)
+assert code == 0
+
+code, stdout, _ = cli_runner(&quot;report&quot;, &quot;categories&quot;)
+assert code == 0
+rows = stdout.splitlines()
+assert rows[0] == &quot;category,description,transactions,inflow,outflow,net&quot;
+assert any(row.startswith(&quot;SALES,Sales receipts,&quot;) for row in rows)
+assert any(row.startswith(&quot;OPENING,Opening balance,0,0.00,0.00,0.00&quot;) for row in rows)
+assert rows[-1].startswith(&quot;TOTAL,,&quot;)
+=== END AC category-report-includes-unused ===
+
+=== AC category-report-empty ===
+Intent: An initialized ledger with categories but no transactions reports zero-valued category totals.
+
+from cli.testing import cli_runner
+
+code, _, _ = cli_runner(&quot;init&quot;)
+assert code == 0
+
+code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)
+assert code == 0
+
+code, stdout, _ = cli_runner(&quot;report&quot;, &quot;categories&quot;)
+assert code == 0
+rows = stdout.splitlines()
+assert rows[0] == &quot;category,description,transactions,inflow,outflow,net&quot;
+assert len(rows) == 9
+assert rows[-1] == &quot;TOTAL,,0,0.00,0.00,0.00&quot;
+=== END AC category-report-empty ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Include every persisted category, even when it has no transactions.
+- Compute inflow, outflow, and net from integer-cent transaction amounts.
+- Order category rows by category code and derive the total row from queried data.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Monthly-Reports.md ===
+# FEATURE: Monthly Reports
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Reports persisted transaction totals grouped by calendar month. |
+| Depends On  | ARCHITECTURE.md, DATABASE.md, FEATURE-Transaction-Posting.md |
+| Provides    | ledger report monthly |
+| Consumes    | `transactions.list` |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The monthly report groups transactions by their `YYYY-MM` calendar month, omits months without transactions, orders rows ascending, and appends a database-derived total.
+
+## Workflow
+
+`ledger report monthly` emits the monthly header, transaction-bearing months only, and a `TOTAL` row.
+
+## Programmatic Acceptance
+
+=== AC monthly-report-grouping ===
+Intent: The monthly report groups persisted transactions by month and computes signed totals.
+
+from cli.testing import cli_runner
+
+code, _, _ = cli_runner(&quot;init&quot;)
+assert code == 0
+
+code, _, _ = cli_runner(&quot;load&quot;, &quot;accounts&quot;, &quot;sources/seed_accounts.csv&quot;)
+assert code == 0
+
+code, _, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)
+assert code == 0
+
+first_amount = &quot;10.00&quot;
+second_amount = &quot;-3.25&quot;
+first_date = &quot;2026-04-01&quot;
+second_date = &quot;2026-06-02&quot;
+
+code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;DRAWER1&quot;, &quot;SALES&quot;, first_amount, first_date)
+assert code == 0
+code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;DRAWER1&quot;, &quot;SUPPLY&quot;, second_amount, second_date)
+assert code == 0
+
+code, stdout, _ = cli_runner(&quot;report&quot;, &quot;monthly&quot;)
+assert code == 0
+rows = stdout.splitlines()
+assert rows[0] == &quot;month,transactions,inflow,outflow,net&quot;
+assert rows[1] == &quot;2026-04,1,10.00,0.00,10.00&quot;
+assert rows[2] == &quot;2026-06,1,0.00,3.25,-3.25&quot;
+assert rows[-1] == &quot;TOTAL,2,10.00,3.25,6.75&quot;
+=== END AC monthly-report-grouping ===
+
+=== AC monthly-report-empty ===
+Intent: An initialized ledger with no transactions reports no month rows and a zero total.
+
+from cli.testing import cli_runner
+
+code, _, _ = cli_runner(&quot;init&quot;)
+assert code == 0
+
+code, stdout, _ = cli_runner(&quot;report&quot;, &quot;monthly&quot;)
+assert code == 0
+rows = stdout.splitlines()
+assert rows[0] == &quot;month,transactions,inflow,outflow,net&quot;
+assert rows[-1] == &quot;TOTAL,0,0.00,0.00,0.00&quot;
+assert len(rows) == 2
+=== END AC monthly-report-empty ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Group by the transaction date&#x27;s `YYYY-MM` value.
+- Omit months with no transactions and order remaining months ascending.
+- Perform aggregation in integer cents and format only final output values.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Test-Runner.md ===
+# FEATURE: Test Runner
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Provides the project&#x27;s automated pytest suite and POSIX test runner. |
+| Depends On  | ARCHITECTURE.md, FEATURE-Balance-Reports.md, FEATURE-Category-Reports.md, FEATURE-Monthly-Reports.md |
+| Provides    | bin/test.sh, pytest test suite |
+| Consumes    | all ledger command capabilities |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The project test runner executes the automated Python test suite from the application root and returns success only when all tests pass.
+
+## Programmatic Acceptance
+
+=== AC test-runner-exists-and-passes ===
+Intent: The project provides an executable POSIX test runner whose complete suite passes.
+
+from pathlib import Path
+import os
+import subprocess
+
+runner = Path(&quot;bin/test.sh&quot;)
+assert runner.is_file()
+assert os.access(runner, os.X_OK)
+
+result = subprocess.run([&quot;sh&quot;, &quot;bin/test.sh&quot;], capture_output=True, text=True)
+print(result.stdout)
+print(result.stderr)
+assert result.returncode == 0
+=== END AC test-runner-exists-and-passes ===
+
+=== AC pytest-suite-is-present ===
+Intent: The automated test suite contains at least one runnable pytest test module.
+
+from pathlib import Path
+
+test_files = list(Path(&quot;tests&quot;).glob(&quot;test_*.py&quot;))
+assert test_files
+=== END AC pytest-suite-is-present ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- `bin/test.sh` must be POSIX-compatible and run from the application root.
+- The suite must exercise the real temporary database and cover commands, exit codes, validation, atomicity, persistence, balances, and reports.
+- The runner must return nonzero when a test fails.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Conformance-Verification.md ===
+# FEATURE: Conformance Verification
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Runs the supplied ledger conformance harness as the terminal release verification. |
+| Depends On  | ARCHITECTURE.md, FEATURE-Test-Runner.md, FEATURE-Balance-Reports.md, FEATURE-Category-Reports.md, FEATURE-Monthly-Reports.md |
+| Provides    | full supplied conformance verification |
+| Consumes    | all ledger command capabilities |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The supplied `sources/run.sh` harness is staged unchanged and executed from the completed application root. Its exit status is the release conformance verdict.
+
+## Programmatic Acceptance
+
+=== AC supplied-conformance-suite ===
+Intent: The supplied conformance harness executes all authoritative checks and exits successfully.
+Suite: full
+
+import subprocess
+
+result = subprocess.run(
+    [&quot;sh&quot;, &quot;sources/run.sh&quot;],
+    capture_output=True,
+    text=True,
+)
+print(result.stdout)
+print(result.stderr)
+assert result.returncode == 0
+=== END AC supplied-conformance-suite ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Run `sources/run.sh` unfiltered as the terminal verification.
+- Preserve the supplied harness and seed files byte-for-byte.
+- Treat the harness exit status as authoritative; do not replace it with output scraping or hardcoded report values.
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

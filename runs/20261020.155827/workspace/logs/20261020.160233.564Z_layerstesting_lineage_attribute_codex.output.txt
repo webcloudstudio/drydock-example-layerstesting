@@ -1,0 +1,23 @@
+<requirement name="seed-categories" stories="account-category-load">
+category,description
+OPENING,Opening balance
+PAYROLL,Payroll
+REFUND,Customer refunds
+RENT,Rent
+SALES,Sales receipts
+SUPPLY,Supplies
+TRANSFER,Internal transfer
+</requirement>
+<unattached story="architecture"/>
+<unattached story="persistence"/>
+<unattached story="cli-foundation"/>
+<unattached story="schema-lifecycle"/>
+<unattached story="transaction-load"/>
+<unattached story="account-operations"/>
+<unattached story="transaction-operations"/>
+<unattached story="transfers"/>
+<unattached story="balance-report"/>
+<unattached story="monthly-report"/>
+<unattached story="category-report"/>
+<unattached story="project-tests"/>
+<unattached story="conformance"/>

@@ -1,0 +1,64 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Drydock status
+
+  Target          /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.161323/workspace/targets/LayersTesting
+  Name            drydock Layers Testing Uat Case
+  Description     Drydock uat - LayersTesting exercises the language and persistence layers. The source is an original
+                  brief for a command-line cash ledger with three tables (accounts, categories, transactions) reached…
+  Phase           Implement
+  State           15 pending
+  Metadata        planned · approved
+  Sources         6 imported · 15 authored blueprint files
+  Analysis        Ready · 14 stories · 0 questions · 0 blockers
+  Blueprint       ⚠  0 errors · 12 warnings
+    ⚠  Acceptance snippets: FEATURE-Balance-Reports.md [balances-report-round-trip]: expects
+       'account,name,transactions,balance', a value re-typed rather than derived from the input or read back from
+       the system. This criterion is reported but does not gate its story; bind the value to a name and use that
+       name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Balance-Reports.md [balances-report-empty]: expects
+       'account,name,transactions,balance', a value re-typed rather than derived from the input or read back from
+       the system. This criterion is reported but does not gate its story; bind the value to a name and use that
+       name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Balance-Reports.md [balances-report-empty]: expects 'TOTAL,,0,0.00', a value re-
+       typed rather than derived from the input or read back from the system. This criterion is reported but does
+       not gate its story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Category-Reports.md [category-report-includes-unused]: expects
+       'category,description,transactions,inflow,outflow,net', a value re-typed rather than derived from the
+       input or read back from the system. This criterion is reported but does not gate its story; bind the value
+       to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Category-Reports.md [category-report-empty]: expects
+       'category,description,transactions,inflow,outflow,net', a value re-typed rather than derived from the
+       input or read back from the system. This criterion is reported but does not gate its story; bind the value
+       to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Category-Reports.md [category-report-empty]: expects 'TOTAL,,0,0.00,0.00,0.00', a
+       value re-typed rather than derived from the input or read back from the system. This criterion is reported
+       but does not gate its story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Monthly-Reports.md [monthly-report-grouping]: expects
+       'month,transactions,inflow,outflow,net', a value re-typed rather than derived from the input or read back
+       from the system. This criterion is reported but does not gate its story; bind the value to a name and use
+       that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Monthly-Reports.md [monthly-report-grouping]: expects '2026-04,1,10.00,0.00,10.00',
+       a value re-typed rather than derived from the input or read back from the system. This criterion is
+       reported but does not gate its story; bind the value to a name and use that name on both sides to make it
+       binding
+    ⚠  Acceptance snippets: FEATURE-Monthly-Reports.md [monthly-report-grouping]: expects '2026-06,1,0.00,3.25,-3.25', a
+       value re-typed rather than derived from the input or read back from the system. This criterion is reported
+       but does not gate its story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Monthly-Reports.md [monthly-report-grouping]: expects 'TOTAL,2,10.00,3.25,6.75', a
+       value re-typed rather than derived from the input or read back from the system. This criterion is reported
+       but does not gate its story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Monthly-Reports.md [monthly-report-empty]: expects
+       'month,transactions,inflow,outflow,net', a value re-typed rather than derived from the input or read back
+       from the system. This criterion is reported but does not gate its story; bind the value to a name and use
+       that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Monthly-Reports.md [monthly-report-empty]: expects 'TOTAL,0,0.00,0.00,0.00', a value
+       re-typed rather than derived from the input or read back from the system. This criterion is reported but
+       does not gate its story; bind the value to a name and use that name on both sides to make it binding
+  Plan            15 pending
+  Frontier        architecture: Define the ledger application boundaries and technology usage.
+  Workflow        4 steps
+                  Initialize         complete at 2026-10-20T16:13:24.391+00:00
+                  Import             complete at 2026-10-20T16:13:28.743+00:00
+                  Analyze            complete at 2026-10-20T16:14:01.362+00:00
+                  Plan               complete at 2026-10-20T16:17:59.140+00:00
+  Next step       drydock build LayersTesting  (frontier: Define the ledger application boundaries and technology usage.)

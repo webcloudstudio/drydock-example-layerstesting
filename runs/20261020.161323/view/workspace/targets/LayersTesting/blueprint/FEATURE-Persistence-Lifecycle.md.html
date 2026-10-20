@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Persistence-Lifecycle.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Persistence-Lifecycle.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Persistence-Lifecycle.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Persistence Lifecycle</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Provides schema initialization and deterministic table-count commands.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger init, ledger count</td></tr><tr><td>Consumes</td><td>relational ledger schema, persistence operations</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>The lifecycle commands establish a known empty ledger and expose row counts for all three tables.</p>
+<h2>Workflows</h2>
+<h3>Initialize</h3>
+<p><code>ledger init</code> drops and recreates <code>accounts</code>, <code>categories</code>, and <code>transactions</code>. It writes no standard output on success.</p>
+<h3>Count</h3>
+<p><code>ledger count</code> reports:</p>
+<ul><li><code>table,rows</code></li><li><code>accounts</code></li><li><code>categories</code></li><li><code>transactions</code></li></ul>
+<p>Rows always appear in that order.</p>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC persistence-init-clears-state ===<br>Intent: Initialization succeeds and the subsequent count observes the empty ledger state. from cli.testing import cli_runner</p>
+<p>init_code, init_out, init_err = cli_runner(&quot;init&quot;) assert init_code == 0 assert init_out == &quot;&quot;</p>
+<p>count_code, count_out, count_err = cli_runner(&quot;count&quot;) assert count_code == 0 assert count_out assert isinstance(count_err, str) === END AC persistence-init-clears-state ===</p>
+<p>=== AC persistence-count-contract ===<br>Intent: Count returns a successful structured result for the three declared tables. from cli.testing import cli_runner</p>
+<p>code, output, err = cli_runner(&quot;count&quot;) assert code == 0 lines = output.splitlines() expected_line_count = 4 assert len(lines) == expected_line_count assert lines[0].split(&quot;,&quot;) == [&quot;table&quot;, &quot;rows&quot;] assert [line.split(&quot;,&quot;)[0] for line in lines[1:]] == [&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;] assert isinstance(err, str) === END AC persistence-count-contract ===</p>
+<p>=== AC persistence-reinitialization ===<br>Intent: Reinitialization removes previously persisted rows. from cli.testing import cli_runner</p>
+<p>init_code, _, _ = cli_runner(&quot;init&quot;) assert init_code == 0</p>
+<p>account_code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;TEMP1&quot;, &quot;Temporary&quot;) assert account_code == 0</p>
+<p>reset_code, reset_out, reset_err = cli_runner(&quot;init&quot;) assert reset_code == 0 assert reset_out == &quot;&quot;</p>
+<p>count_code, count_out, count_err = cli_runner(&quot;count&quot;) assert count_code == 0 assert &quot;TEMP1&quot; not in count_out assert isinstance(reset_err, str) assert isinstance(count_err, str) === END AC persistence-reinitialization ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li><code>init</code> emits no standard output.</li><li><code>count</code> uses the exact header and table order.</li><li>Initialization recreates all three tables.</li><li>A failed lifecycle command emits no standard output.</li></ul></article>
+</main>
+</body>
+</html>

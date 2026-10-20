@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/logs/20261020.163149.505Z_layerstesting_build_codex.stderr.log</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/logs/20261020.163149.505Z_layerstesting_build_codex.stderr.log</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../workspace/logs/20261020.163149.505Z_layerstesting_build_codex.stderr.log">Raw file</a></div></header>
+<article class="doc"><pre>2026-10-20T16:32:10.365302Z ERROR codex_core::tools::router: error=exec_command failed: CreateProcess { message: &quot;Rejected(\&quot;`/bin/bash -lc &#x27;tmp=$(mktemp -d); TMP_CASE=\\\&quot;$tmp\\\&quot; python - &lt;&lt;&#x27;\\\&quot;&#x27;PY&#x27;\\nfrom pathlib import Path\\nimport tempfile, csv, os\\nfrom cli.testing import cli_runner\\n\\ndef run(rows):\\n    with tempfile.TemporaryDirectory() as directory:\\n        path=Path(directory)/&#x27;transactions.csv&#x27;\\n        path.write_text(&#x27;\\\\\\\\n&#x27;.join(&#x27;,&#x27;.join(row) for row in rows)+&#x27;\\\\\\\\n&#x27;)\\n        re…260 chars truncated…]))\\nprint(&#x27;invalid&#x27;, run([\\n [&#x27;txn_id&#x27;,&#x27;date&#x27;,&#x27;account&#x27;,&#x27;category&#x27;,&#x27;amount&#x27;,&#x27;memo&#x27;],\\n [&#x27;1&#x27;,&#x27;2026-01-01&#x27;,&#x27;A&#x27;,&#x27;C&#x27;,&#x27;10.00&#x27;,&#x27;valid&#x27;],\\n [&#x27;2&#x27;,&#x27;2026-01-01&#x27;,&#x27;NOSUCH&#x27;,&#x27;C&#x27;,&#x27;10.00&#x27;,&#x27;invalid&#x27;],\\n]))\\nprint(&#x27;negative&#x27;, run([\\n [&#x27;txn_id&#x27;,&#x27;date&#x27;,&#x27;account&#x27;,&#x27;category&#x27;,&#x27;amount&#x27;,&#x27;memo&#x27;],\\n [&#x27;1&#x27;,&#x27;2026-01-01&#x27;,&#x27;A&#x27;,&#x27;C&#x27;,&#x27;-1.00&#x27;,&#x27;overdraw&#x27;],\\n]))\\nPY\\nrm -rf \\\\\\\&quot;\\\&quot;&#x27;$tmp\\\&quot;&#x27;` rejected: rm -f style commands are not permitted. Use a safer approach\&quot;)&quot; }
+</pre></article>
+</main>
+</body>
+</html>

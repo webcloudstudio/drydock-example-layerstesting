@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Validation.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Validation.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Validation.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Ledger Validation</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Defines shared validation and atomic preflight rules for ledger commands.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-Persistence-Lifecycle.md</td></tr><tr><td>Provides</td><td>domain validation, integer-cent amount parsing, date validation, balance validation</td></tr><tr><td>Consumes</td><td>relational ledger schema, persistence operations</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>All commands validate their complete input and all resulting business rules before their first write.</p>
+<h2>Validation Rules</h2>
+<ul><li>Codes are 1–12 uppercase alphanumeric characters.</li><li>Names and descriptions are 1–40 characters.</li><li>Memos are 0–60 characters.</li><li>Names, descriptions, and memos contain no comma or newline.</li><li>Input amounts match <code>-?DIGITS[.D[D]]</code>, have at most two decimal places, and are nonzero.</li><li>Stored amounts are integer cents.</li><li>Dates are real calendar dates in <code>YYYY-MM-DD</code>.</li><li>Account and category references must exist.</li><li>Transaction ids must be valid and unique where created.</li><li>No resulting account balance may be negative.</li><li>A rejected operation writes nothing.</li></ul>
+<h2>Atomic Preflight</h2>
+<p>Loaders, posts, amendments, deletes, and transfers first validate all rows and calculate affected balances. Only after the full operation passes may the service call persistence writes, using one transaction for multi-row operations.</p>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC validation-invalid-amount ===<br>Intent: Invalid decimal precision is rejected with the declared rejection status and no output. from cli.testing import cli_runner</p>
+<p>init_code, _, _ = cli_runner(&quot;init&quot;) assert init_code == 0 account_code, _, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;VALID1&quot;, &quot;Valid Account&quot;) assert account_code == 0</p>
+<p>code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;VALID1&quot;, &quot;SALES&quot;, &quot;1.234&quot;, &quot;2026-01-01&quot;) expected_code = 3 assert code == expected_code assert out == &quot;&quot; assert isinstance(err, str) === END AC validation-invalid-amount ===</p>
+<p>=== AC validation-invalid-date ===<br>Intent: Nonexistent calendar dates are rejected with the declared rejection status. from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;VALID1&quot;, &quot;SALES&quot;, &quot;1.00&quot;, &quot;2026-02-30&quot;) expected_code = 3 assert code == expected_code assert out == &quot;&quot; assert isinstance(err, str) === END AC validation-invalid-date ===</p>
+<p>=== AC validation-negative-balance ===<br>Intent: A command that would make an account balance negative is rejected without standard output. from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;VALID1&quot;, &quot;SALES&quot;, &quot;-1.00&quot;, &quot;2026-01-01&quot;) expected_code = 3 assert code == expected_code assert out == &quot;&quot; assert isinstance(err, str) === END AC validation-negative-balance ===</p>
+<p>=== AC validation-unknown-reference ===<br>Intent: Unknown account or category references are rejected before a transaction is written. from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;VALID1&quot;, &quot;UNKNOWN1&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;) expected_code = 3 assert code == expected_code assert out == &quot;&quot; assert isinstance(err, str) === END AC validation-unknown-reference ===</p>
+<p>=== AC validation-atomic-rejection ===<br>Intent: A rejected transaction leaves the persisted transaction count unchanged. from cli.testing import cli_runner</p>
+<p>before_code, before_out, _ = cli_runner(&quot;count&quot;) assert before_code == 0 before_count = before_out.splitlines()[-1].split(&quot;,&quot;)[1]</p>
+<p>reject_code, reject_out, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;VALID1&quot;, &quot;UNKNOWN1&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;) assert reject_code == 3 assert reject_out == &quot;&quot;</p>
+<p>after_code, after_out, _ = cli_runner(&quot;count&quot;) assert after_code == 0 after_count = after_out.splitlines()[-1].split(&quot;,&quot;)[1] assert after_count == before_count === END AC validation-atomic-rejection ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Validation precedes every write.</li><li>Rejected commands leave every table unchanged.</li><li>Balance checks use integer cents.</li><li>Floating-point arithmetic is prohibited.</li><li>Error messages are diagnostics only and are not part of the output contract.</li></ul></article>
+</main>
+</body>
+</html>

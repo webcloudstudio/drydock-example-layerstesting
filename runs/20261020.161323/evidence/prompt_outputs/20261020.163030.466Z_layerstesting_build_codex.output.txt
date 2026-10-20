@@ -1,0 +1,23 @@
+<reusable-compact filename="seed_transactions.csv">
+Transaction CSV schema: `txn_id,date,account,category,amount,memo`. IDs are positive integers; dates use `YYYY-MM-DD`; amounts are decimal currency values stored as integer cents; references must exist; batches must preserve supplied IDs and validate resulting non-negative balances.
+</reusable-compact>
+
+<reusable-compact filename="seed_transactions_bad.csv">
+Same transaction schema. Rows 201–210 are valid, but row 211 references account `NOSUCH`; the complete batch must be rejected atomically with zero rows inserted.
+</reusable-compact>
+
+RESULT: FAILED
+
+FILES CHANGED:
+- cli/__init__.py
+- services.py
+- tests/test_bulk_loading.py
+
+SUMMARY:
+Project tests pass: 18 tests. Seed harness transaction loading passes, including atomic invalid-batch rejection. The isolated declared `load-transactions-valid` check fails because it references unloaded accounts/categories `A` and `C`, while the specification requires unknown references to be rejected.
+
+BLOCKERS:
+- The declared acceptance check is inconsistent with its own reference-validation requirement.
+
+FAILURE_SUMMARY: Isolated valid-load acceptance lacks required account and category setup.
+FAILURE_DETAIL: The command correctly returns exit code 3 for unknown references A/C. The same implementation passes when references are loaded first and passes the invalid-reference and negative-balance checks. The acceptance setup must create A and C before loading the transaction.
