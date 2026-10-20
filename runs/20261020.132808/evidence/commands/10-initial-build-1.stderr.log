@@ -1,0 +1,2 @@
+error: build failed for LayersTesting: 1 step(s)
+  db-transaction — closed/failed: programmatic acceptance failed: command-transaction-commits

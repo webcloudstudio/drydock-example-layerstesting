@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Account-Add.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Account-Add.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Account-Add.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Account Add</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Add an account with zero transactions and a zero balance through <code>ledger account add &lt;code&gt; &lt;name&gt;</code>.</td></tr><tr><td>Depends On</td><td>DATABASE.md, FEATURE-Code-Validation.md, FEATURE-Amount-Format.md, FEATURE-Command-Transaction.md, FEATURE-CLI-Output.md, FEATURE-CLI-Dispatch.md</td></tr><tr><td>Provides</td><td>ledger account add &lt;code&gt; &lt;name&gt;</td></tr><tr><td>Consumes</td><td>accounts.create, accounts.get, accounts.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Creates one row in the <code>accounts</code> table and prints it.</p>
+<h2>Behavior</h2>
+<ul><li>The code must be 1 to 12 characters of <code>A-Z</code> and <code>0-9</code>. The name must be 1 to 40 characters with no comma or newline. A violation exits 3 and changes nothing.</li><li>A code already present exits 3 and changes nothing.</li><li>On success, stdout is the account header row followed by the new row <code>&lt;code&gt;,&lt;name&gt;,0,0.00</code>.</li><li>The command runs in one command transaction.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC account-add-prints-and-persists ===<br>Intent: Adding an account prints the new row with zero transactions and a zero balance, and a later account get returns the same row.</p>
+<p>import csv import io import os import sys import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>os.environ[&quot;DATABASE_URL&quot;] = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)</p>
+<p>def run(*args): code, out, err = cli_runner(*args) print(out) print(err, file=sys.stderr) return code, out, err</p>
+<p>code_arg = &quot;CASH9&quot; name_arg = &quot;Event Float&quot;</p>
+<p>assert run(&quot;init&quot;)[0] == 0 code, out, err = run(&quot;account&quot;, &quot;add&quot;, code_arg, name_arg) assert code == 0 added = list(csv.reader(io.StringIO(out))) assert added[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;] assert added[1] == [code_arg, name_arg, &quot;0&quot;, &quot;0.00&quot;]</p>
+<p>code, out, err = run(&quot;account&quot;, &quot;get&quot;, code_arg) assert code == 0 assert list(csv.reader(io.StringIO(out)))[1] == added[1] === END AC account-add-prints-and-persists ===</p>
+<p>=== AC account-add-boundary-lengths ===<br>Intent: An account code of twelve characters and a name of forty characters are accepted and persisted.</p>
+<p>import csv import io import os import sys import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>os.environ[&quot;DATABASE_URL&quot;] = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)</p>
+<p>def run(*args): code, out, err = cli_runner(*args) print(out) print(err, file=sys.stderr) return code, out, err</p>
+<p>code_arg = &quot;A&quot; * 12 name_arg = &quot;N&quot; * 40</p>
+<p>assert run(&quot;init&quot;)[0] == 0 code, out, err = run(&quot;account&quot;, &quot;add&quot;, code_arg, name_arg) assert code == 0 assert list(csv.reader(io.StringIO(out)))[1] == [code_arg, name_arg, &quot;0&quot;, &quot;0.00&quot;]</p>
+<p>code, out, err = run(&quot;account&quot;, &quot;get&quot;, code_arg) assert code == 0 assert list(csv.reader(io.StringIO(out)))[1] == [code_arg, name_arg, &quot;0&quot;, &quot;0.00&quot;] === END AC account-add-boundary-lengths ===</p>
+<p>=== AC account-add-duplicate-code ===<br>Intent: Adding a code that already exists exits 3, prints nothing, and leaves exactly one account.</p>
+<p>import csv import io import os import sys import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>os.environ[&quot;DATABASE_URL&quot;] = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)</p>
+<p>def run(*args): code, out, err = cli_runner(*args) print(out) print(err, file=sys.stderr) return code, out, err</p>
+<p>code_arg = &quot;CASH9&quot;</p>
+<p>assert run(&quot;init&quot;)[0] == 0 assert run(&quot;account&quot;, &quot;add&quot;, code_arg, &quot;Event Float&quot;)[0] == 0</p>
+<p>code, out, err = run(&quot;account&quot;, &quot;add&quot;, code_arg, &quot;Other Name&quot;) assert code == 3 assert out == &quot;&quot;</p>
+<p>code, out, err = run(&quot;count&quot;) counts = {row[0]: row[1] for row in list(csv.reader(io.StringIO(out)))[1:]} assert counts[&quot;accounts&quot;] == &quot;1&quot; === END AC account-add-duplicate-code ===</p>
+<p>=== AC account-add-invalid-arguments ===<br>Intent: Codes and names that violate the field rules each exit 3 and leave the accounts table empty.</p>
+<p>import csv import io import os import sys import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>os.environ[&quot;DATABASE_URL&quot;] = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)</p>
+<p>def run(*args): code, out, err = cli_runner(*args) print(out) print(err, file=sys.stderr) return code, out, err</p>
+<p>rejected = [ (&quot;lower&quot;, &quot;Valid Name&quot;), (&quot;&quot;, &quot;Valid Name&quot;), (&quot;OK2&quot;, &quot;&quot;), (&quot;OK3&quot;, &quot;N&quot; * 41), (&quot;A&quot; * 13, &quot;Too Long Code&quot;), ]</p>
+<p>assert run(&quot;init&quot;)[0] == 0 for code_arg, name_arg in rejected: code, out, err = run(&quot;account&quot;, &quot;add&quot;, code_arg, name_arg) assert code == 3 assert out == &quot;&quot;</p>
+<p>code, out, err = run(&quot;count&quot;) counts = {row[0]: row[1] for row in list(csv.reader(io.StringIO(out)))[1:]} assert counts[&quot;accounts&quot;] == &quot;0&quot; === END AC account-add-invalid-arguments ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Application code reaches the accounts table only through the <code>persistence</code> package operations.</li><li>A rejected add changes nothing and writes nothing to standard output.</li><li>The new account&#x27;s balance is printed as <code>0.00</code>, never computed as a float.</li></ul></article>
+</main>
+</body>
+</html>

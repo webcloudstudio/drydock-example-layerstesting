@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.133253.331Z_layerstesting_plan_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.133253.331Z_layerstesting_plan_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.133253.331Z_layerstesting_plan_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT ARCHITECTURE.md ===
+# ARCHITECTURE: Cash Ledger
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Modules, boundaries, and technology stack for the `ledger` cash-ledger command-line program. |
+| Provides    | pyproject.toml, uv.lock, .venv, bin/ launchers |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The application is one executable named `ledger` at the application root. It records accounts,
+categories, and cash transactions in a relational database, enforces atomic commands and
+non-negative balances, and reports balances, category totals, and monthly totals. Every value is
+computed by a query, and every amount is stored as integer cents.
+
+## Technology Stack
+
+- Python 3.11 or newer (`python.md`): implementation language.
+- SQLite (`sqlite.md`): the database, reached only through the shipped persistence library. This
+  build has no PostgreSQL backend.
+- CLI (`cli.md`): the `ledger` executable at the application root.
+- pytest (`python.md`): the test runner behind `bin/test.sh`.
+- POSIX sh (`common.md`): `bin/test.sh` and the supplied grader.
+
+## Foundation
+
+- The project root holds `pyproject.toml` declaring Python 3.11 or newer, pytest, and ruff.
+- `uv.lock` is committed beside `pyproject.toml`.
+- `.venv` is created with `uv venv`. Launchers in `bin/` activate it.
+- `pytest -q` is the project test runner.
+
+## Modules
+
+| Module | Responsibility |
+|---|---|
+| `cli` | Entry `main(argv)`, command routing, usage listing, CSV output writer, operational error mapping to exit codes |
+| `database_location` | Resolves the database location from `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db` |
+| `persistence` (generated) | Store access through `open_database(dsn)` and `db.&lt;table&gt;.&lt;verb&gt;(...)` |
+| `command_transaction` | Runs each command inside one database transaction; rolls back on any failure |
+| `validation` | Codes, names, memos, amounts as integer cents, calendar dates |
+| `balance` | Non-negative balance check after a command&#x27;s changes and before commit |
+| `loader` | Bulk CSV loads, all or nothing |
+| `accounts` | Account add, get, rename, delete |
+| `transactions` | Post, get, amend, delete, and the next-id rule |
+| `transfers` | Two-row transfer stored as `TRANSFER` rows, or neither |
+| `reports` | Balances, categories, and monthly reports computed by query |
+
+## Module Ownership
+
+| Boundary | Owner | Allowed access |
+|---|---|---|
+| Persistence | `persistence` package generated from `DATABASE.md` | Domain modules call `open_database(dsn)` and `db.&lt;table&gt;.&lt;verb&gt;(...)` only. No module imports a database driver. |
+| Configuration | `database_location` | Only module that reads `DATABASE_URL` and `DATABASE_PATH` |
+| File store | None | Input CSV files are read only by `loader` |
+| External service | None | No network access, except to a PostgreSQL server named by `DATABASE_URL`. This build rejects that DSN with exit 1. |
+
+## Technical Decisions
+
+- Amounts are stored and computed as integer cents. No floating-point type is used for money.
+- Every command runs in one transaction through `command_transaction`. Any failure rolls back all changes.
+- The balance rule runs after a command&#x27;s changes and before commit, for every touched account.
+- Application code never reads `sources/run.sh` or any seed file. Seed files reach the database only through `ledger load`.
+- Reports are computed from the database. No report answer is embedded in code.
+
+## Programmatic Acceptance
+
+=== AC arch-python-version ===
+Intent: The running interpreter is Python 3.11 or newer, as the Technology Stack requires.
+
+import sys
+
+assert sys.version_info[:2] &gt;= (3, 11)
+=== END AC arch-python-version ===
+
+=== AC arch-pyproject ===
+Intent: pyproject.toml exists at the project root and parses as TOML with a project table.
+
+import tomllib
+
+with open(&quot;pyproject.toml&quot;, &quot;rb&quot;) as handle:
+    data = tomllib.load(handle)
+assert isinstance(data[&quot;project&quot;], dict)
+=== END AC arch-pyproject ===
+
+=== AC arch-uv-lock ===
+Intent: uv.lock is committed at the project root beside pyproject.toml.
+
+from pathlib import Path
+
+assert Path(&quot;uv.lock&quot;).is_file()
+=== END AC arch-uv-lock ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Do not modify, rewrite, or substitute any file under `sources/`.
+- Do not open a database driver outside the `persistence` package.
+- Do not use floating point for money at any layer.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT DATABASE.md ===
+# DATABASE: Cash Ledger Store
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Persistence contract for the accounts, categories, and transactions tables. |
+
+## Questions
+
+- None.
+
+## Access Patterns
+
+### FEATURE-ACCOUNT-001 — Create account
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | write |
+| Repository operation | `accounts.create` |
+| Compatibility | unchanged |
+
+Input: AccountRow
+
+| Field | Type | Notes |
+|---|---|---|
+| account | VARCHAR(12) | Account code |
+| name | VARCHAR(40) | Account name |
+
+Output: AccountRow
+
+| Field | Type | Notes |
+|---|---|---|
+| account | VARCHAR(12) | Account code |
+| name | VARCHAR(40) | Account name |
+
+### FEATURE-ACCOUNT-002 — Get account
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `accounts.get` |
+| Compatibility | unchanged |
+
+Input: AccountKey
+
+| Field | Type | Notes |
+|---|---|---|
+| account | VARCHAR(12) | Account code |
+
+Output: AccountRow
+
+| Field | Type | Notes |
+|---|---|---|
+| account | VARCHAR(12) | Account code |
+| name | VARCHAR(40) | Account name |
+
+### FEATURE-ACCOUNT-003 — List accounts
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `accounts.list` |
+| Compatibility | unchanged |
+
+Input: NoFields
+
+| Field | Type | Notes |
+|---|---|---|
+| (none) | — | The list takes no filter. |
+
+Output: AccountRow
+
+| Field | Type | Notes |
+|---|---|---|
+| account | VARCHAR(12) | Account code |
+| name | VARCHAR(40) | Account name |
+
+### FEATURE-ACCOUNT-004 — Update account name
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | write |
+| Repository operation | `accounts.update` |
+| Compatibility | unchanged |
+
+Input: AccountRow
+
+| Field | Type | Notes |
+|---|---|---|
+| account | VARCHAR(12) | Account code to update |
+| name | VARCHAR(40) | New account name |
+
+Output: AccountRow
+
+| Field | Type | Notes |
+|---|---|---|
+| account | VARCHAR(12) | Account code |
+| name | VARCHAR(40) | Updated account name |
+
+### FEATURE-ACCOUNT-005 — Delete account
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | write |
+| Repository operation | `accounts.delete` |
+| Compatibility | unchanged |
+
+Input: AccountKey
+
+| Field | Type | Notes |
+|---|---|---|
+| account | VARCHAR(12) | Account code |
+
+Output: DeleteResult
+
+| Field | Type | Notes |
+|---|---|---|
+| rows | INTEGER | Rows removed |
+
+### FEATURE-CATEGORY-001 — Create category
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | write |
+| Repository operation | `categories.create` |
+| Compatibility | unchanged |
+
+Input: CategoryRow
+
+| Field | Type | Notes |
+|---|---|---|
+| category | VARCHAR(12) | Category code |
+| description | VARCHAR(40) | Category description |
+
+Output: CategoryRow
+
+| Field | Type | Notes |
+|---|---|---|
+| category | VARCHAR(12) | Category code |
+| description | VARCHAR(40) | Category description |
+
+### FEATURE-CATEGORY-002 — Get category
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `categories.get` |
+| Compatibility | unchanged |
+
+Input: CategoryKey
+
+| Field | Type | Notes |
+|---|---|---|
+| category | VARCHAR(12) | Category code |
+
+Output: CategoryRow
+
+| Field | Type | Notes |
+|---|---|---|
+| category | VARCHAR(12) | Category code |
+| description | VARCHAR(40) | Category description |
+
+### FEATURE-CATEGORY-003 — List categories
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `categories.list` |
+| Compatibility | unchanged |
+
+Input: NoFields
+
+| Field | Type | Notes |
+|---|---|---|
+| (none) | — | The list takes no filter. |
+
+Output: CategoryRow
+
+| Field | Type | Notes |
+|---|---|---|
+| category | VARCHAR(12) | Category code |
+| description | VARCHAR(40) | Category description |
+
+### FEATURE-TXN-001 — Create transaction
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | write |
+| Repository operation | `transactions.create` |
+| Compatibility | unchanged |
+
+Input: TransactionRow
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | INTEGER | Transaction id, assigned by the caller |
+| date | VARCHAR(10) | Date as YYYY-MM-DD |
+| account | VARCHAR(12) | Account code |
+| category | VARCHAR(12) | Category code |
+| amount | INTEGER | Amount in integer cents |
+| memo | VARCHAR(60) | Memo |
+
+Output: TransactionRow
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | INTEGER | Transaction id |
+| date | VARCHAR(10) | Date as YYYY-MM-DD |
+| account | VARCHAR(12) | Account code |
+| category | VARCHAR(12) | Category code |
+| amount | INTEGER | Amount in integer cents |
+| memo | VARCHAR(60) | Memo |
+
+### FEATURE-TXN-002 — Get transaction
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `transactions.get` |
+| Compatibility | unchanged |
+
+Input: TransactionKey
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | INTEGER | Transaction id |
+
+Output: TransactionRow
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | INTEGER | Transaction id |
+| date | VARCHAR(10) | Date as YYYY-MM-DD |
+| account | VARCHAR(12) | Account code |
+| category | VARCHAR(12) | Category code |
+| amount | INTEGER | Amount in integer cents |
+| memo | VARCHAR(60) | Memo |
+
+### FEATURE-TXN-003 — List transactions
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `transactions.list` |
+| Compatibility | unchanged |
+
+Input: NoFields
+
+| Field | Type | Notes |
+|---|---|---|
+| (none) | — | The list takes no filter. Callers compute maxima, balances, and totals from the rows. |
+
+Output: TransactionRow
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | INTEGER | Transaction id |
+| date | VARCHAR(10) | Date as YYYY-MM-DD |
+| account | VARCHAR(12) | Account code |
+| category | VARCHAR(12) | Category code |
+| amount | INTEGER | Amount in integer cents |
+| memo | VARCHAR(60) | Memo |
+
+### FEATURE-TXN-004 — Amend transaction amount
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | write |
+| Repository operation | `transactions.update` |
+| Compatibility | unchanged |
+
+Input: TransactionAmount
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | INTEGER | Transaction id to amend |
+| amount | INTEGER | New amount in integer cents |
+
+Output: TransactionRow
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | INTEGER | Transaction id |
+| date | VARCHAR(10) | Date as YYYY-MM-DD |
+| account | VARCHAR(12) | Account code |
+| category | VARCHAR(12) | Category code |
+| amount | INTEGER | Amount in integer cents |
+| memo | VARCHAR(60) | Memo |
+
+### FEATURE-TXN-005 — Delete transaction
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | write |
+| Repository operation | `transactions.delete` |
+| Compatibility | unchanged |
+
+Input: TransactionKey
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | INTEGER | Transaction id |
+
+Output: DeleteResult
+
+| Field | Type | Notes |
+|---|---|---|
+| rows | INTEGER | Rows removed |
+
+## Schema
+
+## `accounts`
+
+| Field | Type | Notes |
+|---|---|---|
+| account | VARCHAR(12) PK NOT NULL | Account code, primary key |
+| name | VARCHAR(40) NOT NULL | Account name |
+
+## `categories`
+
+| Field | Type | Notes |
+|---|---|---|
+| category | VARCHAR(12) PK NOT NULL | Category code, primary key |
+| description | VARCHAR(40) NOT NULL | Category description |
+
+## `transactions`
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | INTEGER PK NOT NULL | Transaction id, primary key |
+| date | VARCHAR(10) NOT NULL | Date as YYYY-MM-DD |
+| account | VARCHAR(12) NOT NULL REFERENCES accounts(account) | Account code |
+| category | VARCHAR(12) NOT NULL REFERENCES categories(category) | Category code |
+| amount | INTEGER NOT NULL | Amount in integer cents |
+| memo | VARCHAR(60) NOT NULL | Memo, zero to sixty characters |
+
+## Programmatic Acceptance
+
+- None. Drydock owns SQLite schema construction and connectivity invariants deterministically.
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Application code reaches these tables only through the `persistence` package operations.
+- No module imports a database driver.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-CLI-Platform.md ===
+# FEATURE: CLI Platform
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Provide the cli package entry point, the cli_runner test fixture, and the ledger launcher at the application root. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | cli.main(argv), cli.testing.cli_runner, ./ledger |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The CLI platform is the package every command handler plugs into. It owns the entry point, the
+test fixture that runs the entry point in process, and the `ledger` launcher that delegates to it.
+It does not route commands; command routing belongs to `FEATURE-CLI-Dispatch.md`.
+
+## Interface
+
+- `cli.main(argv: list[str] | None = None) -&gt; int` returns an exit code.
+- `cli.testing.cli_runner(*args: str) -&gt; tuple[int, str, str]` returns `(exit_code, stdout, stderr)`
+  without spawning a process.
+- `./ledger` is an executable file at the application root that delegates its arguments to `cli.main`.
+
+## Programmatic Acceptance
+
+=== AC cli-main-callable ===
+Intent: The cli package exposes main with the single parameter argv.
+
+import inspect
+
+import cli
+
+assert callable(cli.main)
+assert list(inspect.signature(cli.main).parameters) == [&quot;argv&quot;]
+=== END AC cli-main-callable ===
+
+=== AC cli-runner-shape ===
+Intent: cli_runner returns a three-element tuple of an integer exit code and two text streams.
+
+from cli.testing import cli_runner
+
+result = cli_runner()
+assert isinstance(result, tuple)
+code, out, err = result
+assert isinstance(code, int)
+assert isinstance(out, str)
+assert isinstance(err, str)
+=== END AC cli-runner-shape ===
+
+=== AC cli-launcher-executable ===
+Intent: The ledger launcher is an executable file at the application root.
+
+import os
+from pathlib import Path
+
+launcher = Path(&quot;ledger&quot;)
+assert launcher.is_file()
+assert os.access(launcher, os.X_OK)
+=== END AC cli-launcher-executable ===
+
+=== AC cli-launcher-shebang ===
+Intent: The ledger launcher begins with an interpreter line.
+
+from pathlib import Path
+
+first_line = Path(&quot;ledger&quot;).read_text(encoding=&quot;utf-8&quot;).splitlines()[0]
+assert first_line.startswith(&quot;#!&quot;)
+=== END AC cli-launcher-shebang ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Do not spawn a subprocess in any criterion. Criteria call `cli_runner` or import the entry point.
+- The launcher contains no command logic; it only delegates to `cli.main`.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Database-Location.md ===
+# FEATURE: Database Location
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Resolve the database location from DATABASE_URL, then DATABASE_PATH, then data/app.db, and reject PostgreSQL DSNs in this build. |
+| Depends On  | ARCHITECTURE.md, DATABASE.md, FEATURE-CLI-Platform.md |
+| Provides    | resolve_database_location() |
+| Consumes    | open_database(dsn) |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every command finds its database through this resolution. The resolved value is passed to
+`open_database(dsn)`. This feature does not open a connection.
+
+## Interface
+
+- `database_location.resolve_database_location() -&gt; str` returns the location string.
+- `database_location.DatabaseLocationError` is raised for an unsupported DSN.
+
+## Resolution Rules
+
+1. If `DATABASE_URL` is set, it is used.
+2. Else, if `DATABASE_PATH` is set, it is used.
+3. Else, the value is `data/app.db`, which is relative to the working directory.
+4. A `sqlite://` prefix is removed. The remainder is the location.
+5. A value beginning `postgres://` or `postgresql://` raises `DatabaseLocationError`. The CLI
+   boundary maps that error to exit 1.
+
+## Programmatic Acceptance
+
+=== AC dbloc-default ===
+Intent: With neither DATABASE_URL nor DATABASE_PATH set, the location is data/app.db.
+
+import os
+
+from database_location import resolve_database_location
+
+keys = (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;)
+saved = {key: os.environ.pop(key, None) for key in keys}
+try:
+    location = resolve_database_location()
+finally:
+    for key, value in saved.items():
+        if value is not None:
+            os.environ[key] = value
+print(location)
+assert location == &quot;data/app.db&quot;
+=== END AC dbloc-default ===
+
+=== AC dbloc-path-fallback ===
+Intent: With only DATABASE_PATH set, the location is that path.
+
+import os
+import tempfile
+from pathlib import Path
+
+from database_location import resolve_database_location
+
+keys = (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;)
+saved = {key: os.environ.pop(key, None) for key in keys}
+try:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = str(Path(tmp) / &quot;ledger.db&quot;)
+        os.environ[&quot;DATABASE_PATH&quot;] = path
+        location = resolve_database_location()
+finally:
+    for key, value in saved.items():
+        if value is not None:
+            os.environ[key] = value
+print(location)
+assert location == path
+=== END AC dbloc-path-fallback ===
+
+=== AC dbloc-url-precedence ===
+Intent: When both DATABASE_URL and DATABASE_PATH are set, DATABASE_URL wins.
+
+import os
+import tempfile
+from pathlib import Path
+
+from database_location import resolve_database_location
+
+keys = (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;)
+saved = {key: os.environ.pop(key, None) for key in keys}
+try:
+    with tempfile.TemporaryDirectory() as tmp:
+        url = str(Path(tmp) / &quot;primary.db&quot;)
+        other = str(Path(tmp) / &quot;secondary.db&quot;)
+        os.environ[&quot;DATABASE_URL&quot;] = url
+        os.environ[&quot;DATABASE_PATH&quot;] = other
+        location = resolve_database_location()
+finally:
+    for key, value in saved.items():
+        if value is not None:
+            os.environ[key] = value
+print(location)
+assert location == url
+=== END AC dbloc-url-precedence ===
+
+=== AC dbloc-sqlite-prefix ===
+Intent: A sqlite:// prefix on DATABASE_URL is removed, leaving the file path.
+
+import os
+import tempfile
+from pathlib import Path
+
+from database_location import resolve_database_location
+
+keys = (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;)
+saved = {key: os.environ.pop(key, None) for key in keys}
+try:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = str(Path(tmp) / &quot;prefixed.db&quot;)
+        os.environ[&quot;DATABASE_URL&quot;] = &quot;sqlite://&quot; + path
+        location = resolve_database_location()
+finally:
+    for key, value in saved.items():
+        if value is not None:
+            os.environ[key] = value
+print(location)
+assert location == path
+=== END AC dbloc-sqlite-prefix ===
+
+=== AC dbloc-postgres-rejected ===
+Intent: postgres:// and postgresql:// DSNs raise DatabaseLocationError in this build.
+
+import os
+
+from database_location import DatabaseLocationError, resolve_database_location
+
+keys = (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;)
+saved = {key: os.environ.pop(key, None) for key in keys}
+rejected = 0
+try:
+    for dsn in (&quot;postgres://ledger@localhost/ledger&quot;, &quot;postgresql://ledger@localhost/ledger&quot;):
+        os.environ[&quot;DATABASE_URL&quot;] = dsn
+        try:
+            resolve_database_location()
+        except DatabaseLocationError:
+            rejected += 1
+finally:
+    for key, value in saved.items():
+        if value is not None:
+            os.environ[key] = value
+print(rejected)
+assert rejected == 2
+=== END AC dbloc-postgres-rejected ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- This feature reads the environment only. It never opens a database connection.
+- Application code outside this feature never reads `DATABASE_URL` or `DATABASE_PATH` directly.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Operational-Errors.md ===
+# FEATURE: Operational Errors
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Map unreachable databases, missing tables, and unreadable input files to exit 1 with no change. |
+| Depends On  | ARCHITECTURE.md, FEATURE-Database-Location.md, FEATURE-CLI-Dispatch.md |
+| Consumes    | resolve_database_location() |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Operational failures are distinct from usage errors and rejections. When the database cannot be
+reached, a non-`init` command finds its tables missing, or an input file cannot be read, the
+command exits 1, writes nothing to standard output, writes one diagnostic line to standard error,
+and changes nothing.
+
+## Interface
+
+- Exit code `1` for every operational failure.
+- Standard output is empty on failure.
+- Standard error carries exactly one non-empty diagnostic line.
+
+## Programmatic Acceptance
+
+=== AC dberr-unreachable ===
+Intent: A database location under a missing directory exits 1 with empty stdout and one stderr line.
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as tmp:
+    dsn = str(Path(tmp) / &quot;absent-dir&quot; / &quot;ledger.db&quot;)
+    saved = os.environ.get(&quot;DATABASE_URL&quot;)
+    os.environ[&quot;DATABASE_URL&quot;] = dsn
+    try:
+        code, out, err = cli_runner(&quot;count&quot;)
+    finally:
+        if saved is None:
+            os.environ.pop(&quot;DATABASE_URL&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_URL&quot;] = saved
+print(out)
+print(err, file=sys.stderr)
+lines = [line for line in err.splitlines() if line.strip()]
+assert code == 1
+assert out == &quot;&quot;
+assert len(lines) == 1
+=== END AC dberr-unreachable ===
+
+=== AC dberr-missing-tables ===
+Intent: A non-init command against an empty database with no tables exits 1 with empty stdout.
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as tmp:
+    db = Path(tmp) / &quot;empty.db&quot;
+    db.touch()
+    saved = os.environ.get(&quot;DATABASE_URL&quot;)
+    os.environ[&quot;DATABASE_URL&quot;] = str(db)
+    try:
+        code, out, err = cli_runner(&quot;count&quot;)
+    finally:
+        if saved is None:
+            os.environ.pop(&quot;DATABASE_URL&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_URL&quot;] = saved
+print(out)
+print(err, file=sys.stderr)
+lines = [line for line in err.splitlines() if line.strip()]
+assert code == 1
+assert out == &quot;&quot;
+assert len(lines) == 1
+=== END AC dberr-missing-tables ===
+
+=== AC dberr-unreadable-input ===
+Intent: A load whose CSV file does not exist exits 1 with empty stdout.
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as tmp:
+    db = Path(tmp) / &quot;empty.db&quot;
+    db.touch()
+    missing = str(Path(tmp) / &quot;absent.csv&quot;)
+    saved = os.environ.get(&quot;DATABASE_URL&quot;)
+    os.environ[&quot;DATABASE_URL&quot;] = str(db)
+    try:
+        code, out, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, missing)
+    finally:
+        if saved is None:
+            os.environ.pop(&quot;DATABASE_URL&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_URL&quot;] = saved
+print(out)
+print(err, file=sys.stderr)
+assert code == 1
+assert out == &quot;&quot;
+=== END AC dberr-unreadable-input ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Operational failures never write to standard output.
+- A failed command leaves every table exactly as it was.
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

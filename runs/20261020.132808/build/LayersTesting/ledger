@@ -1,0 +1,13 @@
+#!/bin/sh
+# ledger: the command-line cash ledger. Locates the project environment and hands the
+# arguments to cli.main. Contains no command logic.
+set -eu
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH
+if [ -x "$ROOT/.venv/bin/python" ]; then
+    PYTHON="$ROOT/.venv/bin/python"
+else
+    PYTHON=python3
+fi
+exec "$PYTHON" -m cli "$@"

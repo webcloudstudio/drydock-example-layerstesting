@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Code-Validation.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Code-Validation.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Code-Validation.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Code Validation</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Validate account and category codes, names, descriptions, and memos before any row is stored.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md</td></tr><tr><td>Provides</td><td>validate_code, validate_name, validate_memo</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Every command that accepts a code, a name, a description, or a memo runs that value through this module before any lookup or write. The module lives at <code>validation.py</code> in the application root.</p>
+<h2>Rules</h2>
+<ul><li><code>validate_code(value)</code> accepts 1 to 12 characters, each one of <code>A-Z</code> or <code>0-9</code>. Lowercase, spaces,</li></ul>
+<p>punctuation, and empty strings are rejected.</p>
+<ul><li><code>validate_name(value)</code> accepts 1 to 40 characters. The same function serves account names and</li></ul>
+<p>category descriptions.</p>
+<ul><li><code>validate_memo(value)</code> accepts 0 to 60 characters. The empty string is valid.</li><li><code>validate_name</code> and <code>validate_memo</code> reject any value containing a comma or a newline.</li><li>An accepted value is returned unchanged. A rejected value raises <code>ValueError</code>. The command layer</li></ul>
+<p>maps that exception to exit 3 with no change to the database.</p>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC code-accepts-bounds ===<br>Intent: validate_code returns a one-character code and a twelve-character code unchanged.</p>
+<p>from validation import validate_code</p>
+<p>shortest = &quot;A&quot; longest = &quot;Z9Z9Z9Z9Z9Z9&quot; assert validate_code(shortest) == shortest assert validate_code(longest) == longest === END AC code-accepts-bounds ===</p>
+<p>=== AC code-rejects-length ===<br>Intent: validate_code rejects an empty code and a thirteen-character code.</p>
+<p>from validation import validate_code</p>
+<p>def rejected(check, value): try: check(value) except ValueError: return True return False</p>
+<p>empty = &quot;&quot; too_long = &quot;A&quot; * 13 assert rejected(validate_code, empty) is True assert rejected(validate_code, too_long) is True === END AC code-rejects-length ===</p>
+<p>=== AC code-rejects-characters ===<br>Intent: validate_code rejects lowercase letters, hyphens, commas, and spaces.</p>
+<p>from validation import validate_code</p>
+<p>def rejected(check, value): try: check(value) except ValueError: return True return False</p>
+<p>for value in (&quot;abc&quot;, &quot;A-1&quot;, &quot;A,B&quot;, &quot;A B&quot;): assert rejected(validate_code, value) is True === END AC code-rejects-characters ===</p>
+<p>=== AC name-bounds ===<br>Intent: validate_name accepts one and forty characters and rejects zero and forty-one.</p>
+<p>from validation import validate_name</p>
+<p>def rejected(check, value): try: check(value) except ValueError: return True return False</p>
+<p>single = &quot;F&quot; maximum = &quot;F&quot; * 40 assert validate_name(single) == single assert validate_name(maximum) == maximum assert rejected(validate_name, &quot;&quot;) is True assert rejected(validate_name, &quot;F&quot; * 41) is True === END AC name-bounds ===</p>
+<p>=== AC name-rejects-comma-and-newline ===<br>Intent: validate_name rejects any name containing a comma or a newline.</p>
+<p>from validation import validate_name</p>
+<p>def rejected(check, value): try: check(value) except ValueError: return True return False</p>
+<p>with_comma = &quot;Front&quot; + chr(44) + &quot;Drawer&quot; with_newline = &quot;Front&quot; + chr(10) + &quot;Drawer&quot; assert rejected(validate_name, with_comma) is True assert rejected(validate_name, with_newline) is True === END AC name-rejects-comma-and-newline ===</p>
+<p>=== AC memo-bounds ===<br>Intent: validate_memo accepts the empty memo and a sixty-character memo, and rejects sixty-one characters.</p>
+<p>from validation import validate_memo</p>
+<p>def rejected(check, value): try: check(value) except ValueError: return True return False</p>
+<p>empty = &quot;&quot; maximum = &quot;m&quot; * 60 assert validate_memo(empty) == empty assert validate_memo(maximum) == maximum assert rejected(validate_memo, &quot;m&quot; * 61) is True === END AC memo-bounds ===</p>
+<p>=== AC memo-rejects-comma-and-newline ===<br>Intent: validate_memo rejects a memo containing a comma or a newline.</p>
+<p>from validation import validate_memo</p>
+<p>def rejected(check, value): try: check(value) except ValueError: return True return False</p>
+<p>with_comma = &quot;tape&quot; + chr(44) + &quot;roll&quot; with_newline = &quot;tape&quot; + chr(10) + &quot;roll&quot; assert rejected(validate_memo, with_comma) is True assert rejected(validate_memo, with_newline) is True === END AC memo-rejects-comma-and-newline ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The validators never open or read the database.</li><li>Code characters are ASCII <code>A-Z</code> and <code>0-9</code> only.</li><li>Validation failures raise <code>ValueError</code> and never write to standard output.</li></ul></article>
+</main>
+</body>
+</html>

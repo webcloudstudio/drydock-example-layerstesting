@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/commands/05-plan-verify.stdout.log</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/commands/05-plan-verify.stdout.log</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/commands/05-plan-verify.stdout.log">Raw file</a></div></header>
+<article class="doc"><pre>Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+plan verify: LayersTesting
+  127 acceptance criteria in 32 files: every one can run
+  ⚠  FEATURE-Account-Delete.md [account-delete-unused-succeeds]: expects &#x27;deleted\nCASH9\n&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Account-Rename.md [account-rename-updates-name]: expects &#x27;account,name,transactions,balance\nCASH9,Event Cash Box,0,0.00\n&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Report-Balances.md [report-balances-header]: expects &#x27;account,name,transactions,balance&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Report-Balances.md [report-balances-row-values]: expects &#x27;RBB1,Report Balance B,2,10.00&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Report-Balances.md [report-balances-total-row]: expects &#x27;TOTAL,,2,2.00&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Report-Categories.md [report-categories-header]: expects &#x27;category,description,transactions,inflow,outflow,net&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Report-Categories.md [report-categories-includes-empty]: expects &#x27;RCB1,Report Empty Category,0,0.00,0.00,0.00&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Report-Categories.md [report-categories-inflow-outflow]: expects &#x27;RCC2,Report Cat Two,2,8.00,1.25,6.75&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Report-Categories.md [report-categories-total-row]: expects &#x27;TOTAL,,2,5.00,2.00,3.00&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Report-Monthly.md [report-monthly-header]: expects &#x27;month,transactions,inflow,outflow,net&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Report-Monthly.md [report-monthly-month-rows]: expects &#x27;2026-03,2,9.00,3.00,6.00&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Report-Monthly.md [report-monthly-total-row]: expects &#x27;TOTAL,2,4.00,1.50,2.50&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Transaction-Amend.md [txn-amend-changes-only-amount]: expects &#x27;txn_id,date,account,category,amount,memo\n121,2026-04-01,DRAWER1,SALES,54.50,walk in sale\n&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Transaction-Get.md [txn-get-prints-row]: expects &#x27;txn_id,date,account,category,amount,memo\n121,2026-04-01,DRAWER1,SALES,45.50,walk in sale\n&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Transaction-Post.md [txn-post-assigns-next-id]: expects &#x27;txn_id,date,account,category,amount,memo\n8,2026-04-01,DRAWER1,SALES,45.50,walk in sale\n&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Transfer.md [transfer-stores-two-rows]: expects &#x27;transfer to XFB1&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Transfer.md [transfer-stores-two-rows]: expects &#x27;transfer from XFA1&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Transfer.md [transfer-output-rows]: expects &#x27;txn_id,date,account,category,amount,memo&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Transfer.md [transfer-output-rows]: expects &#x27;8012,2026-05-03,XFA2,TRANSFER,-25.50,transfer to XFB2&#x27;, a value re-typed rather than derived from the input or read back from the system
+  ⚠  FEATURE-Transfer.md [transfer-output-rows]: expects &#x27;8013,2026-05-03,XFB2,TRANSFER,25.50,transfer from XFA2&#x27;, a value re-typed rather than derived from the input or read back from the system
+</pre></article>
+</main>
+</body>
+</html>

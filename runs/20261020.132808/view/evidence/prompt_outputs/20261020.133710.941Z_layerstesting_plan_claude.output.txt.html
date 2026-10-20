@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.133710.941Z_layerstesting_plan_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.133710.941Z_layerstesting_plan_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.133710.941Z_layerstesting_plan_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT FEATURE-Code-Validation.md ===
+# FEATURE: Code Validation
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Validate account and category codes, names, descriptions, and memos before any row is stored. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | validate_code, validate_name, validate_memo |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every command that accepts a code, a name, a description, or a memo runs that value through this
+module before any lookup or write. The module lives at `validation.py` in the application root.
+
+## Rules
+
+- `validate_code(value)` accepts 1 to 12 characters, each one of `A-Z` or `0-9`. Lowercase, spaces,
+  punctuation, and empty strings are rejected.
+- `validate_name(value)` accepts 1 to 40 characters. The same function serves account names and
+  category descriptions.
+- `validate_memo(value)` accepts 0 to 60 characters. The empty string is valid.
+- `validate_name` and `validate_memo` reject any value containing a comma or a newline.
+- An accepted value is returned unchanged. A rejected value raises `ValueError`. The command layer
+  maps that exception to exit 3 with no change to the database.
+
+## Programmatic Acceptance
+
+=== AC code-accepts-bounds ===
+Intent: validate_code returns a one-character code and a twelve-character code unchanged.
+
+from validation import validate_code
+
+shortest = &quot;A&quot;
+longest = &quot;Z9Z9Z9Z9Z9Z9&quot;
+assert validate_code(shortest) == shortest
+assert validate_code(longest) == longest
+=== END AC code-accepts-bounds ===
+
+=== AC code-rejects-length ===
+Intent: validate_code rejects an empty code and a thirteen-character code.
+
+from validation import validate_code
+
+
+def rejected(check, value):
+    try:
+        check(value)
+    except ValueError:
+        return True
+    return False
+
+
+empty = &quot;&quot;
+too_long = &quot;A&quot; * 13
+assert rejected(validate_code, empty) is True
+assert rejected(validate_code, too_long) is True
+=== END AC code-rejects-length ===
+
+=== AC code-rejects-characters ===
+Intent: validate_code rejects lowercase letters, hyphens, commas, and spaces.
+
+from validation import validate_code
+
+
+def rejected(check, value):
+    try:
+        check(value)
+    except ValueError:
+        return True
+    return False
+
+
+for value in (&quot;abc&quot;, &quot;A-1&quot;, &quot;A,B&quot;, &quot;A B&quot;):
+    assert rejected(validate_code, value) is True
+=== END AC code-rejects-characters ===
+
+=== AC name-bounds ===
+Intent: validate_name accepts one and forty characters and rejects zero and forty-one.
+
+from validation import validate_name
+
+
+def rejected(check, value):
+    try:
+        check(value)
+    except ValueError:
+        return True
+    return False
+
+
+single = &quot;F&quot;
+maximum = &quot;F&quot; * 40
+assert validate_name(single) == single
+assert validate_name(maximum) == maximum
+assert rejected(validate_name, &quot;&quot;) is True
+assert rejected(validate_name, &quot;F&quot; * 41) is True
+=== END AC name-bounds ===
+
+=== AC name-rejects-comma-and-newline ===
+Intent: validate_name rejects any name containing a comma or a newline.
+
+from validation import validate_name
+
+
+def rejected(check, value):
+    try:
+        check(value)
+    except ValueError:
+        return True
+    return False
+
+
+with_comma = &quot;Front&quot; + chr(44) + &quot;Drawer&quot;
+with_newline = &quot;Front&quot; + chr(10) + &quot;Drawer&quot;
+assert rejected(validate_name, with_comma) is True
+assert rejected(validate_name, with_newline) is True
+=== END AC name-rejects-comma-and-newline ===
+
+=== AC memo-bounds ===
+Intent: validate_memo accepts the empty memo and a sixty-character memo, and rejects sixty-one characters.
+
+from validation import validate_memo
+
+
+def rejected(check, value):
+    try:
+        check(value)
+    except ValueError:
+        return True
+    return False
+
+
+empty = &quot;&quot;
+maximum = &quot;m&quot; * 60
+assert validate_memo(empty) == empty
+assert validate_memo(maximum) == maximum
+assert rejected(validate_memo, &quot;m&quot; * 61) is True
+=== END AC memo-bounds ===
+
+=== AC memo-rejects-comma-and-newline ===
+Intent: validate_memo rejects a memo containing a comma or a newline.
+
+from validation import validate_memo
+
+
+def rejected(check, value):
+    try:
+        check(value)
+    except ValueError:
+        return True
+    return False
+
+
+with_comma = &quot;tape&quot; + chr(44) + &quot;roll&quot;
+with_newline = &quot;tape&quot; + chr(10) + &quot;roll&quot;
+assert rejected(validate_memo, with_comma) is True
+assert rejected(validate_memo, with_newline) is True
+=== END AC memo-rejects-comma-and-newline ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- The validators never open or read the database.
+- Code characters are ASCII `A-Z` and `0-9` only.
+- Validation failures raise `ValueError` and never write to standard output.
+
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Amount-Format.md ===
+# FEATURE: Amount Format
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Parse input amounts into integer cents and format stored cents for output. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | parse_amount_cents, format_amount_cents |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every amount crossing the command boundary is converted here. The module lives at `amounts.py` in
+the application root. No floating-point value is produced or accepted at any point.
+
+## Rules
+
+- `parse_amount_cents(text)` accepts text matching `-?DIGITS` optionally followed by `.D` or `.DD`.
+  It returns an `int` count of cents.
+- Input with a leading plus sign, surrounding whitespace, a thousands separator, a bare decimal
+  point, or no digits is rejected.
+- Zero in any form (`0`, `0.0`, `0.00`, `-0.00`) is rejected because an amount may not be zero.
+- `format_amount_cents(cents)` returns exactly two decimal places, a leading `-` when negative, and
+  no separators. A zero value is written `0.00`, never `-0.00`.
+- Rejections raise `ValueError`. The command layer maps them to exit 3.
+
+## Programmatic Acceptance
+
+=== AC amount-round-trip ===
+Intent: Canonical amount strings parse to cents and format back to the same string.
+
+from amounts import parse_amount_cents, format_amount_cents
+
+canonical = (&quot;12.50&quot;, &quot;-12.50&quot;, &quot;5000.00&quot;, &quot;0.05&quot;, &quot;-0.01&quot;)
+for text in canonical:
+    assert format_amount_cents(parse_amount_cents(text)) == text
+=== END AC amount-round-trip ===
+
+=== AC amount-short-forms-equal ===
+Intent: Amounts with one decimal or no decimal parse to the same cents as their two-decimal forms.
+
+from amounts import parse_amount_cents
+
+short = &quot;12.5&quot;
+full = &quot;12.50&quot;
+whole = &quot;3&quot;
+whole_full = &quot;3.00&quot;
+assert parse_amount_cents(short) == parse_amount_cents(full)
+assert parse_amount_cents(whole) == parse_amount_cents(whole_full)
+=== END AC amount-short-forms-equal ===
+
+=== AC amount-integer-cents ===
+Intent: parse_amount_cents returns a Python int, never a float.
+
+from amounts import parse_amount_cents
+
+sample = &quot;12.50&quot;
+cents = parse_amount_cents(sample)
+assert type(cents) is int
+=== END AC amount-integer-cents ===
+
+=== AC amount-rejects-zero ===
+Intent: Every zero form of an input amount is rejected.
+
+from amounts import parse_amount_cents
+
+
+def rejected(check, value):
+    try:
+        check(value)
+    except ValueError:
+        return True
+    return False
+
+
+for text in (&quot;0&quot;, &quot;0.0&quot;, &quot;0.00&quot;, &quot;-0.00&quot;):
+    assert rejected(parse_amount_cents, text) is True
+=== END AC amount-rejects-zero ===
+
+=== AC amount-rejects-malformed ===
+Intent: Input that does not match the amount pattern is rejected.
+
+from amounts import parse_amount_cents
+
+
+def rejected(check, value):
+    try:
+        check(value)
+    except ValueError:
+        return True
+    return False
+
+
+malformed = (&quot;&quot;, &quot;-&quot;, &quot;abc&quot;, &quot;1.234&quot;, &quot;1,000.00&quot;, &quot; 1.00&quot;, &quot;+1.00&quot;, &quot;.50&quot;, &quot;1.&quot;, &quot;--1.00&quot;, &quot;1.2.3&quot;)
+for text in malformed:
+    assert rejected(parse_amount_cents, text) is True
+=== END AC amount-rejects-malformed ===
+
+=== AC amount-format-zero-and-decimals ===
+Intent: Formatted amounts have exactly two decimals, a leading minus only when negative, and no separators.
+
+from amounts import format_amount_cents
+
+zero = 0
+text = format_amount_cents(zero)
+assert text[0] != &quot;-&quot;
+assert len(text.split(&quot;.&quot;)[1]) == 2
+
+negative = format_amount_cents(-5)
+assert negative[0] == &quot;-&quot;
+assert len(negative.split(&quot;.&quot;)[1]) == 2
+
+large = format_amount_cents(500000000)
+assert &quot;,&quot; not in large
+=== END AC amount-format-zero-and-decimals ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- No floating-point arithmetic is used for money at any layer of this module.
+- The module never opens or reads the database.
+- Amount text is ASCII only.
+
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Date-Validation.md ===
+# FEATURE: Date Validation
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Accept only real YYYY-MM-DD calendar dates for every command that takes a date. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | parse_date |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Dates enter the ledger through `txn post`, `transfer`, and `load transactions`. This module is the
+single parser for all of them. It lives at `dates.py` in the application root.
+
+## Rules
+
+- `parse_date(text)` accepts exactly the form `YYYY-MM-DD` with four digits, a two-digit month, and
+  a two-digit day.
+- The date must exist on the calendar. Leap years are honored, so `2028-02-29` is valid and
+  `2026-02-29` is not.
+- Impossible dates such as `2026-02-30`, month `13`, and day `00` are rejected.
+- Any other shape, including `2026-1-01`, `20260101`, and `2026/01/01`, is rejected.
+- Success returns a `datetime.date`. Rejection raises `ValueError`, which the command layer maps to
+  exit 3.
+
+## Programmatic Acceptance
+
+=== AC date-round-trip ===
+Intent: Valid calendar dates parse to a datetime.date whose ISO form equals the input.
+
+import datetime
+from dates import parse_date
+
+for text in (&quot;2026-01-01&quot;, &quot;2026-02-28&quot;, &quot;2028-02-29&quot;, &quot;2026-12-31&quot;):
+    result = parse_date(text)
+    assert isinstance(result, datetime.date)
+    assert result.isoformat() == text
+=== END AC date-round-trip ===
+
+=== AC date-rejects-impossible ===
+Intent: Dates that do not exist on the calendar are rejected.
+
+from dates import parse_date
+
+
+def rejected(check, value):
+    try:
+        check(value)
+    except ValueError:
+        return True
+    return False
+
+
+for text in (&quot;2026-02-30&quot;, &quot;2026-02-29&quot;, &quot;2026-04-31&quot;, &quot;2026-13-01&quot;, &quot;2026-00-10&quot;, &quot;2026-01-00&quot;):
+    assert rejected(parse_date, text) is True
+=== END AC date-rejects-impossible ===
+
+=== AC date-rejects-malformed ===
+Intent: Text that is not in the YYYY-MM-DD shape is rejected.
+
+from dates import parse_date
+
+
+def rejected(check, value):
+    try:
+        check(value)
+    except ValueError:
+        return True
+    return False
+
+
+for text in (&quot;&quot;, &quot;2026-1-01&quot;, &quot;2026-01-1&quot;, &quot;20260101&quot;, &quot;26-01-01&quot;, &quot;2026/01/01&quot;, &quot;not-a-date&quot;):
+    assert rejected(parse_date, text) is True
+=== END AC date-rejects-malformed ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- The parser never reads the system clock; it validates only the text it is given.
+- The module never opens or reads the database.
+
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-CLI-Help.md ===
+# FEATURE: CLI Help
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Print one usage line per command in the stderr usage diagnostic when ledger is run without a valid command. |
+| Depends On  | FEATURE-CLI-Dispatch.md |
+| Provides    | usage listing on stderr, cli.usage.usage_lines |
+
+## Questions
+
+- None.
+
+## Purpose
+
+When `ledger` is run with no arguments, or with a command that lacks its required sub-verb or
+arguments, the usage diagnostic lists every command in the Commands table. The listing is written
+to standard error and the exit code is 2. The text lives in `cli/usage.py`, inside the `cli`
+package.
+
+## Rules
+
+- `usage_lines()` returns the usage listing as a list of strings with one string per command. It
+  has no trailing newline characters.
+- The Commands table has 15 rows. The listing has exactly one line for each row.
+- Each line contains the command words and a short description, separated by a space.
+- The stderr output equals the `usage_lines()` output, one line per entry.
+- Standard output stays empty for every usage error.
+- No `help` command is added. The word `help` is an unknown command and exits 2.
+
+## Programmatic Acceptance
+
+=== AC help-no-args-exits-2 ===
+Intent: Running ledger with no arguments exits 2 and writes nothing to standard output.
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner()
+assert code == 2
+assert len(out) == 0
+=== END AC help-no-args-exits-2 ===
+
+=== AC help-one-line-per-command ===
+Intent: The usage listing has one unique stderr line for each of the 15 rows in the Commands table.
+
+from cli.testing import cli_runner
+
+command_count = 15
+code, out, err = cli_runner()
+usage = [line for line in err.splitlines() if line.strip()]
+print(f&quot;{len(usage)} usage lines&quot;)
+assert len(usage) == command_count
+assert len(set(usage)) == len(usage)
+=== END AC help-one-line-per-command ===
+
+=== AC help-stderr-matches-usage-lines ===
+Intent: The stderr usage diagnostic is exactly the lines returned by usage_lines.
+
+from cli.testing import cli_runner
+from cli.usage import usage_lines
+
+code, out, err = cli_runner()
+lines = usage_lines()
+assert err.splitlines() == lines
+=== END AC help-stderr-matches-usage-lines ===
+
+=== AC help-no-help-command ===
+Intent: The word help is not a command, so it exits 2 and writes nothing to standard output.
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner(&quot;help&quot;)
+assert code == 2
+assert len(out) == 0
+=== END AC help-no-help-command ===
+
+=== AC help-incomplete-commands ===
+Intent: Command words given without their sub-verb or arguments exit 2 with a usage diagnostic on stderr.
+
+from cli.testing import cli_runner
+
+for argv in ((&quot;account&quot;,), (&quot;txn&quot;,), (&quot;report&quot;,)):
+    code, out, err = cli_runner(*argv)
+    assert code == 2
+    assert len(out) == 0
+    assert len(err.strip()) &gt; 0
+=== END AC help-incomplete-commands ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- The usage listing never reads the database.
+- No `help` command or `--help` option is added by this feature.
+- Usage text is written only to standard error.
+
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Balance-Rule.md ===
+# FEATURE: Balance Rule
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Reject any command whose changes leave a touched account with a negative balance, before the transaction commits. |
+| Depends On  | DATABASE.md, FEATURE-Command-Transaction.md, FEATURE-Amount-Format.md |
+| Provides    | check_non_negative |
+| Consumes    | transactions.list |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Posting, amending, deleting, transferring, and loading all end with this check. The check runs inside
+the command&#x27;s transaction after its changes and before commit. The module lives at `balance.py` in
+the application root.
+
+## Rules
+
+- `check_non_negative(db, accounts)` takes the open `Database` and a list of the account codes that
+  the command touched.
+- For each listed account, the balance is the sum of the `amount` values of that account&#x27;s
+  transactions, in integer cents, computed from the rows returned by `transactions.list`.
+- Any listed account whose balance is below zero causes `ValueError` to be raised.
+- A balance of exactly zero is allowed.
+- Accounts not in the list are not checked, even when their balance is negative.
+- An empty list is accepted and performs no rejection.
+- The check only reads. It never changes a row. The command layer maps the raised `ValueError` to
+  exit 3 and rolls back the transaction.
+
+## Programmatic Acceptance
+
+=== AC balance-rejects-negative ===
+Intent: A touched account whose balance falls below zero raises ValueError and leaves every row unchanged.
+
+from persistence.testing import db_session
+from balance import check_non_negative
+
+with db_session() as db:
+    db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales&quot;)
+    db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;)
+    db.transactions.create(txn_id=1, date=&quot;2026-01-01&quot;, account=&quot;DRAWER1&quot;, category=&quot;SALES&quot;, amount=500, memo=&quot;&quot;)
+    db.transactions.create(txn_id=2, date=&quot;2026-01-02&quot;, account=&quot;DRAWER1&quot;, category=&quot;SALES&quot;, amount=-600, memo=&quot;&quot;)
+    touched = [&quot;DRAWER1&quot;]
+    before = len(db.transactions.list())
+    try:
+        check_non_negative(db, touched)
+    except ValueError:
+        raised = True
+    else:
+        raised = False
+    after = len(db.transactions.list())
+assert raised is True
+assert after == before
+=== END AC balance-rejects-negative ===
+
+=== AC balance-allows-zero ===
+Intent: A touched account whose balance is exactly zero does not raise.
+
+from persistence.testing import db_session
+from balance import check_non_negative
+
+opening = 500
+spend = -opening
+touched = [&quot;DRAWER1&quot;]
+with db_session() as db:
+    db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales&quot;)
+    db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;)
+    db.transactions.create(txn_id=1, date=&quot;2026-01-01&quot;, account=&quot;DRAWER1&quot;, category=&quot;SALES&quot;, amount=opening, memo=&quot;&quot;)
+    db.transactions.create(txn_id=2, date=&quot;2026-01-02&quot;, account=&quot;DRAWER1&quot;, category=&quot;SALES&quot;, amount=spend, memo=&quot;&quot;)
+    ok = True
+    try:
+        check_non_negative(db, touched)
+    except ValueError:
+        ok = False
+assert ok is True
+=== END AC balance-allows-zero ===
+
+=== AC balance-checks-only-touched ===
+Intent: A negative account that is not in the touched list is ignored, and the same account raises when it is touched.
+
+from persistence.testing import db_session
+from balance import check_non_negative
+
+with db_session() as db:
+    db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales&quot;)
+    db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;)
+    db.accounts.create(account=&quot;OTHER&quot;, name=&quot;Other Account&quot;)
+    db.transactions.create(txn_id=1, date=&quot;2026-01-01&quot;, account=&quot;DRAWER1&quot;, category=&quot;SALES&quot;, amount=500, memo=&quot;&quot;)
+    db.transactions.create(txn_id=2, date=&quot;2026-01-02&quot;, account=&quot;OTHER&quot;, category=&quot;SALES&quot;, amount=-100, memo=&quot;&quot;)
+    untouched_ok = True
+    try:
+        check_non_negative(db, [&quot;DRAWER1&quot;])
+    except ValueError:
+        untouched_ok = False
+    touched_raised = False
+    try:
+        check_non_negative(db, [&quot;OTHER&quot;])
+    except ValueError:
+        touched_raised = True
+assert untouched_ok is True
+assert touched_raised is True
+=== END AC balance-checks-only-touched ===
+
+=== AC balance-empty-list-accepts ===
+Intent: An empty touched list performs no rejection.
+
+from persistence.testing import db_session
+from balance import check_non_negative
+
+with db_session() as db:
+    ok = True
+    try:
+        check_non_negative(db, [])
+    except ValueError:
+        ok = False
+assert ok is True
+=== END AC balance-empty-list-accepts ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- The balance check reads through the `persistence` package only and never imports `sqlite3` or a
+  database driver.
+- Balances are computed in integer cents with no floating-point arithmetic.
+- The check never writes to the database.
+
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

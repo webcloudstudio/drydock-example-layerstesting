@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Transaction-Post.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Transaction-Post.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Transaction-Post.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Transaction Post</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Post a transaction with the next id after validating every field and applying the balance rule.</td></tr><tr><td>Depends On</td><td>DATABASE.md, FEATURE-CLI-Dispatch.md, FEATURE-CLI-Output.md, FEATURE-Code-Validation.md, FEATURE-Amount-Format.md, FEATURE-Date-Validation.md, FEATURE-Balance-Rule.md, FEATURE-Command-Transaction.md</td></tr><tr><td>Provides</td><td>ledger txn post &lt;account&gt; &lt;category&gt; &lt;amount&gt; &lt;date&gt; [&lt;memo&gt;], next_txn_id()</td></tr><tr><td>Consumes</td><td>accounts.get, categories.get, transactions.list, transactions.create</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger txn post</code> records one transaction against an account and category. It assigns the next transaction id, validates every field, applies the non-negative balance rule, and prints the new row.</p>
+<h2>Behavior</h2>
+<ul><li>The command runs inside one command transaction (FEATURE-Command-Transaction.md).</li><li>Argument syntax is validated before any lookup. A malformed amount, date, code, or memo exits 3</li></ul>
+<p>even when the account is absent (AC-010).</p>
+<ul><li>The amount is parsed as integer cents (FEATURE-Amount-Format.md). Zero in any form exits 3.</li><li>The date is validated as a real <code>YYYY-MM-DD</code> calendar date (FEATURE-Date-Validation.md).</li><li>The memo is optional, 0 to 60 characters, with no comma or newline. An omitted memo is stored as</li></ul>
+<p>the empty string.</p>
+<ul><li>The account and category are looked up with <code>accounts.get</code> and <code>categories.get</code>. A missing account</li></ul>
+<p>or category exits 3, not 4 (AC-011).</p>
+<ul><li><code>next_txn_id()</code> returns the largest <code>txn_id</code> from <code>transactions.list</code> plus one, or <code>1</code> when the</li></ul>
+<p>table is empty. Ids are computed by query.</p>
+<ul><li>The balance rule (FEATURE-Balance-Rule.md) is checked after the insert and before commit. A</li></ul>
+<p>resulting negative balance exits 3 with no change.</p>
+<ul><li>On success the row is written with <code>transactions.create</code> and printed as:</li></ul>
+<pre><code>  txn_id,date,account,category,amount,memo
+  &lt;id&gt;,&lt;date&gt;,&lt;account&gt;,&lt;category&gt;,&lt;amount&gt;,&lt;memo&gt;</code></pre>
+<p>The amount uses the two-decimal output format.</p>
+<h2>Routes and Interfaces</h2>
+<div class="scroll"><table><thead><tr><th>Command</th><th>Exit 0</th><th>Exit 3</th><th>Exit 4</th></tr></thead><tbody><tr><td><code>ledger txn post &lt;account&gt; &lt;category&gt; &lt;amount&gt; &lt;date&gt; [&lt;memo&gt;]</code></td><td>new row</td><td>malformed argument, missing account or category, negative balance</td><td>not used</td></tr></tbody></table></div>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC txn-post-assigns-next-id ===<br>Intent: Posting into a populated table assigns the largest txn_id plus one and prints the new row.<br>Suite: scoped</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;) db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales receipts&quot;) db.transactions.create(txn_id=7, date=&quot;2026-01-01&quot;, account=&quot;DRAWER1&quot;, category=&quot;SALES&quot;, amount=500, memo=&quot;&quot;) code, out, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;DRAWER1&quot;, &quot;SALES&quot;, &quot;45.50&quot;, &quot;2026-04-01&quot;, &quot;walk in sale&quot;) row = db.transactions.get(txn_id=8)</p>
+<p>assert code == 0 assert out == &quot;txn_id,date,account,category,amount,memo\n8,2026-04-01,DRAWER1,SALES,45.50,walk in sale\n&quot; assert row.amount == 4550 === END AC txn-post-assigns-next-id ===</p>
+<p>=== AC txn-post-empty-table-starts-at-1 ===<br>Intent: Posting into an empty transactions table assigns txn_id 1.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;) db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales receipts&quot;) code, out, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;DRAWER1&quot;, &quot;SALES&quot;, &quot;10.00&quot;, &quot;2026-04-01&quot;) row = db.transactions.get(txn_id=1)</p>
+<p>assert code == 0 assert row.account == &quot;DRAWER1&quot; assert row.amount == 1000 === END AC txn-post-empty-table-starts-at-1 ===</p>
+<p>=== AC txn-post-zero-amount-exits-3 ===<br>Intent: A zero amount in any form is rejected with exit 3 and stores nothing.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;) db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales receipts&quot;) code, out, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;DRAWER1&quot;, &quot;SALES&quot;, &quot;-0.00&quot;, &quot;2026-04-01&quot;) count = db.transactions.list()</p>
+<p>assert code == 3 assert out == &quot;&quot; assert len(count) == 0 === END AC txn-post-zero-amount-exits-3 ===</p>
+<p>=== AC txn-post-malformed-amount-before-lookup ===<br>Intent: A malformed amount exits 3 even when the account is absent (AC-010).</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: code, out, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;NOSUCH&quot;, &quot;SALES&quot;, &quot;1.234&quot;, &quot;2026-04-01&quot;)</p>
+<p>assert code == 3 assert out == &quot;&quot; === END AC txn-post-malformed-amount-before-lookup ===</p>
+<p>=== AC txn-post-missing-account-exits-3 ===<br>Intent: Posting to an account that does not exist exits 3, not 4 (AC-011).</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales receipts&quot;) code, out, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;NOSUCH&quot;, &quot;SALES&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;)</p>
+<p>assert code == 3 assert out == &quot;&quot; === END AC txn-post-missing-account-exits-3 ===</p>
+<p>=== AC txn-post-invalid-date-exits-3 ===<br>Intent: An impossible calendar date is rejected with exit 3.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;) db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales receipts&quot;) code, out, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;DRAWER1&quot;, &quot;SALES&quot;, &quot;1.00&quot;, &quot;2026-02-30&quot;)</p>
+<p>assert code == 3 assert out == &quot;&quot; === END AC txn-post-invalid-date-exits-3 ===</p>
+<p>=== AC txn-post-negative-balance-exits-3 ===<br>Intent: A post that would leave an account below zero exits 3 and stores nothing.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;PETTY&quot;, name=&quot;Petty Cash&quot;) db.categories.create(category=&quot;SUPPLY&quot;, description=&quot;Supplies&quot;) code, out, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;PETTY&quot;, &quot;SUPPLY&quot;, &quot;-1000.00&quot;, &quot;2026-04-04&quot;) count = db.transactions.list()</p>
+<p>assert code == 3 assert out == &quot;&quot; assert len(count) == 0 === END AC txn-post-negative-balance-exits-3 ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The next id, balances, and printed values are computed by query; no value is hardcoded.</li><li>Amounts are integer cents end to end; no floating point is used for money.</li><li>Application code reaches the database only through <code>persistence</code> operations.</li></ul></article>
+</main>
+</body>
+</html>

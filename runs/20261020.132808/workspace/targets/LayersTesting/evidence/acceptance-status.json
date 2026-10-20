@@ -1,0 +1,109 @@
+{
+  "criteria": {
+    "arch-pyproject": {
+      "status": "VALID",
+      "error_code": "product-missing",
+      "code_sha256": "c3b468c1a572d5cc0942a914ad7d38d034a2ec09aacdb4a5b93e6bf20551625c",
+      "updated_at": "2026-10-20T13:48:02+00:00",
+      "detail": ""
+    },
+    "arch-python-version": {
+      "status": "PREBUILD_PASSES",
+      "error_code": "empty-tree",
+      "code_sha256": "566d01eff8c1660bcbd32843e7b6f4e4af47d9ec7472838e0aa30711ff5ef72e",
+      "updated_at": "2026-10-20T13:48:02+00:00",
+      "detail": ""
+    },
+    "arch-uv-lock": {
+      "status": "VALID",
+      "error_code": "baseline-red",
+      "code_sha256": "fe9307e8e5ae00bc7bea0422d67f2bfb755525723acc1f5657b40ca4c4d568d3",
+      "updated_at": "2026-10-20T13:48:02+00:00",
+      "detail": ""
+    },
+    "cli-launcher-executable": {
+      "status": "VALID",
+      "error_code": "baseline-red",
+      "code_sha256": "720846120397c647fc787cbeff0d69fc1b123574938a06426c35610201d6f9da",
+      "updated_at": "2026-10-20T13:50:00+00:00",
+      "detail": ""
+    },
+    "cli-launcher-shebang": {
+      "status": "VALID",
+      "error_code": "product-missing",
+      "code_sha256": "0c22e83a5b2e7996e55ef3c99d506f9a62fdf19339338fedbb5af5308414dbdf",
+      "updated_at": "2026-10-20T13:50:00+00:00",
+      "detail": ""
+    },
+    "cli-main-callable": {
+      "status": "VALID",
+      "error_code": "product-missing",
+      "code_sha256": "d03553ac00cef59854871633bfa3d87196a3d768f00a957e181002c794dc140c",
+      "updated_at": "2026-10-20T13:50:00+00:00",
+      "detail": ""
+    },
+    "cli-runner-shape": {
+      "status": "VALID",
+      "error_code": "product-missing",
+      "code_sha256": "c7764f207c0eef985d8768f241c194e80e9818d48efd7670828aef5780d73434",
+      "updated_at": "2026-10-20T13:50:00+00:00",
+      "detail": ""
+    },
+    "command-transaction-commits": {
+      "status": "VALID",
+      "error_code": "product-missing",
+      "code_sha256": "7c25e8da6148b973496ed24f095aee4130c33ec23faa5e828b35d65a3402f7b8",
+      "updated_at": "2026-10-20T13:54:04+00:00",
+      "detail": ""
+    },
+    "command-transaction-propagates-exception": {
+      "status": "VALID",
+      "error_code": "product-missing",
+      "code_sha256": "2efbfb89c138079931bdb388caa44978d064540532eb31f69139753ca8dd74cf",
+      "updated_at": "2026-10-20T13:54:04+00:00",
+      "detail": ""
+    },
+    "command-transaction-rolls-back-all-writes": {
+      "status": "VALID",
+      "error_code": "product-missing",
+      "code_sha256": "913bb45d521466ef522d4926b99d482cb89be9c4e3eb8680a9b127a2951f71ac",
+      "updated_at": "2026-10-20T13:54:04+00:00",
+      "detail": ""
+    },
+    "dbloc-default": {
+      "status": "VALID",
+      "error_code": "product-missing",
+      "code_sha256": "9ebefa0d24c0341aa81caa7b0790ff619b5855ec56b5bca1e3773ad36ec6d2ee",
+      "updated_at": "2026-10-20T13:52:42+00:00",
+      "detail": ""
+    },
+    "dbloc-path-fallback": {
+      "status": "VALID",
+      "error_code": "product-missing",
+      "code_sha256": "21e7e211d1fb996d887faa4fff82fadf0e8d950728d3dc904fd7ae199f00d2ca",
+      "updated_at": "2026-10-20T13:52:42+00:00",
+      "detail": ""
+    },
+    "dbloc-postgres-rejected": {
+      "status": "VALID",
+      "error_code": "product-missing",
+      "code_sha256": "81c93a0724a33da81725769f8c969aee856a8a95119d4c2ee6da7f7024cd5554",
+      "updated_at": "2026-10-20T13:52:42+00:00",
+      "detail": ""
+    },
+    "dbloc-sqlite-prefix": {
+      "status": "VALID",
+      "error_code": "product-missing",
+      "code_sha256": "5ab08263b8415c8c2110b1c0cb22be80ec77767b83a2a146d04e41ead5ad6d08",
+      "updated_at": "2026-10-20T13:52:42+00:00",
+      "detail": ""
+    },
+    "dbloc-url-precedence": {
+      "status": "VALID",
+      "error_code": "product-missing",
+      "code_sha256": "789617dd0e9a74eb5a03d2c79ba62771a54965c8eddab43e31499e3fbe123011",
+      "updated_at": "2026-10-20T13:52:42+00:00",
+      "detail": ""
+    }
+  }
+}

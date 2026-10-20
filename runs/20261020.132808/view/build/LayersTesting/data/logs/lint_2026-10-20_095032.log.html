@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/data/logs/lint_2026-10-20_095032.log</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/data/logs/lint_2026-10-20_095032.log</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../build/LayersTesting/data/logs/lint_2026-10-20_095032.log">Raw file</a></div></header>
+<article class="doc"><pre>=== lint started at 2026-10-20 09:50:32 ===
+Arguments: 
+Working dir: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.132808/build/LayersTesting
+---
+too-many-blank-lines: [*] Too many blank lines (2)
+  --&gt; persistence/postgres.py:37:5
+   |
+37 |     paramstyle = &quot;format&quot;
+   |     ^^^^^^^^^^
+38 |     returning = True
+   |
+help: Remove extraneous blank line(s)
+   |
+35 |
+   -
+36 |     paramstyle = &quot;format&quot;
+   |
+
+blank-lines-top-level: [*] Expected 2 blank lines, found 1
+  --&gt; persistence/schema.py:16:1
+   |
+14 | __all__ = [&quot;SCHEMA&quot;, &quot;open_database&quot;, &quot;AccountRow&quot;, &quot;CategoryRow&quot;, &quot;TransactionRow&quot;]
+15 |
+16 | @dataclass(frozen=True)
+   | ^
+17 | class AccountRow:
+18 |     account: VARCHAR(12)
+   |
+help: Add missing blank line(s)
+   |
+15 |
+16 +
+17 | @dataclass(frozen=True)
+   |
+
+undefined-name: Undefined name `VARCHAR`
+  --&gt; persistence/schema.py:18:14
+   |
+16 | @dataclass(frozen=True)
+17 | class AccountRow:
+18 |     account: VARCHAR(12)
+   |              ^^^^^^^
+19 |     name: VARCHAR(40)
+   |
+
+undefined-name: Undefined name `VARCHAR`
+  --&gt; persistence/schema.py:19:11
+   |
+17 | class AccountRow:
+18 |     account: VARCHAR(12)
+19 |     name: VARCHAR(40)
+   |           ^^^^^^^
+
+undefined-name: Undefined name `VARCHAR`
+  --&gt; persistence/schema.py:24:15
+   |
+22 | @dataclass(frozen=True)
+23 | class CategoryRow:
+24 |     category: VARCHAR(12)
+   |               ^^^^^^^
+25 |     description: VARCHAR(40)
+   |
+
+undefined-name: Undefined name `VARCHAR`
+  --&gt; persistence/schema.py:25:18
+   |
+23 | class CategoryRow:
+24 |     category: VARCHAR(12)
+25 |     description: VARCHAR(40)
+   |                  ^^^^^^^
+
+undefined-name: Undefined name `INTEGER`
+  --&gt; persistence/schema.py:30:13
+   |
+28 | @dataclass(frozen=True)
+29 | class TransactionRow:
+30 |     txn_id: INTEGER
+   |             ^^^^^^^
+31 |     date: VARCHAR(10)
+32 |     account: VARCHAR(12)
+   |
+
+undefined-name: Undefined name `VARCHAR`
+  --&gt; persistence/schema.py:31:11
+   |
+29 | class TransactionRow:
+30 |     txn_id: INTEGER
+31 |     date: VARCHAR(10)
+   |           ^^^^^^^
+32 |     account: VARCHAR(12)
+33 |     category: VARCHAR(12)
+   |
+
+undefined-name: Undefined name `VARCHAR`
+  --&gt; persistence/schema.py:32:14
+   |
+30 |     txn_id: INTEGER
+31 |     date: VARCHAR(10)
+32 |     account: VARCHAR(12)
+   |              ^^^^^^^
+33 |     category: VARCHAR(12)
+34 |     amount: INTEGER
+   |
+
+undefined-name: Undefined name `VARCHAR`
+  --&gt; persistence/schema.py:33:15
+   |
+31 |     date: VARCHAR(10)
+32 |     account: VARCHAR(12)
+33 |     category: VARCHAR(12)
+   |               ^^^^^^^
+34 |     amount: INTEGER
+35 |     memo: VARCHAR(60)
+   |
+
+undefined-name: Undefined name `INTEGER`
+  --&gt; persistence/schema.py:34:13
+   |
+32 |     account: VARCHAR(12)
+33 |     category: VARCHAR(12)
+34 |     amount: INTEGER
+   |             ^^^^^^^
+35 |     memo: VARCHAR(60)
+   |
+
+undefined-name: Undefined name `VARCHAR`
+  --&gt; persistence/schema.py:35:11
+   |
+33 |     category: VARCHAR(12)
+34 |     amount: INTEGER
+35 |     memo: VARCHAR(60)
+   |           ^^^^^^^
+
+context-manager-iterator: Use `Generator` instead of `Iterator` for a context manager
+  --&gt; persistence/testing.py:17:43
+   |
+16 | @contextmanager
+17 | def db_session(dsn: str | None = None) -&gt; Iterator[Database]:
+   |                                           ^^^^^^^^^^^^^^^^^^
+18 |     &quot;&quot;&quot;Open ``dsn``, or a temporary SQLite store, with ``schema.sql`` applied.&quot;&quot;&quot;
+19 |     with tempfile.TemporaryDirectory() as directory:
+   |
+help: Replace with `Generator`
+   |
+5  | import tempfile
+   - from collections.abc import Iterator
+6  + from collections.abc import Iterator, Generator
+7  | from contextlib import contextmanager
+--------------------------------------------------------------------------------
+16 | @contextmanager
+   - def db_session(dsn: str | None = None) -&gt; Iterator[Database]:
+17 + def db_session(dsn: str | None = None) -&gt; Generator[Database, None, None]:
+18 |     &quot;&quot;&quot;Open ``dsn``, or a temporary SQLite store, with ``schema.sql`` applied.&quot;&quot;&quot;
+   |
+note: This is an unsafe fix and may change runtime behavior
+
+Found 13 errors.
+[*] 2 fixable with `--fix` (1 unsafe fix available with `--fix --unsafe-fixes`).
+=== lint finished at 2026-10-20 09:50:32 with status 1 ===
+</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,163 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Build: LayersTesting
+scope: entire project
+frontier: python-foundation
+git: baseline LayersTesting 8166609b80c5
+git: baseline LayersTesting 51cd29418c60
+
+BLOCK block-1  name="Block 1 · Foundational"  calls_max=7
+  story=python-foundation  "Stand up the Python project root, environment, dependency manifest, and launchers."
+
+  [call 1/7]  kind=initial  llm=claude/claude-haiku-5-5
+    result=ok  rc=0  execution=20261020.134803.253Z-0227f27d
+    acceptance=3/3
+git: block-1 | python.md, ARCHITECTURE.md | call=1 | app=1d443f70201f target=75665418863a
+
+  DONE  story=python-foundation  state=closed/verified  execution=20261020.134803.253Z-0227f27d  elapsed=1m54s
+git: block-1 | python.md, ARCHITECTURE.md | step_completed | app=unchanged target=8caa514bab30
+
+BLOCK block-2  name="Block 2 · Foundational"  calls_max=7
+  story=database-step  "Generate the persistence package and schema.sql from DATABASE.md through the shipped Rigging library."
+  story=cli-foundation  "Stand up the cli package, its main entry, the cli_runner fixture, and the ledger launcher."
+
+  [call 1/7]  kind=initial  llm=claude/claude-haiku-5-5
+    result=ok  rc=0  execution=20261020.135003.768Z-6e2ba9f1
+    acceptance=4/4
+git: block-2 | DATABASE.md, FEATURE-CLI-Platform.md | call=1 | app=ba8b8c8fca72 target=ebfda420899e
+
+  DONE  story=database-step  state=closed/verified  execution=20261020.135003.768Z-6e2ba9f1  elapsed=2m40s
+git: block-2 | DATABASE.md, FEATURE-CLI-Platform.md | step_completed | app=unchanged target=b1d8587065c1
+
+BLOCK block-3  name="Block 3 · Service"  calls_max=7
+  story=db-location  "Resolve the database location from DATABASE_URL, then DATABASE_PATH, then data/app.db."
+
+  [call 1/7]  kind=initial  llm=claude/claude-haiku-5-5
+    result=ok  rc=0  execution=20261020.135246.655Z-97605663
+    acceptance=5/5
+git: block-3 | FEATURE-Database-Location.md | call=1 | app=80a497df4097 target=98a3af2e6fed
+
+  DONE  story=db-location  state=closed/verified  execution=20261020.135246.655Z-97605663  elapsed=1m20s
+git: block-3 | FEATURE-Database-Location.md | step_completed | app=unchanged target=583b3e167aa4
+
+BLOCK block-4  name="Block 4 · Service"  calls_max=7
+  story=db-transaction  "Run every command in one database transaction that rolls back on any failure."
+
+  [call 1/7]  kind=initial  llm=claude/claude-haiku-5-5
+    result=ok  rc=0  execution=20261020.135416.160Z-3e4560fc
+    acceptance=2/3  failed=command-transaction-commits
+git: block-4 | FEATURE-Command-Transaction.md | call=1 | app=9b76e4f74536 target=4af219559254
+
+  [call 2/7]  kind=repair(1/6)  llm=claude/claude-haiku-5-5
+    fixing=command-transaction-commits
+    result=ok  rc=0  execution=20261020.135644.141Z-54e6215e
+    acceptance=2/3  failed=command-transaction-commits
+git: block-4 | FEATURE-Command-Transaction.md | call=2 | app=unchanged target=99c0b1caa7cb
+
+  [call 3/7]  kind=repair(2/6)  llm=claude/claude-haiku-5-5
+    fixing=command-transaction-commits
+    result=ok  rc=0  execution=20261020.135726.891Z-d04d1df0
+    acceptance=2/3  failed=command-transaction-commits
+  STOP  reason=stall  flat_calls=2
+git: block-4 | FEATURE-Command-Transaction.md | call=3 | app=unchanged target=e63358570ddd
+
+  FAILED  story=db-transaction  state=closed/failed  execution=20261020.135726.891Z-d04d1df0  elapsed=3m49s
+git: block-4 | FEATURE-Command-Transaction.md | step_completed | app=unchanged target=34a9b9066f1f
+
+result: 4 built, 1 failed, 0 unchanged
+elapsed: 10 minutes 25 seconds
+
+========================================================================
+BUILD FAILED: LayersTesting  (1 step)
+========================================================================
+
+  Failure
+    Provenance
+      Target: LayersTesting
+      Block: Block 4 · Service [block-4]
+      Story: Run every command in one database transaction that rolls back on any failure. [db-transaction]
+    Cause: programmatic acceptance failed: command-transaction-commits
+    agent summary:
+      - `transaction.run_command(db, command)` is complete. It
+      commits once when the command returns, and rolls back and
+      re-raises on any exception. A persistence error such as a
+      lock held by another connection also rolls back and
+      propagates. - Declared criteria, rerun verbatim: - `command-
+      transaction-rolls-back-all-writes`: passes. - `command-
+      transaction-propagates-exception`: passes. - `command-
+      transaction-commits`: fails at `assert result.account ==
+      account_code` with `AttributeError: 'int' object has no
+      attribute 'account'`. - `sh bin/test.sh`: 93 passed, exit 0
+      (includes 16 new tests in
+      `tests/test_command_transaction.py`). - I did not edit the
+      criterion, the spec, or the shipped persistence package.
+      <blueprint-decisions> [{"spec":"FEATURE-Command-
+      Transaction.md","severity":"Material","subject":"Deferred-
+      commit view over the shipped Database","decision":"The
+      shipped Database commits after each write, so run_command
+      gives the command a Database built on a driver whose
+      connection commit() is deferred, then commits or rolls back
+      the real connection once. I did not edit the shipped
+      persistence package. Is that acceptable, or should the
+      persistence layer gain a transaction scope
+      instead?"},{"spec":"FEATURE-Command-
+      Transaction.md","severity":"Low","subject":"Module
+      name","decision":"Named the module transaction.py to match
+      the acceptance criteria import, not ARCHITECTURE.md's
+      command_transaction. Should the architecture name be used on
+      replan?"}] </blueprint-decisions>
+    stopped early: 3 of 7 calls · deterministic acceptance score did not improve on 2 consecutive calls
+    acceptance: 2/3 passing · baseline 0/3 · improved
+    Assertion
+      Acceptance checks:
+      Acceptance: command-transaction-commits
+      Intent: A command that returns normally has its write persisted and its return value passed back to the caller.
+      Source: FEATURE-Command-Transaction.md
+      Code: assert result.account == account_code
+    Result
+      Process exit code: 1
+      Error: AttributeError: 'int' object has no attribute 'account'
+      Stderr:
+          File "command-transaction-commits.py", line 9, in <module>
+            assert result.account == account_code
+                   ^^^^^^^^^^^^^^
+        AttributeError: 'int' object has no attribute 'account'
+    Recovery
+      Run: drydock build LayersTesting
+        to continue the build. This story resumes where it left off and is
+        retried against the checks it failed.
+    agent blockers:
+      - `command-transaction-commits` cannot pass as written. It
+      needs a criterion or `create` return-contract fix on replan.
+    execution: 20261020.135726.891Z-d04d1df0
+    evidence: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.132808/workspace/targets/LayersTesting/evidence/block-4.md
+
+  Next
+    Run: drydock build LayersTesting
+      to continue the build. This story resumes where it left off and is
+      retried against the checks it failed.
+========================================================================
+
+========================================================================
+POST-LLM FAILURE  ·  build  ·  programmatic acceptance failed: command-transaction-commits
+========================================================================
+
+  Block "Block 4 · Service" [block-4] failed its acceptance criteria.
+    Story "Run every command in one database transaction that rolls back on any failure." [db-transaction] does not meet its own acceptance criteria:
+      - AC command-transaction-commits — A command that returns normally has its write persisted and its return value passed back to the caller.
+          assertion: assert result.account == account_code → AttributeError: 'int' object has no attribute 'account'
+          raised at: command-transaction-commits.py:9
+          process exit code: 1
+          error: AttributeError: 'int' object has no attribute 'account'
+          values at failure:
+            account_code = 'TXNA1'
+            result = 1
+          check stderr:
+            Traceback (most recent call last):
+  … (4 more lines truncated)
+
+  Recovery
+    Run: drydock build LayersTesting
+      to continue the build. This story resumes where it left off and is retried against the checks it failed.
+
+========================================================================
+Target - committed project workspace git store

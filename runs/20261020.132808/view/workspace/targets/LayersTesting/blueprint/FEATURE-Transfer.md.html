@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Transfer.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Transfer.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Transfer.md">Raw file</a></div></header>
+<article class="doc"><h1>Feature: Transfer</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Store a transfer as two TRANSFER rows, or neither, under the non-negative balance rule.</td></tr><tr><td>Depends On</td><td>DATABASE.md, FEATURE-Transaction-Post.md, FEATURE-Balance-Rule.md, FEATURE-Amount-Format.md, FEATURE-Date-Validation.md, FEATURE-Code-Validation.md, FEATURE-CLI-Output.md, FEATURE-CLI-Dispatch.md</td></tr><tr><td>Provides</td><td>ledger transfer &lt;from&gt; &lt;to&gt; &lt;amount&gt; &lt;date&gt;</td></tr><tr><td>Consumes</td><td>accounts.get, transactions.create, transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger transfer &lt;from&gt; &lt;to&gt; &lt;amount&gt; &lt;date&gt;</code> moves cash between two accounts. It stores two rows in category <code>TRANSFER</code>: <code>-amount</code> on <code>&lt;from&gt;</code> and <code>+amount</code> on <code>&lt;to&gt;</code>. Both rows are stored or neither is.</p>
+<h2>Trigger</h2>
+<p>The user runs <code>ledger transfer &lt;from&gt; &lt;to&gt; &lt;amount&gt; &lt;date&gt;</code>.</p>
+<h2>Behavior</h2>
+<ol><li>Validate syntax before any lookup: <code>&lt;amount&gt;</code> parses as a positive amount, and <code>&lt;date&gt;</code> is a</li></ol>
+<p>real <code>YYYY-MM-DD</code> date. Either failure exits 3.</p>
+<ol><li>Require <code>&lt;from&gt;</code> and <code>&lt;to&gt;</code> to differ. Equal accounts exit 3.</li><li>Within the command transaction, confirm both accounts exist through <code>accounts.get</code>. A missing</li></ol>
+<p>account exits 3, not 4.</p>
+<ol><li>Take the next two ids: <code>n</code> and <code>n+1</code>, where <code>n</code> is one more than the largest <code>txn_id</code> present</li></ol>
+<p>(1 in an empty table), using the shared next-id function from FEATURE-Transaction-Post.md.</p>
+<ol><li>Create the row <code>n</code> on <code>&lt;from&gt;</code> with amount <code>-amount</code> and memo <code>transfer to &lt;to&gt;</code>, and the row</li></ol>
+<p><code>n+1</code> on <code>&lt;to&gt;</code> with amount <code>+amount</code> and memo <code>transfer from &lt;from&gt;</code>. Both use category <code>TRANSFER</code>.</p>
+<ol><li>Apply the balance rule to both touched accounts (FEATURE-Balance-Rule.md). A negative balance</li></ol>
+<p>exits 3 and rolls back both rows.</p>
+<ol><li>Commit and print the two rows in CSV with the header:</li></ol>
+<pre><code>txn_id,date,account,category,amount,memo
+&lt;n&gt;,&lt;date&gt;,&lt;from&gt;,TRANSFER,-&lt;amount&gt;,transfer to &lt;to&gt;
+&lt;n+1&gt;,&lt;date&gt;,&lt;to&gt;,TRANSFER,&lt;amount&gt;,transfer from &lt;from&gt;</code></pre>
+<p>Amounts are written with exactly two decimal places (FEATURE-Amount-Format.md).</p>
+<h2>Routes and Interfaces</h2>
+<div class="scroll"><table><thead><tr><th>Interface</th><th>Kind</th><th>Notes</th></tr></thead><tbody><tr><td><code>ledger transfer &lt;from&gt; &lt;to&gt; &lt;amount&gt; &lt;date&gt;</code></td><td>CLI command</td><td>Exit 0 on success, 3 on rejection.</td></tr></tbody></table></div>
+<h2>Reads and Writes</h2>
+<div class="scroll"><table><thead><tr><th>Operation</th><th>Access</th><th>Repository operation</th><th>Notes</th></tr></thead><tbody><tr><td>Confirm accounts</td><td>read</td><td><code>accounts.get</code></td><td>Missing account exits 3.</td></tr><tr><td>Read largest id</td><td>read</td><td><code>transactions.list</code></td><td>Next id is derived from the rows, never stored.</td></tr><tr><td>Insert the two rows</td><td>write</td><td><code>transactions.create</code></td><td>Both inserts run inside one command transaction.</td></tr></tbody></table></div>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC transfer-stores-two-rows ===<br>Intent: A valid transfer stores two TRANSFER rows with the next two ids and the stated memos.<br>Requires: executable=python3; scope=test</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;XFA1&quot;, name=&quot;Transfer From&quot;) db.accounts.create(account=&quot;XFB1&quot;, name=&quot;Transfer To&quot;) db.categories.create(category=&quot;TRANSFER&quot;, description=&quot;Internal transfer&quot;) db.transactions.create(txn_id=8001, date=&quot;2026-05-01&quot;, account=&quot;XFA1&quot;, category=&quot;TRANSFER&quot;, amount=5000, memo=&quot;seed&quot;) code, out, err = cli_runner(&quot;transfer&quot;, &quot;XFA1&quot;, &quot;XFB1&quot;, &quot;100.00&quot;, &quot;2026-05-02&quot;) assert code == 0 assert db.transactions.get(txn_id=8002).account == &quot;XFA1&quot; assert db.transactions.get(txn_id=8002).amount == -10000 assert db.transactions.get(txn_id=8002).memo == &quot;transfer to XFB1&quot; assert db.transactions.get(txn_id=8003).account == &quot;XFB1&quot; assert db.transactions.get(txn_id=8003).amount == 10000 assert db.transactions.get(txn_id=8003).memo == &quot;transfer from XFA1&quot; === END AC transfer-stores-two-rows ===</p>
+<p>=== AC transfer-output-rows ===<br>Intent: A valid transfer prints the header and the two stored rows in CSV.<br>Requires: executable=python3; scope=test</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;XFA2&quot;, name=&quot;Transfer From B&quot;) db.accounts.create(account=&quot;XFB2&quot;, name=&quot;Transfer To B&quot;) db.categories.create(category=&quot;TRANSFER&quot;, description=&quot;Internal transfer&quot;) db.transactions.create(txn_id=8011, date=&quot;2026-05-01&quot;, account=&quot;XFA2&quot;, category=&quot;TRANSFER&quot;, amount=5000, memo=&quot;seed&quot;) code, out, err = cli_runner(&quot;transfer&quot;, &quot;XFA2&quot;, &quot;XFB2&quot;, &quot;25.50&quot;, &quot;2026-05-03&quot;) assert code == 0 lines = out.splitlines() assert lines[0] == &quot;txn_id,date,account,category,amount,memo&quot; assert lines[1] == &quot;8012,2026-05-03,XFA2,TRANSFER,-25.50,transfer to XFB2&quot; assert lines[2] == &quot;8013,2026-05-03,XFB2,TRANSFER,25.50,transfer from XFA2&quot; === END AC transfer-output-rows ===</p>
+<p>=== AC transfer-rejects-same-account ===<br>Intent: A transfer naming the same account for both sides exits 3 and stores nothing.<br>Requires: executable=python3; scope=test</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;XFA3&quot;, name=&quot;Transfer Same&quot;) db.categories.create(category=&quot;TRANSFER&quot;, description=&quot;Internal transfer&quot;) code, out, err = cli_runner(&quot;transfer&quot;, &quot;XFA3&quot;, &quot;XFA3&quot;, &quot;10.00&quot;, &quot;2026-05-04&quot;) assert code == 3 assert out == &quot;&quot; assert db.transactions.list() == [] === END AC transfer-rejects-same-account ===</p>
+<p>=== AC transfer-rejects-zero-amount ===<br>Intent: A transfer with a zero amount exits 3 and stores nothing.<br>Requires: executable=python3; scope=test</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;XFA4&quot;, name=&quot;Transfer Zero A&quot;) db.accounts.create(account=&quot;XFB4&quot;, name=&quot;Transfer Zero B&quot;) db.categories.create(category=&quot;TRANSFER&quot;, description=&quot;Internal transfer&quot;) code, out, err = cli_runner(&quot;transfer&quot;, &quot;XFA4&quot;, &quot;XFB4&quot;, &quot;0.00&quot;, &quot;2026-05-04&quot;) assert code == 3 assert db.transactions.list() == [] === END AC transfer-rejects-zero-amount ===</p>
+<p>=== AC transfer-rejects-unknown-account ===<br>Intent: A transfer naming an unknown account exits 3, not 4, and stores nothing.<br>Requires: executable=python3; scope=test</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;XFA5&quot;, name=&quot;Transfer Known&quot;) db.categories.create(category=&quot;TRANSFER&quot;, description=&quot;Internal transfer&quot;) code, out, err = cli_runner(&quot;transfer&quot;, &quot;XFA5&quot;, &quot;NOSUCH&quot;, &quot;10.00&quot;, &quot;2026-05-04&quot;) assert code == 3 assert db.transactions.list() == [] === END AC transfer-rejects-unknown-account ===</p>
+<p>=== AC transfer-rejects-overdraft ===<br>Intent: A transfer that would leave the source account below zero exits 3 and stores neither row.<br>Requires: executable=python3; scope=test</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;XFA6&quot;, name=&quot;Transfer Poor&quot;) db.accounts.create(account=&quot;XFB6&quot;, name=&quot;Transfer Rich&quot;) db.categories.create(category=&quot;TRANSFER&quot;, description=&quot;Internal transfer&quot;) db.transactions.create(txn_id=8061, date=&quot;2026-05-01&quot;, account=&quot;XFA6&quot;, category=&quot;TRANSFER&quot;, amount=1000, memo=&quot;seed&quot;) code, out, err = cli_runner(&quot;transfer&quot;, &quot;XFA6&quot;, &quot;XFB6&quot;, &quot;10.01&quot;, &quot;2026-05-04&quot;) assert code == 3 assert [t.txn_id for t in db.transactions.list()] == [8061] === END AC transfer-rejects-overdraft ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Both rows are stored or neither; no partial transfer is ever visible.</li><li>Transfer ids come from the shared next-id function, never from a separately stored counter.</li><li>A rejected transfer prints nothing to standard output.</li></ul></article>
+</main>
+</body>
+</html>

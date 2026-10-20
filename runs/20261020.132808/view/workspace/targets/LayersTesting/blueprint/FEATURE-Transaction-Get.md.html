@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Transaction-Get.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Transaction-Get.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Transaction-Get.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Transaction Get</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Print one transaction row by id, rejecting non-integer ids before lookup.</td></tr><tr><td>Depends On</td><td>DATABASE.md, FEATURE-CLI-Dispatch.md, FEATURE-CLI-Output.md, FEATURE-Amount-Format.md, FEATURE-Command-Transaction.md</td></tr><tr><td>Provides</td><td>ledger txn get &lt;id&gt;</td></tr><tr><td>Consumes</td><td>transactions.get</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger txn get &lt;id&gt;</code> prints the stored transaction with the given id.</p>
+<h2>Behavior</h2>
+<ul><li>The command runs inside one command transaction (FEATURE-Command-Transaction.md).</li><li>The <code>&lt;id&gt;</code> argument must be a non-integer-free decimal integer. A non-integer id exits 3 before any</li></ul>
+<p>lookup (AC-012).</p>
+<ul><li>The row is read with <code>transactions.get</code>. An absent id exits 4.</li><li>On success the row is printed through the CSV output contract as:</li></ul>
+<pre><code>  txn_id,date,account,category,amount,memo
+  &lt;id&gt;,&lt;date&gt;,&lt;account&gt;,&lt;category&gt;,&lt;amount&gt;,&lt;memo&gt;</code></pre>
+<p>The amount uses the two-decimal output format.</p>
+<h2>Routes and Interfaces</h2>
+<div class="scroll"><table><thead><tr><th>Command</th><th>Exit 0</th><th>Exit 3</th><th>Exit 4</th></tr></thead><tbody><tr><td><code>ledger txn get &lt;id&gt;</code></td><td>transaction row</td><td>non-integer id</td><td>absent id</td></tr></tbody></table></div>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-TXN-002</code> — read: retrieve a transaction by id - supplies: <code>txn_id</code> - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC txn-get-prints-row ===<br>Intent: Getting an existing transaction prints its row with the two-decimal amount.<br>Suite: scoped</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;) db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales receipts&quot;) db.transactions.create(txn_id=121, date=&quot;2026-04-01&quot;, account=&quot;DRAWER1&quot;, category=&quot;SALES&quot;, amount=4550, memo=&quot;walk in sale&quot;) code, out, _ = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;121&quot;)</p>
+<p>assert code == 0 assert out == &quot;txn_id,date,account,category,amount,memo\n121,2026-04-01,DRAWER1,SALES,45.50,walk in sale\n&quot; === END AC txn-get-prints-row ===</p>
+<p>=== AC txn-get-absent-exits-4 ===<br>Intent: Getting an absent transaction id exits 4 and writes nothing to stdout.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: code, out, _ = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;999&quot;)</p>
+<p>assert code == 4 assert out == &quot;&quot; === END AC txn-get-absent-exits-4 ===</p>
+<p>=== AC txn-get-non-integer-exits-3 ===<br>Intent: A non-integer id argument exits 3 before any lookup (AC-012).</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: code, out, _ = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;12a&quot;)</p>
+<p>assert code == 3 assert out == &quot;&quot; === END AC txn-get-non-integer-exits-3 ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The printed row comes from a query; no transaction value is hardcoded.</li><li>Application code reaches the database only through <code>persistence</code> operations.</li></ul></article>
+</main>
+</body>
+</html>

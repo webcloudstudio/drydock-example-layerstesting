@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/parser.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/parser.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/parser.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Argument parser for the ``ledger`` command line. Builds the argparse tree; holds no behavior.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import argparse
+
+
+def build_parser() -&gt; argparse.ArgumentParser:
+    &quot;&quot;&quot;Return the ``ledger`` parser. Commands are added by the dispatch feature, not here.&quot;&quot;&quot;
+    parser = argparse.ArgumentParser(prog=&quot;ledger&quot;, description=&quot;Command-line cash ledger.&quot;)
+    parser.add_subparsers(dest=&quot;command&quot;, metavar=&quot;&lt;command&gt;&quot;, required=True)
+    return parser
+</pre></article>
+</main>
+</body>
+</html>

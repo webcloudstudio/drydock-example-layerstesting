@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Balance-Rule.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Balance-Rule.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Balance-Rule.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Balance Rule</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Reject any command whose changes leave a touched account with a negative balance, before the transaction commits.</td></tr><tr><td>Depends On</td><td>DATABASE.md, FEATURE-Command-Transaction.md, FEATURE-Amount-Format.md</td></tr><tr><td>Provides</td><td>check_non_negative</td></tr><tr><td>Consumes</td><td>transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Posting, amending, deleting, transferring, and loading all end with this check. The check runs inside the command&#x27;s transaction after its changes and before commit. The module lives at <code>balance.py</code> in the application root.</p>
+<h2>Rules</h2>
+<ul><li><code>check_non_negative(db, accounts)</code> takes the open <code>Database</code> and a list of the account codes that</li></ul>
+<p>the command touched.</p>
+<ul><li>For each listed account, the balance is the sum of the <code>amount</code> values of that account&#x27;s</li></ul>
+<p>transactions, in integer cents, computed from the rows returned by <code>transactions.list</code>.</p>
+<ul><li>Any listed account whose balance is below zero causes <code>ValueError</code> to be raised.</li><li>A balance of exactly zero is allowed.</li><li>Accounts not in the list are not checked, even when their balance is negative.</li><li>An empty list is accepted and performs no rejection.</li><li>The check only reads. It never changes a row. The command layer maps the raised <code>ValueError</code> to</li></ul>
+<p>exit 3 and rolls back the transaction.</p>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC balance-rejects-negative ===<br>Intent: A touched account whose balance falls below zero raises ValueError and leaves every row unchanged.</p>
+<p>from persistence.testing import db_session from balance import check_non_negative</p>
+<p>with db_session() as db: db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales&quot;) db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;) db.transactions.create(txn_id=1, date=&quot;2026-01-01&quot;, account=&quot;DRAWER1&quot;, category=&quot;SALES&quot;, amount=500, memo=&quot;&quot;) db.transactions.create(txn_id=2, date=&quot;2026-01-02&quot;, account=&quot;DRAWER1&quot;, category=&quot;SALES&quot;, amount=-600, memo=&quot;&quot;) touched = [&quot;DRAWER1&quot;] before = len(db.transactions.list()) try: check_non_negative(db, touched) except ValueError: raised = True else: raised = False after = len(db.transactions.list()) assert raised is True assert after == before === END AC balance-rejects-negative ===</p>
+<p>=== AC balance-allows-zero ===<br>Intent: A touched account whose balance is exactly zero does not raise.</p>
+<p>from persistence.testing import db_session from balance import check_non_negative</p>
+<p>opening = 500 spend = -opening touched = [&quot;DRAWER1&quot;] with db_session() as db: db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales&quot;) db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;) db.transactions.create(txn_id=1, date=&quot;2026-01-01&quot;, account=&quot;DRAWER1&quot;, category=&quot;SALES&quot;, amount=opening, memo=&quot;&quot;) db.transactions.create(txn_id=2, date=&quot;2026-01-02&quot;, account=&quot;DRAWER1&quot;, category=&quot;SALES&quot;, amount=spend, memo=&quot;&quot;) ok = True try: check_non_negative(db, touched) except ValueError: ok = False assert ok is True === END AC balance-allows-zero ===</p>
+<p>=== AC balance-checks-only-touched ===<br>Intent: A negative account that is not in the touched list is ignored, and the same account raises when it is touched.</p>
+<p>from persistence.testing import db_session from balance import check_non_negative</p>
+<p>with db_session() as db: db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales&quot;) db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;) db.accounts.create(account=&quot;OTHER&quot;, name=&quot;Other Account&quot;) db.transactions.create(txn_id=1, date=&quot;2026-01-01&quot;, account=&quot;DRAWER1&quot;, category=&quot;SALES&quot;, amount=500, memo=&quot;&quot;) db.transactions.create(txn_id=2, date=&quot;2026-01-02&quot;, account=&quot;OTHER&quot;, category=&quot;SALES&quot;, amount=-100, memo=&quot;&quot;) untouched_ok = True try: check_non_negative(db, [&quot;DRAWER1&quot;]) except ValueError: untouched_ok = False touched_raised = False try: check_non_negative(db, [&quot;OTHER&quot;]) except ValueError: touched_raised = True assert untouched_ok is True assert touched_raised is True === END AC balance-checks-only-touched ===</p>
+<p>=== AC balance-empty-list-accepts ===<br>Intent: An empty touched list performs no rejection.</p>
+<p>from persistence.testing import db_session from balance import check_non_negative</p>
+<p>with db_session() as db: ok = True try: check_non_negative(db, []) except ValueError: ok = False assert ok is True === END AC balance-empty-list-accepts ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The balance check reads through the <code>persistence</code> package only and never imports <code>sqlite3</code> or a</li></ul>
+<p>database driver.</p>
+<ul><li>Balances are computed in integer cents with no floating-point arithmetic.</li><li>The check never writes to the database.</li></ul></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Transaction-Amend.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Transaction-Amend.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Transaction-Amend.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Transaction Amend</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Change only the amount of one transaction, applying the balance rule and printing the updated row.</td></tr><tr><td>Depends On</td><td>DATABASE.md, FEATURE-CLI-Dispatch.md, FEATURE-CLI-Output.md, FEATURE-Amount-Format.md, FEATURE-Balance-Rule.md, FEATURE-Command-Transaction.md</td></tr><tr><td>Provides</td><td>ledger txn amend &lt;id&gt; &lt;amount&gt;</td></tr><tr><td>Consumes</td><td>transactions.get, transactions.update, transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger txn amend &lt;id&gt; &lt;amount&gt;</code> replaces the amount of an existing transaction. No other field changes.</p>
+<h2>Behavior</h2>
+<ul><li>The command runs inside one command transaction (FEATURE-Command-Transaction.md).</li><li>The <code>&lt;id&gt;</code> argument must be an integer. A non-integer id exits 3 before any lookup.</li><li>The <code>&lt;amount&gt;</code> argument is parsed as integer cents (FEATURE-Amount-Format.md). Zero in any form</li></ul>
+<p>exits 3.</p>
+<ul><li>The transaction is read with <code>transactions.get</code>. An absent id exits 4 with no change.</li><li>The amount is written with <code>transactions.update</code>. No other column changes.</li><li>The balance rule (FEATURE-Balance-Rule.md) is checked after the update and before commit. A</li></ul>
+<p>resulting negative balance exits 3 with no change.</p>
+<ul><li>On success the updated row is printed as:</li></ul>
+<pre><code>  txn_id,date,account,category,amount,memo
+  &lt;id&gt;,&lt;date&gt;,&lt;account&gt;,&lt;category&gt;,&lt;amount&gt;,&lt;memo&gt;</code></pre>
+<h2>Routes and Interfaces</h2>
+<div class="scroll"><table><thead><tr><th>Command</th><th>Exit 0</th><th>Exit 3</th><th>Exit 4</th></tr></thead><tbody><tr><td><code>ledger txn amend &lt;id&gt; &lt;amount&gt;</code></td><td>updated row</td><td>malformed id or amount, negative balance</td><td>absent id</td></tr></tbody></table></div>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC txn-amend-changes-only-amount ===<br>Intent: Amending a transaction changes only its amount and prints the updated row.<br>Suite: scoped</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;) db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales receipts&quot;) db.transactions.create(txn_id=121, date=&quot;2026-04-01&quot;, account=&quot;DRAWER1&quot;, category=&quot;SALES&quot;, amount=4550, memo=&quot;walk in sale&quot;) code, out, _ = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;121&quot;, &quot;54.50&quot;) row = db.transactions.get(txn_id=121)</p>
+<p>assert code == 0 assert out == &quot;txn_id,date,account,category,amount,memo\n121,2026-04-01,DRAWER1,SALES,54.50,walk in sale\n&quot; assert row.amount == 5450 assert row.memo == &quot;walk in sale&quot; assert row.date == &quot;2026-04-01&quot; === END AC txn-amend-changes-only-amount ===</p>
+<p>=== AC txn-amend-absent-exits-4 ===<br>Intent: Amending an absent transaction id exits 4 and writes nothing to stdout.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: code, out, _ = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;999&quot;, &quot;1.00&quot;)</p>
+<p>assert code == 4 assert out == &quot;&quot; === END AC txn-amend-absent-exits-4 ===</p>
+<p>=== AC txn-amend-zero-amount-exits-3 ===<br>Intent: A zero amount in any form is rejected with exit 3 and the stored amount is unchanged.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;DRAWER1&quot;, name=&quot;Front Drawer&quot;) db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales receipts&quot;) db.transactions.create(txn_id=121, date=&quot;2026-04-01&quot;, account=&quot;DRAWER1&quot;, category=&quot;SALES&quot;, amount=4550, memo=&quot;walk in sale&quot;) code, out, _ = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;121&quot;, &quot;0.00&quot;) row = db.transactions.get(txn_id=121)</p>
+<p>assert code == 3 assert out == &quot;&quot; assert row.amount == 4550 === END AC txn-amend-zero-amount-exits-3 ===</p>
+<p>=== AC txn-amend-negative-balance-exits-3 ===<br>Intent: An amendment that would leave an account below zero exits 3 and changes nothing.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;PETTY&quot;, name=&quot;Petty Cash&quot;) db.categories.create(category=&quot;SUPPLY&quot;, description=&quot;Supplies&quot;) db.transactions.create(txn_id=1, date=&quot;2026-01-01&quot;, account=&quot;PETTY&quot;, category=&quot;SUPPLY&quot;, amount=-1200, memo=&quot;tape&quot;) code, out, _ = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;, &quot;-1000.00&quot;) row = db.transactions.get(txn_id=1)</p>
+<p>assert code == 3 assert out == &quot;&quot; assert row.amount == -1200 === END AC txn-amend-negative-balance-exits-3 ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Only the amount column changes on amend; account, category, date, and memo are never rewritten.</li><li>Amounts are integer cents end to end; no floating point is used for money.</li><li>Application code reaches the database only through <code>persistence</code> operations.</li></ul></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Load-Accounts.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Load-Accounts.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Load-Accounts.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Load Accounts</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Load the accounts CSV all or nothing through <code>ledger load accounts &lt;csv&gt;</code>.</td></tr><tr><td>Depends On</td><td>DATABASE.md, FEATURE-Code-Validation.md, FEATURE-Command-Transaction.md, FEATURE-CLI-Output.md, FEATURE-CLI-Dispatch.md</td></tr><tr><td>Provides</td><td>ledger load accounts &lt;csv&gt;</td></tr><tr><td>Consumes</td><td>accounts.get, accounts.create</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Loads the <code>accounts</code> table from a CSV file whose header is <code>account,name</code>.</p>
+<h2>Behavior</h2>
+<ul><li>The header must equal <code>account,name</code> in that order. Otherwise the command exits 3 and stores nothing.</li><li>Each code is validated by the code rules. Each name is 1 to 40 characters with no comma or newline. A violation exits 3 and stores nothing.</li><li>A code repeated within the file, or a code already present, exits 3 and stores nothing.</li><li>A header-only file loads zero rows and exits 0.</li><li>On success, stdout is <code>table,loaded</code> then <code>accounts,&lt;rows&gt;</code>.</li><li>The command runs in one command transaction. An unreadable file exits 1 with no change.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC load-accounts-seed-round-trip ===<br>Intent: Loading the seed accounts file reports its row count, and each loaded account reads back with its code and name.</p>
+<p>import csv import io import os import sys import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>os.environ[&quot;DATABASE_URL&quot;] = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)</p>
+<p>def run(*args): code, out, err = cli_runner(*args) print(out) print(err, file=sys.stderr) return code, out, err</p>
+<p>seed_path = &quot;sources/seed_accounts.csv&quot; with open(seed_path, newline=&quot;&quot;) as handle: seed_header, *seed_rows = list(csv.reader(handle)) assert seed_header == [&quot;account&quot;, &quot;name&quot;]</p>
+<p>assert run(&quot;init&quot;)[0] == 0 code, out, err = run(&quot;load&quot;, &quot;accounts&quot;, seed_path) assert code == 0 loaded = list(csv.reader(io.StringIO(out))) assert loaded[0] == [&quot;table&quot;, &quot;loaded&quot;] assert loaded[-1] == [&quot;accounts&quot;, str(len(seed_rows))]</p>
+<p>for account, name in seed_rows: code, out, err = run(&quot;account&quot;, &quot;get&quot;, account) assert code == 0 row = list(csv.reader(io.StringIO(out)))[1] assert row[0] == account assert row[1] == name === END AC load-accounts-seed-round-trip ===</p>
+<p>=== AC load-accounts-header-only ===<br>Intent: A header-only accounts file loads zero rows, reports accounts,0, and exits 0.</p>
+<p>import csv import io import os import sys import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>os.environ[&quot;DATABASE_URL&quot;] = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)</p>
+<p>def run(*args): code, out, err = cli_runner(*args) print(out) print(err, file=sys.stderr) return code, out, err</p>
+<p>with open(&quot;sources/seed_accounts.csv&quot;, newline=&quot;&quot;) as handle: seed_header = next(csv.reader(handle))</p>
+<p>header_only = os.path.join(tempfile.mkdtemp(), &quot;accounts.csv&quot;) with open(header_only, &quot;w&quot;, newline=&quot;&quot;) as handle: csv.writer(handle, lineterminator=&quot;\n&quot;).writerow(seed_header)</p>
+<p>assert run(&quot;init&quot;)[0] == 0 code, out, err = run(&quot;load&quot;, &quot;accounts&quot;, header_only) assert code == 0 assert list(csv.reader(io.StringIO(out)))[-1] == [&quot;accounts&quot;, &quot;0&quot;]</p>
+<p>code, out, err = run(&quot;count&quot;) assert code == 0 counts = {row[0]: row[1] for row in list(csv.reader(io.StringIO(out)))[1:]} assert counts[&quot;accounts&quot;] == &quot;0&quot; === END AC load-accounts-header-only ===</p>
+<p>=== AC load-accounts-header-mismatch ===<br>Intent: An accounts file whose header columns are out of order exits 3 and leaves the accounts table empty.</p>
+<p>import csv import io import os import sys import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>os.environ[&quot;DATABASE_URL&quot;] = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)</p>
+<p>def run(*args): code, out, err = cli_runner(*args) print(out) print(err, file=sys.stderr) return code, out, err</p>
+<p>with open(&quot;sources/seed_accounts.csv&quot;, newline=&quot;&quot;) as handle: seed_header, *seed_rows = list(csv.reader(handle))</p>
+<p>reordered = os.path.join(tempfile.mkdtemp(), &quot;accounts.csv&quot;) with open(reordered, &quot;w&quot;, newline=&quot;&quot;) as handle: writer = csv.writer(handle, lineterminator=&quot;\n&quot;) writer.writerow(list(reversed(seed_header))) writer.writerows(seed_rows)</p>
+<p>assert run(&quot;init&quot;)[0] == 0 code, out, err = run(&quot;load&quot;, &quot;accounts&quot;, reordered) assert code == 3 assert out == &quot;&quot;</p>
+<p>code, out, err = run(&quot;count&quot;) counts = {row[0]: row[1] for row in list(csv.reader(io.StringIO(out)))[1:]} assert counts[&quot;accounts&quot;] == &quot;0&quot; === END AC load-accounts-header-mismatch ===</p>
+<p>=== AC load-accounts-duplicate-key ===<br>Intent: An accounts file that repeats a code exits 3 and stores none of its rows.</p>
+<p>import csv import io import os import sys import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>os.environ[&quot;DATABASE_URL&quot;] = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)</p>
+<p>def run(*args): code, out, err = cli_runner(*args) print(out) print(err, file=sys.stderr) return code, out, err</p>
+<p>with open(&quot;sources/seed_accounts.csv&quot;, newline=&quot;&quot;) as handle: seed_header, *seed_rows = list(csv.reader(handle))</p>
+<p>duplicated = os.path.join(tempfile.mkdtemp(), &quot;accounts.csv&quot;) with open(duplicated, &quot;w&quot;, newline=&quot;&quot;) as handle: writer = csv.writer(handle, lineterminator=&quot;\n&quot;) writer.writerow(seed_header) writer.writerows(seed_rows) writer.writerow(seed_rows[0])</p>
+<p>assert run(&quot;init&quot;)[0] == 0 code, out, err = run(&quot;load&quot;, &quot;accounts&quot;, duplicated) assert code == 3 assert out == &quot;&quot;</p>
+<p>code, out, err = run(&quot;count&quot;) counts = {row[0]: row[1] for row in list(csv.reader(io.StringIO(out)))[1:]} assert counts[&quot;accounts&quot;] == &quot;0&quot; === END AC load-accounts-duplicate-key ===</p>
+<p>=== AC load-accounts-invalid-row-all-or-none ===<br>Intent: An accounts file with one name longer than 40 characters exits 3 and stores none of the valid rows before it.</p>
+<p>import csv import io import os import sys import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>os.environ[&quot;DATABASE_URL&quot;] = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)</p>
+<p>def run(*args): code, out, err = cli_runner(*args) print(out) print(err, file=sys.stderr) return code, out, err</p>
+<p>with open(&quot;sources/seed_accounts.csv&quot;, newline=&quot;&quot;) as handle: seed_header, *seed_rows = list(csv.reader(handle))</p>
+<p>invalid_rows = [list(row) for row in seed_rows] invalid_rows[-1][1] = &quot;N&quot; * 41</p>
+<p>invalid = os.path.join(tempfile.mkdtemp(), &quot;accounts.csv&quot;) with open(invalid, &quot;w&quot;, newline=&quot;&quot;) as handle: writer = csv.writer(handle, lineterminator=&quot;\n&quot;) writer.writerow(seed_header) writer.writerows(invalid_rows)</p>
+<p>assert run(&quot;init&quot;)[0] == 0 code, out, err = run(&quot;load&quot;, &quot;accounts&quot;, invalid) assert code == 3 assert out == &quot;&quot;</p>
+<p>code, out, err = run(&quot;count&quot;) counts = {row[0]: row[1] for row in list(csv.reader(io.StringIO(out)))[1:]} assert counts[&quot;accounts&quot;] == &quot;0&quot; === END AC load-accounts-invalid-row-all-or-none ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Application code reaches the accounts table only through the <code>persistence</code> package operations.</li><li>A rejected accounts load stores no rows, including rows that were individually valid.</li><li>Diagnostics go to standard error only; standard output stays empty on failure.</li></ul></article>
+</main>
+</body>
+</html>

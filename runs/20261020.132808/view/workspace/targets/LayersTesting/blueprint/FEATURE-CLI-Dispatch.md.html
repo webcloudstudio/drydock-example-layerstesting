@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-CLI-Dispatch.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-CLI-Dispatch.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-CLI-Dispatch.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: CLI Dispatch</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Routes <code>ledger</code> command words to their handlers and rejects usage errors with exit 2 before any database access.</td></tr><tr><td>Depends On</td><td>FEATURE-CLI-Platform.md</td></tr><tr><td>Provides</td><td>ledger &lt;command&gt; routing, usage error exit 2</td></tr><tr><td>Consumes</td><td>cli.main, cli_runner</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Every <code>ledger</code> invocation is either handed to the handler its story owns or rejected as a usage error. Nothing else happens first.</p>
+<h2>Behavior</h2>
+<ul><li>The command word, sub-verb, and argument count are checked against the Commands table before any handler or database access runs.</li><li>An unknown command, unknown sub-verb, unknown table, unknown report, or wrong argument count exits 2 with exactly one line on standard error and nothing on standard output.</li><li>A correctly shaped command is passed to its handler, and the handler&#x27;s exit code is returned unchanged.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC cli-dispatch-usage-errors-exit-two ===<br>Intent: Each unknown command, sub-verb, table, report, or wrong argument count exits 2 with empty stdout and one stderr line.</p>
+<p>from cli.testing import cli_runner</p>
+<p>usage_errors = [ (&quot;frobnicate&quot;,), (&quot;report&quot;, &quot;nosuch&quot;), (&quot;load&quot;, &quot;nosuch&quot;, &quot;missing.csv&quot;), (&quot;account&quot;, &quot;nosuch&quot;), (&quot;count&quot;, &quot;extra&quot;), (&quot;account&quot;, &quot;add&quot;, &quot;ONLY&quot;), ]</p>
+<p>for args in usage_errors: code, out, err = cli_runner(*args) print(args, err) assert code == 2 assert out == &quot;&quot; assert len(err.splitlines()) == 1 === END AC cli-dispatch-usage-errors-exit-two ===</p>
+<p>=== AC cli-dispatch-usage-touches-no-database ===<br>Intent: A usage error exits 2 without creating or opening the database file named by DATABASE_URL.</p>
+<p>import os import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn</p>
+<p>code, out, err = cli_runner(&quot;frobnicate&quot;) assert code == 2 assert not os.path.exists(dsn) === END AC cli-dispatch-usage-touches-no-database ===</p>
+<p>=== AC cli-dispatch-main-returns-usage-code ===<br>Intent: The published <code>main</code> entry point returns the integer 2 for an unknown command.</p>
+<p>from cli import main</p>
+<p>result = main([&quot;frobnicate&quot;]) assert isinstance(result, int) assert result == 2 === END AC cli-dispatch-main-returns-usage-code ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Argument validation completes before any database connection is opened.</li><li>Usage diagnostics go to standard error only and are never written to standard output.</li><li>Dispatch never reads a file named on the command line before validating the command.</li></ul></article>
+</main>
+</body>
+</html>

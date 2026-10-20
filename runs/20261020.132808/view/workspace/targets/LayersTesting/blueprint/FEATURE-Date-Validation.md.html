@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Date-Validation.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Date-Validation.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Date-Validation.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Date Validation</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Accept only real YYYY-MM-DD calendar dates for every command that takes a date.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md</td></tr><tr><td>Provides</td><td>parse_date</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Dates enter the ledger through <code>txn post</code>, <code>transfer</code>, and <code>load transactions</code>. This module is the single parser for all of them. It lives at <code>dates.py</code> in the application root.</p>
+<h2>Rules</h2>
+<ul><li><code>parse_date(text)</code> accepts exactly the form <code>YYYY-MM-DD</code> with four digits, a two-digit month, and</li></ul>
+<p>a two-digit day.</p>
+<ul><li>The date must exist on the calendar. Leap years are honored, so <code>2028-02-29</code> is valid and</li></ul>
+<p><code>2026-02-29</code> is not.</p>
+<ul><li>Impossible dates such as <code>2026-02-30</code>, month <code>13</code>, and day <code>00</code> are rejected.</li><li>Any other shape, including <code>2026-1-01</code>, <code>20260101</code>, and <code>2026/01/01</code>, is rejected.</li><li>Success returns a <code>datetime.date</code>. Rejection raises <code>ValueError</code>, which the command layer maps to</li></ul>
+<p>exit 3.</p>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC date-round-trip ===<br>Intent: Valid calendar dates parse to a datetime.date whose ISO form equals the input.</p>
+<p>import datetime from dates import parse_date</p>
+<p>for text in (&quot;2026-01-01&quot;, &quot;2026-02-28&quot;, &quot;2028-02-29&quot;, &quot;2026-12-31&quot;): result = parse_date(text) assert isinstance(result, datetime.date) assert result.isoformat() == text === END AC date-round-trip ===</p>
+<p>=== AC date-rejects-impossible ===<br>Intent: Dates that do not exist on the calendar are rejected.</p>
+<p>from dates import parse_date</p>
+<p>def rejected(check, value): try: check(value) except ValueError: return True return False</p>
+<p>for text in (&quot;2026-02-30&quot;, &quot;2026-02-29&quot;, &quot;2026-04-31&quot;, &quot;2026-13-01&quot;, &quot;2026-00-10&quot;, &quot;2026-01-00&quot;): assert rejected(parse_date, text) is True === END AC date-rejects-impossible ===</p>
+<p>=== AC date-rejects-malformed ===<br>Intent: Text that is not in the YYYY-MM-DD shape is rejected.</p>
+<p>from dates import parse_date</p>
+<p>def rejected(check, value): try: check(value) except ValueError: return True return False</p>
+<p>for text in (&quot;&quot;, &quot;2026-1-01&quot;, &quot;2026-01-1&quot;, &quot;20260101&quot;, &quot;26-01-01&quot;, &quot;2026/01/01&quot;, &quot;not-a-date&quot;): assert rejected(parse_date, text) is True === END AC date-rejects-malformed ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The parser never reads the system clock; it validates only the text it is given.</li><li>The module never opens or reads the database.</li></ul></article>
+</main>
+</body>
+</html>

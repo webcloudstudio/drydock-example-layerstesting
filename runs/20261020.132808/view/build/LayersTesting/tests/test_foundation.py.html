@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_foundation.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_foundation.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_foundation.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Foundation checks: project manifest, lock file, environment, and launchers.
+
+Each test acts on the project and reads the resulting state back. None of them
+inspect captured text beyond parsed JSON or an exit status.
+&quot;&quot;&quot;
+
+import json
+import os
+import subprocess
+import tomllib
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+VENV_PYTHON = ROOT / &quot;.venv&quot; / &quot;bin&quot; / &quot;python&quot;
+
+
+def _load_pyproject() -&gt; dict:
+    with open(ROOT / &quot;pyproject.toml&quot;, &quot;rb&quot;) as handle:
+        return tomllib.load(handle)
+
+
+def _requirement_names(specs: list[str]) -&gt; set[str]:
+    names = set()
+    for spec in specs:
+        name = spec
+        for sep in (&quot;&lt;&quot;, &quot;&gt;&quot;, &quot;=&quot;, &quot;!&quot;, &quot;~&quot;, &quot;[&quot;, &quot;;&quot;, &quot; &quot;):
+            name = name.split(sep, 1)[0]
+        names.add(name.strip().lower())
+    return names
+
+
+# --- pyproject.toml -------------------------------------------------------------------
+
+
+def test_pyproject_parses_with_project_table():
+    data = _load_pyproject()
+    assert isinstance(data[&quot;project&quot;], dict)
+
+
+def test_pyproject_names_the_ledger_project():
+    assert _load_pyproject()[&quot;project&quot;][&quot;name&quot;] == &quot;ledger&quot;
+
+
+def test_pyproject_requires_python_311_or_newer():
+    spec = _load_pyproject()[&quot;project&quot;][&quot;requires-python&quot;]
+    assert spec == &quot;&gt;=3.11&quot;
+
+
+def test_pyproject_declares_pytest_and_ruff_as_dev_dependencies():
+    dev = _load_pyproject()[&quot;dependency-groups&quot;][&quot;dev&quot;]
+    assert {&quot;pytest&quot;, &quot;ruff&quot;} &lt;= _requirement_names(dev)
+
+
+def test_pyproject_points_pytest_at_tests_directory():
+    assert _load_pyproject()[&quot;tool&quot;][&quot;pytest&quot;][&quot;ini_options&quot;][&quot;testpaths&quot;] == [&quot;tests&quot;]
+
+
+# --- uv.lock --------------------------------------------------------------------------
+
+
+def test_uv_lock_is_committed_beside_pyproject():
+    assert (ROOT / &quot;uv.lock&quot;).is_file()
+
+
+def test_uv_lock_pins_pytest_and_ruff():
+    with open(ROOT / &quot;uv.lock&quot;, &quot;rb&quot;) as handle:
+        lock = tomllib.load(handle)
+    pinned = {package[&quot;name&quot;] for package in lock[&quot;package&quot;]}
+    assert {&quot;pytest&quot;, &quot;ruff&quot;} &lt;= pinned
+
+
+# --- .venv ----------------------------------------------------------------------------
+
+
+def test_venv_interpreter_runs_and_reports_python_311_or_newer():
+    result = subprocess.run(
+        [str(VENV_PYTHON), &quot;-c&quot;, &quot;import sys, json; print(json.dumps(list(sys.version_info[:2])))&quot;],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    major, minor = json.loads(result.stdout)
+    assert (major, minor) &gt;= (3, 11)
+
+
+def test_venv_provides_pytest_and_ruff_executables():
+    for tool in (&quot;pytest&quot;, &quot;ruff&quot;):
+        assert os.access(ROOT / &quot;.venv&quot; / &quot;bin&quot; / tool, os.X_OK)
+
+
+# --- bin/ launchers -------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(&quot;launcher&quot;, [&quot;bin/test.sh&quot;, &quot;bin/lint.sh&quot;])
+def test_launcher_is_an_executable_file(launcher):
+    path = ROOT / launcher
+    assert path.is_file()
+    assert os.access(path, os.X_OK)
+
+
+@pytest.mark.parametrize(&quot;launcher&quot;, [&quot;bin/test.sh&quot;, &quot;bin/lint.sh&quot;])
+def test_launcher_declares_commandcenter_header(launcher):
+    lines = (ROOT / launcher).read_text().splitlines()
+    assert lines[0] == &quot;#!/bin/sh&quot;
+    assert lines[1] == &quot;# CommandCenter Operation&quot;
+
+
+def test_lint_launcher_exits_zero_on_clean_project():
+    result = subprocess.run([&quot;sh&quot;, str(ROOT / &quot;bin&quot; / &quot;lint.sh&quot;)], check=False, cwd=ROOT)
+    assert result.returncode == 0
+
+
+# --- .gitignore -----------------------------------------------------------------------
+
+
+def test_gitignore_excludes_venv_and_runtime_data():
+    entries = {line.strip() for line in (ROOT / &quot;.gitignore&quot;).read_text().splitlines()}
+    assert {&quot;.venv/&quot;, &quot;data/&quot;, &quot;.env&quot;} &lt;= entries
+</pre></article>
+</main>
+</body>
+</html>

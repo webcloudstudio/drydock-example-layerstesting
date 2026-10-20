@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Report-Categories.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Report-Categories.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Report-Categories.md">Raw file</a></div></header>
+<article class="doc"><h1>Feature: Report Categories</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Print one row per category, including categories with no transactions, ordered by code, then a TOTAL row, all computed from the database.</td></tr><tr><td>Depends On</td><td>DATABASE.md, FEATURE-Amount-Format.md, FEATURE-Command-Transaction.md, FEATURE-CLI-Output.md, FEATURE-CLI-Dispatch.md</td></tr><tr><td>Provides</td><td>ledger report categories</td></tr><tr><td>Consumes</td><td>categories.list, transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger report categories</code> reports, for every category, its description, transaction count, inflow, outflow, and net, followed by a TOTAL row.</p>
+<h2>Trigger</h2>
+<p>The user runs <code>ledger report categories</code>.</p>
+<h2>Behavior</h2>
+<ol><li>Within the command transaction, read every category through <code>categories.list</code>, ordered by</li></ol>
+<p><code>category</code> ascending.</p>
+<ol><li>For each category, compute by query over <code>transactions.list</code>:<ul><li><code>transactions</code>: the number of rows in that category.</li><li><code>inflow</code>: the sum of positive amounts, in integer cents.</li><li><code>outflow</code>: the sum of the absolute values of negative amounts, in integer cents, printed as a</li></ul></li></ol>
+<p>positive number.</p>
+<ul><li><code>net</code>: <code>inflow - outflow</code>.</li></ul>
+<p>A category with no transactions reports <code>0</code>, <code>0.00</code>, <code>0.00</code>, <code>0.00</code>.</p>
+<ol><li>Print the header and one row per category:</li></ol>
+<pre><code>category,description,transactions,inflow,outflow,net</code></pre>
+<ol><li>Print the TOTAL row, whose count, inflow, outflow, and net are summed over every transaction:</li></ol>
+<pre><code>TOTAL,,&lt;count&gt;,&lt;inflow&gt;,&lt;outflow&gt;,&lt;net&gt;</code></pre>
+<p>Amounts are formatted per FEATURE-Amount-Format.md. No value is embedded as a constant.</p>
+<h2>Routes and Interfaces</h2>
+<div class="scroll"><table><thead><tr><th>Interface</th><th>Kind</th><th>Notes</th></tr></thead><tbody><tr><td><code>ledger report categories</code></td><td>CLI command</td><td>Exit 0 on success.</td></tr></tbody></table></div>
+<h2>Reads and Writes</h2>
+<div class="scroll"><table><thead><tr><th>Operation</th><th>Access</th><th>Repository operation</th><th>Notes</th></tr></thead><tbody><tr><td>List categories</td><td>read</td><td><code>categories.list</code></td><td>Ordered by code; includes empty categories.</td></tr><tr><td>List transactions</td><td>read</td><td><code>transactions.list</code></td><td>Aggregated per category and in total.</td></tr></tbody></table></div>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC report-categories-header ===<br>Intent: The categories report begins with the category header line.<br>Requires: executable=python3; scope=test</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: db.categories.create(category=&quot;RCA1&quot;, description=&quot;Report Category A&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;) assert code == 0 assert out.splitlines()[0] == &quot;category,description,transactions,inflow,outflow,net&quot; === END AC report-categories-header ===</p>
+<p>=== AC report-categories-includes-empty ===<br>Intent: A category with no transactions still appears, with zero values.<br>Requires: executable=python3; scope=test</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: db.categories.create(category=&quot;RCB1&quot;, description=&quot;Report Empty Category&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;) assert code == 0 rows = out.splitlines() assert rows[1] == &quot;RCB1,Report Empty Category,0,0.00,0.00,0.00&quot; === END AC report-categories-includes-empty ===</p>
+<p>=== AC report-categories-inflow-outflow ===<br>Intent: A category&#x27;s inflow sums its positive amounts and its outflow sums the absolute values of its negative amounts.<br>Requires: executable=python3; scope=test</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;RCC1&quot;, name=&quot;Report Cat Account&quot;) db.categories.create(category=&quot;RCC2&quot;, description=&quot;Report Cat Two&quot;) db.transactions.create(txn_id=7201, date=&quot;2026-05-01&quot;, account=&quot;RCC1&quot;, category=&quot;RCC2&quot;, amount=800, memo=&quot;in&quot;) db.transactions.create(txn_id=7202, date=&quot;2026-05-01&quot;, account=&quot;RCC1&quot;, category=&quot;RCC2&quot;, amount=-125, memo=&quot;out&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;) assert code == 0 rows = out.splitlines() assert rows[1] == &quot;RCC2,Report Cat Two,2,8.00,1.25,6.75&quot; === END AC report-categories-inflow-outflow ===</p>
+<p>=== AC report-categories-ordered-by-code ===<br>Intent: Category rows are ordered by category code ascending.<br>Requires: executable=python3; scope=test</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: db.categories.create(category=&quot;RCZ1&quot;, description=&quot;Zulu&quot;) db.categories.create(category=&quot;RCY1&quot;, description=&quot;Yankee&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;) assert code == 0 rows = out.splitlines() assert rows[1].startswith(&quot;RCY1,&quot;) assert rows[2].startswith(&quot;RCZ1,&quot;) === END AC report-categories-ordered-by-code ===</p>
+<p>=== AC report-categories-total-row ===<br>Intent: The TOTAL row sums transaction count, inflow, outflow, and net over every category.<br>Requires: executable=python3; scope=test</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;RCT1&quot;, name=&quot;Report Cat Total Account&quot;) db.categories.create(category=&quot;RCT2&quot;, description=&quot;Report Cat Total Two&quot;) db.transactions.create(txn_id=7301, date=&quot;2026-05-01&quot;, account=&quot;RCT1&quot;, category=&quot;RCT2&quot;, amount=500, memo=&quot;in&quot;) db.transactions.create(txn_id=7302, date=&quot;2026-05-01&quot;, account=&quot;RCT1&quot;, category=&quot;RCT2&quot;, amount=-200, memo=&quot;out&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;) assert code == 0 assert out.splitlines()[-1] == &quot;TOTAL,,2,5.00,2.00,3.00&quot; === END AC report-categories-total-row ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Every category appears, including those with no transactions.</li><li>No count, sum, or total is hardcoded; every value comes from a query.</li><li>Amounts are formatted with two decimals, never floating point; a zero total prints <code>0.00</code>,</li></ul>
+<p>never <code>-0.00</code>.</p></article>
+</main>
+</body>
+</html>

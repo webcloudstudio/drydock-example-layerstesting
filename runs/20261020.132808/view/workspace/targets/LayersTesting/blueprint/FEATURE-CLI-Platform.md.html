@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-CLI-Platform.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-CLI-Platform.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-CLI-Platform.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: CLI Platform</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Provide the cli package entry point, the cli_runner test fixture, and the ledger launcher at the application root.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md</td></tr><tr><td>Provides</td><td>cli.main(argv), cli.testing.cli_runner, ./ledger</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>The CLI platform is the package every command handler plugs into. It owns the entry point, the test fixture that runs the entry point in process, and the <code>ledger</code> launcher that delegates to it. It does not route commands; command routing belongs to <code>FEATURE-CLI-Dispatch.md</code>.</p>
+<h2>Interface</h2>
+<ul><li><code>cli.main(argv: list[str] | None = None) -&gt; int</code> returns an exit code.</li><li><code>cli.testing.cli_runner(*args: str) -&gt; tuple[int, str, str]</code> returns <code>(exit_code, stdout, stderr)</code></li></ul>
+<p>without spawning a process.</p>
+<ul><li><code>./ledger</code> is an executable file at the application root that delegates its arguments to <code>cli.main</code>.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC cli-main-callable ===<br>Intent: The cli package exposes main with the single parameter argv.</p>
+<p>import inspect</p>
+<p>import cli</p>
+<p>assert callable(cli.main) assert list(inspect.signature(cli.main).parameters) == [&quot;argv&quot;] === END AC cli-main-callable ===</p>
+<p>=== AC cli-runner-shape ===<br>Intent: cli_runner returns a three-element tuple of an integer exit code and two text streams.</p>
+<p>from cli.testing import cli_runner</p>
+<p>result = cli_runner() assert isinstance(result, tuple) code, out, err = result assert isinstance(code, int) assert isinstance(out, str) assert isinstance(err, str) === END AC cli-runner-shape ===</p>
+<p>=== AC cli-launcher-executable ===<br>Intent: The ledger launcher is an executable file at the application root.</p>
+<p>import os from pathlib import Path</p>
+<p>launcher = Path(&quot;ledger&quot;) assert launcher.is_file() assert os.access(launcher, os.X_OK) === END AC cli-launcher-executable ===</p>
+<p>=== AC cli-launcher-shebang ===<br>Intent: The ledger launcher begins with an interpreter line.</p>
+<p>from pathlib import Path</p>
+<p>first_line = Path(&quot;ledger&quot;).read_text(encoding=&quot;utf-8&quot;).splitlines()[0] assert first_line.startswith(&quot;#!&quot;) === END AC cli-launcher-shebang ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Do not spawn a subprocess in any criterion. Criteria call <code>cli_runner</code> or import the entry point.</li><li>The launcher contains no command logic; it only delegates to <code>cli.main</code>.</li></ul></article>
+</main>
+</body>
+</html>

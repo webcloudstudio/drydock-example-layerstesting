@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.134300.856Z_layerstesting_plan_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.134300.856Z_layerstesting_plan_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.134300.856Z_layerstesting_plan_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT FEATURE-Report-Monthly.md ===
+# Feature: Report Monthly
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Print one row per calendar month that has transactions, ascending, then a TOTAL row, all computed from the database. |
+| Depends On  | DATABASE.md, FEATURE-Amount-Format.md, FEATURE-Command-Transaction.md, FEATURE-CLI-Output.md, FEATURE-CLI-Dispatch.md |
+| Provides    | ledger report monthly |
+| Consumes    | transactions.list |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger report monthly` reports, for each month that has transactions, its transaction count,
+inflow, outflow, and net, followed by a TOTAL row.
+
+## Trigger
+
+The user runs `ledger report monthly`.
+
+## Behavior
+
+1. Within the command transaction, read every transaction through `transactions.list`.
+2. Group rows by month, the `YYYY-MM` prefix of `date`. Only months that have transactions appear.
+3. For each month, compute by query:
+   - `transactions`: the number of rows in that month.
+   - `inflow`: the sum of positive amounts, in integer cents.
+   - `outflow`: the sum of the absolute values of negative amounts, in integer cents, printed as a
+     positive number.
+   - `net`: `inflow - outflow`.
+4. Print the header, then one row per month in ascending `YYYY-MM` order:
+
+```text
+month,transactions,inflow,outflow,net
+```
+
+5. Print the TOTAL row, whose count, inflow, outflow, and net are summed over every transaction:
+
+```text
+TOTAL,&lt;count&gt;,&lt;inflow&gt;,&lt;outflow&gt;,&lt;net&gt;
+```
+
+6. With no transactions, print only `TOTAL,0,0.00,0.00,0.00` after the header.
+
+Amounts are formatted per FEATURE-Amount-Format.md. No value is embedded as a constant.
+
+## Routes and Interfaces
+
+| Interface | Kind | Notes |
+|---|---|---|
+| `ledger report monthly` | CLI command | Exit 0 on success. |
+
+## Reads and Writes
+
+| Operation | Access | Repository operation | Notes |
+|---|---|---|---|
+| List transactions | read | `transactions.list` | Grouped by month and totalled in code from the query result. |
+
+## Programmatic Acceptance
+
+=== AC report-monthly-header ===
+Intent: The monthly report begins with the month header line.
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;)
+    assert code == 0
+    assert out.splitlines()[0] == &quot;month,transactions,inflow,outflow,net&quot;
+=== END AC report-monthly-header ===
+
+=== AC report-monthly-empty ===
+Intent: With no transactions the report prints only the TOTAL row of zeros.
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;)
+    assert code == 0
+    assert out.splitlines()[1:] == [&quot;TOTAL,0,0.00,0.00,0.00&quot;]
+=== END AC report-monthly-empty ===
+
+=== AC report-monthly-month-rows ===
+Intent: Each month row carries its count, inflow, outflow, and net for transactions dated in that month.
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    db.accounts.create(account=&quot;RMA1&quot;, name=&quot;Monthly Account&quot;)
+    db.categories.create(category=&quot;RMC1&quot;, description=&quot;Monthly Category&quot;)
+    db.transactions.create(txn_id=7401, date=&quot;2026-03-05&quot;, account=&quot;RMA1&quot;,
+                           category=&quot;RMC1&quot;, amount=900, memo=&quot;in&quot;)
+    db.transactions.create(txn_id=7402, date=&quot;2026-03-09&quot;, account=&quot;RMA1&quot;,
+                           category=&quot;RMC1&quot;, amount=-300, memo=&quot;out&quot;)
+    code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;)
+    assert code == 0
+    rows = out.splitlines()
+    assert rows[1] == &quot;2026-03,2,9.00,3.00,6.00&quot;
+=== END AC report-monthly-month-rows ===
+
+=== AC report-monthly-ascending ===
+Intent: Month rows are ordered by YYYY-MM ascending.
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    db.accounts.create(account=&quot;RMB1&quot;, name=&quot;Monthly Order Account&quot;)
+    db.categories.create(category=&quot;RMD1&quot;, description=&quot;Monthly Order Category&quot;)
+    db.transactions.create(txn_id=7501, date=&quot;2026-06-01&quot;, account=&quot;RMB1&quot;,
+                           category=&quot;RMD1&quot;, amount=100, memo=&quot;june&quot;)
+    db.transactions.create(txn_id=7502, date=&quot;2026-04-01&quot;, account=&quot;RMB1&quot;,
+                           category=&quot;RMD1&quot;, amount=100, memo=&quot;april&quot;)
+    code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;)
+    assert code == 0
+    rows = out.splitlines()
+    assert rows[1].startswith(&quot;2026-04,&quot;)
+    assert rows[2].startswith(&quot;2026-06,&quot;)
+=== END AC report-monthly-ascending ===
+
+=== AC report-monthly-total-row ===
+Intent: The TOTAL row sums transaction count, inflow, outflow, and net over every month.
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    db.accounts.create(account=&quot;RMT1&quot;, name=&quot;Monthly Total Account&quot;)
+    db.categories.create(category=&quot;RMT2&quot;, description=&quot;Monthly Total Category&quot;)
+    db.transactions.create(txn_id=7601, date=&quot;2026-01-15&quot;, account=&quot;RMT1&quot;,
+                           category=&quot;RMT2&quot;, amount=400, memo=&quot;jan&quot;)
+    db.transactions.create(txn_id=7602, date=&quot;2026-02-15&quot;, account=&quot;RMT1&quot;,
+                           category=&quot;RMT2&quot;, amount=-150, memo=&quot;feb&quot;)
+    code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;)
+    assert code == 0
+    assert out.splitlines()[-1] == &quot;TOTAL,2,4.00,1.50,2.50&quot;
+=== END AC report-monthly-total-row ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Only months that contain transactions appear as rows.
+- No count, sum, or total is hardcoded; every value comes from a query.
+- Amounts are formatted with two decimals, never floating point; a zero total prints `0.00`,
+  never `-0.00`.
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

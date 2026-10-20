@@ -1,0 +1,548 @@
+=== BEGIN ARTIFACT TOPOLOGY.md ===
+## Declarations
+
+## story python-foundation
+summary:      Stand up the Python project root, environment, dependency manifest, and launchers.
+type:         foundational
+kind:         capability
+phase:        1
+implements:   ARCHITECTURE.md
+stack:        common.md, python.md
+provides:     project root, .venv, pyproject.toml, uv.lock, pytest -q runner, bin/ launchers
+acceptance:   yes
+instructions: |
+  Create the project root with pyproject.toml and a committed uv.lock. Create .venv with uv venv and declare Python 3.11 or newer, pytest, and ruff.
+  Provide bin/ launchers that activate .venv. Record the module ownership table and the derived Technology Stack section in ARCHITECTURE.md.
+
+## story database-step
+summary:      Generate the persistence package and schema.sql from DATABASE.md through the shipped Rigging library.
+type:         foundational
+kind:         migration
+phase:        1
+implements:   DATABASE.md
+accepts:      st-009
+stack:        persistence.md, sqlite.md, python.md
+depends:      python-foundation
+provides:     open_database(dsn), persistence.testing.db_session, schema.sql
+acceptance:   yes
+instructions: |
+  Declare the accounts, categories, and transactions tables with columns, primary keys, and foreign keys, and an access pattern for each table operation the services use.
+  The DATABASE step copies the shipped persistence library and generates persistence/schema.py and schema.sql. This story writes no persistence code.
+
+## story cli-foundation
+summary:      Stand up the cli package, its main entry, the cli_runner fixture, and the ledger launcher.
+type:         foundational
+kind:         capability
+phase:        1
+implements:   FEATURE-CLI-Platform.md
+stack:        cli.md, python.md
+depends:      python-foundation
+provides:     cli.main(argv), cli.testing.cli_runner, ./ledger
+acceptance:   yes
+instructions: |
+  Provide cli/__init__.py with main(argv: list[str] | None = None) -> int and cli/testing.py with cli_runner returning (exit_code, stdout, stderr).
+  Ship the ledger executable at the application root that delegates to main. Command routing is owned by cli-dispatch.
+
+## story db-location
+summary:      Resolve the database location from DATABASE_URL, then DATABASE_PATH, then data/app.db.
+type:         service
+kind:         integration
+phase:        1
+implements:   FEATURE-Database-Location.md
+covers:       DB-001
+accepts:      st-009
+context:      DATABASE.md
+stack:        python.md
+depends:      database-step, cli-foundation
+provides:     resolve_database_location()
+consumes:     open_database
+acceptance:   yes
+instructions: |
+  Select DATABASE_URL first, then DATABASE_PATH, then data/app.db resolved against the working directory. Accept an optional sqlite:// prefix.
+  Recognize postgres:// and postgresql:// and exit 1 with a diagnostic stating that this build has no PostgreSQL backend.
+  Reach the store only through open_database(dsn).
+
+## story db-errors
+summary:      Map unreachable databases, missing tables, and unreadable inputs to exit 1 with no change.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Operational-Errors.md
+covers:       DB-002
+context:      DATABASE.md
+stack:        python.md
+depends:      db-location, cli-dispatch
+acceptance:   yes
+instructions: |
+  Exit 1 with one stderr line when the database is unreachable, when a non-init command finds its tables missing, or when an input file is unreadable.
+  Write nothing to stdout and change nothing.
+
+## story db-transaction
+summary:      Run every command in one database transaction that rolls back on any failure.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Command-Transaction.md
+covers:       DB-003
+accepts:      st-007
+context:      DATABASE.md
+stack:        python.md
+depends:      db-location
+provides:     command transaction wrapper
+acceptance:   yes
+instructions: |
+  Run each command inside one transaction on the store from open_database(dsn). Any failure rolls back every change.
+  A write lock held by another connection exits 1 with no change.
+
+## story schema-init
+summary:      Drop and recreate the three tables empty for ledger init.
+type:         service
+kind:         migration
+phase:        1
+implements:   FEATURE-Schema-Init.md
+covers:       SCHEMA-001
+accepts:      st-003
+context:      DATABASE.md
+stack:        python.md, cli.md
+depends:      db-transaction, cli-dispatch
+provides:     ledger init
+acceptance:   yes
+instructions: |
+  ledger init drops accounts, categories, and transactions if present, recreates them empty, writes nothing to stdout, and exits 0.
+  Apply the schema through the persistence package only.
+
+## story schema-count
+summary:      Print the row count of each table for ledger count.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Schema-Count.md
+covers:       SCHEMA-002
+accepts:      st-003
+context:      DATABASE.md
+stack:        python.md, cli.md
+depends:      schema-init, cli-output
+provides:     ledger count
+acceptance:   yes
+instructions: |
+  Print table,rows, then accounts, categories, and transactions counts in that order. Each count is read through its table's count operation.
+
+## story cli-dispatch
+summary:      Dispatch ledger commands and reject usage errors with exit 2.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-CLI-Dispatch.md
+covers:       CLI-001
+stack:        cli.md, python.md
+depends:      cli-foundation
+provides:     ledger <command> routing
+acceptance:   yes
+instructions: |
+  Route each command word to its handler. An unknown command, unknown table, unknown report, or wrong argument count exits 2 with one stderr line and nothing on stdout.
+  Command handlers are supplied by their own stories.
+
+## story cli-output
+summary:      Emit the CSV success output contract for every command except init.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-CLI-Output.md
+covers:       CLI-003
+stack:        cli.md, python.md
+depends:      cli-foundation
+provides:     CSV row writer
+acceptance:   yes
+instructions: |
+  Write a header row then data rows to stdout: comma-separated, unquoted, \n line endings, no trailing spaces.
+  Failure diagnostics go to stderr as one line and are never compared.
+
+## story val-codes
+summary:      Validate codes, names, descriptions, and memos.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Code-Validation.md
+covers:       VAL-001
+stack:        python.md
+depends:      python-foundation
+provides:     validate_code, validate_name, validate_memo
+acceptance:   yes
+instructions: |
+  Codes are 1 to 12 characters of A-Z and 0-9. Names and descriptions are 1 to 40 characters. Memos are 0 to 60 characters.
+  None may contain a comma or newline. A violation exits 3 with no change.
+
+## story val-amount
+summary:      Parse and format amounts as integer cents.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Amount-Format.md
+covers:       VAL-002
+stack:        python.md
+depends:      python-foundation
+provides:     parse_amount_cents, format_amount_cents
+acceptance:   yes
+instructions: |
+  Accept input matching -?DIGITS[.D[D]] as integer cents. Zero in any form (0, 0.00, -0.00) exits 3.
+  Format with two decimals, a leading - when negative, and no separators. A zero total prints 0.00, never -0.00. Use no floating point.
+
+## story val-dates
+summary:      Validate real YYYY-MM-DD calendar dates.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Date-Validation.md
+covers:       VAL-003
+stack:        python.md
+depends:      python-foundation
+provides:     parse_date
+acceptance:   yes
+instructions: |
+  Accept only real YYYY-MM-DD calendar dates. Impossible dates such as 2026-02-30 exit 3.
+
+## story cli-help
+summary:      Print one line of help per command in the usage diagnostic.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-CLI-Help.md
+covers:       CLI-002
+stack:        cli.md, python.md
+depends:      cli-dispatch
+provides:     usage listing on stderr
+acceptance:   yes
+instructions: |
+  Running ledger with no arguments writes the usage listing of every command and sub-verb to stderr and exits 2. No help command is added.
+
+## story db-balance
+summary:      Reject any command that leaves an account below zero before commit.
+type:         service
+kind:         capability
+phase:        3
+implements:   FEATURE-Balance-Rule.md
+covers:       DB-004
+accepts:      st-008
+context:      DATABASE.md
+stack:        python.md
+depends:      db-transaction, val-amount
+provides:     non-negative balance check
+acceptance:   yes
+instructions: |
+  After a command's changes and before commit, compute each touched account's balance as the sum of its transaction amounts.
+  Any balance below zero exits 3 with no change.
+
+## story load-accounts
+summary:      Load the accounts CSV all or nothing.
+type:         service
+kind:         capability
+phase:        4
+implements:   FEATURE-Load-Accounts.md
+covers:       LOAD-001
+accepts:      st-004, st-007
+context:      DATABASE.md
+stack:        python.md, cli.md
+depends:      database-step, val-codes, db-transaction, cli-output, cli-dispatch
+provides:     ledger load accounts <csv>
+acceptance:   yes
+instructions: |
+  Check the header matches account,name in order. Validate each row, reject duplicate keys, and store all rows or none.
+  Print table,loaded then accounts,<rows>. A header-only file loads zero rows and exits 0.
+
+## story load-categories
+summary:      Load the categories CSV all or nothing.
+type:         service
+kind:         capability
+phase:        4
+implements:   FEATURE-Load-Categories.md
+covers:       LOAD-002
+accepts:      st-004, st-007
+context:      DATABASE.md
+stack:        python.md, cli.md
+depends:      database-step, val-codes, db-transaction, cli-output, cli-dispatch
+provides:     ledger load categories <csv>
+acceptance:   yes
+instructions: |
+  Check the header matches category,description in order. Apply the same validation, duplicate, and all-or-none rules as accounts.
+  Print table,loaded then categories,<rows>.
+
+## story load-transactions
+summary:      Load the transactions CSV all or nothing under the balance rule.
+type:         service
+kind:         capability
+phase:        4
+implements:   FEATURE-Load-Transactions.md
+covers:       LOAD-003
+accepts:      st-004, st-007
+context:      DATABASE.md
+stack:        python.md, cli.md
+depends:      load-accounts, load-categories, db-balance, val-amount, val-dates, db-transaction, cli-output, cli-dispatch
+provides:     ledger load transactions <csv>
+acceptance:   yes
+instructions: |
+  Keep each file's txn_id. Reject unknown accounts or categories and any balance breach for the whole file.
+  Store none of the rows on rejection and exit 3. Print table,loaded then transactions,<rows> on success.
+
+## story account-add
+summary:      Add an account with zero transactions and a zero balance.
+type:         service
+kind:         capability
+phase:        5
+implements:   FEATURE-Account-Add.md
+covers:       ACCT-001
+accepts:      st-006
+context:      DATABASE.md
+stack:        python.md, cli.md
+depends:      val-codes, val-amount, cli-output, db-transaction, cli-dispatch
+provides:     ledger account add <code> <name>
+acceptance:   yes
+instructions: |
+  Print the new row with 0 transactions and balance 0.00. A duplicate code exits 3.
+
+## story account-get
+summary:      Print an account with its transaction count and balance.
+type:         service
+kind:         capability
+phase:        5
+implements:   FEATURE-Account-Get.md
+covers:       ACCT-002
+accepts:      st-006
+context:      DATABASE.md
+stack:        python.md, cli.md
+depends:      val-codes, val-amount, cli-output, db-transaction, cli-dispatch
+provides:     ledger account get <code>
+acceptance:   yes
+instructions: |
+  Print the account row with its transaction count and balance. An absent code exits 4.
+
+## story account-rename
+summary:      Rename an account.
+type:         service
+kind:         capability
+phase:        5
+implements:   FEATURE-Account-Rename.md
+covers:       ACCT-003
+accepts:      st-006
+context:      DATABASE.md
+stack:        python.md, cli.md
+depends:      val-codes, cli-output, db-transaction, cli-dispatch
+provides:     ledger account rename <code> <name>
+acceptance:   yes
+instructions: |
+  Print the updated row. An absent code exits 4. An invalid name exits 3.
+
+## story account-delete
+summary:      Delete an account that has no transactions.
+type:         service
+kind:         capability
+phase:        5
+implements:   FEATURE-Account-Delete.md
+covers:       ACCT-004
+accepts:      st-006
+context:      DATABASE.md
+stack:        python.md, cli.md
+depends:      val-codes, cli-output, db-transaction, cli-dispatch
+provides:     ledger account delete <code>
+acceptance:   yes
+instructions: |
+  Print deleted and the code. An account referenced by any transaction exits 3. An absent account exits 4.
+
+## story txn-post
+summary:      Post a transaction with the next id after validating every field.
+type:         service
+kind:         capability
+phase:        6
+implements:   FEATURE-Transaction-Post.md
+covers:       TXN-001
+accepts:      st-006, st-007
+context:      DATABASE.md
+stack:        python.md, cli.md
+depends:      val-codes, val-amount, val-dates, db-balance, db-transaction, cli-output, cli-dispatch
+provides:     ledger txn post, next_txn_id()
+acceptance:   yes
+instructions: |
+  Validate argument syntax before any lookup, so a malformed amount exits 3 even when the account is absent.
+  A missing account or category exits 3. Assign the next id as the largest txn_id plus one, or 1 when the table is empty. Apply the balance rule and print the new row.
+
+## story txn-get
+summary:      Print one transaction by id.
+type:         service
+kind:         capability
+phase:        6
+implements:   FEATURE-Transaction-Get.md
+covers:       TXN-002
+accepts:      st-006
+context:      DATABASE.md
+stack:        python.md, cli.md
+depends:      val-amount, db-transaction, cli-output, cli-dispatch
+provides:     ledger txn get <id>
+acceptance:   yes
+instructions: |
+  Reject a non-integer id with exit 3 before any lookup. Print the row. An absent id exits 4.
+
+## story txn-amend
+summary:      Amend the amount of one transaction.
+type:         service
+kind:         capability
+phase:        6
+implements:   FEATURE-Transaction-Amend.md
+covers:       TXN-003
+accepts:      st-006, st-007
+context:      DATABASE.md
+stack:        python.md, cli.md
+depends:      val-amount, db-balance, db-transaction, cli-output, cli-dispatch
+provides:     ledger txn amend <id> <amount>
+acceptance:   yes
+instructions: |
+  Change only the amount. Apply the balance rule. Print the updated row. An absent id exits 4. A rejected amendment changes nothing.
+
+## story txn-delete
+summary:      Delete one transaction by id.
+type:         service
+kind:         capability
+phase:        6
+implements:   FEATURE-Transaction-Delete.md
+covers:       TXN-004
+accepts:      st-006, st-007
+context:      DATABASE.md
+stack:        python.md, cli.md
+depends:      db-balance, db-transaction, cli-output, cli-dispatch
+provides:     ledger txn delete <id>
+acceptance:   yes
+instructions: |
+  Apply the balance rule after the delete. Print deleted and the id. An absent id exits 4. A rejected delete changes nothing.
+
+## story transfer
+summary:      Store a transfer as two TRANSFER rows, or neither.
+type:         service
+kind:         capability
+phase:        7
+implements:   FEATURE-Transfer.md
+covers:       XFER-001
+accepts:      st-007
+context:      DATABASE.md
+stack:        python.md, cli.md
+depends:      txn-post, db-balance, val-amount, val-dates, val-codes, cli-output, cli-dispatch
+provides:     ledger transfer <from> <to> <amount> <date>
+acceptance:   yes
+instructions: |
+  Require a positive amount, two distinct existing accounts, and a valid date. Take the next two ids from next_txn_id.
+  Write -amount on <from> with memo "transfer to <to>" and +amount on <to> with memo "transfer from <from>" in category TRANSFER. Apply the balance rule. Store both rows or neither.
+
+## story report-balances
+summary:      Report one row per account and a TOTAL row.
+type:         service
+kind:         capability
+phase:        8
+implements:   FEATURE-Report-Balances.md
+covers:       RPT-001
+accepts:      st-005
+context:      DATABASE.md
+stack:        python.md, cli.md
+depends:      val-amount, db-transaction, cli-output, cli-dispatch
+provides:     ledger report balances
+acceptance:   yes
+instructions: |
+  Compute every value by query. Print one row per account ordered by code, then TOTAL,,<count>,<sum>. With no accounts, print only TOTAL,,0,0.00.
+
+## story report-categories
+summary:      Report one row per category, including empty ones, and a TOTAL row.
+type:         service
+kind:         capability
+phase:        8
+implements:   FEATURE-Report-Categories.md
+covers:       RPT-002
+accepts:      st-005
+context:      DATABASE.md
+stack:        python.md, cli.md
+depends:      val-amount, db-transaction, cli-output, cli-dispatch
+provides:     ledger report categories
+acceptance:   yes
+instructions: |
+  Compute every value by query. Print every category ordered by code, including those with no transactions, then TOTAL,,<count>,<inflow>,<outflow>,<net>.
+
+## story report-monthly
+summary:      Report one row per month that has transactions, and a TOTAL row.
+type:         service
+kind:         capability
+phase:        8
+implements:   FEATURE-Report-Monthly.md
+covers:       RPT-003
+accepts:      st-005
+context:      DATABASE.md
+stack:        python.md, cli.md
+depends:      val-amount, db-transaction, cli-output, cli-dispatch
+provides:     ledger report monthly
+acceptance:   yes
+instructions: |
+  Compute every value by query. Print one row per YYYY-MM with transactions, ascending, then TOTAL,<count>,<inflow>,<outflow>,<net>. With no transactions, print only TOTAL,0,0.00,0.00,0.00.
+
+## story test-suite
+summary:      Provide the POSIX bin/test.sh that drives the pytest suite against a temporary database.
+type:         service
+kind:         test harness
+phase:        9
+implements:   FEATURE-Automated-Suite.md
+covers:       VER-001
+accepts:      st-002
+stack:        common.md, python.md
+depends:      python-foundation, cli-foundation, database-step
+provides:     bin/test.sh
+acceptance:   yes
+instructions: |
+  Write bin/test.sh as POSIX sh. It runs pytest against a real temporary database and exits zero only when every test passes.
+  The suite covers each command, each exit code, and each rule.
+
+## story terminal-grader
+summary:      Pass the supplied acceptance grader end to end against the completed application.
+type:         feature
+kind:         test harness
+phase:        10
+implements:   FEATURE-Acceptance-Grader.md
+covers:       VER-002
+accepts:      st-001
+stack:        common.md
+depends:      python-foundation, database-step, cli-foundation, db-location, db-errors, db-transaction, schema-init, schema-count, cli-dispatch, cli-output, val-codes, val-amount, val-dates, cli-help, db-balance, load-accounts, load-categories, load-transactions, account-add, account-get, account-rename, account-delete, txn-post, txn-get, txn-amend, txn-delete, transfer, report-balances, report-categories, report-monthly, test-suite
+provides:     sh sources/run.sh exits 0
+acceptance:   yes
+instructions: |
+  Stage sources/run.sh and the seed files verbatim into the application root. Do not author or modify them.
+  Gate on sh sources/run.sh run unfiltered from the application root. Declare Suite: full. Require exit 0.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT DECISIONS.json ===
+[
+  {
+    "id": "Q-001",
+    "type": "text",
+    "severity": "material",
+    "blueprint": "DATABASE.md",
+    "story": "database-step",
+    "title": "Persistence library source",
+    "description": "The sources name a shipped persistence library but do not supply it. The stack declares persistence.md and sqlite.md, so the DATABASE step copies the shipped Rigging library unchanged and generates the schema package from DATABASE.md.",
+    "options": [],
+    "system_choice": "Copy the shipped Rigging persistence library through the DATABASE step. No other story writes persistence code."
+  },
+  {
+    "id": "Q-002",
+    "type": "text",
+    "severity": "low",
+    "blueprint": "ARCHITECTURE.md",
+    "story": "python-foundation",
+    "title": "Phase sequencing",
+    "description": "ANALYSIS.md gives ten sequencing groups. Phases follow those groups so that no depends edge points to a later phase.",
+    "options": [],
+    "system_choice": "Phase equals the ANALYSIS.md sequencing group. Foundations are phase 1 and the terminal grader is phase 10."
+  },
+  {
+    "id": "Q-003",
+    "type": "text",
+    "severity": "low",
+    "blueprint": "FEATURE-CLI-Platform.md",
+    "story": "cli-foundation",
+    "title": "CLI skeleton split from dispatch",
+    "description": "The CLI platform contract publishes main() and cli_runner, while CLI-001 owns usage-error routing. Both could be one story or two.",
+    "options": [],
+    "system_choice": "Split them. cli-foundation supplies the package, main(), cli_runner, and the launcher. cli-dispatch adds routing and exit 2 handling."
+  }
+]
+=== END ARTIFACT ===

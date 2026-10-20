@@ -1,0 +1,24 @@
+This is the same failing criterion from the last two passes. I'll rerun it once more to confirm nothing has changed, then stop rather than loop.RESULT: SUCCESS
+
+AC_BROKEN: command-transaction-commits
+
+FILES CHANGED:
+- (none this pass; the implementation is unchanged from the previous pass)
+
+SUMMARY:
+- `transaction.run_command(db, command)` is complete. It commits once when the command returns, and rolls back and re-raises on any exception. A persistence error such as a lock held by another connection also rolls back and propagates.
+- Declared criteria, rerun verbatim:
+  - `command-transaction-rolls-back-all-writes`: passes.
+  - `command-transaction-propagates-exception`: passes.
+  - `command-transaction-commits`: fails at `assert result.account == account_code` with `AttributeError: 'int' object has no attribute 'account'`.
+- `sh bin/test.sh`: 93 passed, exit 0 (includes 16 new tests in `tests/test_command_transaction.py`).
+- I did not edit the criterion, the spec, or the shipped persistence package.
+
+<blueprint-decisions>
+[{"spec":"FEATURE-Command-Transaction.md","severity":"Material","subject":"Deferred-commit view over the shipped Database","decision":"The shipped Database commits after each write, so run_command gives the command a Database built on a driver whose connection commit() is deferred, then commits or rolls back the real connection once. I did not edit the shipped persistence package. Is that acceptable, or should the persistence layer gain a transaction scope instead?"},{"spec":"FEATURE-Command-Transaction.md","severity":"Low","subject":"Module name","decision":"Named the module transaction.py to match the acceptance criteria import, not ARCHITECTURE.md's command_transaction. Should the architecture name be used on replan?"}]
+</blueprint-decisions>
+
+FAILURE_DETAIL: AC_BROKEN covers only `command-transaction-commits`. The command succeeds: the row is persisted, and `run_command` returns the value `create` returned. The assertion `result.account == account_code` fails because the shipped `accounts.create` returns the SQLite integer `lastrowid`, and the spec requires `run_command` to return the command's value unchanged. No spec-compliant implementation can satisfy that line. The fix is in the Blueprint: either the criterion checks the persisted row rather than `result.account`, or the `accounts.create` return contract in DATABASE.md changes. I have not rerun the build beyond the checks above, and I will not keep repairing this criterion.
+
+BLOCKERS:
+- `command-transaction-commits` cannot pass as written. It needs a criterion or `create` return-contract fix on replan.

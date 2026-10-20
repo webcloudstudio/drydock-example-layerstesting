@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/DATABASE_compact.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/DATABASE_compact.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/DATABASE_compact.md">Raw file</a></div></header>
+<article class="doc"><p>&lt;!-- Compacted from DATABASE.md sha256=650916af259dc734c7ccc409d6e94a7ac33236f48bcbcafce67250823e473913 on 2026-10-20 by drydock build agent --&gt;</p>
+<p>Tables (SQLite DDL, schema.sql, CREATE IF NOT EXISTS):</p>
+<ul><li>accounts(account VARCHAR(12) PK NOT NULL, name VARCHAR(40) NOT NULL)</li><li>categories(category VARCHAR(12) PK NOT NULL, description VARCHAR(40) NOT NULL)</li><li>transactions(txn_id INTEGER PK NOT NULL, date VARCHAR(10) NOT NULL, account VARCHAR(12) NOT NULL REFERENCES accounts(account), category VARCHAR(12) NOT NULL REFERENCES categories(category), amount INTEGER NOT NULL [integer cents], memo VARCHAR(60) NOT NULL)</li><li>Indexes: transactions_account_idx, transactions_category_idx</li></ul>
+<p>Python surface: persistence.open_database(dsn) -&gt; Database; persistence.testing.db_session(dsn=None) context manager applies schema.sql to a fresh store.<br>Exports: Database, PersistenceError, UnknownOperation, SCHEMA, open_database. Operations (db.&lt;table&gt;.&lt;verb&gt;(**kwargs)):</p>
+<ul><li>accounts.create(account, name) -&gt; identity; accounts.get(account) -&gt; AccountRow|None; accounts.list() -&gt; list[AccountRow]; accounts.update(account, name) -&gt; rowcount; accounts.delete(account) -&gt; rowcount</li><li>categories.create(category, description); categories.get(category); categories.list()</li><li>transactions.create(txn_id, date, account, category, amount, memo); transactions.get(txn_id); transactions.list(); transactions.update(txn_id, amount) -&gt; rowcount; transactions.delete(txn_id) -&gt; rowcount</li></ul>
+<p>Undeclared verb -&gt; UnknownOperation. Unknown kwarg, FK violation, duplicate key, or driver failure -&gt; PersistenceError.<br>DSN: bare path or sqlite:// selects SQLite (foreign keys ON); postgres:// selects PostgreSQL (needs psycopg, not in dependencies). SQLite does not enforce VARCHAR length.</p></article>
+</main>
+</body>
+</html>

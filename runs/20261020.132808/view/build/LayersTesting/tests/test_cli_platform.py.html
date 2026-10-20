@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_cli_platform.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_cli_platform.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_cli_platform.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;CLI platform: the main entry point, the cli_runner fixture, and the ledger launcher.
+
+Tests call ``main`` or ``cli_runner`` in process. One subprocess test covers the launcher, and
+it asserts only on the exit status.
+&quot;&quot;&quot;
+
+import inspect
+import subprocess
+import sys
+from pathlib import Path
+
+import cli
+from cli import testing
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+# --- main -----------------------------------------------------------------------------
+
+
+def test_main_takes_a_single_argv_parameter():
+    assert list(inspect.signature(cli.main).parameters) == [&quot;argv&quot;]
+
+
+def test_main_returns_an_integer_rather_than_exiting():
+    assert isinstance(cli.main([&quot;--help&quot;]), int)
+
+
+def test_main_help_returns_zero():
+    assert cli.main([&quot;--help&quot;]) == 0
+
+
+def test_main_without_a_command_returns_usage_code_two():
+    assert cli.main([]) == 2
+
+
+def test_main_with_an_unknown_command_returns_usage_code_two():
+    assert cli.main([&quot;no-such-command&quot;]) == 2
+
+
+def test_main_defaults_to_sys_argv_when_called_without_arguments(monkeypatch):
+    monkeypatch.setattr(&quot;sys.argv&quot;, [&quot;ledger&quot;, &quot;--help&quot;])
+    assert cli.main() == 0
+
+
+# --- cli_runner -----------------------------------------------------------------------
+
+
+def test_cli_runner_returns_exit_code_and_both_streams():
+    code, out, err = testing.cli_runner(&quot;--help&quot;)
+    assert code == 0
+    assert err == &quot;&quot;
+    assert out.startswith(&quot;usage: ledger&quot;)
+
+
+def test_cli_runner_routes_usage_errors_to_stderr_only():
+    code, out, err = testing.cli_runner()
+    assert code == 2
+    assert out == &quot;&quot;
+    assert &quot;usage: ledger&quot; in err
+
+
+def test_cli_runner_unknown_command_reports_the_name_on_stderr():
+    code, out, err = testing.cli_runner(&quot;no-such-command&quot;)
+    assert code == 2
+    assert out == &quot;&quot;
+    assert &quot;&#x27;no-such-command&#x27;&quot; in err
+
+
+def test_cli_runner_fixture_is_the_runner(cli_runner):
+    assert cli_runner is testing.cli_runner
+
+
+def test_cli_runner_does_not_leak_output_to_the_real_streams(capsys):
+    testing.cli_runner(&quot;--help&quot;)
+    captured = capsys.readouterr()
+    assert captured.out == &quot;&quot;
+    assert captured.err == &quot;&quot;
+
+
+# --- python -m cli --------------------------------------------------------------------
+
+
+def test_python_dash_m_cli_exits_with_usage_code_two():
+    result = subprocess.run([sys.executable, &quot;-m&quot;, &quot;cli&quot;], check=False, cwd=ROOT)
+    assert result.returncode == 2
+
+
+# --- ledger launcher -----------------------------------------------------------------
+
+
+def test_ledger_launcher_is_an_executable_file_at_the_root():
+    launcher = ROOT / &quot;ledger&quot;
+    assert launcher.is_file()
+    assert launcher.stat().st_mode &amp; 0o111
+
+
+def test_ledger_launcher_begins_with_an_interpreter_line():
+    first_line = (ROOT / &quot;ledger&quot;).read_text(encoding=&quot;utf-8&quot;).splitlines()[0]
+    assert first_line.startswith(&quot;#!&quot;)
+
+
+def test_ledger_launcher_delegates_help_to_main_with_exit_zero():
+    result = subprocess.run([str(ROOT / &quot;ledger&quot;), &quot;--help&quot;], check=False, cwd=ROOT)
+    assert result.returncode == 0
+
+
+def test_ledger_launcher_delegates_usage_error_with_exit_two_from_any_directory(tmp_path):
+    result = subprocess.run([str(ROOT / &quot;ledger&quot;)], check=False, cwd=tmp_path)
+    assert result.returncode == 2
+</pre></article>
+</main>
+</body>
+</html>

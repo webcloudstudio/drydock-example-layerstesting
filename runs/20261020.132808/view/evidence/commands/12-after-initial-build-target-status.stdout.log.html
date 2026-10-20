@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/commands/12-after-initial-build-target-status.stdout.log</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/commands/12-after-initial-build-target-status.stdout.log</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/commands/12-after-initial-build-target-status.stdout.log">Raw file</a></div></header>
+<article class="doc"><pre>Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Drydock status
+
+  Target          /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.132808/workspace/targets/LayersTesting
+  Name            drydock Layers Testing Uat Case
+  Description     Drydock uat - LayersTesting exercises the language and persistence layers. The source is an original
+                  brief for a command-line cash ledger with three tables (accounts, categories, transactions) reached…
+  Phase           Implement
+  State           Failed: programmatic acceptance failed: command-transaction-commits
+  Metadata        building · running
+  Sources         6 imported · 32 authored blueprint files
+  Analysis        Ready · 29 stories · 0 questions · 0 blockers
+  Blueprint       ⚠  0 errors · 20 warnings
+    ⚠  Acceptance snippets: FEATURE-Account-Delete.md [account-delete-unused-succeeds]: expects &#x27;deleted\nCASH9\n&#x27;, a
+       value re-typed rather than derived from the input or read back from the system. This criterion is reported
+       but does not gate its story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Account-Rename.md [account-rename-updates-name]: expects
+       &#x27;account,name,transactions,balance\nCASH9,Event Cash Box,0,0.00\n&#x27;, a value re-typed rather than derived
+       from the input or read back from the system. This criterion is reported but does not gate its story; bind
+       the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Report-Balances.md [report-balances-header]: expects
+       &#x27;account,name,transactions,balance&#x27;, a value re-typed rather than derived from the input or read back from
+       the system. This criterion is reported but does not gate its story; bind the value to a name and use that
+       name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Report-Balances.md [report-balances-row-values]: expects &#x27;RBB1,Report Balance
+       B,2,10.00&#x27;, a value re-typed rather than derived from the input or read back from the system. This
+       criterion is reported but does not gate its story; bind the value to a name and use that name on both
+       sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Report-Balances.md [report-balances-total-row]: expects &#x27;TOTAL,,2,2.00&#x27;, a value re-
+       typed rather than derived from the input or read back from the system. This criterion is reported but does
+       not gate its story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Report-Categories.md [report-categories-header]: expects
+       &#x27;category,description,transactions,inflow,outflow,net&#x27;, a value re-typed rather than derived from the
+       input or read back from the system. This criterion is reported but does not gate its story; bind the value
+       to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Report-Categories.md [report-categories-includes-empty]: expects &#x27;RCB1,Report Empty
+       Category,0,0.00,0.00,0.00&#x27;, a value re-typed rather than derived from the input or read back from the
+       system. This criterion is reported but does not gate its story; bind the value to a name and use that name
+       on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Report-Categories.md [report-categories-inflow-outflow]: expects &#x27;RCC2,Report Cat
+       Two,2,8.00,1.25,6.75&#x27;, a value re-typed rather than derived from the input or read back from the system.
+       This criterion is reported but does not gate its story; bind the value to a name and use that name on both
+       sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Report-Categories.md [report-categories-total-row]: expects
+       &#x27;TOTAL,,2,5.00,2.00,3.00&#x27;, a value re-typed rather than derived from the input or read back from the
+       system. This criterion is reported but does not gate its story; bind the value to a name and use that name
+       on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Report-Monthly.md [report-monthly-header]: expects
+       &#x27;month,transactions,inflow,outflow,net&#x27;, a value re-typed rather than derived from the input or read back
+       from the system. This criterion is reported but does not gate its story; bind the value to a name and use
+       that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Report-Monthly.md [report-monthly-month-rows]: expects &#x27;2026-03,2,9.00,3.00,6.00&#x27;, a
+       value re-typed rather than derived from the input or read back from the system. This criterion is reported
+       but does not gate its story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Report-Monthly.md [report-monthly-total-row]: expects &#x27;TOTAL,2,4.00,1.50,2.50&#x27;, a
+       value re-typed rather than derived from the input or read back from the system. This criterion is reported
+       but does not gate its story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Transaction-Amend.md [txn-amend-changes-only-amount]: expects
+       &#x27;txn_id,date,account,category,amount,memo\n121,2026-04-01,DRAWER1,SALES,54.50,walk in sale\n&#x27;, a value re-
+       typed rather than derived from the input or read back from the system. This criterion is reported but does
+       not gate its story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Transaction-Get.md [txn-get-prints-row]: expects
+       &#x27;txn_id,date,account,category,amount,memo\n121,2026-04-01,DRAWER1,SALES,45.50,walk in sale\n&#x27;, a value re-
+       typed rather than derived from the input or read back from the system. This criterion is reported but does
+       not gate its story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Transaction-Post.md [txn-post-assigns-next-id]: expects
+       &#x27;txn_id,date,account,category,amount,memo\n8,2026-04-01,DRAWER1,SALES,45.50,walk in sale\n&#x27;, a value re-
+       typed rather than derived from the input or read back from the system. This criterion is reported but does
+       not gate its story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Transfer.md [transfer-stores-two-rows]: expects &#x27;transfer to XFB1&#x27;, a value re-typed
+       rather than derived from the input or read back from the system. This criterion is reported but does not
+       gate its story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Transfer.md [transfer-stores-two-rows]: expects &#x27;transfer from XFA1&#x27;, a value re-
+       typed rather than derived from the input or read back from the system. This criterion is reported but does
+       not gate its story; bind the value to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Transfer.md [transfer-output-rows]: expects
+       &#x27;txn_id,date,account,category,amount,memo&#x27;, a value re-typed rather than derived from the input or read
+       back from the system. This criterion is reported but does not gate its story; bind the value to a name and
+       use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Transfer.md [transfer-output-rows]: expects
+       &#x27;8012,2026-05-03,XFA2,TRANSFER,-25.50,transfer to XFB2&#x27;, a value re-typed rather than derived from the
+       input or read back from the system. This criterion is reported but does not gate its story; bind the value
+       to a name and use that name on both sides to make it binding
+    ⚠  Acceptance snippets: FEATURE-Transfer.md [transfer-output-rows]: expects
+       &#x27;8013,2026-05-03,XFB2,TRANSFER,25.50,transfer from XFA2&#x27;, a value re-typed rather than derived from the
+       input or read back from the system. This criterion is reported but does not gate its story; bind the value
+       to a name and use that name on both sides to make it binding
+  Plan            27 pending · 4 closed/implemented · 1 closed/failed
+  Frontier        cli-dispatch: Dispatch ledger commands and reject usage errors with exit 2.
+  Workflow        5 steps
+                  Initialize         complete at 2026-10-20T13:28:11.680+00:00
+                  Import             complete at 2026-10-20T13:28:15.740+00:00
+                  Analyze            complete at 2026-10-20T13:30:47.440+00:00
+                  Plan               complete at 2026-10-20T13:46:28.348+00:00
+                  Build              failed at 2026-10-20T13:57:56.162+00:00
+  Next step       drydock run quarterdeck LayersTesting
+</pre></article>
+</main>
+</body>
+</html>

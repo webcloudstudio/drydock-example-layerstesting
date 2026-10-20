@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/transaction.py</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/transaction.py</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../build/LayersTesting/transaction.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Command transaction: each ledger command runs inside exactly one database transaction.
+
+``run_command`` calls the command once against a view of the store, commits when the command
+returns, and rolls back every write when it raises. The shipped ``Database`` commits after each
+write, so the command&#x27;s view defers that commit to ``run_command``. The command body never commits
+or rolls back its own work.
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import Any, TypeVar
+
+from persistence import Database, PersistenceError
+from persistence.schema import SCHEMA
+
+__all__ = [&quot;run_command&quot;]
+
+T = TypeVar(&quot;T&quot;)
+
+
+class _DeferredCommit:
+    &quot;&quot;&quot;A connection whose ``commit`` is deferred to the enclosing command. Everything else passes through.&quot;&quot;&quot;
+
+    def __init__(self, connection: Any) -&gt; None:
+        self._connection = connection
+
+    def commit(self) -&gt; None:
+        &quot;&quot;&quot;Deferred: ``run_command`` commits once, when the command returns.&quot;&quot;&quot;
+
+    def __getattr__(self, name: str) -&gt; Any:
+        return getattr(self._connection, name)
+
+
+class _CommandDriver:
+    &quot;&quot;&quot;The store&#x27;s driver for one command: the same connection, with commit deferred.&quot;&quot;&quot;
+
+    def __init__(self, driver: Any) -&gt; None:
+        self._driver = driver
+        self.raw = driver.connect()
+        self.connection = _DeferredCommit(self.raw)
+
+    def connect(self) -&gt; _DeferredCommit:
+        return self.connection
+
+    def __getattr__(self, name: str) -&gt; Any:
+        return getattr(self._driver, name)
+
+
+def run_command(db: Database, command: Callable[[Database], T]) -&gt; T:
+    &quot;&quot;&quot;Run ``command`` in one transaction on ``db`` and return what it returned.
+
+    Commits when ``command`` returns. When ``command`` raises, or the commit fails, every write made
+    through the transaction is rolled back and the exception propagates unchanged.
+    &quot;&quot;&quot;
+    try:
+        driver = _CommandDriver(db.driver)
+    except PersistenceError:
+        raise
+    except Exception as exc:
+        raise PersistenceError(f&quot;transaction could not open: {exc}&quot;) from exc
+
+    # The store is already open and the driver is supplied, so the DSN argument is not read.
+    scoped = Database(&quot;&quot;, SCHEMA, driver=driver)
+    connection = driver.raw
+    try:
+        result = command(scoped)
+        _commit(connection)
+    except BaseException:
+        connection.rollback()
+        raise
+    return result
+
+
+def _commit(connection: Any) -&gt; None:
+    &quot;&quot;&quot;Commit the command&#x27;s transaction on the real connection, translating a failure.&quot;&quot;&quot;
+    try:
+        connection.commit()
+    except Exception as exc:
+        raise PersistenceError(f&quot;transaction commit failed: {exc}&quot;) from exc
+</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<requirement name="schema-lifecycle" stories="database-step,schema-init,schema-count">
+A. Schema lifecycle
+</requirement>
+<requirement name="reinit-drops-rows" stories="schema-init">
+Z. Re-initialization drops every row
+</requirement>
+<requirement name="bulk-load" stories="load-accounts,load-categories,load-transactions">
+B. Bulk load of the known dataset
+</requirement>
+<requirement name="reports" stories="report-balances,report-categories,report-monthly">
+C. Reports over the seeded rows
+H. Reports after the changes
+</requirement>
+<requirement name="rejected-load-changes-nothing" stories="load-accounts,load-transactions,db-transaction">
+D. A rejected load changes nothing
+</requirement>
+<requirement name="account-crud" stories="account-add,account-get,account-rename,account-delete">
+E. Account create, read, update, delete
+</requirement>
+<requirement name="txn-crud" stories="txn-post,txn-get,txn-amend,txn-delete">
+F. Transaction create, read, update, delete
+</requirement>
+<requirement name="reject-invalid-transaction-fields" stories="txn-post,val-codes,val-amount,val-dates">
+check F5 3 txn post DRAWER1 NOSUCH 1.00 2026-04-01 < /dev/null
+check F6 3 txn post DRAWER1 SALES 1.234 2026-04-01 < /dev/null
+check F7 3 txn post DRAWER1 SALES 1.00 2026-02-30 < /dev/null
+</requirement>
+<requirement name="transfer-atomic" stories="transfer,db-transaction,db-balance">
+G. Transfers are atomic; no command leaves a negative balance
+</requirement>
+<requirement name="usage-errors" stories="cli-dispatch">
+U. Usage errors
+</requirement>
+<requirement name="cli-output-contract" stories="cli-output">
+Exercises ./ledger against a fresh database and compares every command's exit code and standard output with the known answer below.
+</requirement>
+<requirement name="db-location" stories="db-location">
+Database: DATABASE_URL when the caller sets it (for example a PostgreSQL DSN), otherwise a SQLite file in a fresh temporary directory.
+</requirement>
+<requirement name="ledger-executable-at-root" stories="cli-foundation">
+The deliverable is an executable named ledger at the application root.
+</requirement>
+<requirement name="pass-acceptance-grader" stories="terminal-grader">
+Exit 0 only when every check passes.
+</requirement>
+<unattached story="python-foundation"/>
+<unattached story="db-errors"/>
+<unattached story="cli-help"/>
+<unattached story="test-suite"/>

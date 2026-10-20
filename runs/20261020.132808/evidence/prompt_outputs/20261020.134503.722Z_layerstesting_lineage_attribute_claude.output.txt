@@ -1,0 +1,41 @@
+<requirement name="load-seed-categories" stories="load-categories">
+category,description
+OPENING,Opening balance
+PAYROLL,Payroll
+REFUND,Customer refunds
+RENT,Rent
+SALES,Sales receipts
+SUPPLY,Supplies
+TRANSFER,Internal transfer
+</requirement>
+<unattached story="python-foundation"/>
+<unattached story="database-step"/>
+<unattached story="cli-foundation"/>
+<unattached story="db-location"/>
+<unattached story="db-transaction"/>
+<unattached story="cli-dispatch"/>
+<unattached story="db-errors"/>
+<unattached story="schema-init"/>
+<unattached story="cli-output"/>
+<unattached story="schema-count"/>
+<unattached story="val-codes"/>
+<unattached story="val-amount"/>
+<unattached story="val-dates"/>
+<unattached story="cli-help"/>
+<unattached story="db-balance"/>
+<unattached story="load-accounts"/>
+<unattached story="load-transactions"/>
+<unattached story="account-add"/>
+<unattached story="account-get"/>
+<unattached story="account-rename"/>
+<unattached story="account-delete"/>
+<unattached story="txn-post"/>
+<unattached story="txn-get"/>
+<unattached story="txn-amend"/>
+<unattached story="txn-delete"/>
+<unattached story="transfer"/>
+<unattached story="report-balances"/>
+<unattached story="report-categories"/>
+<unattached story="report-monthly"/>
+<unattached story="test-suite"/>
+<unattached story="terminal-grader"/>

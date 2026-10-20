@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/ARCHITECTURE.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/ARCHITECTURE.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/ARCHITECTURE.md">Raw file</a></div></header>
+<article class="doc"><h1>ARCHITECTURE: Cash Ledger</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Modules, boundaries, and technology stack for the <code>ledger</code> cash-ledger command-line program.</td></tr><tr><td>Provides</td><td>pyproject.toml, uv.lock, .venv, bin/ launchers</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>The application is one executable named <code>ledger</code> at the application root. It records accounts, categories, and cash transactions in a relational database, enforces atomic commands and non-negative balances, and reports balances, category totals, and monthly totals. Every value is computed by a query, and every amount is stored as integer cents.</p>
+<h2>Technology Stack</h2>
+<ul><li>Python 3.11 or newer (<code>python.md</code>): implementation language.</li><li>SQLite (<code>sqlite.md</code>): the database, reached only through the shipped persistence library. This</li></ul>
+<p>build has no PostgreSQL backend.</p>
+<ul><li>CLI (<code>cli.md</code>): the <code>ledger</code> executable at the application root.</li><li>pytest (<code>python.md</code>): the test runner behind <code>bin/test.sh</code>.</li><li>POSIX sh (<code>common.md</code>): <code>bin/test.sh</code> and the supplied grader.</li></ul>
+<h2>Foundation</h2>
+<ul><li>The project root holds <code>pyproject.toml</code> declaring Python 3.11 or newer, pytest, and ruff.</li><li><code>uv.lock</code> is committed beside <code>pyproject.toml</code>.</li><li><code>.venv</code> is created with <code>uv venv</code>. Launchers in <code>bin/</code> activate it.</li><li><code>pytest -q</code> is the project test runner.</li></ul>
+<h2>Modules</h2>
+<div class="scroll"><table><thead><tr><th>Module</th><th>Responsibility</th></tr></thead><tbody><tr><td><code>cli</code></td><td>Entry <code>main(argv)</code>, command routing, usage listing, CSV output writer, operational error mapping to exit codes</td></tr><tr><td><code>database_location</code></td><td>Resolves the database location from <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code></td></tr><tr><td><code>persistence</code> (generated)</td><td>Store access through <code>open_database(dsn)</code> and <code>db.&lt;table&gt;.&lt;verb&gt;(...)</code></td></tr><tr><td><code>command_transaction</code></td><td>Runs each command inside one database transaction; rolls back on any failure</td></tr><tr><td><code>validation</code></td><td>Codes, names, memos, amounts as integer cents, calendar dates</td></tr><tr><td><code>balance</code></td><td>Non-negative balance check after a command&#x27;s changes and before commit</td></tr><tr><td><code>loader</code></td><td>Bulk CSV loads, all or nothing</td></tr><tr><td><code>accounts</code></td><td>Account add, get, rename, delete</td></tr><tr><td><code>transactions</code></td><td>Post, get, amend, delete, and the next-id rule</td></tr><tr><td><code>transfers</code></td><td>Two-row transfer stored as <code>TRANSFER</code> rows, or neither</td></tr><tr><td><code>reports</code></td><td>Balances, categories, and monthly reports computed by query</td></tr></tbody></table></div>
+<h2>Module Ownership</h2>
+<div class="scroll"><table><thead><tr><th>Boundary</th><th>Owner</th><th>Allowed access</th></tr></thead><tbody><tr><td>Persistence</td><td><code>persistence</code> package generated from <code>DATABASE.md</code></td><td>Domain modules call <code>open_database(dsn)</code> and <code>db.&lt;table&gt;.&lt;verb&gt;(...)</code> only. No module imports a database driver.</td></tr><tr><td>Configuration</td><td><code>database_location</code></td><td>Only module that reads <code>DATABASE_URL</code> and <code>DATABASE_PATH</code></td></tr><tr><td>File store</td><td>None</td><td>Input CSV files are read only by <code>loader</code></td></tr><tr><td>External service</td><td>None</td><td>No network access, except to a PostgreSQL server named by <code>DATABASE_URL</code>. This build rejects that DSN with exit 1.</td></tr></tbody></table></div>
+<h2>Technical Decisions</h2>
+<ul><li>Amounts are stored and computed as integer cents. No floating-point type is used for money.</li><li>Every command runs in one transaction through <code>command_transaction</code>. Any failure rolls back all changes.</li><li>The balance rule runs after a command&#x27;s changes and before commit, for every touched account.</li><li>Application code never reads <code>sources/run.sh</code> or any seed file. Seed files reach the database only through <code>ledger load</code>.</li><li>Reports are computed from the database. No report answer is embedded in code.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC arch-python-version ===<br>Intent: The running interpreter is Python 3.11 or newer, as the Technology Stack requires.</p>
+<p>import sys</p>
+<p>assert sys.version_info[:2] &gt;= (3, 11) === END AC arch-python-version ===</p>
+<p>=== AC arch-pyproject ===<br>Intent: pyproject.toml exists at the project root and parses as TOML with a project table.</p>
+<p>import tomllib</p>
+<p>with open(&quot;pyproject.toml&quot;, &quot;rb&quot;) as handle: data = tomllib.load(handle) assert isinstance(data[&quot;project&quot;], dict) === END AC arch-pyproject ===</p>
+<p>=== AC arch-uv-lock ===<br>Intent: uv.lock is committed at the project root beside pyproject.toml.</p>
+<p>from pathlib import Path</p>
+<p>assert Path(&quot;uv.lock&quot;).is_file() === END AC arch-uv-lock ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Do not modify, rewrite, or substitute any file under <code>sources/</code>.</li><li>Do not open a database driver outside the <code>persistence</code> package.</li><li>Do not use floating point for money at any layer.</li></ul></article>
+</main>
+</body>
+</html>

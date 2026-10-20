@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.133507.868Z_layerstesting_plan_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.133507.868Z_layerstesting_plan_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.133507.868Z_layerstesting_plan_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT FEATURE-Command-Transaction.md ===
+# FEATURE: Command Transaction
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Runs every ledger command inside exactly one database transaction that commits on success and rolls back on failure. |
+| Depends On  | FEATURE-Database-Location.md, DATABASE.md |
+| Provides    | run_command(db, command) |
+| Consumes    | open_database, db.accounts.create, db.accounts.list |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every command that reads or writes the store runs inside one transaction. A command either completes in full or changes nothing.
+
+## Behavior
+
+- `run_command(db, command)` opens one transaction on `db`, calls `command(db)` once, commits when the call returns, and returns the value the command returned.
+- If `command` raises, every write made through `db` during that call is rolled back, and the exception propagates unchanged.
+- A persistence error raised while the transaction is open, including a write lock held by another connection, rolls back the same way and propagates. The CLI maps it to exit 1 through FEATURE-Operational-Errors.md.
+- The wrapper does not commit or roll back inside a command body. Commands never open their own transaction.
+
+## Programmatic Acceptance
+
+=== AC command-transaction-commits ===
+Intent: A command that returns normally has its write persisted and its return value passed back to the caller.
+
+from persistence.testing import db_session
+from transaction import run_command
+
+account_code = &quot;TXNA1&quot;
+account_name = &quot;Commit Test&quot;
+
+with db_session() as db:
+    result = run_command(db, lambda d: d.accounts.create(account=account_code, name=account_name))
+    assert result.account == account_code
+    matches = [row for row in db.accounts.list() if row.account == account_code]
+    assert len(matches) == 1
+    assert matches[0].name == account_name
+=== END AC command-transaction-commits ===
+
+=== AC command-transaction-rolls-back-all-writes ===
+Intent: When a command raises after two writes, neither write persists and the exception reaches the caller.
+
+from persistence.testing import db_session
+from transaction import run_command
+
+first_code = &quot;TXNB1&quot;
+second_code = &quot;TXNB2&quot;
+
+class Abort(Exception):
+    pass
+
+def write_then_fail(d):
+    d.accounts.create(account=first_code, name=&quot;Rollback First&quot;)
+    d.accounts.create(account=second_code, name=&quot;Rollback Second&quot;)
+    raise Abort(&quot;forced after two writes&quot;)
+
+with db_session() as db:
+    before = len(db.accounts.list())
+    raised = False
+    try:
+        run_command(db, write_then_fail)
+    except Abort:
+        raised = True
+    assert raised
+    after = db.accounts.list()
+    assert len(after) == before
+    assert all(row.account not in (first_code, second_code) for row in after)
+=== END AC command-transaction-rolls-back-all-writes ===
+
+=== AC command-transaction-propagates-exception ===
+Intent: The exception raised by a failing command is the same object the caller receives, not a wrapped or swallowed error.
+
+from persistence.testing import db_session
+from transaction import run_command
+
+raised_error = RuntimeError(&quot;forced by criterion&quot;)
+
+def fail(d):
+    raise raised_error
+
+with db_session() as db:
+    try:
+        run_command(db, fail)
+    except RuntimeError as caught:
+        assert caught is raised_error
+    else:
+        raise AssertionError(&quot;run_command swallowed the command&#x27;s exception&quot;)
+=== END AC command-transaction-propagates-exception ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- No module begins or commits a transaction outside `run_command`.
+- A failed command never leaves a partial write in any table.
+- No command body commits its own work.
+- Application code reaches the store only through the `persistence` package, never through a database driver.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Schema-Init.md ===
+# FEATURE: Schema Init
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Implements `ledger init`, which drops and recreates the three ledger tables empty. |
+| Depends On  | FEATURE-Command-Transaction.md, FEATURE-CLI-Dispatch.md, DATABASE.md |
+| Provides    | ledger init |
+| Consumes    | open_database, run_command |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger init` resets the store to three empty tables, so a later load or report starts from a known state.
+
+## Behavior
+
+- `ledger init` drops `accounts`, `categories`, and `transactions` if they exist, then recreates them empty from the generated schema through the `persistence` package.
+- The drop and recreate run inside one command transaction (FEATURE-Command-Transaction.md).
+- `init` writes nothing to standard output and exits 0.
+- Argument-count errors are rejected by FEATURE-CLI-Dispatch.md before this handler runs.
+
+## Programmatic Acceptance
+
+=== AC schema-init-exit-and-silent ===
+Intent: `ledger init` exits 0 and writes nothing to standard output on a fresh database.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+code, out, err = cli_runner(&quot;init&quot;)
+assert code == 0
+assert out == &quot;&quot;
+=== END AC schema-init-exit-and-silent ===
+
+=== AC schema-init-drops-existing-rows ===
+Intent: Running `ledger init` against a store holding a row leaves all three tables empty.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence import open_database
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+seeded = open_database(dsn)
+seeded.accounts.create(account=&quot;INITA&quot;, name=&quot;Before Init&quot;)
+assert len(seeded.accounts.list()) == 1
+
+code, out, err = cli_runner(&quot;init&quot;)
+assert code == 0
+assert out == &quot;&quot;
+
+after = open_database(dsn)
+assert len(after.accounts.list()) == 0
+assert len(after.categories.list()) == 0
+assert len(after.transactions.list()) == 0
+=== END AC schema-init-drops-existing-rows ===
+
+=== AC schema-init-recreates-usable-schema ===
+Intent: After `ledger init` runs a second time, the recreated tables accept a new row.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence import open_database
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+first_code, first_out, first_err = cli_runner(&quot;init&quot;)
+assert first_code == 0
+second_code, second_out, second_err = cli_runner(&quot;init&quot;)
+assert second_code == 0
+assert second_out == &quot;&quot;
+
+db = open_database(dsn)
+db.accounts.create(account=&quot;INITB&quot;, name=&quot;After Init&quot;)
+assert len(db.accounts.list()) == 1
+=== END AC schema-init-recreates-usable-schema ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- `init` does not read any file under `sources/`.
+- `init` never writes to standard output.
+- Schema objects are created only through the generated `schema.sql`, never by inline SQL in this handler.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Schema-Count.md ===
+# FEATURE: Schema Count
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Implements `ledger count`, which prints the row count of each ledger table. |
+| Depends On  | FEATURE-Schema-Init.md, FEATURE-CLI-Output.md, DATABASE.md |
+| Provides    | ledger count |
+| Consumes    | open_database, write_csv |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger count` tells an operator how many rows each table holds, which is how the seed loads are checked.
+
+## Behavior
+
+- Prints `table,rows`, then one line each for `accounts`, `categories`, and `transactions`, in that order.
+- Each count is the number of rows returned by that table&#x27;s list operation in `DATABASE.md`. No count is stored or hardcoded.
+- The output is written through `write_csv`, so the contract in FEATURE-CLI-Output.md applies.
+- Exits 0 on success.
+
+## Programmatic Acceptance
+
+=== AC schema-count-header-and-order ===
+Intent: `ledger count` writes a `table,rows` header followed by the three table lines in the fixed order.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+init_code, init_out, init_err = cli_runner(&quot;init&quot;)
+assert init_code == 0
+
+code, out, err = cli_runner(&quot;count&quot;)
+assert code == 0
+lines = out.splitlines()
+assert len(lines) == 4
+assert lines[0].split(&quot;,&quot;) == [&quot;table&quot;, &quot;rows&quot;]
+assert [line.split(&quot;,&quot;)[0] for line in lines[1:]] == [&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;]
+=== END AC schema-count-header-and-order ===
+
+=== AC schema-count-matches-stored-rows ===
+Intent: Each count equals the number of rows the store holds for that table after known inserts.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence import open_database
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+init_code, init_out, init_err = cli_runner(&quot;init&quot;)
+assert init_code == 0
+
+db = open_database(dsn)
+db.accounts.create(account=&quot;CNTA1&quot;, name=&quot;Count Account One&quot;)
+db.accounts.create(account=&quot;CNTA2&quot;, name=&quot;Count Account Two&quot;)
+db.categories.create(category=&quot;CNTC1&quot;, description=&quot;Count Category&quot;)
+db.transactions.create(txn_id=1, date=&quot;2026-01-05&quot;, account=&quot;CNTA1&quot;, category=&quot;CNTC1&quot;, amount=1250, memo=&quot;count test&quot;)
+
+expected = {&quot;accounts&quot;: 2, &quot;categories&quot;: 1, &quot;transactions&quot;: 1}
+
+code, out, err = cli_runner(&quot;count&quot;)
+assert code == 0
+counts = {line.split(&quot;,&quot;)[0]: int(line.split(&quot;,&quot;)[1]) for line in out.splitlines()[1:]}
+assert counts == expected
+=== END AC schema-count-matches-stored-rows ===
+
+=== AC schema-count-zero-after-init ===
+Intent: On a freshly initialized store, every table count is zero.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+init_code, init_out, init_err = cli_runner(&quot;init&quot;)
+assert init_code == 0
+
+code, out, err = cli_runner(&quot;count&quot;)
+assert code == 0
+rows = [line.split(&quot;,&quot;) for line in out.splitlines()[1:]]
+assert len(rows) == 3
+assert all(int(row[1]) == 0 for row in rows)
+=== END AC schema-count-zero-after-init ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- No count value is hardcoded in this handler; every count comes from a query.
+- `count` takes no arguments and does not modify any table.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-CLI-Dispatch.md ===
+# FEATURE: CLI Dispatch
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Routes `ledger` command words to their handlers and rejects usage errors with exit 2 before any database access. |
+| Depends On  | FEATURE-CLI-Platform.md |
+| Provides    | ledger &lt;command&gt; routing, usage error exit 2 |
+| Consumes    | cli.main, cli_runner |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every `ledger` invocation is either handed to the handler its story owns or rejected as a usage error. Nothing else happens first.
+
+## Behavior
+
+- The command word, sub-verb, and argument count are checked against the Commands table before any handler or database access runs.
+- An unknown command, unknown sub-verb, unknown table, unknown report, or wrong argument count exits 2 with exactly one line on standard error and nothing on standard output.
+- A correctly shaped command is passed to its handler, and the handler&#x27;s exit code is returned unchanged.
+
+## Programmatic Acceptance
+
+=== AC cli-dispatch-usage-errors-exit-two ===
+Intent: Each unknown command, sub-verb, table, report, or wrong argument count exits 2 with empty stdout and one stderr line.
+
+from cli.testing import cli_runner
+
+usage_errors = [
+    (&quot;frobnicate&quot;,),
+    (&quot;report&quot;, &quot;nosuch&quot;),
+    (&quot;load&quot;, &quot;nosuch&quot;, &quot;missing.csv&quot;),
+    (&quot;account&quot;, &quot;nosuch&quot;),
+    (&quot;count&quot;, &quot;extra&quot;),
+    (&quot;account&quot;, &quot;add&quot;, &quot;ONLY&quot;),
+]
+
+for args in usage_errors:
+    code, out, err = cli_runner(*args)
+    print(args, err)
+    assert code == 2
+    assert out == &quot;&quot;
+    assert len(err.splitlines()) == 1
+=== END AC cli-dispatch-usage-errors-exit-two ===
+
+=== AC cli-dispatch-usage-touches-no-database ===
+Intent: A usage error exits 2 without creating or opening the database file named by DATABASE_URL.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+
+code, out, err = cli_runner(&quot;frobnicate&quot;)
+assert code == 2
+assert not os.path.exists(dsn)
+=== END AC cli-dispatch-usage-touches-no-database ===
+
+=== AC cli-dispatch-main-returns-usage-code ===
+Intent: The published `main` entry point returns the integer 2 for an unknown command.
+
+from cli import main
+
+result = main([&quot;frobnicate&quot;])
+assert isinstance(result, int)
+assert result == 2
+=== END AC cli-dispatch-main-returns-usage-code ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Argument validation completes before any database connection is opened.
+- Usage diagnostics go to standard error only and are never written to standard output.
+- Dispatch never reads a file named on the command line before validating the command.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-CLI-Output.md ===
+# FEATURE: CLI Output
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Provides the CSV writer every successful ledger command uses for standard output. |
+| Depends On  | FEATURE-CLI-Platform.md |
+| Provides    | cli.output.write_csv(header, rows) |
+| Consumes    | none |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every successful command except `init` reports its result as CSV on standard output, in one shared format.
+
+## Behavior
+
+- `write_csv(header, rows)` writes the header row, then one row per entry in `rows`, to standard output.
+- Fields are joined with commas, are never quoted, and each line ends with a single `\n`.
+- No line carries a trailing space, and no line contains a carriage return.
+- With an empty `rows`, only the header row is written.
+- Nothing is written to standard error.
+
+## Programmatic Acceptance
+
+=== AC cli-output-header-then-rows ===
+Intent: `write_csv` writes the header row followed by one comma-separated line per data row, in order.
+
+import contextlib
+import io
+
+from cli.output import write_csv
+
+header = [&quot;account&quot;, &quot;name&quot;]
+rows = [[&quot;ALPHA&quot;, &quot;Alpha Drawer&quot;], [&quot;BETA&quot;, &quot;Beta Safe&quot;]]
+
+buf = io.StringIO()
+with contextlib.redirect_stdout(buf):
+    write_csv(header, rows)
+
+lines = buf.getvalue().splitlines()
+assert len(lines) == len(rows) + 1
+assert lines[0].split(&quot;,&quot;) == header
+assert [line.split(&quot;,&quot;) for line in lines[1:]] == rows
+=== END AC cli-output-header-then-rows ===
+
+=== AC cli-output-no-quoting-or-trailing-space ===
+Intent: Output contains no quote characters, no carriage returns, no trailing spaces, and one line ending per written line.
+
+import contextlib
+import io
+
+from cli.output import write_csv
+
+header = [&quot;category&quot;, &quot;description&quot;]
+rows = [[&quot;SALES&quot;, &quot;Sales receipts&quot;], [&quot;RENT&quot;, &quot;Rent&quot;]]
+
+buf = io.StringIO()
+with contextlib.redirect_stdout(buf):
+    write_csv(header, rows)
+
+text = buf.getvalue()
+assert &#x27;&quot;&#x27; not in text
+assert chr(13) not in text
+assert text.count(chr(10)) == len(rows) + 1
+assert all(line == line.rstrip() for line in text.splitlines())
+=== END AC cli-output-no-quoting-or-trailing-space ===
+
+=== AC cli-output-header-only-and-silent-stderr ===
+Intent: With no data rows, only the header is written to standard output, and nothing is written to standard error.
+
+import contextlib
+import io
+
+from cli.output import write_csv
+
+header = [&quot;table&quot;, &quot;loaded&quot;]
+
+out_buf = io.StringIO()
+err_buf = io.StringIO()
+with contextlib.redirect_stdout(out_buf), contextlib.redirect_stderr(err_buf):
+    write_csv(header, [])
+
+lines = out_buf.getvalue().splitlines()
+assert len(lines) == 1
+assert lines[0].split(&quot;,&quot;) == header
+assert err_buf.getvalue() == &quot;&quot;
+=== END AC cli-output-header-only-and-silent-stderr ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- No field is quoted or escaped; values containing a comma or newline are rejected upstream by validation, never encoded here.
+- The writer formats only the values it is given and never formats money or dates itself.
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

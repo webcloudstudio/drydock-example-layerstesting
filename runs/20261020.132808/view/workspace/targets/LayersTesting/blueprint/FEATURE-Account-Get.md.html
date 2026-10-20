@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Account-Get.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Account-Get.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Account-Get.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Account Get</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Print one account with its transaction count and balance through <code>ledger account get &lt;code&gt;</code>.</td></tr><tr><td>Depends On</td><td>DATABASE.md, FEATURE-Code-Validation.md, FEATURE-Amount-Format.md, FEATURE-Command-Transaction.md, FEATURE-CLI-Output.md, FEATURE-CLI-Dispatch.md</td></tr><tr><td>Provides</td><td>ledger account get &lt;code&gt;</td></tr><tr><td>Consumes</td><td>accounts.get, transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Reads one row from the <code>accounts</code> table and prints it with its derived transaction count and balance.</p>
+<h2>Behavior</h2>
+<ul><li>On success, stdout is the account header row followed by <code>&lt;code&gt;,&lt;name&gt;,&lt;transactions&gt;,&lt;balance&gt;</code>.</li><li><code>transactions</code> counts the account&#x27;s rows in the transactions table.</li><li><code>balance</code> is the sum of those rows&#x27; amounts, formatted with two decimals.</li><li>An absent code exits 4 and prints nothing to standard output.</li><li>The command is read-only: repeated calls return identical output.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC account-get-matches-loaded-seed ===<br>Intent: After the seed accounts, categories, and transactions load, account get for each seed account returns its name and the seed transaction count, and matches the balances report row.</p>
+<p>import csv import io import os import sys import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>os.environ[&quot;DATABASE_URL&quot;] = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)</p>
+<p>def run(*args): code, out, err = cli_runner(*args) print(out) print(err, file=sys.stderr) return code, out, err</p>
+<p>with open(&quot;sources/seed_accounts.csv&quot;, newline=&quot;&quot;) as handle: _, *account_rows = list(csv.reader(handle)) with open(&quot;sources/seed_transactions.csv&quot;, newline=&quot;&quot;) as handle: _, *txn_rows = list(csv.reader(handle))</p>
+<p>assert run(&quot;init&quot;)[0] == 0 assert run(&quot;load&quot;, &quot;accounts&quot;, &quot;sources/seed_accounts.csv&quot;)[0] == 0 assert run(&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;)[0] == 0 assert run(&quot;load&quot;, &quot;transactions&quot;, &quot;sources/seed_transactions.csv&quot;)[0] == 0</p>
+<p>code, out, err = run(&quot;report&quot;, &quot;balances&quot;) assert code == 0 balances = {row[0]: row for row in list(csv.reader(io.StringIO(out)))[1:]}</p>
+<p>for account, name in account_rows: expected_count = sum(1 for row in txn_rows if row[2] == account) code, out, err = run(&quot;account&quot;, &quot;get&quot;, account) assert code == 0 row = list(csv.reader(io.StringIO(out)))[1] assert row[0] == account assert row[1] == name assert row[2] == str(expected_count) assert row == balances[account] === END AC account-get-matches-loaded-seed ===</p>
+<p>=== AC account-get-absent-code ===<br>Intent: Getting an account code that does not exist exits 4 and prints nothing to standard output.</p>
+<p>import csv import io import os import sys import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>os.environ[&quot;DATABASE_URL&quot;] = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)</p>
+<p>def run(*args): code, out, err = cli_runner(*args) print(out) print(err, file=sys.stderr) return code, out, err</p>
+<p>assert run(&quot;init&quot;)[0] == 0 code, out, err = run(&quot;account&quot;, &quot;get&quot;, &quot;NOSUCH&quot;) assert code == 4 assert out == &quot;&quot; === END AC account-get-absent-code ===</p>
+<p>=== AC account-get-repeatable ===<br>Intent: Two consecutive account get calls on the same code return identical output and exit 0, showing the command changes nothing.</p>
+<p>import csv import io import os import sys import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>os.environ[&quot;DATABASE_URL&quot;] = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;)</p>
+<p>def run(*args): code, out, err = cli_runner(*args) print(out) print(err, file=sys.stderr) return code, out, err</p>
+<p>with open(&quot;sources/seed_accounts.csv&quot;, newline=&quot;&quot;) as handle: _, *account_rows = list(csv.reader(handle)) account = account_rows[0][0]</p>
+<p>assert run(&quot;init&quot;)[0] == 0 assert run(&quot;load&quot;, &quot;accounts&quot;, &quot;sources/seed_accounts.csv&quot;)[0] == 0</p>
+<p>first_code, first_out, first_err = run(&quot;account&quot;, &quot;get&quot;, account) second_code, second_out, second_err = run(&quot;account&quot;, &quot;get&quot;, account) assert first_code == 0 assert second_code == 0 assert first_out == second_out === END AC account-get-repeatable ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Application code reaches the accounts and transactions tables only through the <code>persistence</code> package operations.</li><li>The balance is computed from the database rows at read time and is never stored or cached.</li><li>An absent code is reported only as exit 4; no row is created as a side effect.</li></ul></article>
+</main>
+</body>
+</html>

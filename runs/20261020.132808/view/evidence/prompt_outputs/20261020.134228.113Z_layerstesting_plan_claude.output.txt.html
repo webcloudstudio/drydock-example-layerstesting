@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.134228.113Z_layerstesting_plan_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.134228.113Z_layerstesting_plan_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.134228.113Z_layerstesting_plan_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT FEATURE-Automated-Suite.md ===
+# FEATURE: Automated Suite
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Provides the POSIX `bin/test.sh` wrapper that runs the project&#x27;s pytest suite against a temporary database and exits zero only when every test passes. |
+| Depends On  | ARCHITECTURE.md, FEATURE-CLI-Platform.md, DATABASE.md |
+| Provides    | bin/test.sh |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`bin/test.sh` is the application&#x27;s own automated test entry point. It is POSIX `sh`, runs from the application root, starts pytest against a real temporary SQLite database, and exits zero only when every test passes. The suite it runs covers each command, each exit code, and each rule in `sources/INSTRUCTIONS.md`.
+
+The suite is written beside the code by the build agent. This story owns the wrapper and its contract, not the individual tests.
+
+## Behavior
+
+- `bin/test.sh` is a POSIX `sh` script. It creates or reuses the `.venv` created by the foundation and runs `pytest -q` from the application root.
+- The database for the run is a fresh temporary SQLite file, removed on exit.
+- The wrapper exits with pytest&#x27;s status. A failing or erroring test makes it exit nonzero.
+
+## Programmatic Acceptance
+
+=== AC test-suite-posix-syntax ===
+Intent: bin/test.sh parses as POSIX sh without executing any test.
+Requires: executable=sh; scope=test
+
+import os
+import subprocess
+
+result = subprocess.run(
+    [&quot;sh&quot;, &quot;-n&quot;, &quot;bin/test.sh&quot;],
+    capture_output=True, text=True,
+    env={**os.environ},
+)
+print(result.stdout)
+print(result.stderr)
+assert result.returncode == 0
+=== END AC test-suite-posix-syntax ===
+
+=== AC test-suite-passes ===
+Intent: Running bin/test.sh from the application root exits zero when every automated test passes.
+Requires: executable=sh; scope=test
+
+import os
+import subprocess
+import sys
+
+result = subprocess.run(
+    [&quot;sh&quot;, &quot;bin/test.sh&quot;],
+    capture_output=True, text=True,
+    env={**os.environ},
+)
+print(result.stdout)
+print(result.stderr, file=sys.stderr)
+assert result.returncode == 0
+=== END AC test-suite-passes ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Do not modify, rewrite, or substitute any file under `sources/`.
+- `bin/test.sh` must not read `sources/run.sh` or any seed file.
+- The wrapper must not open a database driver directly; tests reach the database only through the persistence package.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Acceptance-Grader.md ===
+# FEATURE: Acceptance Grader
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Stages the supplied `sources/run.sh` grader and seed files into the application root and gates on the grader passing end to end. |
+| Depends On  | ARCHITECTURE.md, DATABASE.md, FEATURE-CLI-Platform.md, FEATURE-Database-Location.md, FEATURE-Operational-Errors.md, FEATURE-Command-Transaction.md, FEATURE-Schema-Init.md, FEATURE-Schema-Count.md, FEATURE-CLI-Dispatch.md, FEATURE-CLI-Output.md, FEATURE-Code-Validation.md, FEATURE-Amount-Format.md, FEATURE-Date-Validation.md, FEATURE-CLI-Help.md, FEATURE-Balance-Rule.md, FEATURE-Load-Accounts.md, FEATURE-Load-Categories.md, FEATURE-Load-Transactions.md, FEATURE-Account-Add.md, FEATURE-Account-Get.md, FEATURE-Account-Rename.md, FEATURE-Account-Delete.md, FEATURE-Transaction-Post.md, FEATURE-Transaction-Get.md, FEATURE-Transaction-Amend.md, FEATURE-Transaction-Delete.md, FEATURE-Transfer.md, FEATURE-Report-Balances.md, FEATURE-Report-Categories.md, FEATURE-Report-Monthly.md, FEATURE-Automated-Suite.md |
+| Provides    | `sh sources/run.sh` exits 0 |
+| Consumes    | ./ledger, sources/run.sh, sources/seed_accounts.csv, sources/seed_categories.csv, sources/seed_transactions.csv, sources/seed_transactions_bad.csv |
+
+## Questions
+
+- None.
+
+## Purpose
+
+This is the terminal verification story. It runs last, after every other story closes. It stages the supplied grader and its seed files verbatim into the application root, then runs the grader unfiltered from the application root.
+
+The grader is the acceptance verdict for the project. Its exit status decides this story.
+
+## Behavior
+
+- Stage `sources/run.sh` and `sources/seed_accounts.csv`, `sources/seed_categories.csv`, `sources/seed_transactions.csv`, and `sources/seed_transactions_bad.csv` into `sources/` under the application root, byte for byte. Do not author, rewrite, trim, or regenerate them.
+- Run `sh sources/run.sh` unfiltered from the application root.
+- The story passes only when that run exits 0.
+
+## Programmatic Acceptance
+
+=== AC grader-staged-executable ===
+Intent: The ledger executable exists at the application root and is executable before the grader runs.
+Requires: executable=sh; scope=test
+
+import os
+
+assert os.path.isfile(&quot;ledger&quot;)
+assert os.access(&quot;ledger&quot;, os.X_OK)
+=== END AC grader-staged-executable ===
+
+=== AC grader-full ===
+Intent: The supplied grader sh sources/run.sh exits 0 unmodified against the completed application, running every check it contains.
+Suite: full
+Requires: executable=sh; scope=test
+
+import os
+import subprocess
+import sys
+
+result = subprocess.run(
+    [&quot;sh&quot;, &quot;sources/run.sh&quot;],
+    capture_output=True, text=True,
+    env={**os.environ},
+)
+print(result.stdout)
+print(result.stderr, file=sys.stderr)
+assert result.returncode == 0
+=== END AC grader-full ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Do not modify, rewrite, regenerate, or substitute `sources/run.sh` or any seed file.
+- Application code must never read `sources/run.sh` or any seed file. Seed files reach the database only through `ledger load`.
+- Do not hardcode a report row, count, or total to make the grader pass.
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

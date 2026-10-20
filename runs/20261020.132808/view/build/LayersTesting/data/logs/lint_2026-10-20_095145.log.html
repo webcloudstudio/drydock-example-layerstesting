@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/data/logs/lint_2026-10-20_095145.log</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/data/logs/lint_2026-10-20_095145.log</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../build/LayersTesting/data/logs/lint_2026-10-20_095145.log">Raw file</a></div></header>
+<article class="doc"><pre>=== lint started at 2026-10-20 09:51:45 ===
+Arguments: 
+Working dir: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.132808/build/LayersTesting
+---
+PLW1510 `subprocess.run` without explicit `check` argument
+  --&gt; tests/test_cli_platform.py:85:14
+   |
+84 | def test_python_dash_m_cli_exits_with_usage_code_two():
+85 |     result = subprocess.run([sys.executable, &quot;-m&quot;, &quot;cli&quot;], cwd=ROOT)
+   |              ^^^^^^^^^^^^^^
+86 |     assert result.returncode == 2
+   |
+help: Add explicit `check=False`
+   |
+84 | def test_python_dash_m_cli_exits_with_usage_code_two():
+   -     result = subprocess.run([sys.executable, &quot;-m&quot;, &quot;cli&quot;], cwd=ROOT)
+85 +     result = subprocess.run([sys.executable, &quot;-m&quot;, &quot;cli&quot;], check=False, cwd=ROOT)
+86 |     assert result.returncode == 2
+   |
+note: This suggestion may be incorrect or produce invalid syntax. It requires manual review and cannot be applied automatically
+
+PLW1510 `subprocess.run` without explicit `check` argument
+   --&gt; tests/test_cli_platform.py:104:14
+    |
+103 | def test_ledger_launcher_delegates_help_to_main_with_exit_zero():
+104 |     result = subprocess.run([str(ROOT / &quot;ledger&quot;), &quot;--help&quot;], cwd=ROOT)
+    |              ^^^^^^^^^^^^^^
+105 |     assert result.returncode == 0
+    |
+help: Add explicit `check=False`
+    |
+103 | def test_ledger_launcher_delegates_help_to_main_with_exit_zero():
+    -     result = subprocess.run([str(ROOT / &quot;ledger&quot;), &quot;--help&quot;], cwd=ROOT)
+104 +     result = subprocess.run([str(ROOT / &quot;ledger&quot;), &quot;--help&quot;], check=False, cwd=ROOT)
+105 |     assert result.returncode == 0
+    |
+note: This suggestion may be incorrect or produce invalid syntax. It requires manual review and cannot be applied automatically
+
+PLW1510 `subprocess.run` without explicit `check` argument
+   --&gt; tests/test_cli_platform.py:109:14
+    |
+108 | def test_ledger_launcher_delegates_usage_error_with_exit_two_from_any_directory(tmp_path):
+109 |     result = subprocess.run([str(ROOT / &quot;ledger&quot;)], cwd=tmp_path)
+    |              ^^^^^^^^^^^^^^
+110 |     assert result.returncode == 2
+    |
+help: Add explicit `check=False`
+    |
+108 | def test_ledger_launcher_delegates_usage_error_with_exit_two_from_any_directory(tmp_path):
+    -     result = subprocess.run([str(ROOT / &quot;ledger&quot;)], cwd=tmp_path)
+109 +     result = subprocess.run([str(ROOT / &quot;ledger&quot;)], check=False, cwd=tmp_path)
+110 |     assert result.returncode == 2
+    |
+note: This suggestion may be incorrect or produce invalid syntax. It requires manual review and cannot be applied automatically
+
+C408 Unnecessary `dict()` call (rewrite as a literal)
+   --&gt; tests/test_database_step.py:225:15
+    |
+223 |     with db_session() as db:
+224 |         _seed(db)
+225 |         row = dict(txn_id=8, date=&quot;2026-10-08&quot;, account=&quot;CASH&quot;, category=&quot;FOOD&quot;, amount=1, memo=&quot;&quot;)
+    |               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+226 |         db.transactions.create(**row)
+227 |         with pytest.raises(PersistenceError):
+    |
+help: Rewrite as a literal
+    |
+224 |         _seed(db)
+    -         row = dict(txn_id=8, date=&quot;2026-10-08&quot;, account=&quot;CASH&quot;, category=&quot;FOOD&quot;, amount=1, memo=&quot;&quot;)
+225 +         row = {&quot;txn_id&quot;: 8, &quot;date&quot;: &quot;2026-10-08&quot;, &quot;account&quot;: &quot;CASH&quot;, &quot;category&quot;: &quot;FOOD&quot;, &quot;amount&quot;: 1, &quot;memo&quot;: &quot;&quot;}
+226 |         db.transactions.create(**row)
+    |
+note: This is an unsafe fix and may change runtime behavior
+
+SIM117 [*] Use a single `with` statement with multiple contexts instead of nested `with` statements
+   --&gt; tests/test_database_step.py:235:5
+    |
+234 |   def test_undeclared_verb_raises_unknown_operation():
+235 | /     with db_session() as db:
+236 | |         with pytest.raises(UnknownOperation):
+    | |_____________________________________________^
+237 |               db.accounts.upsert(account=&quot;CASH&quot;, name=&quot;Cash&quot;)
+    |
+help: Combine `with` statements
+    |
+234 | def test_undeclared_verb_raises_unknown_operation():
+    -     with db_session() as db:
+    -         with pytest.raises(UnknownOperation):
+    -             db.accounts.upsert(account=&quot;CASH&quot;, name=&quot;Cash&quot;)
+235 +     with db_session() as db, pytest.raises(UnknownOperation):
+236 +         db.accounts.upsert(account=&quot;CASH&quot;, name=&quot;Cash&quot;)
+237 |
+    |
+
+SIM117 [*] Use a single `with` statement with multiple contexts instead of nested `with` statements
+   --&gt; tests/test_database_step.py:241:5
+    |
+240 |   def test_undeclared_argument_is_refused_before_reaching_the_store():
+241 | /     with db_session() as db:
+242 | |         with pytest.raises(PersistenceError):
+    | |_____________________________________________^
+243 |               db.accounts.create(account=&quot;CASH&quot;, name=&quot;Cash&quot;, balance=5)
+    |
+help: Combine `with` statements
+    |
+240 | def test_undeclared_argument_is_refused_before_reaching_the_store():
+    -     with db_session() as db:
+    -         with pytest.raises(PersistenceError):
+    -             db.accounts.create(account=&quot;CASH&quot;, name=&quot;Cash&quot;, balance=5)
+241 +     with db_session() as db, pytest.raises(PersistenceError):
+242 +         db.accounts.create(account=&quot;CASH&quot;, name=&quot;Cash&quot;, balance=5)
+243 |
+    |
+
+PLW1510 `subprocess.run` without explicit `check` argument
+   --&gt; tests/test_foundation.py:111:14
+    |
+110 | def test_lint_launcher_exits_zero_on_clean_project():
+111 |     result = subprocess.run([&quot;sh&quot;, str(ROOT / &quot;bin&quot; / &quot;lint.sh&quot;)], cwd=ROOT)
+    |              ^^^^^^^^^^^^^^
+112 |     assert result.returncode == 0
+    |
+help: Add explicit `check=False`
+    |
+110 | def test_lint_launcher_exits_zero_on_clean_project():
+    -     result = subprocess.run([&quot;sh&quot;, str(ROOT / &quot;bin&quot; / &quot;lint.sh&quot;)], cwd=ROOT)
+111 +     result = subprocess.run([&quot;sh&quot;, str(ROOT / &quot;bin&quot; / &quot;lint.sh&quot;)], check=False, cwd=ROOT)
+112 |     assert result.returncode == 0
+    |
+note: This suggestion may be incorrect or produce invalid syntax. It requires manual review and cannot be applied automatically
+
+Found 7 errors.
+[*] 2 fixable with `--fix` (1 unsafe fix available with `--fix --unsafe-fixes`).
+=== lint finished at 2026-10-20 09:51:45 with status 1 ===
+</pre></article>
+</main>
+</body>
+</html>

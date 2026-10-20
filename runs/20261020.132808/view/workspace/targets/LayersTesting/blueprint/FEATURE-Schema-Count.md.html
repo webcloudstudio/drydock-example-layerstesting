@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Schema-Count.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Schema-Count.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Schema-Count.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Schema Count</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger count</code>, which prints the row count of each ledger table.</td></tr><tr><td>Depends On</td><td>FEATURE-Schema-Init.md, FEATURE-CLI-Output.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger count</td></tr><tr><td>Consumes</td><td>open_database, write_csv</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger count</code> tells an operator how many rows each table holds, which is how the seed loads are checked.</p>
+<h2>Behavior</h2>
+<ul><li>Prints <code>table,rows</code>, then one line each for <code>accounts</code>, <code>categories</code>, and <code>transactions</code>, in that order.</li><li>Each count is the number of rows returned by that table&#x27;s list operation in <code>DATABASE.md</code>. No count is stored or hardcoded.</li><li>The output is written through <code>write_csv</code>, so the contract in FEATURE-CLI-Output.md applies.</li><li>Exits 0 on success.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC schema-count-header-and-order ===<br>Intent: <code>ledger count</code> writes a <code>table,rows</code> header followed by the three table lines in the fixed order.</p>
+<p>import os import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn</p>
+<p>init_code, init_out, init_err = cli_runner(&quot;init&quot;) assert init_code == 0</p>
+<p>code, out, err = cli_runner(&quot;count&quot;) assert code == 0 lines = out.splitlines() assert len(lines) == 4 assert lines[0].split(&quot;,&quot;) == [&quot;table&quot;, &quot;rows&quot;] assert [line.split(&quot;,&quot;)[0] for line in lines[1:]] == [&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;] === END AC schema-count-header-and-order ===</p>
+<p>=== AC schema-count-matches-stored-rows ===<br>Intent: Each count equals the number of rows the store holds for that table after known inserts.</p>
+<p>import os import tempfile</p>
+<p>from cli.testing import cli_runner from persistence import open_database</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn</p>
+<p>init_code, init_out, init_err = cli_runner(&quot;init&quot;) assert init_code == 0</p>
+<p>db = open_database(dsn) db.accounts.create(account=&quot;CNTA1&quot;, name=&quot;Count Account One&quot;) db.accounts.create(account=&quot;CNTA2&quot;, name=&quot;Count Account Two&quot;) db.categories.create(category=&quot;CNTC1&quot;, description=&quot;Count Category&quot;) db.transactions.create(txn_id=1, date=&quot;2026-01-05&quot;, account=&quot;CNTA1&quot;, category=&quot;CNTC1&quot;, amount=1250, memo=&quot;count test&quot;)</p>
+<p>expected = {&quot;accounts&quot;: 2, &quot;categories&quot;: 1, &quot;transactions&quot;: 1}</p>
+<p>code, out, err = cli_runner(&quot;count&quot;) assert code == 0 counts = {line.split(&quot;,&quot;)[0]: int(line.split(&quot;,&quot;)[1]) for line in out.splitlines()[1:]} assert counts == expected === END AC schema-count-matches-stored-rows ===</p>
+<p>=== AC schema-count-zero-after-init ===<br>Intent: On a freshly initialized store, every table count is zero.</p>
+<p>import os import tempfile</p>
+<p>from cli.testing import cli_runner</p>
+<p>dsn = os.path.join(tempfile.mkdtemp(), &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn</p>
+<p>init_code, init_out, init_err = cli_runner(&quot;init&quot;) assert init_code == 0</p>
+<p>code, out, err = cli_runner(&quot;count&quot;) assert code == 0 rows = [line.split(&quot;,&quot;) for line in out.splitlines()[1:]] assert len(rows) == 3 assert all(int(row[1]) == 0 for row in rows) === END AC schema-count-zero-after-init ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>No count value is hardcoded in this handler; every count comes from a query.</li><li><code>count</code> takes no arguments and does not modify any table.</li></ul></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/ERRORS.md</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/ERRORS.md</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../workspace/targets/LayersTesting/ERRORS.md">Raw file</a></div></header>
+<article class="doc"><h1>BIG ERRORS — action required</h1>
+<ul><li>Command: <code>build</code></li><li>Phase: build step</li><li>State: Failed</li><li>Timestamp: 2026-10-20T13:57:52+00:00</li><li>Execution ID: 20261020.135726.891Z-d04d1df0</li><li>Challenge Execution ID: -</li><li>Classification: programmatic acceptance failed: command-transaction-commits</li><li>Evidence / logs: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.132808/workspace/targets/LayersTesting/evidence/block-4.md</li></ul>
+<h2>Diagnostic</h2>
+<p>Block &quot;Block 4 · Service&quot; [block-4] failed its acceptance criteria. Story &quot;Run every command in one database transaction that rolls back on any failure.&quot; [db-transaction] does not meet its own acceptance criteria:</p>
+<ul><li>AC command-transaction-commits — A command that returns normally has its write persisted and its return value passed back to the caller.</li></ul>
+<p>assertion: assert result.account == account_code → AttributeError: &#x27;int&#x27; object has no attribute &#x27;account&#x27; raised at: command-transaction-commits.py:9 process exit code: 1 error: AttributeError: &#x27;int&#x27; object has no attribute &#x27;account&#x27; values at failure: account_code = &#x27;TXNA1&#x27; result = 1 check stderr: Traceback (most recent call last): … (4 more lines truncated)</p>
+<h2>Recovery</h2>
+<p>Run: drydock build LayersTesting to continue the build. This story resumes where it left off and is retried against the checks it failed.</p></article>
+</main>
+</body>
+</html>

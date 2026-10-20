@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Acceptance-Grader.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Acceptance-Grader.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Acceptance-Grader.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Acceptance Grader</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Stages the supplied <code>sources/run.sh</code> grader and seed files into the application root and gates on the grader passing end to end.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-CLI-Platform.md, FEATURE-Database-Location.md, FEATURE-Operational-Errors.md, FEATURE-Command-Transaction.md, FEATURE-Schema-Init.md, FEATURE-Schema-Count.md, FEATURE-CLI-Dispatch.md, FEATURE-CLI-Output.md, FEATURE-Code-Validation.md, FEATURE-Amount-Format.md, FEATURE-Date-Validation.md, FEATURE-CLI-Help.md, FEATURE-Balance-Rule.md, FEATURE-Load-Accounts.md, FEATURE-Load-Categories.md, FEATURE-Load-Transactions.md, FEATURE-Account-Add.md, FEATURE-Account-Get.md, FEATURE-Account-Rename.md, FEATURE-Account-Delete.md, FEATURE-Transaction-Post.md, FEATURE-Transaction-Get.md, FEATURE-Transaction-Amend.md, FEATURE-Transaction-Delete.md, FEATURE-Transfer.md, FEATURE-Report-Balances.md, FEATURE-Report-Categories.md, FEATURE-Report-Monthly.md, FEATURE-Automated-Suite.md</td></tr><tr><td>Provides</td><td><code>sh sources/run.sh</code> exits 0</td></tr><tr><td>Consumes</td><td>./ledger, sources/run.sh, sources/seed_accounts.csv, sources/seed_categories.csv, sources/seed_transactions.csv, sources/seed_transactions_bad.csv</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>This is the terminal verification story. It runs last, after every other story closes. It stages the supplied grader and its seed files verbatim into the application root, then runs the grader unfiltered from the application root.</p>
+<p>The grader is the acceptance verdict for the project. Its exit status decides this story.</p>
+<h2>Behavior</h2>
+<ul><li>Stage <code>sources/run.sh</code> and <code>sources/seed_accounts.csv</code>, <code>sources/seed_categories.csv</code>, <code>sources/seed_transactions.csv</code>, and <code>sources/seed_transactions_bad.csv</code> into <code>sources/</code> under the application root, byte for byte. Do not author, rewrite, trim, or regenerate them.</li><li>Run <code>sh sources/run.sh</code> unfiltered from the application root.</li><li>The story passes only when that run exits 0.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC grader-staged-executable ===<br>Intent: The ledger executable exists at the application root and is executable before the grader runs.<br>Requires: executable=sh; scope=test</p>
+<p>import os</p>
+<p>assert os.path.isfile(&quot;ledger&quot;) assert os.access(&quot;ledger&quot;, os.X_OK) === END AC grader-staged-executable ===</p>
+<p>=== AC grader-full ===<br>Intent: The supplied grader sh sources/run.sh exits 0 unmodified against the completed application, running every check it contains.<br>Suite: full<br>Requires: executable=sh; scope=test</p>
+<p>import os import subprocess import sys</p>
+<p>result = subprocess.run( [&quot;sh&quot;, &quot;sources/run.sh&quot;], capture_output=True, text=True, env={**os.environ}, ) print(result.stdout) print(result.stderr, file=sys.stderr) assert result.returncode == 0 === END AC grader-full ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Do not modify, rewrite, regenerate, or substitute <code>sources/run.sh</code> or any seed file.</li><li>Application code must never read <code>sources/run.sh</code> or any seed file. Seed files reach the database only through <code>ledger load</code>.</li><li>Do not hardcode a report row, count, or total to make the grader pass.</li></ul></article>
+</main>
+</body>
+</html>
