@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Report-Balances.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Report-Balances.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Report-Balances.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Balance Report</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Report account balances and transaction counts from persisted ledger data.</td></tr><tr><td>Depends On</td><td>FEATURE-Transaction-Management.md</td></tr><tr><td>Provides</td><td>report balances</td></tr><tr><td>Consumes</td><td>accounts.list, transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>The balances report lists every account ordered by account code, with its transaction count and integer-cent balance, followed by a computed total row.</p>
+<h2>Workflow</h2>
+<p>Query accounts and transactions through the persistence layer, calculate each account&#x27;s count and sum, format cents with exactly two decimal places, and calculate totals from the queried rows.</p>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC balance-report-empty ===<br>Intent: The balances report succeeds for an initialized empty ledger and reports no account rows. from cli.testing import cli_runner import csv import io import os import tempfile</p>
+<p>with tempfile.TemporaryDirectory() as directory: os.environ[&quot;DATABASE_URL&quot;] = os.path.join(directory, &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0</p>
+<p>code, output, _ = cli_runner(&quot;report&quot;, &quot;balances&quot;) assert code == 0 rows = list(csv.reader(io.StringIO(output))) assert len(rows) == 2 assert rows[-1][0] == &quot;TOTAL&quot; assert rows[-1][2] == &quot;0&quot;</p>
+<p>=== END AC balance-report-empty ===</p>
+<p>=== AC balance-report-computes-persisted-state ===<br>Intent: The report reflects persisted account counts and balances after transactions. from cli.testing import cli_runner import csv import io import os import tempfile</p>
+<p>with tempfile.TemporaryDirectory() as directory: os.environ[&quot;DATABASE_URL&quot;] = os.path.join(directory, &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;B&quot;, &quot;Second&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;First&quot;)[0] == 0 assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;C&quot;, &quot;Category&quot;)[0] == 0 assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;C&quot;, &quot;12.50&quot;, &quot;2026-01-01&quot;)[0] == 0 assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;B&quot;, &quot;C&quot;, &quot;3.25&quot;, &quot;2026-01-02&quot;)[0] == 0</p>
+<p>code, output, _ = cli_runner(&quot;report&quot;, &quot;balances&quot;) assert code == 0 rows = list(csv.reader(io.StringIO(output))) assert [row[0] for row in rows[1:-1]] == [&quot;A&quot;, &quot;B&quot;] assert rows[1][2] == &quot;1&quot; assert rows[1][3] == &quot;12.50&quot; assert rows[-1][2] == &quot;2&quot; assert rows[-1][3] == &quot;15.75&quot;</p>
+<p>=== END AC balance-report-computes-persisted-state ===</p>
+<p>=== AC balance-report-missing-database ===<br>Intent: A balances report against an unavailable database path returns an operational failure. from cli.testing import cli_runner import os import tempfile</p>
+<p>with tempfile.TemporaryDirectory() as directory: os.environ[&quot;DATABASE_URL&quot;] = os.path.join(directory, &quot;missing&quot;, &quot;ledger.db&quot;) code, output, _ = cli_runner(&quot;report&quot;, &quot;balances&quot;) assert code == 1 assert output == &quot;&quot;</p>
+<p>=== END AC balance-report-missing-database ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Account rows are ordered by account code.</li><li>Totals are computed from database rows, never hardcoded.</li><li>Amounts are stored as integer cents and rendered with two decimals.</li></ul></article>
+</main>
+</body>
+</html>

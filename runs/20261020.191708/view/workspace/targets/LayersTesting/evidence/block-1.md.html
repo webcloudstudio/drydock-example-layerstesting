@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-1.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-1.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-1.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 1 · Foundational (block-1)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 2736</li><li>execution id: 20261020.192229.000Z-69c8fe37</li></ul>
+<h2>Stories built</h2>
+<ul><li>Define the ledger application boundaries and technical structure. (architecture) [story]</li></ul>
+<h2>Reusable compacts</h2>
+<ul><li>ARCHITECTURE_compact.md</li></ul>
+<h2>Stacked context</h2>
+<ul><li>implements: python.md (SP 761)</li><li>compass: COMPASS.md (SP 755)</li><li>implements: ARCHITECTURE.md (SP 918)</li><li>context: TECHNOLOGY_STACK.md (SP 239)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>bin/test.sh</li><li>cli.py</li><li>configuration.py</li><li>ledger</li><li>persistence/<strong>init</strong>.py</li><li>pyproject.toml</li><li>reports.py</li><li>services.py</li><li>tests/test_architecture.py</li><li>uv.lock</li><li>validation.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>RED: architecture-imports (ARCHITECTURE.md)</li></ul>
+<p>intent: The built application exposes the selected CLI and persistence foundation packages. return code: 1 stderr: Traceback (most recent call last): File &quot;architecture-imports.py&quot;, line 3, in &lt;module&gt; cli_module = import_module(&quot;cli&quot;) ^^^^^^^^^^^^^^^^^^^^ File &quot;/home/barlo/.local/share/uv/python/cpython-3.12.13-linux-x86_64-gnu/lib/python3.12/importlib/<strong>init</strong>.py&quot;, line 90, in import_module return _bootstrap._gcd_import(name[level:], package, level) ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 1387, in _gcd_import File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 1360, in _find_and_load File &quot;&lt;frozen importlib._bootstrap&gt;&quot;, line 1324, in _find_and_load_unlocked<br>ModuleNotFoundError: No module named &#x27;cli&#x27;</p>
+<ul><li>RED: architecture-cli-contract (ARCHITECTURE.md)</li></ul>
+<p>intent: The CLI foundation exposes an in-process callable accepting an argument list. error: foundation not built: <code>cli</code> is the package the cli foundation (cli.md) builds, and the build directory has no <code>cli/</code>. The criterion exercises the built application, so it was not run.</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: architecture-imports (ARCHITECTURE.md)</li></ul>
+<p>intent: The built application exposes the selected CLI and persistence foundation packages. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: architecture-cli-contract (ARCHITECTURE.md)</li></ul>
+<p>intent: The CLI foundation exposes an in-process callable accepting an argument list. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Build summary</h2>
+<p>&lt;reusable-compact filename=&quot;ARCHITECTURE.md&quot;&gt; Expose <code>cli.main(argv)</code> and <code>persistence.open_database(dsn)</code>. Use boundaries for configuration, validation/services, persistence callers, reporting, and CLI dispatch. Resolve databases via <code>DATABASE_URL</code>, <code>DATABASE_PATH</code>, then <code>data/app.db</code>. Keep all monetary values as integer cents; application code must not access database drivers directly. CLI exit codes: 0 success, 1 operational failure, 2 usage error, 3 rejected input/invariant violation, 4 absent record. &lt;/reusable-compact&gt;</p>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>pyproject.toml</li><li>uv.lock</li><li>cli.py</li><li>configuration.py</li><li>validation.py</li><li>services.py</li><li>reports.py</li><li>persistence/<strong>init</strong>.py</li><li>ledger</li><li>bin/test.sh</li><li>tests/test_architecture.py</li></ul>
+<p>SUMMARY: Implemented the foundational Python architecture, CLI contract, configuration precedence, validation/service/report boundaries, persistence facade, executable launcher, and tests. <code>pytest</code>, <code>sh bin/test.sh</code>, and launcher checks pass.</p>
+<p>BLOCKERS:</p>
+<ul><li>None</li></ul></article>
+</main>
+</body>
+</html>

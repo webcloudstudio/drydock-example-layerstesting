@@ -1,0 +1,24 @@
+<reusable-compact filename="ARCHITECTURE.md">
+Expose `cli.main(argv)` and `persistence.open_database(dsn)`. Use boundaries for configuration, validation/services, persistence callers, reporting, and CLI dispatch. Resolve databases via `DATABASE_URL`, `DATABASE_PATH`, then `data/app.db`. Keep all monetary values as integer cents; application code must not access database drivers directly. CLI exit codes: 0 success, 1 operational failure, 2 usage error, 3 rejected input/invariant violation, 4 absent record.
+</reusable-compact>
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- pyproject.toml
+- uv.lock
+- cli.py
+- configuration.py
+- validation.py
+- services.py
+- reports.py
+- persistence/__init__.py
+- ledger
+- bin/test.sh
+- tests/test_architecture.py
+
+SUMMARY:
+Implemented the foundational Python architecture, CLI contract, configuration precedence, validation/service/report boundaries, persistence facade, executable launcher, and tests. `pytest`, `sh bin/test.sh`, and launcher checks pass.
+
+BLOCKERS:
+- None

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-8.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-8.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-8.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 8 · Service (block-8)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 7436</li><li>execution id: 20261020.193309.606Z-09487d6c</li></ul>
+<h2>Stories built</h2>
+<ul><li>Add, read, rename, and delete ledger accounts. (account-management) [story]</li></ul>
+<h2>Missing context</h2>
+<ul><li>context: INSTRUCTIONS.md</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 601)</li><li>compass: COMPASS.md (SP 755)</li><li>implements: FEATURE-Account-Management.md (SP 928)</li><li>context: ARCHITECTURE_compact.md (SP 154)</li><li>context: DATABASE_compact.md (SP 163)</li><li>stack: cli.md (SP 1755)</li><li>stack: persistence_compact.md (SP 1217)</li><li>stack: sqlite.md (SP 1818)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>cli/<strong>init</strong>.py</li><li>tests/test_account_management.py</li><li>validation.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>GREEN (prepassed): account-crud-roundtrip (FEATURE-Account-Management.md)</li></ul>
+<p>intent: Account creation, retrieval, rename, and deletion persist through the public CLI. return code: 0</p>
+<ul><li>GREEN (prepassed): account-rejection-contract (FEATURE-Account-Management.md)</li></ul>
+<p>intent: Duplicate, invalid, absent, and in-use account operations return their specified statuses. return code: 0</p>
+<ul><li>RED: account-in-use-protection (FEATURE-Account-Management.md)</li></ul>
+<p>intent: An account with a transaction cannot be deleted. return code: 1 stderr: Traceback (most recent call last): File &quot;account-in-use-protection.py&quot;, line 12, in &lt;module&gt; assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;)[0] == 0 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ AssertionError</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: account-crud-roundtrip (FEATURE-Account-Management.md)</li></ul>
+<p>intent: Account creation, retrieval, rename, and deletion persist through the public CLI. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: account-rejection-contract (FEATURE-Account-Management.md)</li></ul>
+<p>intent: Duplicate, invalid, absent, and in-use account operations return their specified statuses. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: account-in-use-protection (FEATURE-Account-Management.md)</li></ul>
+<p>intent: An account with a transaction cannot be deleted. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Build summary</h2>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>cli/<strong>init</strong>.py</li><li>validation.py</li><li>tests/test_account_management.py</li></ul>
+<p>SUMMARY: Implemented account CRUD validation, balance reporting, duplicate/not-found handling, and transaction-use deletion protection. Added supporting category creation and comprehensive tests.</p>
+<p>Verified: project tests passed; all 43 harness checks passed; declared account acceptance passed.</p>
+<p>BLOCKERS:</p>
+<ul><li>None</li></ul></article>
+</main>
+</body>
+</html>

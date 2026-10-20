@@ -1,0 +1,11 @@
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli/__init__.py
+- tests/test_category_report.py
+
+SUMMARY:
+Implemented category reports with code ordering and added focused coverage for zero-activity categories, flows, totals, and empty ledgers. `pytest` and all 43 harness checks pass.
+
+BLOCKERS:
+- None

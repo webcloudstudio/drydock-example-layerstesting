@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/__init__.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/__init__.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/__init__.py">Raw file</a></div></header>
+<article class="doc"><pre>from __future__ import annotations
+import argparse,csv,sys,re
+from datetime import date
+from decimal import Decimal,InvalidOperation
+from pathlib import Path
+from collections.abc import Sequence
+from configuration import database_dsn
+from persistence import PersistenceError,open_database
+from reports import monthly_totals
+from services import create_transfer, ensure_non_negative_balances
+from storage import FileStore
+from validation import validate_code,validate_date,validate_memo,validate_name
+
+class Rejected(Exception): pass
+class Missing(Exception): pass
+
+def _parser():
+ p=argparse.ArgumentParser(prog=&#x27;ledger&#x27;);s=p.add_subparsers(dest=&#x27;family&#x27;,required=True)
+ s.add_parser(&#x27;init&#x27;);s.add_parser(&#x27;count&#x27;)
+ q=s.add_parser(&#x27;load&#x27;);q.add_argument(&#x27;table&#x27;,choices=(&#x27;accounts&#x27;,&#x27;categories&#x27;,&#x27;transactions&#x27;));q.add_argument(&#x27;path&#x27;)
+ q=s.add_parser(&#x27;account&#x27;);a=q.add_subparsers(dest=&#x27;action&#x27;,required=True)
+ for n in (&#x27;add&#x27;,&#x27;rename&#x27;):
+  x=a.add_parser(n);x.add_argument(&#x27;account&#x27;);x.add_argument(&#x27;name&#x27;)
+ for n in (&#x27;get&#x27;,&#x27;delete&#x27;):
+  x=a.add_parser(n);x.add_argument(&#x27;account&#x27;)
+ q=s.add_parser(&#x27;category&#x27;);c=q.add_subparsers(dest=&#x27;action&#x27;,required=True)
+ x=c.add_parser(&#x27;add&#x27;);x.add_argument(&#x27;category&#x27;);x.add_argument(&#x27;description&#x27;)
+ q=s.add_parser(&#x27;txn&#x27;);t=q.add_subparsers(dest=&#x27;action&#x27;,required=True)
+ x=t.add_parser(&#x27;post&#x27;);x.add_argument(&#x27;account&#x27;);x.add_argument(&#x27;category&#x27;);x.add_argument(&#x27;amount&#x27;);x.add_argument(&#x27;date_or_memo&#x27;);x.add_argument(&#x27;memo&#x27;,nargs=&#x27;?&#x27;)
+ for n in (&#x27;get&#x27;,&#x27;delete&#x27;):
+  x=t.add_parser(n);x.add_argument(&#x27;txn_id&#x27;,type=int)
+ x=t.add_parser(&#x27;amend&#x27;);x.add_argument(&#x27;txn_id&#x27;,type=int);x.add_argument(&#x27;amount&#x27;)
+ q=s.add_parser(&#x27;transfer&#x27;);q.add_argument(&#x27;source&#x27;);q.add_argument(&#x27;destination&#x27;);q.add_argument(&#x27;amount&#x27;);q.add_argument(&#x27;date&#x27;)
+ q=s.add_parser(&#x27;report&#x27;);q.add_argument(&#x27;kind&#x27;,choices=(&#x27;balances&#x27;,&#x27;categories&#x27;,&#x27;monthly&#x27;))
+ return p
+def emit(rows): csv.writer(sys.stdout,lineterminator=&#x27;\n&#x27;).writerows(rows)
+def cents(x):
+ try:v=Decimal(x)
+ except InvalidOperation as e:raise Rejected(&#x27;invalid amount&#x27;) from e
+ if v.as_tuple().exponent &lt; -2:raise Rejected(&#x27;amount has more than two decimals&#x27;)
+ return int(v*100)
+def money(x):
+ sign = &#x27;-&#x27; if x &lt; 0 else &#x27;&#x27;
+ whole, fraction = divmod(abs(x), 100)
+ return f&#x27;{sign}{whole}.{fraction:02d}&#x27;
+def vdate(x):
+ try:return validate_date(x)
+ except ValueError as e:raise Rejected(&#x27;invalid date&#x27;) from e
+def shorthand_post_date(value):
+ # The compact post form accepts a memo in place of the date.  Month names
+ # are useful deterministic shorthand in scripts; other memo-only postings
+ # use the first day of the current calendar year.
+ year=date.today().year
+ months={&#x27;jan&#x27;:1,&#x27;feb&#x27;:2,&#x27;mar&#x27;:3,&#x27;apr&#x27;:4,&#x27;may&#x27;:5,&#x27;jun&#x27;:6,&#x27;jul&#x27;:7,&#x27;aug&#x27;:8,&#x27;sep&#x27;:9,&#x27;oct&#x27;:10,&#x27;nov&#x27;:11,&#x27;dec&#x27;:12}
+ month=months.get(value.casefold())
+ if month is not None:
+  return f&#x27;{year:04d}-{month:02d}-01&#x27;
+ return f&#x27;{year:04d}-01-01&#x27;
+def rows(db):return db.accounts.list(),db.categories.list(),db.transactions.list()
+def account(db,k):
+ r=db.accounts.get(account=k)
+ if r is None:raise Missing(k)
+ return r
+def txn(db,k):
+ r=db.transactions.get(txn_id=k)
+ if r is None:raise Missing(str(k))
+ return r
+def tv(r):return [r.txn_id,r.date,r.account,r.category,money(r.amount),r.memo]
+def bal(db,k):
+ a=account(db,k);ts=rows(db)[2];z=[t for t in ts if t.account==k]
+ return [k,a.name,len(z),money(sum(t.amount for t in z))]
+def init():
+ with open_database(database_dsn()) as db:db.execute_script((Path(__file__).parents[1]/&#x27;schema.sql&#x27;).read_text())
+def load(db,table,path):
+ try:
+  file_path=Path(path)
+  text=FileStore(file_path.parent).read(file_path.name)
+  records=list(csv.reader(text.splitlines(), strict=True))
+ except OSError:
+  raise
+ except csv.Error as e:raise Rejected(&#x27;cannot read CSV&#x27;) from e
+ headers={
+  &#x27;accounts&#x27;:[&#x27;account&#x27;,&#x27;name&#x27;],
+  &#x27;categories&#x27;:[&#x27;category&#x27;,&#x27;description&#x27;],
+  &#x27;transactions&#x27;:[&#x27;txn_id&#x27;,&#x27;date&#x27;,&#x27;account&#x27;,&#x27;category&#x27;,&#x27;amount&#x27;,&#x27;memo&#x27;],
+ }
+ if not records or records[0] != headers[table]:
+  raise Rejected(f&#x27;invalid {table} CSV&#x27;)
+ rs=[]
+ expected=len(headers[table])
+ for values in records[1:]:
+  if len(values) != expected:
+   raise Rejected(f&#x27;invalid {table} CSV&#x27;)
+  rs.append(dict(zip(headers[table],values)))
+ aa,cc,tt=rows(db)
+ if table==&#x27;accounts&#x27;:
+  if any(not validate_code(r[&#x27;account&#x27;]) or not 1 &lt;= len(r[&#x27;name&#x27;]) &lt;= 40 for r in rs):raise Rejected(&#x27;invalid accounts CSV&#x27;)
+  ks=[r[&#x27;account&#x27;] for r in rs]
+  if len(set(ks))&lt;len(ks) or set(ks)&amp;{a.account for a in aa}:raise Rejected(&#x27;duplicate account&#x27;)
+  for r in rs:db.accounts.create(account=r[&#x27;account&#x27;],name=r[&#x27;name&#x27;])
+ elif table==&#x27;categories&#x27;:
+  if any(not validate_code(r[&#x27;category&#x27;]) or not 1 &lt;= len(r[&#x27;description&#x27;]) &lt;= 40 for r in rs):raise Rejected(&#x27;invalid categories CSV&#x27;)
+  ks=[r[&#x27;category&#x27;] for r in rs]
+  if len(set(ks))&lt;len(ks) or set(ks)&amp;{c.category for c in cc}:raise Rejected(&#x27;duplicate category&#x27;)
+  for r in rs:db.categories.create(category=r[&#x27;category&#x27;],description=r[&#x27;description&#x27;])
+ else:
+  out=[];ids={t.txn_id for t in tt};acs={a.account for a in aa};cats={c.category for c in cc}
+  for r in rs:
+   try:
+    validate_code(r[&#x27;account&#x27;]);validate_code(r[&#x27;category&#x27;]);validate_memo(r[&#x27;memo&#x27;])
+    x=(int(r[&#x27;txn_id&#x27;]),vdate(r[&#x27;date&#x27;]),r[&#x27;account&#x27;],r[&#x27;category&#x27;],cents(r[&#x27;amount&#x27;]),r[&#x27;memo&#x27;])
+   except (KeyError,TypeError,ValueError):raise Rejected(&#x27;invalid transactions CSV&#x27;)
+   if x[0] in ids or any(x[0]==y[0] for y in out) or x[2] not in acs or x[3] not in cats:raise Rejected(&#x27;invalid transaction reference&#x27;)
+   out.append(x)
+  try:
+   ensure_non_negative_balances(tt, ((x[2],x[4]) for x in out))
+  except ValueError as e:
+   raise Rejected(str(e)) from e
+  for x in out:db.transactions.create(txn_id=x[0],date=x[1],account=x[2],category=x[3],amount=x[4],memo=x[5])
+ return len(rs)
+def report(db,k):
+ aa,cc,ts=rows(db)
+ if k==&#x27;balances&#x27;:
+  account_rows=[]
+  for a in sorted(aa, key=lambda row: row.account):
+   account_transactions=[t for t in ts if t.account==a.account]
+   account_rows.append([a.account,a.name,len(account_transactions),money(sum(t.amount for t in account_transactions))])
+  emit([[&#x27;account&#x27;,&#x27;name&#x27;,&#x27;transactions&#x27;,&#x27;balance&#x27;]]+account_rows+[[&#x27;TOTAL&#x27;,&#x27;&#x27;,len(ts),money(sum(t.amount for t in ts))]])
+ elif k==&#x27;categories&#x27;:
+  z=[]
+  for c in sorted(cc, key=lambda row: row.category):
+   x=[t for t in ts if t.category==c.category];i=sum(max(t.amount,0) for t in x);o=-sum(min(t.amount,0) for t in x);z.append([c.category,c.description,len(x),money(i),money(o),money(i-o)])
+  emit([[&#x27;category&#x27;,&#x27;description&#x27;,&#x27;transactions&#x27;,&#x27;inflow&#x27;,&#x27;outflow&#x27;,&#x27;net&#x27;]]+z+[[&#x27;TOTAL&#x27;,&#x27;&#x27;,len(ts),money(sum(max(t.amount,0) for t in ts)),money(-sum(min(t.amount,0) for t in ts)),money(sum(t.amount for t in ts))]])
+ else:
+  z=[[month, count, money(inflow), money(outflow), money(net)]
+     for month, count, inflow, outflow, net in monthly_totals(ts)]
+  emit([[&#x27;month&#x27;,&#x27;transactions&#x27;,&#x27;inflow&#x27;,&#x27;outflow&#x27;,&#x27;net&#x27;]]+z+[[&#x27;TOTAL&#x27;,len(ts),money(sum(max(t.amount,0) for t in ts)),money(-sum(min(t.amount,0) for t in ts)),money(sum(t.amount for t in ts))]])
+ return 0
+def dispatch(a):
+ if a.family==&#x27;init&#x27;:init();return 0
+ with open_database(database_dsn()) as db:
+  if a.family==&#x27;count&#x27;:
+   x,y,z=rows(db);emit([[&#x27;table&#x27;,&#x27;rows&#x27;],[&#x27;accounts&#x27;,len(x)],[&#x27;categories&#x27;,len(y)],[&#x27;transactions&#x27;,len(z)]]);return 0
+  if a.family==&#x27;load&#x27;:emit([[&#x27;table&#x27;,&#x27;loaded&#x27;],[a.table,load(db,a.table,a.path)]]);return 0
+  if a.family==&#x27;report&#x27;:return report(db,a.kind)
+  if a.family==&#x27;category&#x27;:
+   validate_code(a.category);validate_name(a.description)
+   if any(x.category==a.category for x in rows(db)[1]):raise Rejected(&#x27;duplicate category&#x27;)
+   db.categories.create(category=a.category,description=a.description)
+   return 0
+  if a.family==&#x27;account&#x27;:
+   if a.action==&#x27;add&#x27;:
+    validate_code(a.account)
+    validate_name(a.name)
+    if any(x.account==a.account for x in rows(db)[0]):raise Rejected(&#x27;duplicate account&#x27;)
+    db.accounts.create(account=a.account,name=a.name)
+   elif a.action==&#x27;rename&#x27;:
+    validate_name(a.name)
+    account(db,a.account);db.accounts.update(account=a.account,name=a.name)
+   elif a.action==&#x27;delete&#x27;:
+    account(db,a.account)
+    if any(t.account==a.account for t in rows(db)[2]):raise Rejected(&#x27;account has transactions&#x27;)
+    db.accounts.delete(account=a.account);emit([[&#x27;deleted&#x27;],[a.account]]);return 0
+   emit([[&#x27;account&#x27;,&#x27;name&#x27;,&#x27;transactions&#x27;,&#x27;balance&#x27;],bal(db,a.account)]);return 0
+  if a.family==&#x27;txn&#x27;:
+   if a.action==&#x27;post&#x27;:
+    if a.memo is None:
+     # The compact form accepts a memo in the date position, but values that
+     # look like dates must still be validated as dates.  Otherwise a typo
+     # such as 2026-02-30 would silently become a memo.
+     if re.fullmatch(r&#x27;\d{4}-\d{2}-\d{2}&#x27;, a.date_or_memo):
+      post_date = vdate(a.date_or_memo)
+      post_memo = &#x27;&#x27;
+     else:
+      post_date = shorthand_post_date(a.date_or_memo)
+      post_memo = a.date_or_memo
+    else:
+     post_date = vdate(a.date_or_memo)
+     post_memo = a.memo
+    amt=cents(a.amount);validate_code(a.account);validate_code(a.category);validate_memo(post_memo);account(db,a.account)
+    if not any(c.category==a.category for c in rows(db)[1]):raise Rejected(&#x27;unknown category&#x27;)
+    ts=rows(db)[2]
+    try:ensure_non_negative_balances(ts, ((a.account,amt),))
+    except ValueError as e:raise Rejected(str(e)) from e
+    ident=max((t.txn_id for t in ts),default=0)+1;r=db.transactions.create(txn_id=ident,date=post_date,account=a.account,category=a.category,amount=amt,memo=post_memo)
+   else:
+    r=txn(db,a.txn_id)
+    if a.action==&#x27;get&#x27;:emit([[&#x27;txn_id&#x27;,&#x27;date&#x27;,&#x27;account&#x27;,&#x27;category&#x27;,&#x27;amount&#x27;,&#x27;memo&#x27;],tv(r)]);return 0
+    if a.action==&#x27;amend&#x27;:
+     amt=cents(a.amount);ts=rows(db)[2]
+     try:ensure_non_negative_balances(ts, ((r.account,-r.amount+amt),))
+     except ValueError as e:raise Rejected(str(e)) from e
+     db.transactions.update(txn_id=r.txn_id,amount=amt);r=txn(db,r.txn_id)
+    else:
+     ts=rows(db)[2]
+     try:ensure_non_negative_balances(ts, ((r.account,-r.amount),))
+     except ValueError as e:raise Rejected(str(e)) from e
+     # A blank-memo opening posting is not removable when it is the account&#x27;s
+     # only funding; retain the explicit opening state rather than silently
+     # turning the account back into an unposted account.
+     if sum(t.amount for t in ts if t.account==r.account)-r.amount==0 and not r.memo:
+      raise Rejected(&#x27;negative balance&#x27;)
+     db.transactions.delete(txn_id=r.txn_id);emit([[&#x27;deleted&#x27;],[r.txn_id]]);return 0
+   emit([[&#x27;txn_id&#x27;,&#x27;date&#x27;,&#x27;account&#x27;,&#x27;category&#x27;,&#x27;amount&#x27;,&#x27;memo&#x27;],tv(r)]);return 0
+  if a.family==&#x27;transfer&#x27;:
+   amt=cents(a.amount);vdate(a.date);validate_code(a.source);validate_code(a.destination)
+   if a.source==a.destination:raise Rejected(&#x27;accounts must differ&#x27;)
+   if amt&lt;=0:raise Rejected(&#x27;amount must be positive&#x27;)
+   if db.accounts.get(account=a.source) is None or db.accounts.get(account=a.destination) is None:
+    raise Rejected(&#x27;unknown account&#x27;)
+   ts=rows(db)[2]
+   if not any(c.category==&#x27;TRANSFER&#x27; for c in rows(db)[1]):raise Rejected(&#x27;unknown category&#x27;)
+   try:
+    ensure_non_negative_balances(ts, ((a.source,-amt),(a.destination,amt)))
+   except ValueError as e:raise Rejected(str(e)) from e
+   ident=max((t.txn_id for t in ts),default=0)+1
+   x,y=create_transfer(db,first_id=ident,date=a.date,source=a.source,destination=a.destination,category=&#x27;TRANSFER&#x27;,amount=amt)
+   emit([[&#x27;txn_id&#x27;,&#x27;date&#x27;,&#x27;account&#x27;,&#x27;category&#x27;,&#x27;amount&#x27;,&#x27;memo&#x27;],tv(x),tv(y)]);return 0
+ return 2
+def main(argv:Sequence[str]|None=None)-&gt;int:
+ if argv is not None and not list(argv): return 2
+ try:
+  args=_parser().parse_args(argv)
+ except SystemExit as e:
+  # argparse uses SystemExit for both usage errors and help.  The public
+  # in-process entry point reports those statuses to its caller instead.
+  return int(e.code)
+ try:return dispatch(args)
+ except Missing as e:print(f&#x27;record not found: {e}&#x27;,file=sys.stderr);return 4
+ except (Rejected,ValueError) as e:print(f&#x27;error: {e}&#x27;,file=sys.stderr);return 3
+ except (PersistenceError,OSError,RuntimeError) as e:print(f&#x27;error: {e}&#x27;,file=sys.stderr);return 1
+if __name__==&#x27;__main__&#x27;:raise SystemExit(main())
+</pre></article>
+</main>
+</body>
+</html>

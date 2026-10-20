@@ -1,0 +1,3 @@
+<!-- Compacted from DATABASE.md sha256=fce590c2ef857d4ed0e9d1ba21fdfcbe1ec8cde7fea03986bcae3670b48a70f3 on 2026-10-20 by drydock build agent -->
+
+Relational ledger persistence uses `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`. Tables: `accounts(account VARCHAR(12) PK, name VARCHAR(40))`; `categories(category VARCHAR(12) PK, description VARCHAR(40))`; `transactions(txn_id INTEGER PK, date VARCHAR(10), account/category foreign keys, amount INTEGER cents, memo VARCHAR(60))`. Foreign keys are enforced; initialization recreates all tables empty; rejected operations preserve existing rows; callers use only `persistence.open_database`.

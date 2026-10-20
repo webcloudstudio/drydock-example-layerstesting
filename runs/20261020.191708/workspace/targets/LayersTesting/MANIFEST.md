@@ -1,0 +1,431 @@
+# MANIFEST: LayersTesting
+updated:     2026-10-20T19:20:18+00:00
+state:       approved
+blocks:      16
+
+applied_specs: |
+  ARCHITECTURE.md sha256=720369e5d325d4742ec589bc3a3c05da95245579b7fb57132fcecddad782b7e6 commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-1 applied_at=2026-10-20T19:23:10+00:00 build_sha256=2d65fa9c794bef3184794d0db33ff629cf77d431ef3a7da3fc5dd3a1daa19658
+  ARCHITECTURE_compact.md sha256=453891011d17f9754d2f1976dd0efee197ed24f0e8c4246ecf186e94cc74610c commit=474cf99d95615a49d03e0257e69596e1876132eb applied_by=block-16 applied_at=2026-10-20T19:55:44+00:00 build_sha256=453891011d17f9754d2f1976dd0efee197ed24f0e8c4246ecf186e94cc74610c
+  DATABASE.md sha256=fce590c2ef857d4ed0e9d1ba21fdfcbe1ec8cde7fea03986bcae3670b48a70f3 commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-2 applied_at=2026-10-20T19:24:48+00:00 build_sha256=24d72eaf4ed2952cd68a82914af172fc5c82cc849c6b00a4d44bc74323347ea3 database_operations=FEATURE-DB-001:9c80541aae1d02af29f2c29ade6327d260dfc6fb4458b273770c5f76bf21c70a;FEATURE-DB-002:6b431d9a6699e81168a7fc9ad2bdfe23aeb15f699413a7ad90c64a0ce52ce7e6;FEATURE-DB-003:96d4acef689a34b7abc7a63f1b125b4a87d29c58062206765e26b36cdd0bd27b;FEATURE-DB-004:5468aa43e292d2a33de59b15eedf115f96b5c025adc9e92bb85efb99ce2ba51b;FEATURE-DB-005:40a556492191eddc97c171ff5ebfc03c59492fe4aaa0329c1c50b728574c5c6e;FEATURE-DB-006:2f417ffc2f56d12f1f0f0b15c411223341a26d9295a83f7a6c4ca0142c05f9ff;FEATURE-DB-007:c462799c6ca29ee70ca5dfeccfc9a4933dce3ed1e15cbf9708f1182e788222b5
+  DATABASE_compact.md sha256=a11c312b993c3588aed1f7e8822fd9e318019e07640e5118a0281824bec65286 commit=6970f77452bea08f5673ae66c2c08d61710b0977 applied_by=block-16 applied_at=2026-10-20T19:55:44+00:00 build_sha256=a11c312b993c3588aed1f7e8822fd9e318019e07640e5118a0281824bec65286
+  FEATURE-Account-Category-Loading.md sha256=daec4205b7efc501db35996f71b4858edd07e4ffc173bca4108b291a1d749006 commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-6 applied_at=2026-10-20T19:31:59+00:00 build_sha256=8494e5c3c6dfb46056da3d594939f4e0118ab0dc40a279ca71ae08fad6853921
+  FEATURE-Account-Management.md sha256=0158b302ea133b9db4f3c6423b3646d148079e89ab854fedac93be9f6088b10f commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-8 applied_at=2026-10-20T19:34:38+00:00 build_sha256=87bfe9f6830fb57742a2670518cc853d63d30864f2b1ce01dff2b1d1424c405c
+  FEATURE-Balance-Invariant.md sha256=0f1d0f0798e7ce367ec552926bdde317cc61b84f551367471aa8a8097b2d6c39 commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-10 applied_at=2026-10-20T19:38:32+00:00 build_sha256=aedb454b7ad083d64171208c72fa0bd0eeedc44a3a3a3f8b6c72487a30e4bb27
+  FEATURE-CLI-Dispatcher.md sha256=8c3ed44dba0cb12f52864296a35158f1dc1bc520ad0b7abdc8183bdb9d6ec6b3 commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-4 applied_at=2026-10-20T19:29:30+00:00 build_sha256=20193dd4399675ef8af3c4572b2bbc404321e468e8dd04e409b798934eb2d763
+  FEATURE-CLI-Validation.md sha256=5c194d4954dc3ee94d1a4c6ab34699d80a84726df24fb20ae57cc0ccbde19bd5 commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-5 applied_at=2026-10-20T19:30:34+00:00 build_sha256=352c34ed6021151dcac8f0008b2c65e511ffe8d21a0d8d53c961ebaa8e0585ff
+  FEATURE-Conformance.md sha256=44fa5004bae773c5e7675081527a484115e21f0926c7736479fc9578d2d9a429 commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-16 applied_at=2026-10-20T19:55:44+00:00 build_sha256=3d2b7dd2c65c9ef13c33a99d87ea889639f95cdd21b223a77062c6b3d1e84d43
+  FEATURE-Database-Configuration.md sha256=47f96d242ab38164025f5643e586e03e5dff2ee0a7a4dc103d91c283211c018a commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-3 applied_at=2026-10-20T19:25:46+00:00 build_sha256=d8a10c5de19b0ca36acfea639c51b610537655f1b23ba3f1488122735e47040a
+  FEATURE-Project-Tests.md sha256=3539b0b5415388cc247dd9cc6335184643670db7e6929781aa11a7ee35f31920 commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-15 applied_at=2026-10-20T19:51:00+00:00 build_sha256=de6567f99522d656bd22b04e4137da473b0578d31249fe6fceb9a977acdac76c
+  FEATURE-Report-Balances.md sha256=4bed261e240fb92e1fb868310ae4124b6c767a18a295dbda03051f158e276e4a commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-12 applied_at=2026-10-20T19:43:21+00:00 build_sha256=82778875ac2c83b263c8dbdf95751396c6eb428eabe95d82c24af8dfdc50a284
+  FEATURE-Report-Categories.md sha256=70844ad4b3103af2094137506e8c6c5cf8591028395403d24c2f2cbadb3a80aa commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-13 applied_at=2026-10-20T19:46:20+00:00 build_sha256=120f55b2ad1353a7b7bb6794ce15c8b170f6c90011ee5883d60b65b23deb596d
+  FEATURE-Report-Monthly.md sha256=8c8202092f35c90762777c3993f386c05a923972f63b54669e0827d3faa86db4 commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-14 applied_at=2026-10-20T19:48:48+00:00 build_sha256=3a64cc1bb09e066dabe17d3d43eda9aa2fabf6d982447ea3d213710e25366067
+  FEATURE-Transaction-Loading.md sha256=62b2b02abf27e3015d09f1468c4f951a6009b52423bdb7d2bb249e41289c720d commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-7 applied_at=2026-10-20T19:33:03+00:00 build_sha256=3f9e7d07b3700a2a53c402228061b692458a92ee3f6cb6a465e0cfff54661e8e
+  FEATURE-Transaction-Management.md sha256=2f1eaf2e6e5600dcf553cbff5c50c1a786e4c68cde33ec588906037a389d8919 commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-9 applied_at=2026-10-20T19:36:36+00:00 build_sha256=ddd520fc91d2243c9b561c1cec603f896ab3ebc721abb6bb61055c596493389c
+  FEATURE-Transfers.md sha256=c26a2f46d5d8398c8bdf32ca56f4dfc7e78e66751e55992feb6ad078459f70c7 commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-11 applied_at=2026-10-20T19:42:06+00:00 build_sha256=f8cf29199f67275640ad0cf24388bdccba09e3e2e9378c577722c95f9ceb5376
+  run.sh sha256=744a2165699ea832a9b8679b0dc2792664336184ec88d63045829c969f6d1639 commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-16 applied_at=2026-10-20T19:55:44+00:00 build_sha256=744a2165699ea832a9b8679b0dc2792664336184ec88d63045829c969f6d1639
+  seed_accounts.csv sha256=48f83f688324264fd811a0a363418c867454043e30ce02bc8bc81683ed28625b commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-16 applied_at=2026-10-20T19:55:44+00:00 build_sha256=48f83f688324264fd811a0a363418c867454043e30ce02bc8bc81683ed28625b
+  seed_categories.csv sha256=265d594bf154ef991105beec15a61241f46bb2b330aff215f9bffad2a0602b43 commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-16 applied_at=2026-10-20T19:55:44+00:00 build_sha256=265d594bf154ef991105beec15a61241f46bb2b330aff215f9bffad2a0602b43
+  seed_transactions.csv sha256=c208c69039e28ebe36c868726a0ed8e3ce5e11d54bb52d636a952631446038da commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-16 applied_at=2026-10-20T19:55:44+00:00 build_sha256=c208c69039e28ebe36c868726a0ed8e3ce5e11d54bb52d636a952631446038da
+  seed_transactions_bad.csv sha256=a7cffd87094d0bec741438e34dd8992f893d2e93ec0d32dad8395502d4b5af46 commit=29fd2f134961ff42cbdeab102ffe32feb21cea85 applied_by=block-16 applied_at=2026-10-20T19:55:44+00:00 build_sha256=a7cffd87094d0bec741438e34dd8992f893d2e93ec0d32dad8395502d4b5af46
+## story 1: Define the ledger application boundaries and technical structure.
+id: architecture
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-1.md
+summary: Define the ledger application boundaries and technical structure.
+type: foundational
+kind: capability
+phase: 1
+block: 1
+implements: ARCHITECTURE.md
+context: TECHNOLOGY_STACK.md
+stack: python.md
+stack_mode: builder
+size: 3497
+provides: application module boundaries
+instructions: |
+  Define the Python application structure, CLI boundary, configuration boundary, service
+  validation boundary, and persistence-library boundary. Document that application code never
+  opens database drivers directly and that all money uses integer cents.
+acceptance: yes
+state: closed/implemented
+
+## story 2: Establish the relational ledger schema and persistence contract.
+id: database-schema
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-2.md
+summary: Establish the relational ledger schema and persistence contract.
+type: foundational
+kind: migration
+phase: 1
+block: 2
+implements: DATABASE.md
+covers: DB-001
+accepts: st-003, st-009
+context: INSTRUCTIONS.md
+stack: python.md, persistence.md, sqlite.md
+stack_mode: builder
+size: 8819
+provides: accounts table, categories table, transactions table, schema initialization
+instructions: |
+  Declare the accounts, categories, and transactions tables and every repository operation
+  required by the ledger. Use integer cents, primary keys, foreign keys, and the shipped
+  persistence package. Ensure init can recreate an empty schema through the persistence
+  boundary.
+acceptance: yes
+depends: architecture
+state: closed/implemented
+
+## story 3: Resolve database configuration and operational failures.
+id: database-configuration
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-3.md
+summary: Resolve database configuration and operational failures.
+type: service
+kind: integration
+phase: 1
+block: 3
+implements: FEATURE-Database-Configuration.md
+covers: DB-002
+context: INSTRUCTIONS.md, ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: python.md, persistence.md, sqlite.md
+stack_mode: consumer
+size: 8725
+provides: DATABASE_URL resolution, DATABASE_PATH fallback, default database path, operational error handling
+consumes: schema initialization
+instructions: |
+  Implement configuration precedence DATABASE_URL, DATABASE_PATH, then data/app.db. Support
+  SQLite paths and PostgreSQL DSNs through open_database only. Report unreachable databases or
+  missing tables as operational failures with exit code 1 and no standard-output data.
+acceptance: yes
+depends: database-schema
+state: closed/implemented
+
+## story 4: Provide the executable ledger command dispatcher and output contract.
+id: cli-dispatch
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-4.md
+summary: Provide the executable ledger command dispatcher and output contract.
+type: foundational
+kind: capability
+phase: 1
+block: 4
+implements: FEATURE-CLI-Dispatcher.md
+covers: CLI-001
+context: INSTRUCTIONS.md, ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: python.md, cli.md
+stack_mode: builder
+size: 7867
+provides: ./ledger, command dispatch, CSV output, exit-code dispatch
+consumes: database configuration
+instructions: |
+  Create the executable ledger entry point and dispatch all documented command families.
+  Centralize success CSV emission, diagnostic stderr handling, and the documented exit-code
+  contract without embedding report answers.
+acceptance: yes
+depends: database-configuration
+state: closed/implemented
+
+## story 5: Validate command names, tables, reports, and argument counts.
+id: cli-validation
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-5.md
+summary: Validate command names, tables, reports, and argument counts.
+type: service
+kind: capability
+phase: 1
+block: 5
+implements: FEATURE-CLI-Validation.md
+covers: CLI-002
+context: INSTRUCTIONS.md, ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: python.md, cli.md
+stack_mode: consumer
+size: 7864
+provides: command usage validation, command help
+consumes: command dispatch
+instructions: |
+  Add consistent usage validation for every command, table, report, and argument shape.
+  Provide discoverable help for each command and sub-verb, returning usage exit code 2 for
+  unknown commands, unknown tables or reports, and wrong argument counts.
+acceptance: yes
+depends: cli-dispatch
+state: closed/implemented
+
+## story 6: Load and validate account and category CSV files atomically.
+id: account-loading
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-6.md
+summary: Load and validate account and category CSV files atomically.
+type: service
+kind: capability
+phase: 2
+block: 6
+implements: FEATURE-Account-Category-Loading.md
+covers: LOAD-001
+accepts: st-004, st-007
+context: seed_accounts.csv, seed_categories.csv, ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: python.md, cli.md, persistence.md, sqlite.md
+stack_mode: consumer
+size: 8916
+provides: load accounts, load categories
+consumes: command dispatch, database configuration, accounts.create, categories.create
+instructions: |
+  Implement ledger load for accounts and categories. Validate readable files, exact headers,
+  codes, names, descriptions, duplicate keys, and atomicity before the first write. Emit the
+  documented loaded table and row count on success.
+acceptance: yes
+depends: cli-validation, database-schema
+state: closed/implemented
+
+## story 7: Load and validate transaction CSV files atomically.
+id: transaction-loading
+finding: ADVISORY: implemented, not verified — every binding criterion this story passed was already green before the story built, so none measured the work. Repair the criteria in the Blueprint to exercise this story and rebuild to obtain a verdict.
+evidence: evidence/block-7.md
+summary: Load and validate transaction CSV files atomically.
+type: service
+kind: capability
+phase: 2
+block: 7
+implements: FEATURE-Transaction-Loading.md
+covers: LOAD-002
+accepts: st-004, st-007, st-008
+context: seed_transactions.csv, seed_transactions_bad.csv, ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: python.md, cli.md, persistence.md, sqlite.md
+stack_mode: consumer
+size: 10656
+provides: load transactions
+consumes: command dispatch, database configuration, transactions.create, accounts.get, categories.get
+instructions: |
+  Implement transaction CSV loading with exact-header validation, field parsing, date and amount
+  validation, duplicate-id detection, reference validation, and prospective non-negative balance
+  checks. Validate the complete file before writing any row and preserve all prior state on
+  rejection.
+acceptance: yes
+depends: account-loading, database-schema
+state: closed/implemented
+
+## story 8: Add, read, rename, and delete ledger accounts.
+id: account-management
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-8.md
+summary: Add, read, rename, and delete ledger accounts.
+type: service
+kind: capability
+phase: 2
+block: 8
+implements: FEATURE-Account-Management.md
+covers: ACCT-001
+accepts: st-006, st-007
+context: INSTRUCTIONS.md, ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: python.md, cli.md, persistence.md, sqlite.md
+stack_mode: consumer
+size: 10655
+provides: account add, account get, account rename, account delete
+consumes: command dispatch, database configuration, accounts.create, accounts.get, accounts.update, accounts.delete
+instructions: |
+  Implement account CRUD commands with code and name validation, duplicate and not-found
+  handling, transaction-use protection on deletion, and balance-aware account row reporting.
+acceptance: yes
+depends: account-loading, transaction-loading
+state: closed/implemented
+
+## story 9: Post, read, amend, and delete ledger transactions.
+id: transaction-management
+finding: ADVISORY: implemented, not verified — every binding criterion this story passed was already green before the story built, so none measured the work. Repair the criteria in the Blueprint to exercise this story and rebuild to obtain a verdict.
+evidence: evidence/block-9.md
+summary: Post, read, amend, and delete ledger transactions.
+type: service
+kind: capability
+phase: 2
+block: 9
+implements: FEATURE-Transaction-Management.md
+covers: TXN-001
+accepts: st-006, st-007
+context: INSTRUCTIONS.md, ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: python.md, cli.md, persistence.md, sqlite.md
+stack_mode: consumer
+size: 10746
+provides: txn post, txn get, txn amend, txn delete
+consumes: command dispatch, database configuration, transactions.create, transactions.get, transactions.update, transactions.delete
+instructions: |
+  Implement transaction CRUD with generated identifiers, exact amount formatting, date and
+  field validation, not-found behavior, and atomic amendment/deletion checks. Preserve all
+  unchanged transaction fields during amendment.
+acceptance: yes
+depends: transaction-loading
+state: closed/implemented
+
+## story 10: Enforce non-negative account balances across all mutations.
+id: balance-invariant
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-10.md
+summary: Enforce non-negative account balances across all mutations.
+type: service
+kind: capability
+phase: 2
+block: 10
+implements: FEATURE-Balance-Invariant.md
+covers: TXN-002
+accepts: st-007, st-008
+context: INSTRUCTIONS.md, ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: python.md, cli.md, persistence.md, sqlite.md
+stack_mode: consumer
+size: 10572
+provides: prospective balance validation
+consumes: transactions.create, transactions.update, transactions.delete
+instructions: |
+  Centralize prospective balance calculation and apply it before posting, amending, deleting,
+  transferring, and loading transactions. Reject any operation that would make an account
+  balance negative without changing any table.
+acceptance: yes
+depends: transaction-management
+state: closed/implemented
+
+## story 11: Execute atomic two-row account transfers.
+id: transfers
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-11.md
+summary: Execute atomic two-row account transfers.
+type: service
+kind: capability
+phase: 2
+block: 11
+implements: FEATURE-Transfers.md
+covers: TRANSFER-001
+accepts: st-007, st-008
+context: INSTRUCTIONS.md, ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: python.md, cli.md, persistence.md, sqlite.md
+stack_mode: consumer
+size: 10809
+provides: transfer
+consumes: command dispatch, transactions.create, accounts.get, categories.get, prospective balance validation
+instructions: |
+  Implement transfer validation and atomic creation of consecutive outgoing and incoming
+  transactions in category TRANSFER with the specified memos. Reject equal or unknown accounts,
+  invalid positive amounts, invalid dates, and insufficient balances before either row is written.
+acceptance: yes
+depends: balance-invariant
+state: closed/implemented
+
+## story 12: Report balances and transaction counts by account.
+id: balance-report
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-12.md
+summary: Report balances and transaction counts by account.
+type: service
+kind: capability
+phase: 2
+block: 12
+implements: FEATURE-Report-Balances.md
+covers: REPORT-001
+context: INSTRUCTIONS.md, ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: python.md, cli.md, persistence.md, sqlite.md
+stack_mode: consumer
+size: 10481
+provides: report balances
+consumes: accounts.list, transactions.list
+instructions: |
+  Implement report balances using database queries, ordering accounts by code, counting each
+  account's transactions, formatting balances as cents, and computing the total row dynamically.
+acceptance: yes
+depends: transaction-management
+state: closed/implemented
+
+## story 13: Report transaction totals by category.
+id: category-report
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-13.md
+summary: Report transaction totals by category.
+type: service
+kind: capability
+phase: 2
+block: 13
+implements: FEATURE-Report-Categories.md
+covers: REPORT-002
+context: INSTRUCTIONS.md, ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: python.md, cli.md, persistence.md, sqlite.md
+stack_mode: consumer
+size: 10535
+provides: report categories
+consumes: categories.list, transactions.list
+instructions: |
+  Implement report categories with zero-activity categories included, code ordering, transaction
+  counts, positive inflow, positive outflow, net totals, and a dynamically computed total row.
+acceptance: yes
+depends: transaction-management
+state: closed/implemented
+
+## story 14: Report transaction totals by calendar month.
+id: monthly-report
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-14.md
+summary: Report transaction totals by calendar month.
+type: service
+kind: capability
+phase: 2
+block: 14
+implements: FEATURE-Report-Monthly.md
+covers: REPORT-003
+context: INSTRUCTIONS.md, ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: python.md, cli.md, persistence.md, sqlite.md
+stack_mode: consumer
+size: 10511
+provides: report monthly
+consumes: transactions.list
+instructions: |
+  Implement report monthly by grouping persisted transactions by YYYY-MM in ascending order,
+  calculating inflow, outflow, net, and the dynamic total row using integer cents.
+acceptance: yes
+depends: transaction-management
+state: closed/implemented
+
+## story 15: Provide the automated project test runner and test suite.
+id: project-tests
+finding: ADVISORY: implemented, not verified — every binding criterion this story passed was already green before the story built, so none measured the work. Repair the criteria in the Blueprint to exercise this story and rebuild to obtain a verdict.
+evidence: evidence/block-15.md
+summary: Provide the automated project test runner and test suite.
+type: service
+kind: test harness
+phase: 3
+block: 15
+implements: FEATURE-Project-Tests.md
+covers: TEST-001
+accepts: st-002
+context: INSTRUCTIONS.md, ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: python.md, pytest.md, common.md
+stack_mode: builder
+size: 8031
+provides: bin/test.sh, pytest suite
+consumes: ledger command surface
+instructions: |
+  Add a POSIX-compatible bin/test.sh and a pytest suite covering commands, exit codes,
+  validation, persistence, atomic rejection, balance invariants, and all reports. The runner
+  must exit zero only when the complete suite passes.
+acceptance: yes
+depends: cli-validation, account-management, transaction-management, transfers, balance-report, category-report, monthly-report
+state: closed/implemented
+
+## story 16: Pass the supplied end-to-end ledger conformance harness.
+id: conformance
+finding: ADVISORY: implemented, not verified — every binding criterion this story passed was already green before the story built, so none measured the work. Repair the criteria in the Blueprint to exercise this story and rebuild to obtain a verdict.
+evidence: evidence/block-16.md
+summary: Pass the supplied end-to-end ledger conformance harness.
+type: service
+kind: test harness
+phase: 4
+block: 16
+implements: FEATURE-Conformance.md
+covers: TEST-002
+accepts: st-001
+context: run.sh, seed_accounts.csv, seed_categories.csv, seed_transactions.csv, seed_transactions_bad.csv, ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: python.md, cli.md, persistence.md, sqlite.md, common.md
+stack_mode: consumer
+size: 12914
+provides: complete supplied conformance verification
+consumes: ledger command surface, bin/test.sh
+instructions: |
+  Run the supplied sources/run.sh from the completed application root as the terminal release
+  verification. Do not modify the supplied harness or fixtures. Ensure the executable, database
+  lifecycle, imports, mutations, transfers, reports, errors, and reinitialization pass together.
+acceptance: yes
+depends: project-tests, balance-report, category-report, monthly-report, transfers, account-management, transaction-management, transaction-loading, account-loading, cli-validation, cli-dispatch, database-configuration, database-schema, architecture, balance-invariant
+state: closed/implemented

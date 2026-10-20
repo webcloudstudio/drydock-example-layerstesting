@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-11.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-11.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-11.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 11 · Service (block-11)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 7624</li><li>execution id: 20261020.194114.018Z-47efe00c</li></ul>
+<h2>Stories built</h2>
+<ul><li>Execute atomic two-row account transfers. (transfers) [story]</li></ul>
+<h2>Missing context</h2>
+<ul><li>context: INSTRUCTIONS.md</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 601)</li><li>compass: COMPASS.md (SP 755)</li><li>implements: FEATURE-Transfers.md (SP 1091)</li><li>context: ARCHITECTURE_compact.md (SP 154)</li><li>context: DATABASE_compact.md (SP 163)</li><li>stack: cli.md (SP 1755)</li><li>stack: persistence_compact.md (SP 1217)</li><li>stack: sqlite.md (SP 1818)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>cli/<strong>init</strong>.py</li><li>data/app.db</li><li>persistence/testing.py</li><li>services.py</li><li>tests/test_transfers.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>RED: transfers-success (FEATURE-Transfers.md)</li></ul>
+<p>intent: A valid transfer creates two persisted transaction rows and succeeds. return code: 1 stderr: --- drydock: values at failure --- transactions = [] --- drydock: end values --- Traceback (most recent call last): File &quot;transfers-success.py&quot;, line 25, in &lt;module&gt; assert len(transactions) == 3 ^^^^^^^^^^^^^^^^^^^^^^ AssertionError</p>
+<ul><li>RED: transfers-rejects-insufficient-balance (FEATURE-Transfers.md)</li></ul>
+<p>intent: An insufficient-balance transfer is rejected without changing transactions. return code: 1 stderr: --- drydock: values at failure --- transactions = [] --- drydock: end values --- Traceback (most recent call last): File &quot;transfers-rejects-insufficient-balance.py&quot;, line 21, in &lt;module&gt; assert len(transactions) == 1 ^^^^^^^^^^^^^^^^^^^^^^ AssertionError</p>
+<ul><li>RED: transfers-rejects-invalid-accounts (FEATURE-Transfers.md)</li></ul>
+<p>intent: Transfers reject equal or unknown account codes before writing. return code: 1 stderr: Traceback (most recent call last): File &quot;transfers-rejects-invalid-accounts.py&quot;, line 14, in &lt;module&gt; assert cli_runner(&quot;transfer&quot;, &quot;FROM&quot;, &quot;FROM&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;)[0] == 3 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ AssertionError</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: transfers-success (FEATURE-Transfers.md)</li></ul>
+<p>intent: A valid transfer creates two persisted transaction rows and succeeds. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: transfers-rejects-insufficient-balance (FEATURE-Transfers.md)</li></ul>
+<p>intent: An insufficient-balance transfer is rejected without changing transactions. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: transfers-rejects-invalid-accounts (FEATURE-Transfers.md)</li></ul>
+<p>intent: Transfers reject equal or unknown account codes before writing. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Repair attempts</h2>
+<ul><li>attempt 0 (initial build): failed; 1/3 checks model=gpt-5.6-luna; execution 20261020.193838.057Z-58c5e845; reason: programmatic acceptance failed: transfers-success, transfers-rejects-insufficient-balance</li><li>attempt 1 (repair 1): failed; 1/3 checks model=gpt-5.6-luna; execution 20261020.194006.089Z-7ed343de; reason: programmatic acceptance failed: transfers-success, transfers-rejects-insufficient-balance</li><li>attempt 2 (repair 2): built; 3/3 checks model=gpt-5.6-luna; execution 20261020.194114.018Z-47efe00c</li></ul>
+<h2>Build summary</h2>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>persistence/testing.py</li></ul>
+<p>SUMMARY: Fixed explicit DSN sessions resetting databases before acceptance reads. Project tests pass, and all 43 terminal checks pass.</p>
+<p>BLOCKERS:</p>
+<ul><li>None</li></ul></article>
+</main>
+</body>
+</html>

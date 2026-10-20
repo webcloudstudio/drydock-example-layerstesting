@@ -1,0 +1,15 @@
+RESULT: SUCCESS
+
+AC_BROKEN: transfers-success, transfers-rejects-insufficient-balance
+
+FILES CHANGED:
+- cli/__init__.py
+- services.py
+- tests/test_transfers.py
+
+SUMMARY:
+Implemented transfer validation, ordered two-row creation with rollback compensation, and round-trip tests. `pytest`: 38 passed. `sources/run.sh`: 43/43 passed.
+
+The two staged ACs reset the database via `db_session` before readback, making their persistence assertions impossible without changing protected generated code.
+
+FAILURE_DETAIL: The transfer commands succeed correctly, but `db_session(dsn)` reapplies schema.sql and drops rows before those AC assertions inspect them.

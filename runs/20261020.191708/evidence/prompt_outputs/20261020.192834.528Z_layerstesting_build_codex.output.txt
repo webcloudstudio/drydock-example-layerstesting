@@ -1,0 +1,12 @@
+RESULT: SUCCESS
+
+FILES CHANGED:
+- validation.py
+- cli/__init__.py
+- tests/test_architecture.py
+
+SUMMARY:
+Added code validation so `BAD-CODE` returns exit code 3 with stderr-only diagnostics. All tests pass, including the 43-check terminal harness.
+
+BLOCKERS:
+- None

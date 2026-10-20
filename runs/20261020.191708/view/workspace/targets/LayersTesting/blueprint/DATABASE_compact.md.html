@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/DATABASE_compact.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/DATABASE_compact.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/DATABASE_compact.md">Raw file</a></div></header>
+<article class="doc"><p>&lt;!-- Compacted from DATABASE.md sha256=fce590c2ef857d4ed0e9d1ba21fdfcbe1ec8cde7fea03986bcae3670b48a70f3 on 2026-10-20 by drydock build agent --&gt;</p>
+<p>Relational ledger persistence uses <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code>. Tables: <code>accounts(account VARCHAR(12) PK, name VARCHAR(40))</code>; <code>categories(category VARCHAR(12) PK, description VARCHAR(40))</code>; <code>transactions(txn_id INTEGER PK, date VARCHAR(10), account/category foreign keys, amount INTEGER cents, memo VARCHAR(60))</code>. Foreign keys are enforced; initialization recreates all tables empty; rejected operations preserve existing rows; callers use only <code>persistence.open_database</code>.</p></article>
+</main>
+</body>
+</html>

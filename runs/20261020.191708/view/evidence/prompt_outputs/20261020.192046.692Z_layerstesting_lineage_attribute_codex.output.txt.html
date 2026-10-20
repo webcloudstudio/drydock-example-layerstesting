@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.192046.692Z_layerstesting_lineage_attribute_codex.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.192046.692Z_layerstesting_lineage_attribute_codex.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.192046.692Z_layerstesting_lineage_attribute_codex.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>&lt;requirement name=&quot;ledger-executable&quot;&gt;
+The deliverable is an executable named ledger at the application root.
+&lt;/requirement&gt;
+&lt;requirement name=&quot;database-configuration&quot;&gt;
+Database: DATABASE_URL when the caller sets it (for example a PostgreSQL DSN), otherwise a SQLite file in a fresh temporary directory.
+&lt;/requirement&gt;
+&lt;requirement name=&quot;schema-lifecycle&quot; stories=&quot;database-schema&quot;&gt;
+Every run starts with `ledger init`, so the grader never depends on prior state.
+&lt;/requirement&gt;
+&lt;requirement name=&quot;bulk-load-dataset&quot; stories=&quot;account-loading,transaction-loading&quot;&gt;
+Bulk load of the known dataset
+&lt;/requirement&gt;
+&lt;requirement name=&quot;balance-reporting&quot; stories=&quot;balance-report&quot;&gt;
+Reports over the seeded rows
+&lt;/requirement&gt;
+&lt;requirement name=&quot;category-reporting&quot; stories=&quot;category-report&quot;&gt;
+Reports over the seeded rows
+&lt;/requirement&gt;
+&lt;requirement name=&quot;monthly-reporting&quot; stories=&quot;monthly-report&quot;&gt;
+Reports over the seeded rows
+&lt;/requirement&gt;
+&lt;requirement name=&quot;atomic-rejected-loads&quot; stories=&quot;account-loading,transaction-loading&quot;&gt;
+A rejected load changes nothing
+&lt;/requirement&gt;
+&lt;requirement name=&quot;account-management&quot; stories=&quot;account-management&quot;&gt;
+Account create, read, update, delete
+&lt;/requirement&gt;
+&lt;requirement name=&quot;transaction-management&quot; stories=&quot;transaction-management&quot;&gt;
+Transaction create, read, update, delete
+&lt;/requirement&gt;
+&lt;requirement name=&quot;safe-transfers&quot; stories=&quot;balance-invariant,transfers&quot;&gt;
+Transfers are atomic; no command leaves a negative balance
+&lt;/requirement&gt;
+&lt;requirement name=&quot;usage-errors&quot; stories=&quot;cli-validation&quot;&gt;
+Usage errors
+&lt;/requirement&gt;
+&lt;requirement name=&quot;reinitialization&quot; stories=&quot;database-schema&quot;&gt;
+Re-initialization drops every row
+&lt;/requirement&gt;
+&lt;requirement name=&quot;conformance&quot; stories=&quot;conformance&quot;&gt;
+Exit 0 only when every check passes.
+&lt;/requirement&gt;
+&lt;unattached story=&quot;architecture&quot;/&gt;
+&lt;unattached story=&quot;project-tests&quot;/&gt;
+</pre></article>
+</main>
+</body>
+</html>

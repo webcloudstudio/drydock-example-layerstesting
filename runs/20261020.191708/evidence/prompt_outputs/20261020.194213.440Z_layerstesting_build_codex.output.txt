@@ -1,0 +1,11 @@
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli/__init__.py
+- tests/test_balance_report.py
+
+SUMMARY:
+Implemented account-code ordering and dynamic balance reporting. Added focused tests. `sh bin/test.sh` passes 39 tests; `sources/run.sh` passes all 43 checks.
+
+BLOCKERS:
+- None

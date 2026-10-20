@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_transaction_loading.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_transaction_loading.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_transaction_loading.py">Raw file</a></div></header>
+<article class="doc"><pre>import csv
+
+from cli.testing import cli_runner
+
+
+def _database(tmp_path, monkeypatch):
+    monkeypatch.setenv(&quot;DATABASE_PATH&quot;, str(tmp_path / &quot;ledger.db&quot;))
+    monkeypatch.delenv(&quot;DATABASE_URL&quot;, raising=False)
+    assert cli_runner(&quot;init&quot;)[0] == 0
+
+
+def _masters(tmp_path):
+    accounts = tmp_path / &quot;accounts.csv&quot;
+    categories = tmp_path / &quot;categories.csv&quot;
+    accounts.write_text(&quot;account,name\nA1,Drawer\n&quot;, encoding=&quot;utf-8&quot;)
+    categories.write_text(&quot;category,description\nC1,Sales\n&quot;, encoding=&quot;utf-8&quot;)
+    return accounts, categories
+
+
+def test_transaction_load_round_trips_integer_cents(tmp_path, monkeypatch):
+    _database(tmp_path, monkeypatch)
+    accounts, categories = _masters(tmp_path)
+    transactions = tmp_path / &quot;transactions.csv&quot;
+    transactions.write_text(
+        &quot;txn_id,date,account,category,amount,memo\n&quot;
+        &quot;1,2026-01-01,A1,C1,12.34,sale\n&quot;,
+        encoding=&quot;utf-8&quot;,
+    )
+
+    assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, str(accounts))[0] == 0
+    assert cli_runner(&quot;load&quot;, &quot;categories&quot;, str(categories))[0] == 0
+    assert cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(transactions))[0] == 0
+
+    code, output, _ = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;)
+    assert code == 0
+    assert list(csv.reader(output.splitlines()))[1] == [
+        &quot;1&quot;, &quot;2026-01-01&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;12.34&quot;, &quot;sale&quot;
+    ]
+
+
+def test_transaction_load_rejects_later_bad_reference_atomically(tmp_path, monkeypatch):
+    _database(tmp_path, monkeypatch)
+    accounts, categories = _masters(tmp_path)
+    transactions = tmp_path / &quot;bad.csv&quot;
+    transactions.write_text(
+        &quot;txn_id,date,account,category,amount,memo\n&quot;
+        &quot;1,2026-01-01,A1,C1,1.00,ok\n&quot;
+        &quot;2,2026-01-01,NOPE,C1,1.00,bad\n&quot;,
+        encoding=&quot;utf-8&quot;,
+    )
+    assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, str(accounts))[0] == 0
+    assert cli_runner(&quot;load&quot;, &quot;categories&quot;, str(categories))[0] == 0
+
+    assert cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(transactions))[0] == 3
+    assert cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;)[0] == 4
+
+
+def test_transaction_load_rejects_header_shape_and_row_shape(tmp_path, monkeypatch):
+    _database(tmp_path, monkeypatch)
+    accounts, categories = _masters(tmp_path)
+    assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, str(accounts))[0] == 0
+    assert cli_runner(&quot;load&quot;, &quot;categories&quot;, str(categories))[0] == 0
+
+    for name, body in {
+        &quot;header.csv&quot;: &quot;id,date,account,category,amount,memo\n&quot;,
+        &quot;short.csv&quot;: &quot;txn_id,date,account,category,amount,memo\n1,2026-01-01,A1,C1,1.00\n&quot;,
+        &quot;extra.csv&quot;: &quot;txn_id,date,account,category,amount,memo\n1,2026-01-01,A1,C1,1.00,x,extra\n&quot;,
+    }.items():
+        path = tmp_path / name
+        path.write_text(body, encoding=&quot;utf-8&quot;)
+        assert cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(path))[0] == 3
+
+
+def test_transaction_load_rejects_invalid_date_amount_duplicate_and_balance(tmp_path, monkeypatch):
+    _database(tmp_path, monkeypatch)
+    accounts, categories = _masters(tmp_path)
+    assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, str(accounts))[0] == 0
+    assert cli_runner(&quot;load&quot;, &quot;categories&quot;, str(categories))[0] == 0
+
+    cases = {
+        &quot;date.csv&quot;: &quot;1,2026-02-30,A1,C1,1.00,x\n&quot;,
+        &quot;amount.csv&quot;: &quot;1,2026-01-01,A1,C1,1.234,x\n&quot;,
+        &quot;duplicate.csv&quot;: &quot;1,2026-01-01,A1,C1,1.00,x\n1,2026-01-01,A1,C1,1.00,y\n&quot;,
+        &quot;balance.csv&quot;: &quot;1,2026-01-01,A1,C1,-1.00,x\n&quot;,
+    }
+    for name, rows in cases.items():
+        path = tmp_path / name
+        path.write_text(&quot;txn_id,date,account,category,amount,memo\n&quot; + rows, encoding=&quot;utf-8&quot;)
+        assert cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(path))[0] == 3
+
+</pre></article>
+</main>
+</body>
+</html>

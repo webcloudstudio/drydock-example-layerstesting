@@ -1,0 +1,143 @@
+# Evidence: Block 16 · Service (block-16)
+
+- block type: block
+- date: 2026-10-20
+- resulting state: closed/verified
+- story points (combined assembled cost): 12630
+- execution id: 20261020.195148.611Z-7522592a
+
+## Stories built
+- Pass the supplied end-to-end ledger conformance harness. (conformance) [story]
+
+## Stacked context
+- stack: python_compact.md (SP 601)
+- compass: COMPASS.md (SP 755)
+- implements: FEATURE-Conformance.md (SP 528)
+- context: run.sh (SP 2129)
+- context: seed_accounts.csv (SP 22)
+- context: seed_categories.csv (SP 40)
+- context: seed_transactions.csv (SP 1425)
+- context: seed_transactions_bad.csv (SP 141)
+- context: ARCHITECTURE_compact.md (SP 154)
+- context: DATABASE_compact.md (SP 163)
+- stack: cli.md (SP 1755)
+- stack: persistence_compact.md (SP 1217)
+- stack: sqlite.md (SP 1818)
+- stack: common.md (SP 1812)
+
+## Build directory changes
+- cli/__main__.py
+
+## Pre-build acceptance observation
+- GREEN (prepassed): conformance-full (FEATURE-Conformance.md)
+  intent: The completed ledger passes the supplied end-to-end conformance harness.
+  return code: 0
+  stdout:
+    PASS A1: ledger init
+    PASS A2: ledger count
+    PASS B1: ledger load accounts /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/sources/seed_accounts.csv
+    PASS B2: ledger load categories /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/sources/seed_categories.csv
+    PASS B3: ledger load transactions /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/sources/seed_transactions.csv
+    PASS B4: ledger count
+    PASS C1: ledger report balances
+    PASS C2: ledger report categories
+    PASS C3: ledger report monthly
+    PASS D1: ledger load transactions /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/sources/seed_transactions_bad.csv
+    PASS D2: ledger load accounts /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/sources/seed_accounts.csv
+    PASS D3: ledger count
+    PASS E1: ledger account add CASH9 Event Float
+    PASS E2: ledger account add CASH9 Event Float
+    PASS E3: ledger account get CASH9
+    PASS E4: ledger account rename CASH9 Event Cash Box
+    PASS E5: ledger account get NOSUCH
+    PASS E6: ledger account delete DRAWER1
+    PASS E7: ledger account delete CASH9
+    PASS E8: ledger account get CASH9
+    PASS F1: ledger txn post DRAWER1 SALES 45.50 2026-04-01 walk in sale
+    PASS F2: ledger txn get 121
+    PASS F3: ledger txn amend 121 54.50
+    PASS F4: ledger txn get 999
+    PASS F5: ledger txn post DRAWER1 NOSUCH 1.00 2026-04-01
+    PASS F6: ledger txn post DRAWER1 SALES 1.234 2026-04-01
+    PASS F7: ledger txn post DRAWER1 SALES 1.00 2026-02-30
+    PASS F8: ledger txn delete 121
+    PASS F9: ledger txn get 121
+    PASS F10: ledger txn post PETTY SUPPLY -12.34 2026-04-02 tape
+    PASS G1: ledger transfer DRAWER1 SAFE 500.00 2026-04-03
+    PASS G2: ledger transfer SAFE PETTY 999.99 2026-04-04
+    PASS G3: ledger txn post PETTY SUPPLY -1000.00 2026-04-04
+    PASS G4: ledger txn amend 1 1.00
+    PASS G5: ledger txn delete 1
+    PASS G6: ledger count
+    PASS H1: ledger report balances
+    PASS H2: ledger report categories
+    PASS H3: ledger report monthly
+    PASS U1: ledger frobnicate
+    PASS U2: ledger report nosuch
+    PASS Z1: ledger init
+    PASS Z2: ledger count
+    LayersTesting: 43 passed, 0 failed (of 43)
+
+## Post-build programmatic acceptance
+- PASS: conformance-full (FEATURE-Conformance.md)
+  intent: The completed ledger passes the supplied end-to-end conformance harness.
+  target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python
+  provisioning: not required
+  return code: 0
+  stdout:
+    PASS A1: ledger init
+    PASS A2: ledger count
+    PASS B1: ledger load accounts /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/sources/seed_accounts.csv
+    PASS B2: ledger load categories /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/sources/seed_categories.csv
+    PASS B3: ledger load transactions /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/sources/seed_transactions.csv
+    PASS B4: ledger count
+    PASS C1: ledger report balances
+    PASS C2: ledger report categories
+    PASS C3: ledger report monthly
+    PASS D1: ledger load transactions /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/sources/seed_transactions_bad.csv
+    PASS D2: ledger load accounts /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/sources/seed_accounts.csv
+    PASS D3: ledger count
+    PASS E1: ledger account add CASH9 Event Float
+    PASS E2: ledger account add CASH9 Event Float
+    PASS E3: ledger account get CASH9
+    PASS E4: ledger account rename CASH9 Event Cash Box
+    PASS E5: ledger account get NOSUCH
+    PASS E6: ledger account delete DRAWER1
+    PASS E7: ledger account delete CASH9
+    PASS E8: ledger account get CASH9
+    PASS F1: ledger txn post DRAWER1 SALES 45.50 2026-04-01 walk in sale
+    PASS F2: ledger txn get 121
+    PASS F3: ledger txn amend 121 54.50
+    PASS F4: ledger txn get 999
+    PASS F5: ledger txn post DRAWER1 NOSUCH 1.00 2026-04-01
+    PASS F6: ledger txn post DRAWER1 SALES 1.234 2026-04-01
+    PASS F7: ledger txn post DRAWER1 SALES 1.00 2026-02-30
+    PASS F8: ledger txn delete 121
+    PASS F9: ledger txn get 121
+    PASS F10: ledger txn post PETTY SUPPLY -12.34 2026-04-02 tape
+    PASS G1: ledger transfer DRAWER1 SAFE 500.00 2026-04-03
+    PASS G2: ledger transfer SAFE PETTY 999.99 2026-04-04
+    PASS G3: ledger txn post PETTY SUPPLY -1000.00 2026-04-04
+    PASS G4: ledger txn amend 1 1.00
+    PASS G5: ledger txn delete 1
+    PASS G6: ledger count
+    PASS H1: ledger report balances
+    PASS H2: ledger report categories
+    PASS H3: ledger report monthly
+    PASS U1: ledger frobnicate
+    PASS U2: ledger report nosuch
+    PASS Z1: ledger init
+    PASS Z2: ledger count
+    LayersTesting: 43 passed, 0 failed (of 43)
+
+## Build summary
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli/__main__.py
+
+SUMMARY:
+Added the `python -m cli` entry point. Project tests pass (46), and the conformance harness passes 43/43 checks.
+
+BLOCKERS:
+- None

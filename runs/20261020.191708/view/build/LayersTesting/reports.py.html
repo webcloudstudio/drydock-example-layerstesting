@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/reports.py</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/reports.py</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../build/LayersTesting/reports.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Reporting boundary; report values are derived from persisted rows.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+from collections.abc import Iterable
+from typing import Any
+
+
+def query_report(database: Any, query: str, parameters: tuple[object, ...] = ()) -&gt; list[Any]:
+    &quot;&quot;&quot;Run a declared read through the persistence connection abstraction.&quot;&quot;&quot;
+    return database.query(query, parameters)
+
+
+def monthly_totals(transactions: Iterable[Any]) -&gt; list[tuple[str, int, int, int, int]]:
+    &quot;&quot;&quot;Return persisted transaction totals grouped by ascending calendar month.&quot;&quot;&quot;
+    grouped: dict[str, list[int]] = {}
+    for transaction in transactions:
+        month = transaction.date[:7]
+        totals = grouped.setdefault(month, [0, 0, 0])
+        totals[0] += 1
+        if transaction.amount &gt;= 0:
+            totals[1] += transaction.amount
+        else:
+            totals[2] -= transaction.amount
+
+    return [
+        (month, count, inflow, outflow, inflow - outflow)
+        for month, (count, inflow, outflow) in sorted(grouped.items())
+    ]
+</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,10 @@
+RESULT: SUCCESS
+
+FILES CHANGED:
+- persistence/testing.py
+
+SUMMARY:
+Fixed explicit DSN sessions resetting databases before acceptance reads. Project tests pass, and all 43 terminal checks pass.
+
+BLOCKERS:
+- None

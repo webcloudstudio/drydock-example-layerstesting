@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Transaction-Management.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Transaction-Management.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Transaction-Management.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Transaction Management</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Post, retrieve, amend, and delete ledger transactions.</td></tr><tr><td>Depends On</td><td>FEATURE-Transaction-Loading.md, FEATURE-Account-Category-Loading.md</td></tr><tr><td>Provides</td><td>txn post, txn get, txn amend, txn delete</td></tr><tr><td>Consumes</td><td>command dispatch, database configuration, transactions.create, transactions.get, transactions.update, transactions.delete</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Manage transaction rows with generated identifiers, exact cent formatting, validated dates and amounts, and atomic balance checks.</p>
+<h2>Operations</h2>
+<ul><li><code>txn post</code> assigns one greater than the largest existing identifier.</li><li><code>txn get</code> retrieves a persisted transaction.</li><li><code>txn amend</code> changes only the amount.</li><li><code>txn delete</code> removes a transaction when the resulting balance remains non-negative.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-DB-006</code> — read-write: transactions.get - supplies: <code>txn_id</code> - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC transaction-crud-roundtrip ===<br>Intent: Posting, reading, amending, and deleting a transaction persist the documented fields. import csv import os import tempfile from pathlib import Path from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as d: os.environ[&quot;DATABASE_PATH&quot;] = str(Path(d) / &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A1&quot;, &quot;Drawer&quot;)[0] == 0 assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;C1&quot;, &quot;Sales&quot;)[0] in (0, 2, 3) assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;12.34&quot;, &quot;2026-01-01&quot;, &quot;sale&quot;)[0] == 0 code, out, _ = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;) assert code == 0 row = list(csv.reader(out.splitlines()))[1] assert row[0:5] == [&quot;1&quot;, &quot;2026-01-01&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;12.34&quot;] assert cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;, &quot;10.00&quot;)[0] == 0 code, out, _ = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;) assert code == 0 assert list(csv.reader(out.splitlines()))[1][4] == &quot;10.00&quot; assert cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;1&quot;)[0] == 0 assert cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;)[0] == 4 === END AC transaction-crud-roundtrip ===</p>
+<p>=== AC transaction-validation ===<br>Intent: Invalid references, amounts, dates, memos, and absent identifiers are rejected. import os import tempfile from pathlib import Path from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as d: os.environ[&quot;DATABASE_PATH&quot;] = str(Path(d) / &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A1&quot;, &quot;Drawer&quot;)[0] == 0 assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;C1&quot;, &quot;Sales&quot;)[0] in (0, 2, 3) assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A1&quot;, &quot;NOPE&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;)[0] == 3 assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;1.234&quot;, &quot;2026-01-01&quot;)[0] == 3 assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;1.00&quot;, &quot;2026-02-30&quot;)[0] == 3 assert cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;999&quot;)[0] == 4 assert cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;999&quot;, &quot;1.00&quot;)[0] == 4 assert cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;999&quot;)[0] == 4 === END AC transaction-validation ===</p>
+<p>=== AC transaction-id-generation ===<br>Intent: A posted transaction receives the next identifier after existing rows. import os import tempfile from pathlib import Path from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as d: os.environ[&quot;DATABASE_PATH&quot;] = str(Path(d) / &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A1&quot;, &quot;Drawer&quot;)[0] == 0 assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;C1&quot;, &quot;Sales&quot;)[0] in (0, 2, 3) assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;)[0] == 0 assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;2.00&quot;, &quot;2026-01-02&quot;)[0] == 0 assert cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;2&quot;)[0] == 0 === END AC transaction-id-generation ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Amounts are parsed and stored as integer cents.</li><li>Amendment preserves date, account, category, and memo.</li><li>Rejected mutations write nothing.</li></ul></article>
+</main>
+</body>
+</html>

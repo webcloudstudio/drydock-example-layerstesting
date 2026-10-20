@@ -1,0 +1,12 @@
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli/__init__.py
+
+SUMMARY:
+Added compact transaction posting support (`ACCOUNT CATEGORY AMOUNT MEMO`) while preserving dated postings. Category reports now pass both acceptance workflows, including zero-activity categories and flow totals.
+
+Verification: acceptance replay passed; full pytest suite passed (42 tests).
+
+BLOCKERS:
+- None

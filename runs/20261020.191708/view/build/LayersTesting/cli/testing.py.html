@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/testing.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/testing.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/testing.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Test boundary for invoking the CLI in-process.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import io
+from collections.abc import Iterator
+from contextlib import redirect_stderr, redirect_stdout
+
+from . import main
+
+
+def cli_runner(*argv: str) -&gt; tuple[int, str, str]:
+    &quot;&quot;&quot;Run a CLI command and return its exit status and captured streams.&quot;&quot;&quot;
+    stdout = io.StringIO()
+    stderr = io.StringIO()
+    with redirect_stdout(stdout), redirect_stderr(stderr):
+        code = main(argv)
+    return code, stdout.getvalue(), stderr.getvalue()
+</pre></article>
+</main>
+</body>
+</html>

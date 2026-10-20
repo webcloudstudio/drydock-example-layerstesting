@@ -1,0 +1,22 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Drydock status
+
+  Target          /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/workspace/targets/LayersTesting
+  Name            drydock Layers Testing Uat Case
+  Description     Drydock uat - LayersTesting exercises the language and persistence layers. The source is an original
+                  brief for a command-line cash ledger with three tables (accounts, categories, transactions) reached…
+  Phase           Loop
+  State           16 closed/implemented
+  Metadata        built · complete
+  Sources         6 imported · 16 authored blueprint files
+  Analysis        Ready · 15 stories · 0 questions · 0 blockers
+  Blueprint       ✓  0 errors · 0 warnings
+  Plan            16 closed/implemented
+  Frontier        (none)
+  Workflow        5 steps
+                  Initialize         complete at 2026-10-20T19:17:10.349+00:00
+                  Import             complete at 2026-10-20T19:17:14.804+00:00
+                  Analyze            complete at 2026-10-20T19:17:49.064+00:00
+                  Plan               complete at 2026-10-20T19:21:43.119+00:00
+                  Build              complete at 2026-10-20T19:56:05.109+00:00
+  Next step       drydock refit LayersTesting BOTH <Scope> <Change>

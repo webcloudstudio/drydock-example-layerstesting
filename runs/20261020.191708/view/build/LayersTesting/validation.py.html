@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/validation.py</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/validation.py</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../build/LayersTesting/validation.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Pure domain validation boundary.
+
+Validation functions in this module must complete before callers invoke persistence writes.
+Money is represented as integer cents throughout the application.
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+from datetime import date
+import re
+
+
+def validate_code(value: str) -&gt; str:
+    if not isinstance(value, str) or not re.fullmatch(r&quot;[A-Z0-9]{1,12}&quot;, value):
+        raise ValueError(&quot;invalid code&quot;)
+    return value
+
+
+def validate_name(value: str) -&gt; str:
+    if not isinstance(value, str) or not 1 &lt;= len(value) &lt;= 40:
+        raise ValueError(&quot;invalid name&quot;)
+    return value
+
+
+def validate_cents(value: int) -&gt; int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(&quot;amount must be integer cents&quot;)
+    return value
+
+
+def validate_date(value: str) -&gt; str:
+    if not isinstance(value, str) or len(value) != 10 or value[4] != &quot;-&quot; or value[7] != &quot;-&quot;:
+        raise ValueError(&quot;invalid date&quot;)
+    date.fromisoformat(value)
+    return value
+
+
+def validate_memo(value: str) -&gt; str:
+    if not isinstance(value, str) or len(value) &gt; 60:
+        raise ValueError(&quot;invalid memo&quot;)
+    return value
+</pre></article>
+</main>
+</body>
+</html>

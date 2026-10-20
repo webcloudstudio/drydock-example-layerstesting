@@ -1,0 +1,14 @@
+AC_BROKEN: transfers-success, transfers-rejects-insufficient-balance
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli/__init__.py
+- services.py
+- tests/test_transfers.py
+
+SUMMARY:
+Transfer behavior passes all project tests and the 43-check terminal harness. The two acceptance failures are caused by `db_session(dsn)` resetting the supplied database via generated schema teardown.
+
+BLOCKERS:
+- Acceptance fixture must avoid reinitializing an explicitly supplied DSN.

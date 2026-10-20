@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_transfers.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_transfers.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_transfers.py">Raw file</a></div></header>
+<article class="doc"><pre>import csv
+
+from cli.testing import cli_runner
+from persistence import open_database
+
+
+def _ready(tmp_path, monkeypatch):
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, str(tmp_path / &quot;ledger.db&quot;))
+    monkeypatch.delenv(&quot;DATABASE_PATH&quot;, raising=False)
+    assert cli_runner(&quot;init&quot;)[0] == 0
+    assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;FROM&quot;, &quot;Source&quot;)[0] == 0
+    assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;TO&quot;, &quot;Destination&quot;)[0] == 0
+    assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;TRANSFER&quot;, &quot;Internal transfer&quot;)[0] == 0
+
+
+def test_transfer_creates_ordered_rows_with_transfer_memos(tmp_path, monkeypatch):
+    _ready(tmp_path, monkeypatch)
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;FROM&quot;, &quot;TRANSFER&quot;, &quot;100.00&quot;, &quot;2026-04-01&quot;)[0] == 0
+
+    code, output, stderr = cli_runner(&quot;transfer&quot;, &quot;FROM&quot;, &quot;TO&quot;, &quot;25.00&quot;, &quot;2026-04-02&quot;)
+
+    assert code == 0
+    assert stderr == &quot;&quot;
+    assert list(csv.reader(output.splitlines())) == [
+        [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;],
+        [&quot;2&quot;, &quot;2026-04-02&quot;, &quot;FROM&quot;, &quot;TRANSFER&quot;, &quot;-25.00&quot;, &quot;transfer to TO&quot;],
+        [&quot;3&quot;, &quot;2026-04-02&quot;, &quot;TO&quot;, &quot;TRANSFER&quot;, &quot;25.00&quot;, &quot;transfer from FROM&quot;],
+    ]
+    with open_database(str(tmp_path / &quot;ledger.db&quot;)) as db:
+        transactions = db.transactions.list()
+        assert [(row.account, row.amount) for row in transactions] == [
+            (&quot;FROM&quot;, 10000),
+            (&quot;FROM&quot;, -2500),
+            (&quot;TO&quot;, 2500),
+        ]
+
+
+def test_transfer_rejects_invalid_inputs_without_writing(tmp_path, monkeypatch):
+    _ready(tmp_path, monkeypatch)
+    for source, destination, amount, day in (
+        (&quot;FROM&quot;, &quot;FROM&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;),
+        (&quot;FROM&quot;, &quot;MISSING&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;),
+        (&quot;FROM&quot;, &quot;TO&quot;, &quot;0.00&quot;, &quot;2026-04-01&quot;),
+        (&quot;FROM&quot;, &quot;TO&quot;, &quot;1.00&quot;, &quot;2026-02-30&quot;),
+    ):
+        assert cli_runner(&quot;transfer&quot;, source, destination, amount, day)[0] == 3
+
+    with open_database(str(tmp_path / &quot;ledger.db&quot;)) as db:
+        assert db.transactions.list() == []
+
+
+def test_transfer_rejects_insufficient_balance_without_writing(tmp_path, monkeypatch):
+    _ready(tmp_path, monkeypatch)
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;FROM&quot;, &quot;TRANSFER&quot;, &quot;10.00&quot;, &quot;2026-04-01&quot;)[0] == 0
+
+    assert cli_runner(&quot;transfer&quot;, &quot;FROM&quot;, &quot;TO&quot;, &quot;10.01&quot;, &quot;2026-04-02&quot;)[0] == 3
+
+    with open_database(str(tmp_path / &quot;ledger.db&quot;)) as db:
+        transactions = db.transactions.list()
+        assert len(transactions) == 1
+        assert transactions[0].amount == 1000
+</pre></article>
+</main>
+</body>
+</html>

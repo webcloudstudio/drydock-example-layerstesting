@@ -1,0 +1,313 @@
+=== BEGIN ARTIFACT TOPOLOGY.md ===
+## Declarations
+
+## story architecture
+summary:      Define the ledger application boundaries and technical structure.
+type:         foundational
+kind:         capability
+phase:        1
+implements:   ARCHITECTURE.md
+covers:
+context:      TECHNOLOGY_STACK.md, COMPASS.md
+stack:        python.md
+provides:     application module boundaries
+consumes:
+acceptance:   yes
+instructions: |
+  Define the Python application structure, CLI boundary, configuration boundary, service
+  validation boundary, and persistence-library boundary. Document that application code never
+  opens database drivers directly and that all money uses integer cents.
+
+## story database-schema
+summary:      Establish the relational ledger schema and persistence contract.
+type:         foundational
+kind:         migration
+phase:        1
+implements:   DATABASE.md
+covers:       DB-001
+context:      sources/INSTRUCTIONS.md
+stack:        python.md, persistence.md, sqlite.md
+provides:     accounts table, categories table, transactions table, schema initialization
+consumes:
+accepts:      st-003, st-009
+depends:      architecture
+acceptance:   yes
+instructions: |
+  Declare the accounts, categories, and transactions tables and every repository operation
+  required by the ledger. Use integer cents, primary keys, foreign keys, and the shipped
+  persistence package. Ensure init can recreate an empty schema through the persistence
+  boundary.
+
+## story database-configuration
+summary:      Resolve database configuration and operational failures.
+type:         service
+kind:         integration
+phase:        1
+implements:   FEATURE-Database-Configuration.md
+covers:       DB-002
+context:      sources/INSTRUCTIONS.md
+stack:        python.md, persistence.md, sqlite.md
+provides:     DATABASE_URL resolution, DATABASE_PATH fallback, default database path, operational error handling
+consumes:     schema initialization
+acceptance:   yes
+depends:      database-schema
+instructions: |
+  Implement configuration precedence DATABASE_URL, DATABASE_PATH, then data/app.db. Support
+  SQLite paths and PostgreSQL DSNs through open_database only. Report unreachable databases or
+  missing tables as operational failures with exit code 1 and no standard-output data.
+
+## story cli-dispatch
+summary:      Provide the executable ledger command dispatcher and output contract.
+type:         foundational
+kind:         capability
+phase:        1
+implements:   FEATURE-CLI-Dispatcher.md
+covers:       CLI-001
+context:      sources/INSTRUCTIONS.md
+stack:        python.md, cli.md
+provides:     ./ledger, command dispatch, CSV output, exit-code dispatch
+consumes:     database configuration
+acceptance:   yes
+depends:      database-configuration
+instructions: |
+  Create the executable ledger entry point and dispatch all documented command families.
+  Centralize success CSV emission, diagnostic stderr handling, and the documented exit-code
+  contract without embedding report answers.
+
+## story cli-validation
+summary:      Validate command names, tables, reports, and argument counts.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-CLI-Validation.md
+covers:       CLI-002
+context:      sources/INSTRUCTIONS.md
+stack:        python.md, cli.md
+provides:     command usage validation, command help
+consumes:     command dispatch
+acceptance:   yes
+depends:      cli-dispatch
+instructions: |
+  Add consistent usage validation for every command, table, report, and argument shape.
+  Provide discoverable help for each command and sub-verb, returning usage exit code 2 for
+  unknown commands, unknown tables or reports, and wrong argument counts.
+
+## story account-loading
+summary:      Load and validate account and category CSV files atomically.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Account-Category-Loading.md
+covers:       LOAD-001
+context:      sources/seed_accounts.csv, sources/seed_categories.csv
+context_roles: |
+  sources/seed_accounts.csv: asset
+  sources/seed_categories.csv: asset
+stack:        python.md, cli.md, persistence.md, sqlite.md
+provides:     load accounts, load categories
+consumes:     command dispatch, database configuration, accounts.create, categories.create
+accepts:      st-004, st-007
+acceptance:   yes
+depends:      cli-validation, database-schema
+instructions: |
+  Implement ledger load for accounts and categories. Validate readable files, exact headers,
+  codes, names, descriptions, duplicate keys, and atomicity before the first write. Emit the
+  documented loaded table and row count on success.
+
+## story transaction-loading
+summary:      Load and validate transaction CSV files atomically.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Transaction-Loading.md
+covers:       LOAD-002
+context:      sources/seed_transactions.csv, sources/seed_transactions_bad.csv
+context_roles: |
+  sources/seed_transactions.csv: asset
+  sources/seed_transactions_bad.csv: asset
+stack:        python.md, cli.md, persistence.md, sqlite.md
+provides:     load transactions
+consumes:     command dispatch, database configuration, transactions.create, accounts.get, categories.get
+accepts:      st-004, st-007, st-008
+acceptance:   yes
+depends:      account-loading, database-schema
+instructions: |
+  Implement transaction CSV loading with exact-header validation, field parsing, date and amount
+  validation, duplicate-id detection, reference validation, and prospective non-negative balance
+  checks. Validate the complete file before writing any row and preserve all prior state on
+  rejection.
+
+## story account-management
+summary:      Add, read, rename, and delete ledger accounts.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Account-Management.md
+covers:       ACCT-001
+context:      sources/INSTRUCTIONS.md
+stack:        python.md, cli.md, persistence.md, sqlite.md
+provides:     account add, account get, account rename, account delete
+consumes:     command dispatch, database configuration, accounts.create, accounts.get, accounts.update, accounts.delete
+accepts:      st-006, st-007
+acceptance:   yes
+depends:      account-loading, transaction-loading
+instructions: |
+  Implement account CRUD commands with code and name validation, duplicate and not-found
+  handling, transaction-use protection on deletion, and balance-aware account row reporting.
+
+## story transaction-management
+summary:      Post, read, amend, and delete ledger transactions.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Transaction-Management.md
+covers:       TXN-001
+context:      sources/INSTRUCTIONS.md
+stack:        python.md, cli.md, persistence.md, sqlite.md
+provides:     txn post, txn get, txn amend, txn delete
+consumes:     command dispatch, database configuration, transactions.create, transactions.get, transactions.update, transactions.delete
+accepts:      st-006, st-007
+acceptance:   yes
+depends:      transaction-loading
+instructions: |
+  Implement transaction CRUD with generated identifiers, exact amount formatting, date and
+  field validation, not-found behavior, and atomic amendment/deletion checks. Preserve all
+  unchanged transaction fields during amendment.
+
+## story balance-invariant
+summary:      Enforce non-negative account balances across all mutations.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Balance-Invariant.md
+covers:       TXN-002
+context:      sources/INSTRUCTIONS.md
+stack:        python.md, cli.md, persistence.md, sqlite.md
+provides:     prospective balance validation
+consumes:     transactions.create, transactions.update, transactions.delete
+accepts:      st-007, st-008
+acceptance:   yes
+depends:      transaction-management
+instructions: |
+  Centralize prospective balance calculation and apply it before posting, amending, deleting,
+  transferring, and loading transactions. Reject any operation that would make an account
+  balance negative without changing any table.
+
+## story transfers
+summary:      Execute atomic two-row account transfers.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Transfers.md
+covers:       TRANSFER-001
+context:      sources/INSTRUCTIONS.md
+stack:        python.md, cli.md, persistence.md, sqlite.md
+provides:     transfer
+consumes:     command dispatch, transactions.create, accounts.get, categories.get, prospective balance validation
+accepts:      st-007, st-008
+acceptance:   yes
+depends:      balance-invariant
+instructions: |
+  Implement transfer validation and atomic creation of consecutive outgoing and incoming
+  transactions in category TRANSFER with the specified memos. Reject equal or unknown accounts,
+  invalid positive amounts, invalid dates, and insufficient balances before either row is written.
+
+## story balance-report
+summary:      Report balances and transaction counts by account.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Report-Balances.md
+covers:       REPORT-001
+context:      sources/INSTRUCTIONS.md
+stack:        python.md, cli.md, persistence.md, sqlite.md
+provides:     report balances
+consumes:     accounts.list, transactions.list
+acceptance:   yes
+depends:      transaction-management
+instructions: |
+  Implement report balances using database queries, ordering accounts by code, counting each
+  account's transactions, formatting balances as cents, and computing the total row dynamically.
+
+## story category-report
+summary:      Report transaction totals by category.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Report-Categories.md
+covers:       REPORT-002
+context:      sources/INSTRUCTIONS.md
+stack:        python.md, cli.md, persistence.md, sqlite.md
+provides:     report categories
+consumes:     categories.list, transactions.list
+acceptance:   yes
+depends:      transaction-management
+instructions: |
+  Implement report categories with zero-activity categories included, code ordering, transaction
+  counts, positive inflow, positive outflow, net totals, and a dynamically computed total row.
+
+## story monthly-report
+summary:      Report transaction totals by calendar month.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Report-Monthly.md
+covers:       REPORT-003
+context:      sources/INSTRUCTIONS.md
+stack:        python.md, cli.md, persistence.md, sqlite.md
+provides:     report monthly
+consumes:     transactions.list
+acceptance:   yes
+depends:      transaction-management
+instructions: |
+  Implement report monthly by grouping persisted transactions by YYYY-MM in ascending order,
+  calculating inflow, outflow, net, and the dynamic total row using integer cents.
+
+## story project-tests
+summary:      Provide the automated project test runner and test suite.
+type:         service
+kind:         test harness
+phase:        3
+implements:   FEATURE-Project-Tests.md
+covers:       TEST-001
+context:      sources/INSTRUCTIONS.md
+stack:        python.md, pytest.md, common.md
+provides:     bin/test.sh, pytest suite
+consumes:     ledger command surface
+accepts:      st-002
+acceptance:   yes
+depends:      cli-validation, account-management, transaction-management, transfers, balance-report, category-report, monthly-report
+instructions: |
+  Add a POSIX-compatible bin/test.sh and a pytest suite covering commands, exit codes,
+  validation, persistence, atomic rejection, balance invariants, and all reports. The runner
+  must exit zero only when the complete suite passes.
+
+## story conformance
+summary:      Pass the supplied end-to-end ledger conformance harness.
+type:         service
+kind:         test harness
+phase:        4
+implements:   FEATURE-Conformance.md
+covers:       TEST-002
+context:      sources/run.sh, sources/seed_accounts.csv, sources/seed_categories.csv, sources/seed_transactions.csv, sources/seed_transactions_bad.csv
+context_roles: |
+  sources/run.sh: context
+  sources/seed_accounts.csv: asset
+  sources/seed_categories.csv: asset
+  sources/seed_transactions.csv: asset
+  sources/seed_transactions_bad.csv: asset
+stack:        python.md, cli.md, persistence.md, sqlite.md, common.md
+provides:     complete supplied conformance verification
+consumes:     ledger command surface, bin/test.sh
+accepts:      st-001
+acceptance:   yes
+depends:      project-tests, balance-report, category-report, monthly-report, transfers, account-management, transaction-management, transaction-loading, account-loading, cli-validation, cli-dispatch, database-configuration, database-schema, architecture, balance-invariant
+instructions: |
+  Run the supplied sources/run.sh from the completed application root as the terminal release
+  verification. Do not modify the supplied harness or fixtures. Ensure the executable, database
+  lifecycle, imports, mutations, transfers, reports, errors, and reinitialization pass together.
+
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT DECISIONS.json ===
+[]
+=== END ARTIFACT ===

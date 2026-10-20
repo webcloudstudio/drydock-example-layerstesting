@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.192313.901Z_layerstesting_build_codex.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.192313.901Z_layerstesting_build_codex.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.192313.901Z_layerstesting_build_codex.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>&lt;reusable-compact filename=&quot;DATABASE.md&quot;&gt;
+Relational ledger persistence uses `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`. Tables: `accounts(account VARCHAR(12) PK, name VARCHAR(40))`; `categories(category VARCHAR(12) PK, description VARCHAR(40))`; `transactions(txn_id INTEGER PK, date VARCHAR(10), account/category foreign keys, amount INTEGER cents, memo VARCHAR(60))`. Foreign keys are enforced; initialization recreates all tables empty; rejected operations preserve existing rows; callers use only `persistence.open_database`.
+&lt;/reusable-compact&gt;
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- persistence/schema.py
+- tests/test_database_schema.py
+
+SUMMARY:
+Corrected generated row type annotations and added schema round-trip, foreign-key, idempotence, and field-shape tests. Python suite passes: 9 tests.
+
+BLOCKERS:
+- `sources/run.sh` remains 2/43 because later CLI/application build blocks are not implemented yet.</pre></article>
+</main>
+</body>
+</html>

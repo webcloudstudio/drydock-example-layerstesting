@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/logs/20261020.194213.440Z_layerstesting_build_codex.stderr.log</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/logs/20261020.194213.440Z_layerstesting_build_codex.stderr.log</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../workspace/logs/20261020.194213.440Z_layerstesting_build_codex.stderr.log">Raw file</a></div></header>
+<article class="doc"><pre>2026-10-20T19:42:32.303144Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/ledger:
+def report(db,k):
+ aa,cc,ts=rows(db)
+ if k==&#x27;balances&#x27;:emit([[&#x27;account&#x27;,&#x27;name&#x27;,&#x27;transactions&#x27;,&#x27;balance&#x27;]]+[bal(db,a.account) for a in aa]+[[&#x27;TOTAL&#x27;,&#x27;&#x27;,len(ts),money(sum(t.amount for t in ts))]])
+</pre></article>
+</main>
+</body>
+</html>

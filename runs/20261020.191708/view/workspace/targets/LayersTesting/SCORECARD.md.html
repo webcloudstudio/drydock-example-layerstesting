@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/SCORECARD.md</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/SCORECARD.md</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../workspace/targets/LayersTesting/SCORECARD.md">Raw file</a></div></header>
+<article class="doc"><h1>Scorecard: LayersTesting</h1>
+<h2>Specification</h2>
+<blockquote><p><strong>NOT YET RUN</strong> drydock score spec LayersTesting</p></blockquote>
+<h2>Acceptance</h2>
+<blockquote><p><strong>PASSED</strong> drydock score ac LayersTesting · 2026-10-20T19:58:16.366+00:00</p></blockquote>
+<p>PASS 21   FAIL 0   UNVERIFIED 0   PREPASSED 21   (42 AC total)</p>
+<h2>Build</h2>
+<blockquote><p><strong>RECORDED</strong> drydock score build LayersTesting</p></blockquote>
+<p>Blocks: 16   Repaired: 4   Failed: 0<br>Tokens: 8,330,671 (cached 7,501,952, output 98,328)   Cache hit rate: 91.1%</p>
+<h2>Release</h2>
+<blockquote><p><strong>RELEASED</strong> drydock score release LayersTesting · 2026-10-20T20:00:10.860+00:00</p></blockquote>
+<ul><li>Verdict: PASSED</li></ul>
+<p>LayersTesting: PASSED — 9 of 9</p>
+<p>st-001  MET       [&quot;sh&quot;, &quot;sources/run.sh&quot;] exited 0; sh sources/run.sh returned 0; LayersTesting: 43 passed, 0 failed (of 43) st-002  MET       bin/test.sh returned 0; pytest reported 46 passed st-003  MET       sources/run.sh output passed A1/A2 and Z1/Z2 st-004  MET       sources/run.sh output passed B1 through B4 st-005  MET       sources/run.sh output passed C1 through C3 and H1 through H3 st-006  MET       sources/run.sh output passed E1 through E8 and F1 through F10 st-007  MET       sources/run.sh output passed D1 through D3, F5 through F7, and G2 through G6 st-008  MET       sources/run.sh output passed G2, G3, G4, and G5 st-009  MET       cli/<strong>init</strong>.py uses open_database(database_dsn()); configuration.py resolves DATABASE_URL before DATABASE_PATH; schema.sql declares transactions.amount INTEGER; persistence/db.py selects the SQLite or PostgreSQL driver from the DSN</p>
+<h2>Project acceptance</h2>
+<div class="scroll"><table><thead><tr><th>ID</th><th>Type</th><th>Criterion</th><th>Verdict</th><th>Observed</th></tr></thead><tbody><tr><td>st-001</td><td>technical</td><td>The completed ledger shall make sh sources/run.sh exit zero; that script&#x27;s exit status is the sole acceptance verdict.</td><td>MET</td><td>[&quot;sh&quot;, &quot;sources/run.sh&quot;] exited 0; sh sources/run.sh returned 0; LayersTesting: 43 passed, 0 failed (of 43)</td></tr><tr><td>st-002</td><td>technical</td><td>The application shall provide a POSIX-compatible bin/test.sh that exits zero when every automated test passes.</td><td>MET</td><td>bin/test.sh returned 0; pytest reported 46 passed</td></tr><tr><td>st-003</td><td>behavioral</td><td>When ledger init runs, the application shall drop and recreate the accounts, categories, and transactions tables so that ledger count reports zero rows in each.</td><td>MET</td><td>sources/run.sh output passed A1/A2 and Z1/Z2</td></tr><tr><td>st-004</td><td>behavioral</td><td>When the three seed files are loaded into an initialized database, the application shall report 4 accounts, 7 categories, and 120 transactions.</td><td>MET</td><td>sources/run.sh output passed B1 through B4</td></tr><tr><td>st-005</td><td>behavioral</td><td>The application shall compute the balances, categories, and monthly reports from the database, matching the known answers in sources/run.sh byte for byte.</td><td>MET</td><td>sources/run.sh output passed C1 through C3 and H1 through H3</td></tr><tr><td>st-006</td><td>behavioral</td><td>The application shall add, get, rename, and delete accounts and post, get, amend, and delete transactions, reporting an absent record with exit code 4.</td><td>MET</td><td>sources/run.sh output passed E1 through E8 and F1 through F10</td></tr><tr><td>st-007</td><td>behavioral</td><td>If a load, post, amend, delete, or transfer is rejected, then the application shall exit 3 and leave every table exactly as it was.</td><td>MET</td><td>sources/run.sh output passed D1 through D3, F5 through F7, and G2 through G6</td></tr><tr><td>st-008</td><td>behavioral</td><td>If a command would leave any account balance below zero, then the application shall reject it with exit code 3.</td><td>MET</td><td>sources/run.sh output passed G2, G3, G4, and G5</td></tr><tr><td>st-009</td><td>technical</td><td>The application shall reach the database only through the shipped persistence library, selected by DATABASE_URL, with amounts stored as integer cents.</td><td>MET</td><td>cli/<strong>init</strong>.py uses open_database(database_dsn()); configuration.py resolves DATABASE_URL before DATABASE_PATH; schema.sql declares transactions.amount INTEGER; persistence/db.py selects the SQLite or PostgreSQL driver from the DSN</td></tr></tbody></table></div>
+<p><strong>Material decisions:</strong></p>
+<ul><li>Zero-balance deletion — </li></ul></article>
+</main>
+</body>
+</html>

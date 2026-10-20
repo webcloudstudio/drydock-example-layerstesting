@@ -1,0 +1,19 @@
+<reusable-compact filename="seed_accounts.csv">
+CSV contract: header `account,name`; account codes are uppercase alphanumeric, 1–12 characters; names are non-empty, up to 40 characters. Seed rows: DRAWER1, DRAWER2, PETTY, SAFE.
+</reusable-compact>
+
+<reusable-compact filename="seed_categories.csv">
+CSV contract: header `category,description`; category codes are uppercase alphanumeric, 1–12 characters; descriptions are non-empty, up to 40 characters. Seed categories: OPENING, PAYROLL, REFUND, RENT, SALES, SUPPLY, TRANSFER.
+</reusable-compact>
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli/__init__.py
+- tests/test_account_category_loading.py
+
+SUMMARY:
+Implemented strict, atomic-style prevalidated account/category CSV loading with exact headers, validation, duplicate/conflict rejection, and correct error classification. Tests pass; staged grader reports 43/43 checks passed.
+
+BLOCKERS:
+- None

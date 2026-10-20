@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_balance_report.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_balance_report.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_balance_report.py">Raw file</a></div></header>
+<article class="doc"><pre>import csv
+
+from cli.testing import cli_runner
+
+
+def _database(tmp_path, monkeypatch):
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, str(tmp_path / &quot;ledger.db&quot;))
+    monkeypatch.delenv(&quot;DATABASE_PATH&quot;, raising=False)
+    assert cli_runner(&quot;init&quot;)[0] == 0
+
+
+def _report_rows():
+    code, output, stderr = cli_runner(&quot;report&quot;, &quot;balances&quot;)
+    return code, list(csv.reader(output.splitlines())), stderr
+
+
+def test_balances_report_empty_ledger_has_header_and_zero_total(tmp_path, monkeypatch):
+    _database(tmp_path, monkeypatch)
+
+    code, rows, stderr = _report_rows()
+
+    assert code == 0
+    assert stderr == &quot;&quot;
+    assert rows == [
+        [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;],
+        [&quot;TOTAL&quot;, &quot;&quot;, &quot;0&quot;, &quot;0.00&quot;],
+    ]
+
+
+def test_balances_report_orders_accounts_and_computes_persisted_totals(tmp_path, monkeypatch):
+    _database(tmp_path, monkeypatch)
+    assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;B&quot;, &quot;Second&quot;)[0] == 0
+    assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;First&quot;)[0] == 0
+    assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;C&quot;, &quot;Category&quot;)[0] == 0
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;C&quot;, &quot;12.50&quot;, &quot;2026-01-01&quot;)[0] == 0
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;B&quot;, &quot;C&quot;, &quot;3.25&quot;, &quot;2026-01-02&quot;)[0] == 0
+
+    code, rows, stderr = _report_rows()
+
+    assert code == 0
+    assert stderr == &quot;&quot;
+    assert rows == [
+        [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;],
+        [&quot;A&quot;, &quot;First&quot;, &quot;1&quot;, &quot;12.50&quot;],
+        [&quot;B&quot;, &quot;Second&quot;, &quot;1&quot;, &quot;3.25&quot;],
+        [&quot;TOTAL&quot;, &quot;&quot;, &quot;2&quot;, &quot;15.75&quot;],
+    ]
+
+
+def test_balances_report_unavailable_database_is_operational_failure(tmp_path, monkeypatch):
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, str(tmp_path / &quot;missing&quot; / &quot;ledger.db&quot;))
+    monkeypatch.delenv(&quot;DATABASE_PATH&quot;, raising=False)
+
+    code, output, stderr = cli_runner(&quot;report&quot;, &quot;balances&quot;)
+
+    assert code == 1
+    assert output == &quot;&quot;
+    assert stderr != &quot;&quot;
+</pre></article>
+</main>
+</body>
+</html>

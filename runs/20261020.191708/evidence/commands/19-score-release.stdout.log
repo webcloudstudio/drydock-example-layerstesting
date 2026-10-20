@@ -1,0 +1,19 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+2026-10-20 15:59:15 EDT  Calling CODEX/gpt-5.6-luna (score release)...
+  Completed CODEX/gpt-5.6-luna (score release)  rc=0
+
+LayersTesting: PASSED — 9 of 9
+
+  st-001  MET       ["sh", "sources/run.sh"] exited 0; sh sources/run.sh returned 0; LayersTesting: 43 passed, 0 failed (of 43)
+  st-002  MET       bin/test.sh returned 0; pytest reported 46 passed
+  st-003  MET       sources/run.sh output passed A1/A2 and Z1/Z2
+  st-004  MET       sources/run.sh output passed B1 through B4
+  st-005  MET       sources/run.sh output passed C1 through C3 and H1 through H3
+  st-006  MET       sources/run.sh output passed E1 through E8 and F1 through F10
+  st-007  MET       sources/run.sh output passed D1 through D3, F5 through F7, and G2 through G6
+  st-008  MET       sources/run.sh output passed G2, G3, G4, and G5
+  st-009  MET       cli/__init__.py uses open_database(database_dsn()); configuration.py resolves DATABASE_URL before DATABASE_PATH; schema.sql declares transactions.amount INTEGER; persistence/db.py selects the SQLite or PostgreSQL driver from the DSN
+
+Scorecard: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/workspace/targets/LayersTesting/SCORECARD.md
+Evidence: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/workspace/targets/LayersTesting/evidence/score-release.json
+Target - committed project workspace git store

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-7.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-7.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-7.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 7 · Service (block-7)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 9276</li><li>execution id: 20261020.193204.652Z-f4cb03fb</li></ul>
+<h2>Stories built</h2>
+<ul><li>Load and validate transaction CSV files atomically. (transaction-loading) [story]</li></ul>
+<h2>Reusable compacts</h2>
+<ul><li>seed_transactions_compact.md</li><li>seed_transactions_bad_compact.md</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 601)</li><li>compass: COMPASS.md (SP 755)</li><li>implements: FEATURE-Transaction-Loading.md (SP 1174)</li><li>context: seed_transactions.csv (SP 1425)</li><li>context: seed_transactions_bad.csv (SP 141)</li><li>context: ARCHITECTURE_compact.md (SP 154)</li><li>context: DATABASE_compact.md (SP 163)</li><li>stack: cli.md (SP 1755)</li><li>stack: persistence_compact.md (SP 1217)</li><li>stack: sqlite.md (SP 1818)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>cli/<strong>init</strong>.py</li><li>tests/test_transaction_loading.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>GREEN (prepassed): transaction-load-roundtrip (FEATURE-Transaction-Loading.md)</li></ul>
+<p>intent: A valid transaction file persists integer-cent data and remains readable. return code: 0</p>
+<ul><li>GREEN (prepassed): transaction-load-atomic-rejection (FEATURE-Transaction-Loading.md)</li></ul>
+<p>intent: A later invalid reference rejects the entire transaction batch. return code: 0</p>
+<ul><li>GREEN (prepassed): transaction-load-validation (FEATURE-Transaction-Loading.md)</li></ul>
+<p>intent: Invalid dates, amounts, duplicate IDs, and negative prospective balances are rejected. return code: 0</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: transaction-load-roundtrip (FEATURE-Transaction-Loading.md)</li></ul>
+<p>intent: A valid transaction file persists integer-cent data and remains readable. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: transaction-load-atomic-rejection (FEATURE-Transaction-Loading.md)</li></ul>
+<p>intent: A later invalid reference rejects the entire transaction batch. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: transaction-load-validation (FEATURE-Transaction-Loading.md)</li></ul>
+<p>intent: Invalid dates, amounts, duplicate IDs, and negative prospective balances are rejected. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Build summary</h2>
+<p>&lt;reusable-compact filename=&quot;seed_transactions.csv&quot;&gt;<br>CSV contract: header <code>txn_id,date,account,category,amount,memo</code>; transaction IDs are integers, dates use ISO <code>YYYY-MM-DD</code>, amounts are decimal currency values converted to integer cents, accounts/categories reference existing master rows, and memos are strings. The staged dataset contains 120 valid transactions. &lt;/reusable-compact&gt;</p>
+<p>&lt;reusable-compact filename=&quot;seed_transactions_bad.csv&quot;&gt; CSV contract matches <code>seed_transactions.csv</code>. The staged dataset contains 11 rows: 10 valid transactions followed by one transaction referencing <code>NOSUCH</code>; the complete batch must be rejected atomically with no rows inserted. &lt;/reusable-compact&gt;</p>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>cli/<strong>init</strong>.py</li><li>tests/test_transaction_loading.py</li></ul>
+<p>SUMMARY: Implemented exact transaction CSV header/row validation, integer-cent parsing, reference checks, duplicate detection, date/amount validation, prospective balance checks, and atomic rejection behavior. Project tests pass: 24 passed. Terminal acceptance passes: 43 passed, 0 failed.</p>
+<p>BLOCKERS:</p>
+<ul><li>None</li></ul></article>
+</main>
+</body>
+</html>

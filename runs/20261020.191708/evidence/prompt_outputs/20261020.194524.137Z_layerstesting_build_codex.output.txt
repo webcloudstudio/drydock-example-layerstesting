@@ -1,0 +1,10 @@
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli/__init__.py
+
+SUMMARY:
+Fixed transaction shorthand parsing so malformed date-shaped inputs are rejected while memo shorthand remains supported. Category acceptance checks pass, project tests pass (40), and `sources/run.sh` passes all 43 checks.
+
+BLOCKERS:
+- None

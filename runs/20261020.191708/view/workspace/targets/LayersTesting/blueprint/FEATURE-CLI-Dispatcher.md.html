@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-CLI-Dispatcher.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-CLI-Dispatcher.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-CLI-Dispatcher.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: CLI Dispatcher</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Provide the executable ledger dispatcher, CSV output boundary, and exit-code mapping.</td></tr><tr><td>Depends On</td><td>FEATURE-Database-Configuration.md, DATABASE.md</td></tr><tr><td>Provides</td><td><code>./ledger</code>, command dispatch, CSV output, exit-code dispatch</td></tr><tr><td>Consumes</td><td>DATABASE_URL resolution, schema initialization</td></tr></tbody></table></div>
+<h2>Command Boundary</h2>
+<p>The executable <code>ledger</code> is located at the application root and invokes the CLI entry point. The dispatcher recognizes the documented command families: <code>init</code>, <code>count</code>, <code>load</code>, <code>account</code>, <code>txn</code>, <code>transfer</code>, and <code>report</code>.</p>
+<p>Successful commands emit deterministic CSV with a header and newline-delimited rows, except <code>init</code>, which emits nothing. Diagnostics are written only to standard error. The dispatcher maps domain failures to the documented exit codes.</p>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC cli-dispatch-executable ===<br>Intent: The application root contains an executable ledger entry point. from pathlib import Path import os</p>
+<p>ledger = Path(&quot;ledger&quot;) assert ledger.is_file() assert os.access(ledger, os.X_OK) === END AC cli-dispatch-executable ===</p>
+<p>=== AC cli-dispatch-init-and-count ===<br>Intent: The dispatcher reaches schema initialization and produces structured count output. import csv from cli.testing import cli_runner</p>
+<p>init_code, init_stdout, init_stderr = cli_runner(&quot;init&quot;) assert init_code == 0 assert init_stdout == &quot;&quot; count_code, count_stdout, count_stderr = cli_runner(&quot;count&quot;) assert count_code == 0 rows = list(csv.reader(count_stdout.splitlines())) assert rows[0] == [&quot;table&quot;, &quot;rows&quot;] assert len(rows) == 4 assert all(len(row) == 2 for row in rows) === END AC cli-dispatch-init-and-count ===</p>
+<p>=== AC cli-dispatch-error-channel ===<br>Intent: Rejected commands return a failure code without standard-output data and provide diagnostics on standard error. from cli.testing import cli_runner</p>
+<p>code, stdout, stderr = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;BAD-CODE&quot;, &quot;Name&quot;) assert code == 3 assert stdout == &quot;&quot; assert stderr != &quot;&quot; === END AC cli-dispatch-error-channel ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The root executable must be named <code>ledger</code>.</li><li>Successful output must be CSV with no diagnostic text on standard output.</li><li>Failure diagnostics must never be used as successful data output.</li><li>Report values must not be embedded in the dispatcher.</li></ul></article>
+</main>
+</body>
+</html>

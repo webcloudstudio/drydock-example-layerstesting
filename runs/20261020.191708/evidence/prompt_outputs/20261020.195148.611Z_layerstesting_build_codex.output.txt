@@ -1,0 +1,10 @@
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli/__main__.py
+
+SUMMARY:
+Added the `python -m cli` entry point. Project tests pass (46), and the conformance harness passes 43/43 checks.
+
+BLOCKERS:
+- None

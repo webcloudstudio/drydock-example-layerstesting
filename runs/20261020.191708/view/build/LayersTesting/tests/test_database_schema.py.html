@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_database_schema.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_database_schema.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_database_schema.py">Raw file</a></div></header>
+<article class="doc"><pre>from dataclasses import fields
+
+import pytest
+
+from persistence import PersistenceError
+from persistence.schema import AccountRow, CategoryRow, TransactionRow
+from persistence.testing import db_session
+
+
+def test_schema_creates_all_tables_and_starts_empty():
+    with db_session() as db:
+        assert db.accounts.get(account=&quot;MISSING&quot;) is None
+        assert db.transactions.get(txn_id=1) is None
+
+
+def test_declared_create_operations_round_trip_rows():
+    with db_session() as db:
+        account = db.accounts.create(account=&quot;CASH&quot;, name=&quot;Cash&quot;)
+        category = db.categories.create(category=&quot;SALES&quot;, description=&quot;Sales&quot;)
+        transaction = db.transactions.create(
+            txn_id=1,
+            date=&quot;2026-01-01&quot;,
+            account=&quot;CASH&quot;,
+            category=&quot;SALES&quot;,
+            amount=125,
+            memo=&quot;opening&quot;,
+        )
+
+        assert account == AccountRow(account=&quot;CASH&quot;, name=&quot;Cash&quot;)
+        assert category == CategoryRow(category=&quot;SALES&quot;, description=&quot;Sales&quot;)
+        assert transaction == TransactionRow(
+            txn_id=1,
+            date=&quot;2026-01-01&quot;,
+            account=&quot;CASH&quot;,
+            category=&quot;SALES&quot;,
+            amount=125,
+            memo=&quot;opening&quot;,
+        )
+
+
+def test_transaction_foreign_keys_reject_unknown_account_and_category():
+    with db_session() as db:
+        with pytest.raises(PersistenceError):
+            db.transactions.create(
+                txn_id=1,
+                date=&quot;2026-01-01&quot;,
+                account=&quot;MISSING&quot;,
+                category=&quot;MISSING&quot;,
+                amount=1,
+                memo=&quot;invalid&quot;,
+            )
+        assert db.transactions.get(txn_id=1) is None
+
+
+def test_schema_can_be_applied_twice_without_duplicate_objects():
+    with db_session() as db:
+        db.execute_script(&#x27;&#x27;&#x27;
+            CREATE TABLE IF NOT EXISTS &quot;accounts&quot; (&quot;account&quot; VARCHAR(12) PRIMARY KEY NOT NULL, &quot;name&quot; VARCHAR(40) NOT NULL);
+            CREATE TABLE IF NOT EXISTS &quot;categories&quot; (&quot;category&quot; VARCHAR(12) PRIMARY KEY NOT NULL, &quot;description&quot; VARCHAR(40) NOT NULL);
+            CREATE TABLE IF NOT EXISTS &quot;transactions&quot; (&quot;txn_id&quot; INTEGER PRIMARY KEY NOT NULL, &quot;date&quot; VARCHAR(10) NOT NULL, &quot;account&quot; VARCHAR(12) NOT NULL REFERENCES &quot;accounts&quot;(&quot;account&quot;), &quot;category&quot; VARCHAR(12) NOT NULL REFERENCES &quot;categories&quot;(&quot;category&quot;), &quot;amount&quot; INTEGER NOT NULL, &quot;memo&quot; VARCHAR(60) NOT NULL);
+        &#x27;&#x27;&#x27;)
+        assert db.accounts.get(account=&quot;MISSING&quot;) is None
+        assert db.transactions.get(txn_id=1) is None
+
+
+def test_generated_rows_expose_typed_fields():
+    assert [field.name for field in fields(TransactionRow)] == [
+        &quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;
+    ]
+</pre></article>
+</main>
+</body>
+</html>

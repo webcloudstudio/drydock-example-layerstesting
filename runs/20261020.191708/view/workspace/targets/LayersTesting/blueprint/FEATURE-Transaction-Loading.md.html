@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Transaction-Loading.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Transaction-Loading.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Transaction-Loading.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Transaction Loading</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Atomically validate and load transaction CSV files.</td></tr><tr><td>Depends On</td><td>FEATURE-Account-Category-Loading.md, FEATURE-Database-Configuration.md</td></tr><tr><td>Provides</td><td>load transactions</td></tr><tr><td>Consumes</td><td>command dispatch, database configuration, transactions.create, accounts.get, categories.get</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger load transactions &lt;csv&gt;</code> validates every transaction before writing any row, including headers, fields, references, duplicate identifiers, dates, amounts, and prospective account balances.</p>
+<h2>Workflow</h2>
+<p>The complete file is parsed into integer-cent transactions, validated against existing accounts and categories and against duplicate IDs, then checked for non-negative balances. Only a fully valid batch is inserted in one transaction.</p>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-DB-004</code> — read-write: transactions.create - supplies: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code> - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC transaction-load-roundtrip ===<br>Intent: A valid transaction file persists integer-cent data and remains readable. import csv import os import tempfile from pathlib import Path from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as d: os.environ[&quot;DATABASE_PATH&quot;] = str(Path(d) / &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 accounts = Path(d) / &quot;accounts.csv&quot; categories = Path(d) / &quot;categories.csv&quot; txns = Path(d) / &quot;txns.csv&quot; accounts.write_text(&quot;account,name\nA1,Drawer\n&quot;) categories.write_text(&quot;category,description\nC1,Sales\n&quot;) txns.write_text(&quot;txn_id,date,account,category,amount,memo\n1,2026-01-01,A1,C1,12.34,sale\n&quot;) assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, str(accounts))[0] == 0 assert cli_runner(&quot;load&quot;, &quot;categories&quot;, str(categories))[0] == 0 assert cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(txns))[0] == 0 code, out, _ = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;) assert code == 0 row = list(csv.reader(out.splitlines()))[1] assert row[0:4] == [&quot;1&quot;, &quot;2026-01-01&quot;, &quot;A1&quot;, &quot;C1&quot;] assert row[4] == &quot;12.34&quot; === END AC transaction-load-roundtrip ===</p>
+<p>=== AC transaction-load-atomic-rejection ===<br>Intent: A later invalid reference rejects the entire transaction batch. import os import tempfile from pathlib import Path from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as d: os.environ[&quot;DATABASE_PATH&quot;] = str(Path(d) / &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 accounts = Path(d) / &quot;accounts.csv&quot; categories = Path(d) / &quot;categories.csv&quot; bad = Path(d) / &quot;bad.csv&quot; accounts.write_text(&quot;account,name\nA1,Drawer\n&quot;) categories.write_text(&quot;category,description\nC1,Sales\n&quot;) bad.write_text(&quot;txn_id,date,account,category,amount,memo\n1,2026-01-01,A1,C1,1.00,ok\n2,2026-01-01,NOPE,C1,1.00,bad\n&quot;) assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, str(accounts))[0] == 0 assert cli_runner(&quot;load&quot;, &quot;categories&quot;, str(categories))[0] == 0 assert cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(bad))[0] == 3 assert cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;)[0] == 4 === END AC transaction-load-atomic-rejection ===</p>
+<p>=== AC transaction-load-validation ===<br>Intent: Invalid dates, amounts, duplicate IDs, and negative prospective balances are rejected. import os import tempfile from pathlib import Path from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as d: os.environ[&quot;DATABASE_PATH&quot;] = str(Path(d) / &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 a = Path(d) / &quot;a.csv&quot; c = Path(d) / &quot;c.csv&quot; a.write_text(&quot;account,name\nA1,Drawer\n&quot;) c.write_text(&quot;category,description\nC1,Sales\n&quot;) assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, str(a))[0] == 0 assert cli_runner(&quot;load&quot;, &quot;categories&quot;, str(c))[0] == 0 for name, body in { &quot;date.csv&quot;: &quot;txn_id,date,account,category,amount,memo\n1,2026-02-30,A1,C1,1.00,x\n&quot;, &quot;amount.csv&quot;: &quot;txn_id,date,account,category,amount,memo\n1,2026-01-01,A1,C1,1.234,x\n&quot;, &quot;duplicate.csv&quot;: &quot;txn_id,date,account,category,amount,memo\n1,2026-01-01,A1,C1,1.00,x\n1,2026-01-01,A1,C1,1.00,y\n&quot;, &quot;balance.csv&quot;: &quot;txn_id,date,account,category,amount,memo\n1,2026-01-01,A1,C1,-1.00,x\n&quot;, }.items(): path = Path(d) / name path.write_text(body) assert cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(path))[0] == 3 === END AC transaction-load-validation ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>All rows are validated before the first write.</li><li>Amounts are integer cents and never floating point.</li><li>A rejected batch leaves every table unchanged.</li></ul></article>
+</main>
+</body>
+</html>

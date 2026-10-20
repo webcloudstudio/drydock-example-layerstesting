@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Project-Tests.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Project-Tests.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Project-Tests.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Project Test Suite</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Provide the automated project test runner and comprehensive ledger test suite.</td></tr><tr><td>Depends On</td><td>FEATURE-CLI-Validation.md, FEATURE-Account-Management.md, FEATURE-Transaction-Management.md, FEATURE-Transfers.md, FEATURE-Report-Balances.md, FEATURE-Report-Categories.md, FEATURE-Report-Monthly.md</td></tr><tr><td>Provides</td><td>bin/test.sh, pytest suite</td></tr><tr><td>Consumes</td><td>ledger command surface</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Provide a POSIX-compatible <code>bin/test.sh</code> that runs the complete pytest suite from the application root and returns success only when every project test passes.</p>
+<h2>Test Scope</h2>
+<p>The suite covers:</p>
+<ul><li>command dispatch and usage errors;</li><li>database initialization and configuration;</li><li>account and category loading;</li><li>transaction loading and atomic rejection;</li><li>account and transaction CRUD;</li><li>balance invariants and atomic transfers;</li><li>balance, category, and monthly reports;</li><li>validation boundaries and all documented exit codes.</li></ul>
+<p>The suite uses temporary databases and does not modify supplied sources.</p>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC project-test-runner ===<br>Intent: The project test runner exists, is executable, and passes the automated suite. import os import subprocess</p>
+<p>runner = &quot;bin/test.sh&quot; assert os.path.isfile(runner) assert os.access(runner, os.X_OK)</p>
+<p>result = subprocess.run([&quot;sh&quot;, runner], capture_output=True, text=True) print(result.stdout) print(result.stderr) assert result.returncode == 0</p>
+<p>=== END AC project-test-runner ===</p>
+<p>=== AC project-test-runner-is-repeatable ===<br>Intent: Running the project test runner twice succeeds independently. import subprocess</p>
+<p>first = subprocess.run([&quot;sh&quot;, &quot;bin/test.sh&quot;], capture_output=True, text=True) print(first.stdout) print(first.stderr) assert first.returncode == 0</p>
+<p>second = subprocess.run([&quot;sh&quot;, &quot;bin/test.sh&quot;], capture_output=True, text=True) print(second.stdout) print(second.stderr) assert second.returncode == 0</p>
+<p>=== END AC project-test-runner-is-repeatable ===</p>
+<p>=== AC project-test-surface ===<br>Intent: The project suite exercises the executable ledger command surface. from cli.testing import cli_runner import os import tempfile</p>
+<p>with tempfile.TemporaryDirectory() as directory: os.environ[&quot;DATABASE_URL&quot;] = os.path.join(directory, &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;count&quot;)[0] == 0 assert cli_runner(&quot;report&quot;, &quot;balances&quot;)[0] == 0 assert cli_runner(&quot;report&quot;, &quot;categories&quot;)[0] == 0 assert cli_runner(&quot;report&quot;, &quot;monthly&quot;)[0] == 0</p>
+<p>=== END AC project-test-surface ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li><code>bin/test.sh</code> is POSIX-compatible.</li><li>The runner exits zero only when every automated test passes.</li><li>Tests use real temporary databases and preserve supplied source files.</li></ul></article>
+</main>
+</body>
+</html>

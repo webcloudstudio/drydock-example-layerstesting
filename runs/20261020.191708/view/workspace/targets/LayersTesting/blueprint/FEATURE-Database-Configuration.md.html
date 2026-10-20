@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Database-Configuration.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Database-Configuration.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Database-Configuration.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Database Configuration</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Resolve configured database storage and report operational database failures.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md</td></tr><tr><td>Provides</td><td>DATABASE_URL resolution, DATABASE_PATH fallback, default database path, operational error handling</td></tr><tr><td>Consumes</td><td>schema initialization</td></tr></tbody></table></div>
+<h2>Workflow</h2>
+<p>For every command, resolve the database location in this order:</p>
+<ol><li><code>DATABASE_URL</code></li><li><code>DATABASE_PATH</code></li><li><code>data/app.db</code></li></ol>
+<p>SQLite paths and <code>sqlite://</code> paths use the shipped SQLite persistence engine. PostgreSQL DSNs use the shipped PostgreSQL engine. Missing tables, unreachable databases, and other infrastructure failures produce exit code <code>1</code>, no standard-output data, and one diagnostic on standard error.</p>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC database-config-precedence ===<br>Intent: The CLI uses a configured SQLite database and initializes it successfully. import os import tempfile from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as directory: database_path = os.path.join(directory, &quot;configured.db&quot;) old_url = os.environ.get(&quot;DATABASE_URL&quot;) old_path = os.environ.get(&quot;DATABASE_PATH&quot;) try: os.environ[&quot;DATABASE_URL&quot;] = database_path os.environ[&quot;DATABASE_PATH&quot;] = os.path.join(directory, &quot;fallback.db&quot;) code, stdout, stderr = cli_runner(&quot;init&quot;) assert code == 0 assert stdout == &quot;&quot; finally: if old_url is None: os.environ.pop(&quot;DATABASE_URL&quot;, None) else: os.environ[&quot;DATABASE_URL&quot;] = old_url if old_path is None: os.environ.pop(&quot;DATABASE_PATH&quot;, None) else: os.environ[&quot;DATABASE_PATH&quot;] = old_path === END AC database-config-precedence ===</p>
+<p>=== AC database-config-operational-failure ===<br>Intent: A database with missing required tables produces an operational failure with no data output. import os import tempfile from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as directory: database_path = os.path.join(directory, &quot;empty.db&quot;) old_url = os.environ.get(&quot;DATABASE_URL&quot;) old_path = os.environ.get(&quot;DATABASE_PATH&quot;) try: os.environ[&quot;DATABASE_URL&quot;] = database_path os.environ.pop(&quot;DATABASE_PATH&quot;, None) code, stdout, stderr = cli_runner(&quot;count&quot;) assert code == 1 assert stdout == &quot;&quot; assert stderr != &quot;&quot; finally: if old_url is None: os.environ.pop(&quot;DATABASE_URL&quot;, None) else: os.environ[&quot;DATABASE_URL&quot;] = old_url if old_path is None: os.environ.pop(&quot;DATABASE_PATH&quot;, None) else: os.environ[&quot;DATABASE_PATH&quot;] = old_path === END AC database-config-operational-failure ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Configuration precedence must remain deterministic.</li><li>Database drivers may be reached only through the shipped persistence library.</li><li>Operational failures must not emit standard-output data.</li></ul></article>
+</main>
+</body>
+</html>

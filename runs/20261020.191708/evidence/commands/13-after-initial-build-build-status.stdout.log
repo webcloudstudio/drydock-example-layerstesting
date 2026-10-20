@@ -1,0 +1,25 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Next: (no actionable steps — all done or blocked)
+
+Blueprint: LayersTesting
+Target: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/workspace/targets/LayersTesting
+Rows: <state> <type>  <Name>  [<id>]   — pass [<id>] to --step
+Block: Build Block 1 · Foundational  [block-1]   — [built] story Define the ledger application boundaries and technical structure.  [architecture] — complete
+Block: Build Block 2 · Foundational  [block-2]   — [built] story Establish the relational ledger schema and persistence contract.  [database-schema] — complete
+Block: Build Block 3 · Service  [block-3]   — [built] story Resolve database configuration and operational failures.  [database-configuration] — complete
+Block: Build Block 4 · Foundational  [block-4]   — [built] story Provide the executable ledger command dispatcher and output contract.  [cli-dispatch] — complete
+Block: Build Block 5 · Service  [block-5]   — [built] story Validate command names, tables, reports, and argument counts.  [cli-validation] — complete
+Block: Build Block 6 · Service  [block-6]   — [built] story Load and validate account and category CSV files atomically.  [account-loading] — complete
+Block: Build Block 7 · Service  [block-7]   — [built] story Load and validate transaction CSV files atomically.  [transaction-loading] — complete
+Block: Build Block 8 · Service  [block-8]   — [built] story Add, read, rename, and delete ledger accounts.  [account-management] — complete
+Block: Build Block 9 · Service  [block-9]   — [built] story Post, read, amend, and delete ledger transactions.  [transaction-management] — complete
+Block: Build Block 10 · Service  [block-10]   — [built] story Enforce non-negative account balances across all mutations.  [balance-invariant] — complete
+Block: Build Block 11 · Service  [block-11]   — [built] story Execute atomic two-row account transfers.  [transfers] — complete
+Block: Build Block 12 · Service  [block-12]   — [built] story Report balances and transaction counts by account.  [balance-report] — complete
+Block: Build Block 13 · Service  [block-13]   — [built] story Report transaction totals by category.  [category-report] — complete
+Block: Build Block 14 · Service  [block-14]   — [built] story Report transaction totals by calendar month.  [monthly-report] — complete
+Block: Build Block 15 · Service  [block-15]   — [built] story Provide the automated project test runner and test suite.  [project-tests] — complete
+Block: Build Block 16 · Service  [block-16]   — [built] story Pass the supplied end-to-end ledger conformance harness.  [conformance] — complete
+
+Steps: 16 total — 0 done, 16 built (await verify), 0 in review, 0 pending, 0 blocked by questions, 0 failed (0% complete)
+Buildable now: (none)

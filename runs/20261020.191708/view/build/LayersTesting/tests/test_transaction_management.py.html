@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_transaction_management.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_transaction_management.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_transaction_management.py">Raw file</a></div></header>
+<article class="doc"><pre>import csv
+
+from cli.testing import cli_runner
+
+
+def _ready(tmp_path, monkeypatch):
+    monkeypatch.setenv(&quot;DATABASE_PATH&quot;, str(tmp_path / &quot;ledger.db&quot;))
+    monkeypatch.delenv(&quot;DATABASE_URL&quot;, raising=False)
+    assert cli_runner(&quot;init&quot;)[0] == 0
+    assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A1&quot;, &quot;Drawer&quot;)[0] == 0
+    assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;C1&quot;, &quot;Sales&quot;)[0] == 0
+
+
+def _get(txn_id=&quot;1&quot;):
+    code, output, _ = cli_runner(&quot;txn&quot;, &quot;get&quot;, txn_id)
+    return code, list(csv.reader(output.splitlines()))
+
+
+def test_transaction_crud_preserves_fields_and_uses_integer_cents(tmp_path, monkeypatch):
+    _ready(tmp_path, monkeypatch)
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;90071992547409.91&quot;, &quot;2026-01-01&quot;, &quot;sale&quot;)[0] == 0
+    assert _get()[1][1] == [&quot;1&quot;, &quot;2026-01-01&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;90071992547409.91&quot;, &quot;sale&quot;]
+    assert cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;, &quot;90071992547409.90&quot;)[0] == 0
+    assert _get()[1][1] == [&quot;1&quot;, &quot;2026-01-01&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;90071992547409.90&quot;, &quot;sale&quot;]
+    assert cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;1&quot;)[0] == 0
+    assert _get()[0] == 4
+
+
+def test_transaction_post_rejects_invalid_fields_before_writing(tmp_path, monkeypatch):
+    _ready(tmp_path, monkeypatch)
+    cases = [
+        (&quot;BAD-CODE&quot;, &quot;C1&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;, &quot;ok&quot;),
+        (&quot;A1&quot;, &quot;C1&quot;, &quot;1.001&quot;, &quot;2026-01-01&quot;, &quot;ok&quot;),
+        (&quot;A1&quot;, &quot;C1&quot;, &quot;1.00&quot;, &quot;2026-02-30&quot;, &quot;ok&quot;),
+        (&quot;A1&quot;, &quot;C1&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;, &quot;x&quot; * 61),
+    ]
+    for account, category, amount, day, memo in cases:
+        assert cli_runner(&quot;txn&quot;, &quot;post&quot;, account, category, amount, day, memo)[0] == 3
+    assert _get()[0] == 4
+
+
+def test_transaction_amend_and_delete_reject_negative_result_atomically(tmp_path, monkeypatch):
+    _ready(tmp_path, monkeypatch)
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;5.00&quot;, &quot;2026-01-01&quot;, &quot;opening&quot;)[0] == 0
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;-2.00&quot;, &quot;2026-01-02&quot;, &quot;refund&quot;)[0] == 0
+    assert cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;, &quot;-10.00&quot;)[0] == 3
+    assert _get()[1][1] == [&quot;1&quot;, &quot;2026-01-01&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;5.00&quot;, &quot;opening&quot;]
+    assert cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;1&quot;)[0] == 3
+    assert _get()[0] == 0
+</pre></article>
+</main>
+</body>
+</html>

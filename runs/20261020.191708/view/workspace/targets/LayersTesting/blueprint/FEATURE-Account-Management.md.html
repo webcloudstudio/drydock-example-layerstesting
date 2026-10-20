@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Account-Management.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Account-Management.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Account-Management.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Account Management</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Add, retrieve, rename, and delete ledger accounts.</td></tr><tr><td>Depends On</td><td>FEATURE-Account-Category-Loading.md, FEATURE-Transaction-Loading.md</td></tr><tr><td>Provides</td><td>account add, account get, account rename, account delete</td></tr><tr><td>Consumes</td><td>command dispatch, database configuration, accounts.create, accounts.get, accounts.update, accounts.delete</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Manage account master records while reporting transaction counts and integer-cent balances.</p>
+<h2>Operations</h2>
+<ul><li><code>account add &lt;code&gt; &lt;name&gt;</code> validates and creates an unused account.</li><li><code>account get &lt;code&gt;</code> returns the account balance row.</li><li><code>account rename &lt;code&gt; &lt;name&gt;</code> changes only the name.</li><li><code>account delete &lt;code&gt;</code> removes an account only when it has no transactions.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-DB-005</code> — read-write: accounts.get - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code>, <code>transactions</code>, <code>balance</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC account-crud-roundtrip ===<br>Intent: Account creation, retrieval, rename, and deletion persist through the public CLI. import csv import os import tempfile from pathlib import Path from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as d: os.environ[&quot;DATABASE_PATH&quot;] = str(Path(d) / &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A1&quot;, &quot;Drawer&quot;)[0] == 0 code, out, _ = cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;A1&quot;) assert code == 0 assert list(csv.reader(out.splitlines()))[1][0:2] == [&quot;A1&quot;, &quot;Drawer&quot;] assert cli_runner(&quot;account&quot;, &quot;rename&quot;, &quot;A1&quot;, &quot;Front&quot;)[0] == 0 code, out, _ = cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;A1&quot;) assert code == 0 assert list(csv.reader(out.splitlines()))[1][1] == &quot;Front&quot; assert cli_runner(&quot;account&quot;, &quot;delete&quot;, &quot;A1&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;A1&quot;)[0] == 4 === END AC account-crud-roundtrip ===</p>
+<p>=== AC account-rejection-contract ===<br>Intent: Duplicate, invalid, absent, and in-use account operations return their specified statuses. import os import tempfile from pathlib import Path from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as d: os.environ[&quot;DATABASE_PATH&quot;] = str(Path(d) / &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A1&quot;, &quot;Drawer&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A1&quot;, &quot;Again&quot;)[0] == 3 assert cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;NOPE&quot;)[0] == 4 assert cli_runner(&quot;account&quot;, &quot;rename&quot;, &quot;NOPE&quot;, &quot;Name&quot;)[0] == 4 assert cli_runner(&quot;account&quot;, &quot;delete&quot;, &quot;NOPE&quot;)[0] == 4 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;CASH9&quot;, &quot;Event Float&quot;)[0] == 0 assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;C1&quot;, &quot;Sales&quot;)[0] in (0, 2, 3) === END AC account-rejection-contract ===</p>
+<p>=== AC account-in-use-protection ===<br>Intent: An account with a transaction cannot be deleted. import os import tempfile from pathlib import Path from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as d: os.environ[&quot;DATABASE_PATH&quot;] = str(Path(d) / &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A1&quot;, &quot;Drawer&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A2&quot;, &quot;Other&quot;)[0] == 0 assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;C1&quot;, &quot;Sales&quot;)[0] in (0, 2, 3) assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;1.00&quot;, &quot;2026-01-01&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;delete&quot;, &quot;A1&quot;)[0] == 3 === END AC account-in-use-protection ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Account codes and names follow the source validation limits.</li><li>Account deletion never cascades transactions.</li><li>Failed operations preserve existing rows.</li></ul></article>
+</main>
+</body>
+</html>

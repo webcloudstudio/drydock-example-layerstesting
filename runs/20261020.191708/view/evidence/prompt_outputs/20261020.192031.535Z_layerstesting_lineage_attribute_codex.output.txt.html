@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.192031.535Z_layerstesting_lineage_attribute_codex.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.192031.535Z_layerstesting_lineage_attribute_codex.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.192031.535Z_layerstesting_lineage_attribute_codex.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>&lt;requirement name=&quot;ledger-executable&quot;&gt;
+The product is an executable named `ledger` at the application root.
+&lt;/requirement&gt;
+&lt;requirement name=&quot;relational-persistence&quot;&gt;
+It stores everything in a relational database through the shipped persistence library, and every command either completes in full or changes nothing.
+&lt;/requirement&gt;
+&lt;requirement name=&quot;database-configuration&quot; stories=&quot;database-configuration&quot;&gt;
+`DATABASE_URL` names the database. A value beginning `postgres://` or `postgresql://` is a PostgreSQL DSN. Any other value is a SQLite file path, optionally prefixed `sqlite://`. When `DATABASE_URL` is unset, `DATABASE_PATH` is used, then `data/app.db`.
+&lt;/requirement&gt;
+&lt;requirement name=&quot;ledger-schema&quot; stories=&quot;database-schema&quot;&gt;
+Three tables. Amounts are stored as integer cents and never as floating point.
+&lt;/requirement&gt;
+&lt;requirement name=&quot;command-dispatch-and-output&quot; stories=&quot;cli-dispatch&quot;&gt;
+Every successful command except `init` writes CSV to standard output: one header row, then data rows, comma-separated, no quoting, no trailing spaces, `\n` line endings. `init` writes nothing. A failing command writes nothing to standard output and one diagnostic line to standard error.
+&lt;/requirement&gt;
+&lt;requirement name=&quot;validate-command-usage&quot; stories=&quot;cli-validation&quot;&gt;
+| `2` | Usage error: unknown command, unknown table or report, wrong argument count. |
+&lt;/requirement&gt;
+&lt;requirement name=&quot;atomic-rejected-commands&quot; stories=&quot;account-loading,transaction-loading,balance-invariant,transfers&quot;&gt;
+1. **A rejected command changes nothing.** A command checks every input and rule before
+   its
+   first write. A load that rejects row 11 stores none of rows 1 to 10. A transfer stores both of
+   its rows or neither.
+&lt;/requirement&gt;
+&lt;requirement name=&quot;load-accounts-and-categories&quot; stories=&quot;account-loading&quot;&gt;
+| `ledger load &lt;table&gt; &lt;csv&gt;` | Loads `accounts`, `categories`, or `transactions` from a file whose header matches the table&#x27;s columns in the order above. Writes `table,loaded` and `&lt;table&gt;,&lt;rows&gt;`. |
+&lt;/requirement&gt;
+&lt;requirement name=&quot;load-transactions&quot; stories=&quot;transaction-loading&quot;&gt;
+A loaded transaction keeps the `txn_id` from its file.
+&lt;/requirement&gt;
+&lt;requirement name=&quot;account-management&quot; stories=&quot;account-management&quot;&gt;
+| `ledger account add &lt;code&gt; &lt;name&gt;` | The new account row. |
+| `ledger account get &lt;code&gt;` | The account row. |
+| `ledger account rename &lt;code&gt; &lt;name&gt;` | The updated account row. |
+| `ledger account delete &lt;code&gt;` | `deleted` and the code. Refused while the account has transactions. |
+&lt;/requirement&gt;
+&lt;requirement name=&quot;transaction-management&quot; stories=&quot;transaction-management&quot;&gt;
+| `ledger txn post &lt;account&gt; &lt;category&gt; &lt;amount&gt; &lt;date&gt; [&lt;memo&gt;]` | The new transaction row. |
+| `ledger txn get &lt;id&gt;` | The transaction row. |
+| `ledger txn amend &lt;id&gt; &lt;amount&gt;` | The updated transaction row. Only the amount changes. |
+| `ledger txn delete &lt;id&gt;` | `deleted` and the id. |
+&lt;/requirement&gt;
+&lt;requirement name=&quot;non-negative-balances&quot; stories=&quot;balance-invariant&quot;&gt;
+2. **No command leaves an account balance below zero.** An account&#x27;s balance is the sum of its
+   transaction amounts. Posting, amending, deleting, transferring, and loading are all subject to
+   this rule, checked before the command writes anything.
+&lt;/requirement&gt;
+&lt;requirement name=&quot;transfers&quot; stories=&quot;transfers&quot;&gt;
+| `ledger transfer &lt;from&gt; &lt;to&gt; &lt;amount&gt; &lt;date&gt;` | Two transaction rows in category `TRANSFER`: `-amount` on `&lt;from&gt;` with memo `transfer to &lt;to&gt;`, then `+amount` on `&lt;to&gt;` with memo `transfer from &lt;from&gt;`. The amount is positive and the accounts differ. |
+&lt;/requirement&gt;
+&lt;requirement name=&quot;balance-report&quot; stories=&quot;balance-report&quot;&gt;
+| `ledger report balances` | `account,name,transactions,balance` per account ordered by code, then `TOTAL,,&lt;count&gt;,&lt;sum&gt;`. |
+&lt;/requirement&gt;
+&lt;requirement name=&quot;category-report&quot; stories=&quot;category-report&quot;&gt;
+| `ledger report categories` | `category,description,transactions,inflow,outflow,net` per category ordered by code, including categories with no transactions, then `TOTAL,,&lt;count&gt;,&lt;inflow&gt;,&lt;outflow&gt;,&lt;net&gt;`. |
+&lt;/requirement&gt;
+&lt;requirement name=&quot;monthly-report&quot; stories=&quot;monthly-report&quot;&gt;
+| `ledger report monthly` | `month,transactions,inflow,outflow,net` per `YYYY-MM` that has transactions, ascending, then `TOTAL,&lt;count&gt;,&lt;inflow&gt;,&lt;outflow&gt;,&lt;net&gt;`. |
+&lt;/requirement&gt;
+&lt;requirement name=&quot;automated-project-tests&quot; stories=&quot;project-tests&quot;&gt;
+The completed application provides a POSIX-compatible `bin/test.sh` that runs its own automated
+test suite from the application root and exits zero only when every test passes. The suite
+covers each command, each exit code, and each rule above against a real temporary database.
+&lt;/requirement&gt;
+&lt;requirement name=&quot;conformance-harness&quot; stories=&quot;conformance&quot;&gt;
+`sources/run.sh` is the scoring entry point. It is supplied, not authored, and is staged verbatim
+into the application root with the seed files. `drydock uat` runs `sh sources/run.sh` from the
+completed application root and takes its exit code and output as the score.
+&lt;/requirement&gt;
+&lt;unattached story=&quot;architecture&quot;/&gt;</pre></article>
+</main>
+</body>
+</html>

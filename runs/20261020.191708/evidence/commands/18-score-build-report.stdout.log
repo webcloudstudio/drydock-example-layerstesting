@@ -1,0 +1,55 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+
+Build report: LayersTesting
+  evidence: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/workspace/targets/LayersTesting/evidence
+  usage:    /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/workspace/logs/llm.jsonl
+
+  Blueprint acceptance (last `score ac`): PASS 21  FAIL 0  UNVERIFIED 0  PREPASSED 21  (42 AC)
+
+  Block                     Build AC  Calls     Cached  Uncached    Hit  Output     Time
+  ──────────────────────────────────────────────────────────────────────────────────────
+  ✓ Block 1 · Foundational       2/2      1    102,528    14,187  87.8%   3,157      37s
+  ✓ Block 2 · Foundational       0/0      1    333,312    32,845  91.0%   5,415   1m 29s
+  ✓ Block 3 · Service            2/2      1    320,000    30,584  91.3%   5,115      48s
+  ✓ Block 4 · Foundational       3/3      2  1,036,800    75,613  93.2%  18,448   3m 26s
+  ✓ Block 5 · Service            4/4      1    280,320    40,410  87.4%   3,195      52s
+  ✓ Block 6 · Service            3/3      1    449,536    34,924  92.8%   4,824   1m 10s
+  ✓ Block 7 · Service            3/3      1    263,040    30,654  89.6%   3,660      49s
+  ✓ Block 8 · Service            3/3      1    337,408    29,872  91.9%   6,037   1m 19s
+  ✓ Block 9 · Service            3/3      1    340,736    68,415  83.3%   4,891   1m 41s
+  ✓ Block 10 · Service           3/3      1    509,696    35,819  93.4%   5,574   1m 39s
+  ✓ Block 11 · Service           3/3      3  1,119,872    98,699  91.9%  11,632   2m 58s
+  ✓ Block 12 · Service           3/3      1    562,304    40,026  93.4%   3,992      54s
+  ✓ Block 13 · Service           3/3      3    740,224    82,916  89.9%   8,258   2m 15s
+  ✓ Block 14 · Service           3/3      2    500,736    59,858  89.3%   9,625   1m 53s
+  ✓ Block 15 · Service           3/3      1    228,352    21,020  91.6%   2,559      54s
+  ✓ Block 16 · Service           1/1      1    377,088    34,549  91.6%   1,946   1m 52s
+  ──────────────────────────────────────────────────────────────────────────────────────
+  TOTAL                        42/42     22  7,501,952   730,391  91.1%  98,328  24m 43s
+
+  Blocks: 16/16 verified · 12 on first call · 4 repaired
+  Model:  gpt-5.6-luna
+  Tokens: 7,501,952 cached · 730,391 uncached · 98,328 out
+
+  Repairs
+    Block 4 · Foundational [block-4]
+      initial build  incomplete 2/3 AC · 848,084 in · 93.9% hit · 2m 36s
+                     not yet passing: cli-dispatch-error-channel
+      repair 1       built      3/3 AC · 264,329 in · 90.8% hit · 49s
+    Block 11 · Service [block-11]
+      initial build  incomplete 1/3 AC · 725,649 in · 94.3% hit · 1m 18s
+                     not yet passing: transfers-success, transfers-rejects-insufficient-balance
+      repair 1       incomplete 1/3 AC · 273,263 in · 89.3% hit · 59s
+                     not yet passing: transfers-success, transfers-rejects-insufficient-balance
+      repair 2       built      3/3 AC · 219,659 in · 87.2% hit · 40s
+    Block 13 · Service [block-13]
+      initial build  incomplete 1/3 AC · 197,259 in · 85.5% hit · 54s
+                     not yet passing: category-report-includes-zero-activity, category-report-calculates-flows
+      repair 1       incomplete 3/3 AC · 350,683 in · 92.5% hit · 39s
+                     not yet passing: transaction-validation
+      repair 2       built      3/3 AC · 275,198 in · 89.9% hit · 42s
+    Block 14 · Service [block-14]
+      initial build  incomplete 1/3 AC · 327,248 in · 89.7% hit · 1m 04s
+                     not yet passing: monthly-report-groups-months, monthly-report-separates-months
+      repair 1       built      3/3 AC · 233,346 in · 88.8% hit · 49s
+

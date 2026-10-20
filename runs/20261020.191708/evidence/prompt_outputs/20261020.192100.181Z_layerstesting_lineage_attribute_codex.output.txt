@@ -1,0 +1,22 @@
+<requirement name="seed-accounts" stories="account-loading">
+account,name
+DRAWER1,Front Drawer
+DRAWER2,Back Drawer
+PETTY,Petty Cash
+SAFE,Store Safe
+</requirement>
+<unattached story="architecture"/>
+<unattached story="database-schema"/>
+<unattached story="database-configuration"/>
+<unattached story="cli-dispatch"/>
+<unattached story="cli-validation"/>
+<unattached story="transaction-loading"/>
+<unattached story="account-management"/>
+<unattached story="transaction-management"/>
+<unattached story="balance-invariant"/>
+<unattached story="transfers"/>
+<unattached story="balance-report"/>
+<unattached story="category-report"/>
+<unattached story="monthly-report"/>
+<unattached story="project-tests"/>
+<unattached story="conformance"/>

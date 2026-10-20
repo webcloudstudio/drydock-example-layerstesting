@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-9.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-9.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-9.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 9 · Service (block-9)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 7526</li><li>execution id: 20261020.193443.176Z-1dc7e7f9</li></ul>
+<h2>Stories built</h2>
+<ul><li>Post, read, amend, and delete ledger transactions. (transaction-management) [story]</li></ul>
+<h2>Missing context</h2>
+<ul><li>context: INSTRUCTIONS.md</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 601)</li><li>compass: COMPASS.md (SP 755)</li><li>implements: FEATURE-Transaction-Management.md (SP 1007)</li><li>context: ARCHITECTURE_compact.md (SP 154)</li><li>context: DATABASE_compact.md (SP 163)</li><li>stack: cli.md (SP 1755)</li><li>stack: persistence_compact.md (SP 1217)</li><li>stack: sqlite.md (SP 1818)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>cli/<strong>init</strong>.py</li><li>tests/test_transaction_management.py</li><li>validation.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>GREEN (prepassed): transaction-crud-roundtrip (FEATURE-Transaction-Management.md)</li></ul>
+<p>intent: Posting, reading, amending, and deleting a transaction persist the documented fields. return code: 0</p>
+<ul><li>GREEN (prepassed): transaction-validation (FEATURE-Transaction-Management.md)</li></ul>
+<p>intent: Invalid references, amounts, dates, memos, and absent identifiers are rejected. return code: 0</p>
+<ul><li>GREEN (prepassed): transaction-id-generation (FEATURE-Transaction-Management.md)</li></ul>
+<p>intent: A posted transaction receives the next identifier after existing rows. return code: 0</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: transaction-crud-roundtrip (FEATURE-Transaction-Management.md)</li></ul>
+<p>intent: Posting, reading, amending, and deleting a transaction persist the documented fields. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: transaction-validation (FEATURE-Transaction-Management.md)</li></ul>
+<p>intent: Invalid references, amounts, dates, memos, and absent identifiers are rejected. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: transaction-id-generation (FEATURE-Transaction-Management.md)</li></ul>
+<p>intent: A posted transaction receives the next identifier after existing rows. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Build summary</h2>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>cli/<strong>init</strong>.py</li><li>validation.py</li><li>tests/test_transaction_management.py</li></ul>
+<p>SUMMARY: Implemented transaction validation and exact integer-cent formatting. Added CRUD, atomic rejection, and field-preservation tests.</p>
+<p>Verification: <code>30 passed</code>; terminal harness <code>43 passed, 0 failed</code>.</p>
+<p>BLOCKERS:</p>
+<ul><li>None</li></ul></article>
+</main>
+</body>
+</html>

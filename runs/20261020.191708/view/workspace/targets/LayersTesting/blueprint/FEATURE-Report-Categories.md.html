@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Report-Categories.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Report-Categories.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Report-Categories.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Category Report</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Report transaction totals grouped by category.</td></tr><tr><td>Depends On</td><td>FEATURE-Transaction-Management.md</td></tr><tr><td>Provides</td><td>report categories</td></tr><tr><td>Consumes</td><td>categories.list, transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>The category report includes every category, including categories without transactions, and reports transaction count, inflow, outflow, and net totals.</p>
+<h2>Workflow</h2>
+<p>Query categories and transactions, group transactions by category code, calculate positive inflow and absolute negative outflow in cents, include zero-activity categories, order by code, and append a computed total row.</p>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC category-report-includes-zero-activity ===<br>Intent: The category report includes categories with no transactions. from cli.testing import cli_runner import csv import io import os import tempfile</p>
+<p>with tempfile.TemporaryDirectory() as directory: os.environ[&quot;DATABASE_URL&quot;] = os.path.join(directory, &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;ACTIVE&quot;, &quot;Active&quot;)[0] == 0 assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;EMPTY&quot;, &quot;Empty&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Account&quot;)[0] == 0 assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;ACTIVE&quot;, &quot;5.00&quot;, &quot;receipt&quot;)[0] == 0</p>
+<p>code, output, _ = cli_runner(&quot;report&quot;, &quot;categories&quot;) assert code == 0 rows = list(csv.reader(io.StringIO(output))) category_codes = [row[0] for row in rows[1:-1]] assert category_codes == [&quot;ACTIVE&quot;, &quot;EMPTY&quot;] empty = rows[2] assert empty[2:] == [&quot;0&quot;, &quot;0.00&quot;, &quot;0.00&quot;, &quot;0.00&quot;]</p>
+<p>=== END AC category-report-includes-zero-activity ===</p>
+<p>=== AC category-report-calculates-flows ===<br>Intent: The category report calculates inflow, outflow, and net from persisted integer cents. from cli.testing import cli_runner import csv import io import os import tempfile</p>
+<p>with tempfile.TemporaryDirectory() as directory: os.environ[&quot;DATABASE_URL&quot;] = os.path.join(directory, &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Account&quot;)[0] == 0 assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;C&quot;, &quot;Category&quot;)[0] == 0 assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;C&quot;, &quot;10.00&quot;, &quot;in&quot;)[0] == 0 assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;C&quot;, &quot;-3.25&quot;, &quot;out&quot;)[0] == 0</p>
+<p>code, output, _ = cli_runner(&quot;report&quot;, &quot;categories&quot;) assert code == 0 rows = list(csv.reader(io.StringIO(output))) category = rows[1] total = rows[-1] assert category[2:] == [&quot;2&quot;, &quot;10.00&quot;, &quot;3.25&quot;, &quot;6.75&quot;] assert total[1:] == [&quot;&quot;, &quot;2&quot;, &quot;10.00&quot;, &quot;3.25&quot;, &quot;6.75&quot;]</p>
+<p>=== END AC category-report-calculates-flows ===</p>
+<p>=== AC category-report-rejects-unknown-report ===<br>Intent: An unknown category report name returns a usage error without output. from cli.testing import cli_runner import os import tempfile</p>
+<p>with tempfile.TemporaryDirectory() as directory: os.environ[&quot;DATABASE_URL&quot;] = os.path.join(directory, &quot;ledger.db&quot;) code, output, _ = cli_runner(&quot;report&quot;, &quot;unknown&quot;) assert code == 2 assert output == &quot;&quot;</p>
+<p>=== END AC category-report-rejects-unknown-report ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Zero-activity categories are included.</li><li>Outflow is reported as a positive amount.</li><li>Totals are computed from persisted rows.</li></ul></article>
+</main>
+</body>
+</html>

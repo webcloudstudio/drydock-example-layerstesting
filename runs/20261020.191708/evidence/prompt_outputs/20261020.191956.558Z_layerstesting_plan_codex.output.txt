@@ -1,0 +1,56 @@
+=== BEGIN ARTIFACT FEATURE-Conformance.md ===
+# FEATURE: Supplied Conformance Verification
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Verify the completed ledger against the supplied end-to-end conformance harness. |
+| Depends On  | FEATURE-Project-Tests.md, FEATURE-Report-Balances.md, FEATURE-Report-Categories.md, FEATURE-Report-Monthly.md, FEATURE-Transfers.md, FEATURE-Account-Management.md, FEATURE-Transaction-Management.md, FEATURE-Transaction-Loading.md, FEATURE-Account-Category-Loading.md, FEATURE-CLI-Validation.md, FEATURE-CLI-Dispatcher.md, FEATURE-Database-Configuration.md, DATABASE.md, ARCHITECTURE.md |
+| Provides    | complete supplied conformance verification |
+| Consumes    | ledger command surface, bin/test.sh |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The supplied harness is the authoritative final verification for the executable ledger. It exercises schema lifecycle, loading, reports, account and transaction mutations, transfers, rejection atomicity, usage errors, and re-initialization without modifying the supplied harness or fixtures.
+
+## Verification
+
+Run `sh sources/run.sh` from the completed application root. The executable must be present at `./ledger`, use the configured database, compute all output from persisted state, and satisfy every harness check.
+
+## Programmatic Acceptance
+
+Requires: executable=sh; scope=test
+
+=== AC conformance-full ===
+Intent: The completed ledger passes the supplied end-to-end conformance harness.
+Suite: full
+
+import os
+import subprocess
+
+result = subprocess.run(
+    ["sh", "sources/run.sh"],
+    capture_output=True,
+    text=True,
+    env={**os.environ},
+)
+print(result.stdout)
+print(result.stderr, file=__import__("sys").stderr)
+assert result.returncode == 0
+=== END AC conformance-full ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Do not modify, rewrite, regenerate, or substitute any file under `sources/`.
+- Do not embed known report answers in application code.
+- Run the conformance harness only after all implementation stories are complete.
+- The supplied harness is the terminal project verification and its exit status is authoritative.
+=== END ARTIFACT ===

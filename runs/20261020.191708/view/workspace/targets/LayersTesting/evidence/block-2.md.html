@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-2.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-2.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-2.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 2 · Foundational (block-2)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 6943</li><li>execution id: 20261020.192313.901Z-c00a830f</li></ul>
+<h2>Stories built</h2>
+<ul><li>Establish the relational ledger schema and persistence contract. (database-schema) [story]</li></ul>
+<h2>Reusable compacts</h2>
+<ul><li>DATABASE_compact.md</li></ul>
+<h2>Missing context</h2>
+<ul><li>context: INSTRUCTIONS.md</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 601)</li><li>compass: COMPASS.md (SP 755)</li><li>implements: DATABASE.md (SP 1294)</li><li>stack: persistence.md (SP 2407)</li><li>stack: sqlite.md (SP 1818)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>persistence/schema.py</li><li>tests/test_database_schema.py</li></ul>
+<h2>Build summary</h2>
+<p>&lt;reusable-compact filename=&quot;DATABASE.md&quot;&gt; Relational ledger persistence uses <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code>. Tables: <code>accounts(account VARCHAR(12) PK, name VARCHAR(40))</code>; <code>categories(category VARCHAR(12) PK, description VARCHAR(40))</code>; <code>transactions(txn_id INTEGER PK, date VARCHAR(10), account/category foreign keys, amount INTEGER cents, memo VARCHAR(60))</code>. Foreign keys are enforced; initialization recreates all tables empty; rejected operations preserve existing rows; callers use only <code>persistence.open_database</code>. &lt;/reusable-compact&gt;</p>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>persistence/schema.py</li><li>tests/test_database_schema.py</li></ul>
+<p>SUMMARY: Corrected generated row type annotations and added schema round-trip, foreign-key, idempotence, and field-shape tests. Python suite passes: 9 tests.</p>
+<p>BLOCKERS:</p>
+<ul><li><code>sources/run.sh</code> remains 2/43 because later CLI/application build blocks are not implemented yet.</li></ul></article>
+</main>
+</body>
+</html>

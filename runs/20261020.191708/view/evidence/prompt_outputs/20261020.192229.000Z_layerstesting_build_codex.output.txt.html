@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.192229.000Z_layerstesting_build_codex.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.192229.000Z_layerstesting_build_codex.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.192229.000Z_layerstesting_build_codex.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>&lt;reusable-compact filename=&quot;ARCHITECTURE.md&quot;&gt;
+Expose `cli.main(argv)` and `persistence.open_database(dsn)`. Use boundaries for configuration, validation/services, persistence callers, reporting, and CLI dispatch. Resolve databases via `DATABASE_URL`, `DATABASE_PATH`, then `data/app.db`. Keep all monetary values as integer cents; application code must not access database drivers directly. CLI exit codes: 0 success, 1 operational failure, 2 usage error, 3 rejected input/invariant violation, 4 absent record.
+&lt;/reusable-compact&gt;
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- pyproject.toml
+- uv.lock
+- cli.py
+- configuration.py
+- validation.py
+- services.py
+- reports.py
+- persistence/__init__.py
+- ledger
+- bin/test.sh
+- tests/test_architecture.py
+
+SUMMARY:
+Implemented the foundational Python architecture, CLI contract, configuration precedence, validation/service/report boundaries, persistence facade, executable launcher, and tests. `pytest`, `sh bin/test.sh`, and launcher checks pass.
+
+BLOCKERS:
+- None</pre></article>
+</main>
+</body>
+</html>

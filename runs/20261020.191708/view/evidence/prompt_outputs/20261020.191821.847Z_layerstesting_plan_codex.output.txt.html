@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.191821.847Z_layerstesting_plan_codex.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.191821.847Z_layerstesting_plan_codex.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.191821.847Z_layerstesting_plan_codex.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT ARCHITECTURE.md ===
+# ARCHITECTURE: Ledger Application
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Define the command-line ledger boundaries, validation flow, and persistence encapsulation. |
+| Depends On  | — |
+| Provides    | application module boundaries, CLI boundary, configuration boundary, validation boundary |
+| Consumes    | — |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The application is a Python 3.11+ command-line executable named `ledger`. Commands are dispatched through a thin CLI boundary into configuration, validation, service, reporting, and persistence callers.
+
+## Modules and Boundaries
+
+| Module | Responsibility |
+|---|---|
+| `ledger` / CLI package | Parse command arguments, dispatch commands, emit CSV, and map failures to exit codes. |
+| Configuration | Resolve `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`. |
+| Validation and services | Parse and validate codes, text, dates, amounts, references, balances, and atomic workflows before writes. |
+| Persistence callers | Use only `persistence.open_database` and generated table operations. |
+| Reporting | Query persisted rows and calculate report values using integer cents. |
+
+Application code must never import or open a database driver directly. All database access crosses the shipped persistence library boundary. Monetary values remain integer cents at every application and persistence layer; floating-point arithmetic is prohibited.
+
+## Command Flow
+
+Commands resolve configuration, open the database through the persistence package, validate the complete operation, perform writes within an atomic workflow, and serialize successful results as CSV. Diagnostics go to standard error. Exit codes are `0` for success, `1` for operational failure, `2` for usage errors, `3` for rejected input or invariant violations, and `4` for absent records.
+
+## Technology Stack
+
+- Python 3.11 or newer implements the application and tests.
+- SQLite is the supplied database path, accessed through the shipped persistence library.
+- PostgreSQL DSNs are supported through the same persistence boundary.
+- The CLI is the executable `ledger`.
+- pytest runs the project suite.
+- POSIX shell runs `bin/test.sh` and the supplied harness.
+
+## Module Ownership
+
+| Boundary | Owner | Allowed low-level access |
+|---|---|---|
+| Persistence | generated `persistence` package | database driver internals only |
+| Configuration | application configuration module | environment variables and path handling |
+| File input | load services | CSV file reading |
+| CLI | command dispatcher | argument parsing, stdout, stderr, exit codes |
+| Domain validation | service layer | validation and transaction planning |
+| Reports | report services | declared persistence operations |
+
+## Programmatic Acceptance
+
+=== AC architecture-imports ===
+Intent: The built application exposes the selected CLI and persistence foundation packages.
+from importlib import import_module
+
+cli_module = import_module(&quot;cli&quot;)
+persistence_module = import_module(&quot;persistence&quot;)
+assert hasattr(cli_module, &quot;main&quot;)
+assert hasattr(persistence_module, &quot;open_database&quot;)
+=== END AC architecture-imports ===
+
+=== AC architecture-cli-contract ===
+Intent: The CLI foundation exposes an in-process callable accepting an argument list.
+from cli import main
+import inspect
+
+signature = inspect.signature(main)
+assert &quot;argv&quot; in signature.parameters
+assert main([]) == 2
+=== END AC architecture-cli-contract ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Application code must not open a database driver directly.
+- Money must not use floating-point representation or arithmetic.
+- Report values must be computed from persisted state.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT DATABASE.md ===
+# DATABASE: Ledger Persistence
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Define the relational ledger schema and typed persistence operations. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | accounts table, categories table, transactions table, schema initialization |
+| Consumes    | — |
+
+## Questions
+
+- None.
+
+## Stores
+
+The application uses the relational database selected by `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`. SQLite paths may be prefixed with `sqlite://`; PostgreSQL DSNs begin with `postgres://` or `postgresql://`. Application callers use only `persistence.open_database`.
+
+## Access Patterns
+
+### FEATURE-DB-001 — Initialize schema
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | write |
+| Repository operation | `schema.initialize` |
+| Compatibility | rebuild |
+
+Input: `InitializeSchema`
+
+| Field | Type |
+|---|---|
+| drop_existing | INTEGER |
+
+Output: `SchemaStatus`
+
+| Field | Type |
+|---|---|
+| tables | TEXT |
+
+### FEATURE-DB-002 — Account operations
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Account-Category-Loading.md |
+| Access | read-write |
+| Repository operation | `accounts.create` |
+| Compatibility | unchanged |
+
+Input: `AccountInput`
+
+| Field | Type |
+|---|---|
+| account | VARCHAR(12) |
+| name | VARCHAR(40) |
+
+Output: `AccountRow`
+
+| Field | Type |
+|---|---|
+| account | VARCHAR(12) |
+| name | VARCHAR(40) |
+
+### FEATURE-DB-003 — Category operations
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Account-Category-Loading.md |
+| Access | read-write |
+| Repository operation | `categories.create` |
+| Compatibility | unchanged |
+
+Input: `CategoryInput`
+
+| Field | Type |
+|---|---|
+| category | VARCHAR(12) |
+| description | VARCHAR(40) |
+
+Output: `CategoryRow`
+
+| Field | Type |
+|---|---|
+| category | VARCHAR(12) |
+| description | VARCHAR(40) |
+
+### FEATURE-DB-004 — Transaction operations
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Transaction-Loading.md |
+| Access | read-write |
+| Repository operation | `transactions.create` |
+| Compatibility | unchanged |
+
+Input: `TransactionInput`
+
+| Field | Type |
+|---|---|
+| txn_id | INTEGER |
+| date | VARCHAR(10) |
+| account | VARCHAR(12) |
+| category | VARCHAR(12) |
+| amount | INTEGER |
+| memo | VARCHAR(60) |
+
+Output: `TransactionRow`
+
+| Field | Type |
+|---|---|
+| txn_id | INTEGER |
+| date | VARCHAR(10) |
+| account | VARCHAR(12) |
+| category | VARCHAR(12) |
+| amount | INTEGER |
+| memo | VARCHAR(60) |
+
+### FEATURE-DB-005 — Account reads and mutations
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Account-Management.md |
+| Access | read-write |
+| Repository operation | `accounts.get` |
+| Compatibility | unchanged |
+
+Input: `AccountLookup`
+
+| Field | Type |
+|---|---|
+| account | VARCHAR(12) |
+
+Output: `AccountBalanceRow`
+
+| Field | Type |
+|---|---|
+| account | VARCHAR(12) |
+| name | VARCHAR(40) |
+| transactions | INTEGER |
+| balance | INTEGER |
+
+### FEATURE-DB-006 — Transaction reads and mutations
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Transaction-Management.md |
+| Access | read-write |
+| Repository operation | `transactions.get` |
+| Compatibility | unchanged |
+
+Input: `TransactionLookup`
+
+| Field | Type |
+|---|---|
+| txn_id | INTEGER |
+
+Output: `TransactionRow`
+
+| Field | Type |
+|---|---|
+| txn_id | INTEGER |
+| date | VARCHAR(10) |
+| account | VARCHAR(12) |
+| category | VARCHAR(12) |
+| amount | INTEGER |
+| memo | VARCHAR(60) |
+
+### FEATURE-DB-007 — Report reads
+
+| Field | Value |
+|---|---|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `accounts.list` |
+| Compatibility | unchanged |
+
+Input: `ReportQuery`
+
+| Field | Type |
+|---|---|
+| report | TEXT |
+
+Output: `ReportRow`
+
+| Field | Type |
+|---|---|
+| values | TEXT |
+
+## Schema
+
+## `accounts`
+
+| Field | Type | Notes |
+|---|---|---|
+| account | VARCHAR(12) PK NOT NULL | Account code |
+| name | VARCHAR(40) NOT NULL | Account name |
+
+## `categories`
+
+| Field | Type | Notes |
+|---|---|---|
+| category | VARCHAR(12) PK NOT NULL | Category code |
+| description | VARCHAR(40) NOT NULL | Category description |
+
+## `transactions`
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | INTEGER PK NOT NULL | Transaction identifier |
+| date | VARCHAR(10) NOT NULL | Calendar date in `YYYY-MM-DD` form |
+| account | VARCHAR(12) NOT NULL REFERENCES accounts(account) | Account code |
+| category | VARCHAR(12) NOT NULL REFERENCES categories(category) | Category code |
+| amount | INTEGER NOT NULL | Integer cents |
+| memo | VARCHAR(60) NOT NULL | Transaction memo |
+
+## Atomicity and Invariants
+
+Schema initialization drops and recreates all three tables. Foreign keys are enforced. Every command validates all inputs and prospective balance effects before its first write. Transactions are committed atomically.
+
+## Programmatic Acceptance
+
+- None. Schema construction, generated persistence operations, and connectivity invariants are owned and verified deterministically by Drydock&#x27;s persistence foundation.
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Amounts are stored as integer cents.
+- No application module may open a database driver directly.
+- Every rejected command must preserve all existing rows.
+- Schema initialization must leave all three tables empty.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Database-Configuration.md ===
+# FEATURE: Database Configuration
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Resolve configured database storage and report operational database failures. |
+| Depends On  | ARCHITECTURE.md, DATABASE.md |
+| Provides    | DATABASE_URL resolution, DATABASE_PATH fallback, default database path, operational error handling |
+| Consumes    | schema initialization |
+
+## Questions
+
+- None.
+
+## Workflow
+
+For every command, resolve the database location in this order:
+
+1. `DATABASE_URL`
+2. `DATABASE_PATH`
+3. `data/app.db`
+
+SQLite paths and `sqlite://` paths use the shipped SQLite persistence engine. PostgreSQL DSNs use the shipped PostgreSQL engine. Missing tables, unreachable databases, and other infrastructure failures produce exit code `1`, no standard-output data, and one diagnostic on standard error.
+
+## Programmatic Acceptance
+
+=== AC database-config-precedence ===
+Intent: The CLI uses a configured SQLite database and initializes it successfully.
+import os
+import tempfile
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as directory:
+    database_path = os.path.join(directory, &quot;configured.db&quot;)
+    old_url = os.environ.get(&quot;DATABASE_URL&quot;)
+    old_path = os.environ.get(&quot;DATABASE_PATH&quot;)
+    try:
+        os.environ[&quot;DATABASE_URL&quot;] = database_path
+        os.environ[&quot;DATABASE_PATH&quot;] = os.path.join(directory, &quot;fallback.db&quot;)
+        code, stdout, stderr = cli_runner(&quot;init&quot;)
+        assert code == 0
+        assert stdout == &quot;&quot;
+    finally:
+        if old_url is None:
+            os.environ.pop(&quot;DATABASE_URL&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_URL&quot;] = old_url
+        if old_path is None:
+            os.environ.pop(&quot;DATABASE_PATH&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_PATH&quot;] = old_path
+=== END AC database-config-precedence ===
+
+=== AC database-config-operational-failure ===
+Intent: A database with missing required tables produces an operational failure with no data output.
+import os
+import tempfile
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as directory:
+    database_path = os.path.join(directory, &quot;empty.db&quot;)
+    old_url = os.environ.get(&quot;DATABASE_URL&quot;)
+    old_path = os.environ.get(&quot;DATABASE_PATH&quot;)
+    try:
+        os.environ[&quot;DATABASE_URL&quot;] = database_path
+        os.environ.pop(&quot;DATABASE_PATH&quot;, None)
+        code, stdout, stderr = cli_runner(&quot;count&quot;)
+        assert code == 1
+        assert stdout == &quot;&quot;
+        assert stderr != &quot;&quot;
+    finally:
+        if old_url is None:
+            os.environ.pop(&quot;DATABASE_URL&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_URL&quot;] = old_url
+        if old_path is None:
+            os.environ.pop(&quot;DATABASE_PATH&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_PATH&quot;] = old_path
+=== END AC database-config-operational-failure ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Configuration precedence must remain deterministic.
+- Database drivers may be reached only through the shipped persistence library.
+- Operational failures must not emit standard-output data.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-CLI-Dispatcher.md ===
+# FEATURE: CLI Dispatcher
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Provide the executable ledger dispatcher, CSV output boundary, and exit-code mapping. |
+| Depends On  | FEATURE-Database-Configuration.md, DATABASE.md |
+| Provides    | `./ledger`, command dispatch, CSV output, exit-code dispatch |
+| Consumes    | DATABASE_URL resolution, schema initialization |
+
+## Questions
+
+- None.
+
+## Command Boundary
+
+The executable `ledger` is located at the application root and invokes the CLI entry point. The dispatcher recognizes the documented command families: `init`, `count`, `load`, `account`, `txn`, `transfer`, and `report`.
+
+Successful commands emit deterministic CSV with a header and newline-delimited rows, except `init`, which emits nothing. Diagnostics are written only to standard error. The dispatcher maps domain failures to the documented exit codes.
+
+## Programmatic Acceptance
+
+=== AC cli-dispatch-executable ===
+Intent: The application root contains an executable ledger entry point.
+from pathlib import Path
+import os
+
+ledger = Path(&quot;ledger&quot;)
+assert ledger.is_file()
+assert os.access(ledger, os.X_OK)
+=== END AC cli-dispatch-executable ===
+
+=== AC cli-dispatch-init-and-count ===
+Intent: The dispatcher reaches schema initialization and produces structured count output.
+import csv
+from cli.testing import cli_runner
+
+init_code, init_stdout, init_stderr = cli_runner(&quot;init&quot;)
+assert init_code == 0
+assert init_stdout == &quot;&quot;
+count_code, count_stdout, count_stderr = cli_runner(&quot;count&quot;)
+assert count_code == 0
+rows = list(csv.reader(count_stdout.splitlines()))
+assert rows[0] == [&quot;table&quot;, &quot;rows&quot;]
+assert len(rows) == 4
+assert all(len(row) == 2 for row in rows)
+=== END AC cli-dispatch-init-and-count ===
+
+=== AC cli-dispatch-error-channel ===
+Intent: Rejected commands return a failure code without standard-output data and provide diagnostics on standard error.
+from cli.testing import cli_runner
+
+code, stdout, stderr = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;BAD-CODE&quot;, &quot;Name&quot;)
+assert code == 3
+assert stdout == &quot;&quot;
+assert stderr != &quot;&quot;
+=== END AC cli-dispatch-error-channel ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- The root executable must be named `ledger`.
+- Successful output must be CSV with no diagnostic text on standard output.
+- Failure diagnostics must never be used as successful data output.
+- Report values must not be embedded in the dispatcher.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-CLI-Validation.md ===
+# FEATURE: CLI Validation
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Validate command names, subcommands, reports, tables, and argument counts. |
+| Depends On  | FEATURE-CLI-Dispatcher.md |
+| Provides    | command usage validation, command help |
+| Consumes    | command dispatch |
+
+## Questions
+
+- None.
+
+## Validation Rules
+
+The CLI rejects unknown commands, unknown tables, unknown reports, and incorrect argument counts with exit code `2`. Every documented command and sub-verb has discoverable help text. Validation occurs before database mutation.
+
+Documented command families and subcommands include:
+
+- `init`
+- `count`
+- `load`
+- `account add`, `account get`, `account rename`, `account delete`
+- `txn post`, `txn get`, `txn amend`, `txn delete`
+- `transfer`
+- `report balances`, `report categories`, `report monthly`
+
+## Programmatic Acceptance
+
+=== AC cli-validation-unknown-command ===
+Intent: An unknown command is rejected as a usage error.
+from cli.testing import cli_runner
+
+code, stdout, stderr = cli_runner(&quot;frobnicate&quot;)
+assert code == 2
+assert stdout == &quot;&quot;
+assert stderr != &quot;&quot;
+=== END AC cli-validation-unknown-command ===
+
+=== AC cli-validation-unknown-report ===
+Intent: An unknown report is rejected as a usage error.
+from cli.testing import cli_runner
+
+code, stdout, stderr = cli_runner(&quot;report&quot;, &quot;nosuch&quot;)
+assert code == 2
+assert stdout == &quot;&quot;
+assert stderr != &quot;&quot;
+=== END AC cli-validation-unknown-report ===
+
+=== AC cli-validation-argument-count ===
+Intent: A documented command with an incorrect argument count is rejected as a usage error.
+from cli.testing import cli_runner
+
+code, stdout, stderr = cli_runner(&quot;account&quot;, &quot;add&quot;)
+assert code == 2
+assert stdout == &quot;&quot;
+assert stderr != &quot;&quot;
+=== END AC cli-validation-argument-count ===
+
+=== AC cli-validation-help ===
+Intent: Help is available for the command dispatcher and documented command families.
+from cli.testing import cli_runner
+
+for arguments in ((&quot;--help&quot;,), (&quot;account&quot;, &quot;--help&quot;), (&quot;txn&quot;, &quot;--help&quot;), (&quot;report&quot;, &quot;--help&quot;)):
+    code, stdout, stderr = cli_runner(*arguments)
+    assert code == 0
+    assert stdout != &quot;&quot;
+=== END AC cli-validation-help ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Usage errors must return exit code `2`.
+- Argument validation must happen before writes.
+- Help must cover every documented command family and sub-verb.
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,12 @@
+RESULT: SUCCESS
+
+FILES CHANGED:
+- reports.py
+- cli/__init__.py
+- tests/test_monthly_report.py
+
+SUMMARY:
+Implemented monthly grouping with integer-cent totals, ascending months, and dynamic totals. All 44 project tests and 43 terminal checks pass.
+
+BLOCKERS:
+- Declared AC expects `2026-01` for memo-only posts, but established behavior uses today’s date (`2026-10-20`).

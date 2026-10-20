@@ -1,0 +1,150 @@
+{
+  "schema_version": 5,
+  "recorded_at": "2026-10-20T20:00:09+00:00",
+  "target": "LayersTesting",
+  "verdict": "PASSED",
+  "verdict_line": "LayersTesting: PASSED \u2014 9 of 9",
+  "statement": "LayersTesting: PASSED \u2014 9 of 9\n\n  st-001  MET       [\"sh\", \"sources/run.sh\"] exited 0; sh sources/run.sh returned 0; LayersTesting: 43 passed, 0 failed (of 43)\n  st-002  MET       bin/test.sh returned 0; pytest reported 46 passed\n  st-003  MET       sources/run.sh output passed A1/A2 and Z1/Z2\n  st-004  MET       sources/run.sh output passed B1 through B4\n  st-005  MET       sources/run.sh output passed C1 through C3 and H1 through H3\n  st-006  MET       sources/run.sh output passed E1 through E8 and F1 through F10\n  st-007  MET       sources/run.sh output passed D1 through D3, F5 through F7, and G2 through G6\n  st-008  MET       sources/run.sh output passed G2, G3, G4, and G5\n  st-009  MET       cli/__init__.py uses open_database(database_dsn()); configuration.py resolves DATABASE_URL before DATABASE_PATH; schema.sql declares transactions.amount INTEGER; persistence/db.py selects the SQLite or PostgreSQL driver from the DSN",
+  "complete": true,
+  "governed_gate": {
+    "name": "full",
+    "outcome": "PASS",
+    "argv": [
+      "sh",
+      "sources/run.sh"
+    ],
+    "return_code": 0,
+    "duration_ms": 24265,
+    "detail": "",
+    "timed_out": false,
+    "build_identity": "4f880b4d232a9e4b",
+    "stdout": "PASS A1: ledger init\nPASS A2: ledger count\nPASS B1: ledger load accounts /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/sources/seed_accounts.csv\nPASS B2: ledger load categories /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/sources/seed_categories.csv\nPASS B3: ledger load transactions /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/sources/seed_transactions.csv\nPASS B4: ledger count\nPASS C1: ledger report balances\nPASS C2: ledger report categories\nPASS C3: ledger report monthly\nPASS D1: ledger load transactions /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/sources/seed_transactions_bad.csv\nPASS D2: ledger load accounts /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/sources/seed_accounts.csv\nPASS D3: ledger count\nPASS E1: ledger account add CASH9 Event Float\nPASS E2: ledger account add CASH9 Event Float\nPASS E3: ledger account get CASH9\nPASS E4: ledger account rename CASH9 Event Cash Box\nPASS E5: ledger account get NOSUCH\nPASS E6: ledger account delete DRAWER1\nPASS E7: ledger account delete CASH9\nPASS E8: ledger account get CASH9\nPASS F1: ledger txn post DRAWER1 SALES 45.50 2026-04-01 walk in sale\nPASS F2: ledger txn get 121\nPASS F3: ledger txn amend 121 54.50\nPASS F4: ledger txn get 999\nPASS F5: ledger txn post DRAWER1 NOSUCH 1.00 2026-04-01\nPASS F6: ledger txn post DRAWER1 SALES 1.234 2026-04-01\nPASS F7: ledger txn post DRAWER1 SALES 1.00 2026-02-30\nPASS F8: ledger txn delete 121\nPASS F9: ledger txn get 121\nPASS F10: ledger txn post PETTY SUPPLY -12.34 2026-04-02 tape\nPASS G1: ledger transfer DRAWER1 SAFE 500.00 2026-04-03\nPASS G2: ledger transfer SAFE PETTY 999.99 2026-04-04\nPASS G3: ledger txn post PETTY SUPPLY -1000.00 2026-04-04\nPASS G4: ledger txn amend 1 1.00\nPASS G5: ledger txn delete 1\nPASS G6: ledger count\nPASS H1: ledger report balances\nPASS H2: ledger report categories\nPASS H3: ledger report monthly\nPASS U1: ledger frobnicate\nPASS U2: ledger report nosuch\nPASS Z1: ledger init\nPASS Z2: ledger count\nLayersTesting: 43 passed, 0 failed (of 43)\n",
+    "stderr": ""
+  },
+  "criteria": [
+    {
+      "criterion_id": "st-001",
+      "verdict": "MET",
+      "rationale": "The governed command exited zero with 43 of 43 checks passing.",
+      "evidence": [
+        "[\"sh\", \"sources/run.sh\"] exited 0",
+        "sh sources/run.sh returned 0",
+        "LayersTesting: 43 passed, 0 failed (of 43)"
+      ]
+    },
+    {
+      "criterion_id": "st-002",
+      "verdict": "MET",
+      "rationale": "The shipped POSIX test runner completed successfully with all tests passing.",
+      "evidence": [
+        "bin/test.sh returned 0",
+        "pytest reported 46 passed"
+      ]
+    },
+    {
+      "criterion_id": "st-003",
+      "verdict": "MET",
+      "rationale": "Initialization and re-initialization both produced zero rows in all three tables.",
+      "evidence": [
+        "sources/run.sh output passed A1/A2 and Z1/Z2"
+      ]
+    },
+    {
+      "criterion_id": "st-004",
+      "verdict": "MET",
+      "rationale": "Loading the supplied seed files produced exactly 4 accounts, 7 categories, and 120 transactions.",
+      "evidence": [
+        "sources/run.sh output passed B1 through B4"
+      ]
+    },
+    {
+      "criterion_id": "st-005",
+      "verdict": "MET",
+      "rationale": "The seeded and post-mutation balance, category, and monthly reports matched the expected output.",
+      "evidence": [
+        "sources/run.sh output passed C1 through C3 and H1 through H3"
+      ]
+    },
+    {
+      "criterion_id": "st-006",
+      "verdict": "MET",
+      "rationale": "Account and transaction create, read, update, and delete operations passed, including absent-record exit code 4.",
+      "evidence": [
+        "sources/run.sh output passed E1 through E8 and F1 through F10"
+      ]
+    },
+    {
+      "criterion_id": "st-007",
+      "verdict": "MET",
+      "rationale": "Rejected loads, posts, amendments, deletes, and transfers returned exit code 3 while subsequent counts and reports remained correct.",
+      "evidence": [
+        "sources/run.sh output passed D1 through D3, F5 through F7, and G2 through G6"
+      ]
+    },
+    {
+      "criterion_id": "st-008",
+      "verdict": "MET",
+      "rationale": "Operations that would create negative balances were rejected with exit code 3.",
+      "evidence": [
+        "sources/run.sh output passed G2, G3, G4, and G5"
+      ]
+    },
+    {
+      "criterion_id": "st-009",
+      "verdict": "MET",
+      "rationale": "The CLI opens databases through persistence.open_database, database selection uses DATABASE_URL, and the shipped schema stores transaction amounts as INTEGER cents.",
+      "evidence": [
+        "cli/__init__.py uses open_database(database_dsn())",
+        "configuration.py resolves DATABASE_URL before DATABASE_PATH",
+        "schema.sql declares transactions.amount INTEGER",
+        "persistence/db.py selects the SQLite or PostgreSQL driver from the DSN"
+      ]
+    }
+  ],
+  "guardrail_ids": [],
+  "observations": [
+    {
+      "criterion_id": "st-001",
+      "kind": "command",
+      "source": "[\"sh\", \"sources/run.sh\"]",
+      "return_code": 0,
+      "pinned": "MET",
+      "detail": "[\"sh\", \"sources/run.sh\"] exited 0",
+      "output": "PASS F5: ledger txn post DRAWER1 NOSUCH 1.00 2026-04-01\nPASS F6: ledger txn post DRAWER1 SALES 1.234 2026-04-01\nPASS F7: ledger txn post DRAWER1 SALES 1.00 2026-02-30\nPASS F8: ledger txn delete 121\nPASS F9: ledger txn get 121\nPASS F10: ledger txn post PETTY SUPPLY -12.34 2026-04-02 tape\nPASS G1: ledger transfer DRAWER1 SAFE 500.00 2026-04-03\nPASS G2: ledger transfer SAFE PETTY 999.99 2026-04-04\nPASS G3: ledger txn post PETTY SUPPLY -1000.00 2026-04-04\nPASS G4: ledger txn amend 1 1.00\nPASS G5: ledger txn delete 1\nPASS G6: ledger count\nPASS H1: ledger report balances\nPASS H2: ledger report categories\nPASS H3: ledger report monthly\nPASS U1: ledger frobnicate\nPASS U2: ledger report nosuch\nPASS Z1: ledger init\nPASS Z2: ledger count\nLayersTesting: 43 passed, 0 failed (of 43)"
+    }
+  ],
+  "blockers": [],
+  "attestations": [],
+  "kit_faults": [],
+  "warnings": [],
+  "improvements": [],
+  "identities": {
+    "code": "01e748e128de548c77ee012d7c75939b24ca8c18",
+    "sea_trials": "62d2e66c797ba6ac011649dff946f8887822b8af85439c4c28ca70f3ae627360",
+    "blueprint": {
+      "ARCHITECTURE.md": "720369e5d325d4742ec589bc3a3c05da95245579b7fb57132fcecddad782b7e6",
+      "ARCHITECTURE_compact.md": "453891011d17f9754d2f1976dd0efee197ed24f0e8c4246ecf186e94cc74610c",
+      "DATABASE.md": "fce590c2ef857d4ed0e9d1ba21fdfcbe1ec8cde7fea03986bcae3670b48a70f3",
+      "DATABASE_compact.md": "a11c312b993c3588aed1f7e8822fd9e318019e07640e5118a0281824bec65286",
+      "FEATURE-Account-Category-Loading.md": "daec4205b7efc501db35996f71b4858edd07e4ffc173bca4108b291a1d749006",
+      "FEATURE-Account-Management.md": "0158b302ea133b9db4f3c6423b3646d148079e89ab854fedac93be9f6088b10f",
+      "FEATURE-Balance-Invariant.md": "0f1d0f0798e7ce367ec552926bdde317cc61b84f551367471aa8a8097b2d6c39",
+      "FEATURE-CLI-Dispatcher.md": "8c3ed44dba0cb12f52864296a35158f1dc1bc520ad0b7abdc8183bdb9d6ec6b3",
+      "FEATURE-CLI-Validation.md": "5c194d4954dc3ee94d1a4c6ab34699d80a84726df24fb20ae57cc0ccbde19bd5",
+      "FEATURE-Conformance.md": "44fa5004bae773c5e7675081527a484115e21f0926c7736479fc9578d2d9a429",
+      "FEATURE-Database-Configuration.md": "47f96d242ab38164025f5643e586e03e5dff2ee0a7a4dc103d91c283211c018a",
+      "FEATURE-Project-Tests.md": "3539b0b5415388cc247dd9cc6335184643670db7e6929781aa11a7ee35f31920",
+      "FEATURE-Report-Balances.md": "4bed261e240fb92e1fb868310ae4124b6c767a18a295dbda03051f158e276e4a",
+      "FEATURE-Report-Categories.md": "70844ad4b3103af2094137506e8c6c5cf8591028395403d24c2f2cbadb3a80aa",
+      "FEATURE-Report-Monthly.md": "8c8202092f35c90762777c3993f386c05a923972f63b54669e0827d3faa86db4",
+      "FEATURE-Transaction-Loading.md": "62b2b02abf27e3015d09f1468c4f951a6009b52423bdb7d2bb249e41289c720d",
+      "FEATURE-Transaction-Management.md": "2f1eaf2e6e5600dcf553cbff5c50c1a786e4c68cde33ec588906037a389d8919",
+      "FEATURE-Transfers.md": "c26a2f46d5d8398c8bdf32ca56f4dfc7e78e66751e55992feb6ad078459f70c7",
+      "seed_accounts_compact.md": "58032a72e81a0dbcd58ce1572d33db99013b6d19e164162765701ee7eabdcbeb",
+      "seed_categories_compact.md": "cf52a341449b3e2b306256f7b53b2ede7f50cef3839d7bca748f9495168512df",
+      "seed_transactions_bad_compact.md": "c9570c053c7738cd5bbff925fb8950f9f723c9017f9e535d5e1033651c10a94a",
+      "seed_transactions_compact.md": "d8003ce1a7aadb320e7ccda58545565fcdb20c39bfc460b86ac16ebb9a9ce9c0"
+    }
+  },
+  "execution_id": "20261020.195915.487Z-c93c88ee"
+}

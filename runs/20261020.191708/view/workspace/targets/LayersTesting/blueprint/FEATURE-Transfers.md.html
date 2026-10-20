@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Transfers.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Transfers.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Transfers.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Account Transfers</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Execute atomic two-row transfers between ledger accounts.</td></tr><tr><td>Depends On</td><td>FEATURE-Balance-Invariant.md, FEATURE-Transaction-Management.md</td></tr><tr><td>Provides</td><td>transfer</td></tr><tr><td>Consumes</td><td>command dispatch, transactions.create, accounts.get, categories.get, prospective balance validation</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>A transfer moves a positive amount from one existing account to another by creating two consecutive transactions in category <code>TRANSFER</code>.</p>
+<h2>Workflow</h2>
+<ol><li>Validate both account codes, account existence, distinctness, positive amount, date, and the <code>TRANSFER</code> category.</li><li>Calculate both prospective balances before writing.</li><li>Create the outgoing row, then the incoming row, in one transaction.</li><li>Emit both transaction rows in identifier order.</li><li>Roll back completely on any rejection.</li></ol>
+<p>The outgoing memo is <code>transfer to &lt;destination&gt;</code> and the incoming memo is <code>transfer from &lt;source&gt;</code>.</p>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC transfers-success ===<br>Intent: A valid transfer creates two persisted transaction rows and succeeds. from cli.testing import cli_runner from persistence.testing import db_session import csv import io import os import tempfile</p>
+<p>with tempfile.TemporaryDirectory() as directory: dsn = os.path.join(directory, &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn</p>
+<p>assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;FROM&quot;, &quot;Source&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;TO&quot;, &quot;Destination&quot;)[0] == 0 assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;TRANSFER&quot;, &quot;Internal transfer&quot;)[0] == 0 assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;FROM&quot;, &quot;TRANSFER&quot;, &quot;100.00&quot;, &quot;2026-04-01&quot;)[0] == 0</p>
+<p>code, output, _ = cli_runner(&quot;transfer&quot;, &quot;FROM&quot;, &quot;TO&quot;, &quot;25.00&quot;, &quot;2026-04-02&quot;) assert code == 0 rows = list(csv.reader(io.StringIO(output))) assert len(rows) == 3</p>
+<p>with db_session(dsn) as db: transactions = db.transactions.list() assert len(transactions) == 3 assert transactions[-2].amount == -2500 assert transactions[-1].amount == 2500 assert transactions[-2].account == &quot;FROM&quot; assert transactions[-1].account == &quot;TO&quot; === END AC transfers-success ===</p>
+<p>=== AC transfers-rejects-insufficient-balance ===<br>Intent: An insufficient-balance transfer is rejected without changing transactions. from cli.testing import cli_runner from persistence.testing import db_session import os import tempfile</p>
+<p>with tempfile.TemporaryDirectory() as directory: dsn = os.path.join(directory, &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn</p>
+<p>assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;FROM&quot;, &quot;Source&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;TO&quot;, &quot;Destination&quot;)[0] == 0 assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;TRANSFER&quot;, &quot;Internal transfer&quot;)[0] == 0 assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;FROM&quot;, &quot;TRANSFER&quot;, &quot;10.00&quot;, &quot;2026-04-01&quot;)[0] == 0</p>
+<p>code, _, _ = cli_runner(&quot;transfer&quot;, &quot;FROM&quot;, &quot;TO&quot;, &quot;11.00&quot;, &quot;2026-04-02&quot;) assert code == 3</p>
+<p>with db_session(dsn) as db: transactions = db.transactions.list() assert len(transactions) == 1 === END AC transfers-rejects-insufficient-balance ===</p>
+<p>=== AC transfers-rejects-invalid-accounts ===<br>Intent: Transfers reject equal or unknown account codes before writing. from cli.testing import cli_runner from persistence.testing import db_session import os import tempfile</p>
+<p>with tempfile.TemporaryDirectory() as directory: dsn = os.path.join(directory, &quot;ledger.db&quot;) os.environ[&quot;DATABASE_URL&quot;] = dsn</p>
+<p>assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;FROM&quot;, &quot;Source&quot;)[0] == 0 assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;TRANSFER&quot;, &quot;Internal transfer&quot;)[0] == 0</p>
+<p>assert cli_runner(&quot;transfer&quot;, &quot;FROM&quot;, &quot;FROM&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;)[0] == 3 assert cli_runner(&quot;transfer&quot;, &quot;FROM&quot;, &quot;MISSING&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;)[0] == 3</p>
+<p>with db_session(dsn) as db: assert len(db.transactions.list()) == 0 === END AC transfers-rejects-invalid-accounts ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Transfers create both rows or neither row.</li><li>Transfer amounts are positive input values.</li><li>No transfer may leave an account balance negative.</li><li>Application code accesses persistence only through the shipped library.</li></ul></article>
+</main>
+</body>
+</html>

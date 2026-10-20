@@ -1,0 +1,30 @@
+[
+  {
+    "id": "build-feature-balance-invariant.md-zero-balance-deletion",
+    "type": "text",
+    "severity": "material",
+    "origin": "build",
+    "blueprint": "FEATURE-Balance-Invariant.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Zero-balance deletion",
+    "description": "Handled the declared blank-memo sole-posting rejection while preserving existing named-transaction CRUD behavior, which conflicted with the prose invariant.",
+    "options": [],
+    "system_choice": "Handled the declared blank-memo sole-posting rejection while preserving existing named-transaction CRUD behavior, which conflicted with the prose invariant."
+  },
+  {
+    "id": "build-schema-derived-indexes",
+    "type": "text",
+    "severity": "informational",
+    "origin": "build",
+    "blueprint": "DATABASE.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Indexes derived from the persistence declaration",
+    "description": "The rendered schema indexes transactions(account); transactions(category). Each is implied by the declaration \u2014 a foreign key is looked up by its child column, and a read pattern's Input fields are the predicate it filters on. Declare an `- INDEX (...)` bullet in DATABASE.md for any index this does not cover.",
+    "options": [],
+    "system_choice": "transactions(account); transactions(category)"
+  }
+]

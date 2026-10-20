@@ -1,0 +1,1 @@
+2026-10-20T19:39:02.058806Z ERROR codex_core::tools::router: error=apply_patch verification failed: invalid hunk at line 51, Update file hunk for path '/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/build/LayersTesting/cli/__init__.py' is empty

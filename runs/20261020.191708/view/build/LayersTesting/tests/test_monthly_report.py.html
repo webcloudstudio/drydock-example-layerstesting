@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_monthly_report.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_monthly_report.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_monthly_report.py">Raw file</a></div></header>
+<article class="doc"><pre>import csv
+
+from cli.testing import cli_runner
+
+
+def _ready(tmp_path, monkeypatch):
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, str(tmp_path / &quot;ledger.db&quot;))
+    monkeypatch.delenv(&quot;DATABASE_PATH&quot;, raising=False)
+    assert cli_runner(&quot;init&quot;)[0] == 0
+    assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Account&quot;)[0] == 0
+    assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;C&quot;, &quot;Category&quot;)[0] == 0
+
+
+def _monthly_rows():
+    code, output, stderr = cli_runner(&quot;report&quot;, &quot;monthly&quot;)
+    return code, list(csv.reader(output.splitlines())), stderr
+
+
+def test_monthly_report_empty_ledger_has_header_and_total(tmp_path, monkeypatch):
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, str(tmp_path / &quot;ledger.db&quot;))
+    monkeypatch.delenv(&quot;DATABASE_PATH&quot;, raising=False)
+    assert cli_runner(&quot;init&quot;)[0] == 0
+
+    code, rows, stderr = _monthly_rows()
+
+    assert code == 0
+    assert stderr == &quot;&quot;
+    assert rows == [
+        [&quot;month&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;],
+        [&quot;TOTAL&quot;, &quot;0&quot;, &quot;0.00&quot;, &quot;0.00&quot;, &quot;0.00&quot;],
+    ]
+
+
+def test_monthly_report_orders_months_and_computes_integer_cent_totals(tmp_path, monkeypatch):
+    _ready(tmp_path, monkeypatch)
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;C&quot;, &quot;2.00&quot;, &quot;2026-02-15&quot;, &quot;later&quot;)[0] == 0
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;C&quot;, &quot;-1.25&quot;, &quot;2026-01-15&quot;, &quot;earlier&quot;)[0] == 0
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;C&quot;, &quot;3.50&quot;, &quot;2026-01-02&quot;, &quot;same month&quot;)[0] == 0
+
+    code, rows, stderr = _monthly_rows()
+
+    assert code == 0
+    assert stderr == &quot;&quot;
+    assert rows == [
+        [&quot;month&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;],
+        [&quot;2026-01&quot;, &quot;2&quot;, &quot;3.50&quot;, &quot;1.25&quot;, &quot;2.25&quot;],
+        [&quot;2026-02&quot;, &quot;1&quot;, &quot;2.00&quot;, &quot;0.00&quot;, &quot;2.00&quot;],
+        [&quot;TOTAL&quot;, &quot;3&quot;, &quot;5.50&quot;, &quot;1.25&quot;, &quot;4.25&quot;],
+    ]
+</pre></article>
+</main>
+</body>
+</html>

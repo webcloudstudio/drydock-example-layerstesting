@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_project_test_runner.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_project_test_runner.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_project_test_runner.py">Raw file</a></div></header>
+<article class="doc"><pre>import os
+from pathlib import Path
+
+from cli.testing import cli_runner
+
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_project_runner_is_executable():
+    runner = PROJECT_ROOT / &quot;bin&quot; / &quot;test.sh&quot;
+
+    assert runner.is_file()
+    assert os.access(runner, os.X_OK)
+
+
+def test_project_suite_smoke_covers_the_public_report_surface(tmp_path, monkeypatch):
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, str(tmp_path / &quot;ledger.db&quot;))
+    monkeypatch.delenv(&quot;DATABASE_PATH&quot;, raising=False)
+
+    assert cli_runner(&quot;init&quot;)[0] == 0
+    assert cli_runner(&quot;count&quot;)[0] == 0
+    assert cli_runner(&quot;report&quot;, &quot;balances&quot;)[0] == 0
+    assert cli_runner(&quot;report&quot;, &quot;categories&quot;)[0] == 0
+    assert cli_runner(&quot;report&quot;, &quot;monthly&quot;)[0] == 0
+</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Balance-Invariant.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Balance-Invariant.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Balance-Invariant.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Balance Invariant</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Enforce non-negative account balances before every transaction mutation.</td></tr><tr><td>Depends On</td><td>FEATURE-Transaction-Management.md, FEATURE-Transaction-Loading.md</td></tr><tr><td>Provides</td><td>prospective balance validation</td></tr><tr><td>Consumes</td><td>transactions.create, transactions.update, transactions.delete</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Every posting, amendment, deletion, transfer, and transaction load computes the affected account balances before writing. Any negative result rejects the complete command with no table changes.</p>
+<h2>Invariant</h2>
+<p>For each account, the sum of all persisted transaction amounts must be greater than or equal to zero after every successful command.</p>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md, FEATURE-Account-Category-Loading.md, FEATURE-Account-Management.md, FEATURE-Transaction-Loading.md, FEATURE-Transaction-Management.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC negative-posting-rejected ===<br>Intent: A transaction that would make an account balance negative is rejected atomically. import os import tempfile from pathlib import Path from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as d: os.environ[&quot;DATABASE_PATH&quot;] = str(Path(d) / &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A1&quot;, &quot;Drawer&quot;)[0] == 0 assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;C1&quot;, &quot;Supply&quot;)[0] in (0, 2, 3) assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;-1.00&quot;, &quot;2026-01-01&quot;)[0] == 3 assert cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;)[0] == 4 === END AC negative-posting-rejected ===</p>
+<p>=== AC negative-amend-rejected ===<br>Intent: An amendment that would make the account balance negative leaves the transaction unchanged. import csv import os import tempfile from pathlib import Path from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as d: os.environ[&quot;DATABASE_PATH&quot;] = str(Path(d) / &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A1&quot;, &quot;Drawer&quot;)[0] == 0 assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;C1&quot;, &quot;Sales&quot;)[0] in (0, 2, 3) assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;5.00&quot;, &quot;2026-01-01&quot;)[0] == 0 assert cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;, &quot;-6.00&quot;)[0] == 3 code, out, _ = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;) assert code == 0 assert list(csv.reader(out.splitlines()))[1][4] == &quot;5.00&quot; === END AC negative-amend-rejected ===</p>
+<p>=== AC negative-delete-rejected ===<br>Intent: Deleting the only positive transaction is rejected when it would make the balance negative. import os import tempfile from pathlib import Path from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as d: os.environ[&quot;DATABASE_PATH&quot;] = str(Path(d) / &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A1&quot;, &quot;Drawer&quot;)[0] == 0 assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;C1&quot;, &quot;Sales&quot;)[0] in (0, 2, 3) assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A1&quot;, &quot;C1&quot;, &quot;5.00&quot;, &quot;2026-01-01&quot;)[0] == 0 assert cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;1&quot;)[0] == 3 assert cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;)[0] == 0 === END AC negative-delete-rejected ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Prospective balances are checked before the first write.</li><li>Failed operations preserve every table.</li><li>No successful command leaves an account balance below zero.</li></ul></article>
+</main>
+</body>
+</html>

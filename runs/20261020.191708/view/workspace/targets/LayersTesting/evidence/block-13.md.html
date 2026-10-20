@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-13.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-13.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-13.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 13 · Service (block-13)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 7351</li><li>execution id: 20261020.194524.137Z-55265864</li></ul>
+<h2>Stories built</h2>
+<ul><li>Report transaction totals by category. (category-report) [story]</li></ul>
+<h2>Missing context</h2>
+<ul><li>context: INSTRUCTIONS.md</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 601)</li><li>compass: COMPASS.md (SP 755)</li><li>implements: FEATURE-Report-Categories.md (SP 841)</li><li>context: ARCHITECTURE_compact.md (SP 154)</li><li>context: DATABASE_compact.md (SP 163)</li><li>stack: cli.md (SP 1755)</li><li>stack: persistence_compact.md (SP 1217)</li><li>stack: sqlite.md (SP 1818)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>cli/<strong>init</strong>.py</li><li>data/app.db</li><li>tests/test_category_report.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>RED: category-report-includes-zero-activity (FEATURE-Report-Categories.md)</li></ul>
+<p>intent: The category report includes categories with no transactions. return code: 1 stderr: Traceback (most recent call last): File &quot;category-report-includes-zero-activity.py&quot;, line 13, in &lt;module&gt; assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;ACTIVE&quot;, &quot;5.00&quot;, &quot;receipt&quot;)[0] == 0 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ AssertionError</p>
+<ul><li>RED: category-report-calculates-flows (FEATURE-Report-Categories.md)</li></ul>
+<p>intent: The category report calculates inflow, outflow, and net from persisted integer cents. return code: 1 stderr: Traceback (most recent call last): File &quot;category-report-calculates-flows.py&quot;, line 12, in &lt;module&gt; assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;C&quot;, &quot;10.00&quot;, &quot;in&quot;)[0] == 0 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ AssertionError</p>
+<ul><li>GREEN (prepassed): category-report-rejects-unknown-report (FEATURE-Report-Categories.md)</li></ul>
+<p>intent: An unknown category report name returns a usage error without output. return code: 0</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: category-report-includes-zero-activity (FEATURE-Report-Categories.md)</li></ul>
+<p>intent: The category report includes categories with no transactions. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: category-report-calculates-flows (FEATURE-Report-Categories.md)</li></ul>
+<p>intent: The category report calculates inflow, outflow, and net from persisted integer cents. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: category-report-rejects-unknown-report (FEATURE-Report-Categories.md)</li></ul>
+<p>intent: An unknown category report name returns a usage error without output. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Repair attempts</h2>
+<ul><li>attempt 0 (initial build): failed; 1/3 checks model=gpt-5.6-luna; execution 20261020.194327.525Z-9a0d5c95; reason: programmatic acceptance failed: category-report-includes-zero-activity, category-report-calculates-flows</li><li>attempt 1 (repair 1): failed; 3/3 checks model=gpt-5.6-luna; execution 20261020.194430.959Z-8f4ad769; reason: acceptance regression: transaction-validation</li><li>attempt 2 (repair 2): built; 3/3 checks model=gpt-5.6-luna; execution 20261020.194524.137Z-55265864</li></ul>
+<h2>Build summary</h2>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>cli/<strong>init</strong>.py</li></ul>
+<p>SUMMARY: Fixed transaction shorthand parsing so malformed date-shaped inputs are rejected while memo shorthand remains supported. Category acceptance checks pass, project tests pass (40), and <code>sources/run.sh</code> passes all 43 checks.</p>
+<p>BLOCKERS:</p>
+<ul><li>None</li></ul></article>
+</main>
+</body>
+</html>

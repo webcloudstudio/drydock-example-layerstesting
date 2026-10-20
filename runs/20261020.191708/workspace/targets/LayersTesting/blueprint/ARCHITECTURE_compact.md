@@ -1,0 +1,3 @@
+<!-- Compacted from ARCHITECTURE.md sha256=720369e5d325d4742ec589bc3a3c05da95245579b7fb57132fcecddad782b7e6 on 2026-10-20 by drydock build agent -->
+
+Expose `cli.main(argv)` and `persistence.open_database(dsn)`. Use boundaries for configuration, validation/services, persistence callers, reporting, and CLI dispatch. Resolve databases via `DATABASE_URL`, `DATABASE_PATH`, then `data/app.db`. Keep all monetary values as integer cents; application code must not access database drivers directly. CLI exit codes: 0 success, 1 operational failure, 2 usage error, 3 rejected input/invariant violation, 4 absent record.

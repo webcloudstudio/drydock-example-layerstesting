@@ -1,0 +1,44 @@
+<requirement name="ledger-executable">
+The deliverable is an executable named ledger at the application root.
+</requirement>
+<requirement name="database-configuration">
+Database: DATABASE_URL when the caller sets it (for example a PostgreSQL DSN), otherwise a SQLite file in a fresh temporary directory.
+</requirement>
+<requirement name="schema-lifecycle" stories="database-schema">
+Every run starts with `ledger init`, so the grader never depends on prior state.
+</requirement>
+<requirement name="bulk-load-dataset" stories="account-loading,transaction-loading">
+Bulk load of the known dataset
+</requirement>
+<requirement name="balance-reporting" stories="balance-report">
+Reports over the seeded rows
+</requirement>
+<requirement name="category-reporting" stories="category-report">
+Reports over the seeded rows
+</requirement>
+<requirement name="monthly-reporting" stories="monthly-report">
+Reports over the seeded rows
+</requirement>
+<requirement name="atomic-rejected-loads" stories="account-loading,transaction-loading">
+A rejected load changes nothing
+</requirement>
+<requirement name="account-management" stories="account-management">
+Account create, read, update, delete
+</requirement>
+<requirement name="transaction-management" stories="transaction-management">
+Transaction create, read, update, delete
+</requirement>
+<requirement name="safe-transfers" stories="balance-invariant,transfers">
+Transfers are atomic; no command leaves a negative balance
+</requirement>
+<requirement name="usage-errors" stories="cli-validation">
+Usage errors
+</requirement>
+<requirement name="reinitialization" stories="database-schema">
+Re-initialization drops every row
+</requirement>
+<requirement name="conformance" stories="conformance">
+Exit 0 only when every check passes.
+</requirement>
+<unattached story="architecture"/>
+<unattached story="project-tests"/>

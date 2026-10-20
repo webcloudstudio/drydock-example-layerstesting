@@ -1,0 +1,519 @@
+=== BEGIN ARTIFACT FEATURE-Transfers.md ===
+# FEATURE: Account Transfers
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Execute atomic two-row transfers between ledger accounts. |
+| Depends On  | FEATURE-Balance-Invariant.md, FEATURE-Transaction-Management.md |
+| Provides    | transfer |
+| Consumes    | command dispatch, transactions.create, accounts.get, categories.get, prospective balance validation |
+
+## Questions
+
+- None.
+
+## Purpose
+
+A transfer moves a positive amount from one existing account to another by creating two consecutive transactions in category `TRANSFER`.
+
+## Workflow
+
+1. Validate both account codes, account existence, distinctness, positive amount, date, and the `TRANSFER` category.
+2. Calculate both prospective balances before writing.
+3. Create the outgoing row, then the incoming row, in one transaction.
+4. Emit both transaction rows in identifier order.
+5. Roll back completely on any rejection.
+
+The outgoing memo is `transfer to <destination>` and the incoming memo is `transfer from <source>`.
+
+## Programmatic Acceptance
+
+=== AC transfers-success ===
+Intent: A valid transfer creates two persisted transaction rows and succeeds.
+from cli.testing import cli_runner
+from persistence.testing import db_session
+import csv
+import io
+import os
+import tempfile
+
+with tempfile.TemporaryDirectory() as directory:
+    dsn = os.path.join(directory, "ledger.db")
+    os.environ["DATABASE_URL"] = dsn
+
+    assert cli_runner("init")[0] == 0
+    assert cli_runner("account", "add", "FROM", "Source")[0] == 0
+    assert cli_runner("account", "add", "TO", "Destination")[0] == 0
+    assert cli_runner("category", "add", "TRANSFER", "Internal transfer")[0] == 0
+    assert cli_runner("txn", "post", "FROM", "TRANSFER", "100.00", "2026-04-01")[0] == 0
+
+    code, output, _ = cli_runner("transfer", "FROM", "TO", "25.00", "2026-04-02")
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(output)))
+    assert len(rows) == 3
+
+    with db_session(dsn) as db:
+        transactions = db.transactions.list()
+        assert len(transactions) == 3
+        assert transactions[-2].amount == -2500
+        assert transactions[-1].amount == 2500
+        assert transactions[-2].account == "FROM"
+        assert transactions[-1].account == "TO"
+=== END AC transfers-success ===
+
+=== AC transfers-rejects-insufficient-balance ===
+Intent: An insufficient-balance transfer is rejected without changing transactions.
+from cli.testing import cli_runner
+from persistence.testing import db_session
+import os
+import tempfile
+
+with tempfile.TemporaryDirectory() as directory:
+    dsn = os.path.join(directory, "ledger.db")
+    os.environ["DATABASE_URL"] = dsn
+
+    assert cli_runner("init")[0] == 0
+    assert cli_runner("account", "add", "FROM", "Source")[0] == 0
+    assert cli_runner("account", "add", "TO", "Destination")[0] == 0
+    assert cli_runner("category", "add", "TRANSFER", "Internal transfer")[0] == 0
+    assert cli_runner("txn", "post", "FROM", "TRANSFER", "10.00", "2026-04-01")[0] == 0
+
+    code, _, _ = cli_runner("transfer", "FROM", "TO", "11.00", "2026-04-02")
+    assert code == 3
+
+    with db_session(dsn) as db:
+        transactions = db.transactions.list()
+        assert len(transactions) == 1
+=== END AC transfers-rejects-insufficient-balance ===
+
+=== AC transfers-rejects-invalid-accounts ===
+Intent: Transfers reject equal or unknown account codes before writing.
+from cli.testing import cli_runner
+from persistence.testing import db_session
+import os
+import tempfile
+
+with tempfile.TemporaryDirectory() as directory:
+    dsn = os.path.join(directory, "ledger.db")
+    os.environ["DATABASE_URL"] = dsn
+
+    assert cli_runner("init")[0] == 0
+    assert cli_runner("account", "add", "FROM", "Source")[0] == 0
+    assert cli_runner("category", "add", "TRANSFER", "Internal transfer")[0] == 0
+
+    assert cli_runner("transfer", "FROM", "FROM", "1.00", "2026-04-01")[0] == 3
+    assert cli_runner("transfer", "FROM", "MISSING", "1.00", "2026-04-01")[0] == 3
+
+    with db_session(dsn) as db:
+        assert len(db.transactions.list()) == 0
+=== END AC transfers-rejects-invalid-accounts ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Transfers create both rows or neither row.
+- Transfer amounts are positive input values.
+- No transfer may leave an account balance negative.
+- Application code accesses persistence only through the shipped library.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Report-Balances.md ===
+# FEATURE: Balance Report
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Report account balances and transaction counts from persisted ledger data. |
+| Depends On  | FEATURE-Transaction-Management.md |
+| Provides    | report balances |
+| Consumes    | accounts.list, transactions.list |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The balances report lists every account ordered by account code, with its transaction count and integer-cent balance, followed by a computed total row.
+
+## Workflow
+
+Query accounts and transactions through the persistence layer, calculate each account's count and sum, format cents with exactly two decimal places, and calculate totals from the queried rows.
+
+## Programmatic Acceptance
+
+=== AC balance-report-empty ===
+Intent: The balances report succeeds for an initialized empty ledger and reports no account rows.
+from cli.testing import cli_runner
+import csv
+import io
+import os
+import tempfile
+
+with tempfile.TemporaryDirectory() as directory:
+    os.environ["DATABASE_URL"] = os.path.join(directory, "ledger.db")
+    assert cli_runner("init")[0] == 0
+
+    code, output, _ = cli_runner("report", "balances")
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(output)))
+    assert len(rows) == 2
+    assert rows[-1][0] == "TOTAL"
+    assert rows[-1][2] == "0"
+
+=== END AC balance-report-empty ===
+
+=== AC balance-report-computes-persisted-state ===
+Intent: The report reflects persisted account counts and balances after transactions.
+from cli.testing import cli_runner
+import csv
+import io
+import os
+import tempfile
+
+with tempfile.TemporaryDirectory() as directory:
+    os.environ["DATABASE_URL"] = os.path.join(directory, "ledger.db")
+    assert cli_runner("init")[0] == 0
+    assert cli_runner("account", "add", "B", "Second")[0] == 0
+    assert cli_runner("account", "add", "A", "First")[0] == 0
+    assert cli_runner("category", "add", "C", "Category")[0] == 0
+    assert cli_runner("txn", "post", "A", "C", "12.50", "2026-01-01")[0] == 0
+    assert cli_runner("txn", "post", "B", "C", "3.25", "2026-01-02")[0] == 0
+
+    code, output, _ = cli_runner("report", "balances")
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(output)))
+    assert [row[0] for row in rows[1:-1]] == ["A", "B"]
+    assert rows[1][2] == "1"
+    assert rows[1][3] == "12.50"
+    assert rows[-1][2] == "2"
+    assert rows[-1][3] == "15.75"
+
+=== END AC balance-report-computes-persisted-state ===
+
+=== AC balance-report-missing-database ===
+Intent: A balances report against an unavailable database path returns an operational failure.
+from cli.testing import cli_runner
+import os
+import tempfile
+
+with tempfile.TemporaryDirectory() as directory:
+    os.environ["DATABASE_URL"] = os.path.join(directory, "missing", "ledger.db")
+    code, output, _ = cli_runner("report", "balances")
+    assert code == 1
+    assert output == ""
+
+=== END AC balance-report-missing-database ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Account rows are ordered by account code.
+- Totals are computed from database rows, never hardcoded.
+- Amounts are stored as integer cents and rendered with two decimals.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Report-Categories.md ===
+# FEATURE: Category Report
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Report transaction totals grouped by category. |
+| Depends On  | FEATURE-Transaction-Management.md |
+| Provides    | report categories |
+| Consumes    | categories.list, transactions.list |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The category report includes every category, including categories without transactions, and reports transaction count, inflow, outflow, and net totals.
+
+## Workflow
+
+Query categories and transactions, group transactions by category code, calculate positive inflow and absolute negative outflow in cents, include zero-activity categories, order by code, and append a computed total row.
+
+## Programmatic Acceptance
+
+=== AC category-report-includes-zero-activity ===
+Intent: The category report includes categories with no transactions.
+from cli.testing import cli_runner
+import csv
+import io
+import os
+import tempfile
+
+with tempfile.TemporaryDirectory() as directory:
+    os.environ["DATABASE_URL"] = os.path.join(directory, "ledger.db")
+    assert cli_runner("init")[0] == 0
+    assert cli_runner("category", "add", "ACTIVE", "Active")[0] == 0
+    assert cli_runner("category", "add", "EMPTY", "Empty")[0] == 0
+    assert cli_runner("account", "add", "A", "Account")[0] == 0
+    assert cli_runner("txn", "post", "A", "ACTIVE", "5.00", "receipt")[0] == 0
+
+    code, output, _ = cli_runner("report", "categories")
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(output)))
+    category_codes = [row[0] for row in rows[1:-1]]
+    assert category_codes == ["ACTIVE", "EMPTY"]
+    empty = rows[2]
+    assert empty[2:] == ["0", "0.00", "0.00", "0.00"]
+
+=== END AC category-report-includes-zero-activity ===
+
+=== AC category-report-calculates-flows ===
+Intent: The category report calculates inflow, outflow, and net from persisted integer cents.
+from cli.testing import cli_runner
+import csv
+import io
+import os
+import tempfile
+
+with tempfile.TemporaryDirectory() as directory:
+    os.environ["DATABASE_URL"] = os.path.join(directory, "ledger.db")
+    assert cli_runner("init")[0] == 0
+    assert cli_runner("account", "add", "A", "Account")[0] == 0
+    assert cli_runner("category", "add", "C", "Category")[0] == 0
+    assert cli_runner("txn", "post", "A", "C", "10.00", "in")[0] == 0
+    assert cli_runner("txn", "post", "A", "C", "-3.25", "out")[0] == 0
+
+    code, output, _ = cli_runner("report", "categories")
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(output)))
+    category = rows[1]
+    total = rows[-1]
+    assert category[2:] == ["2", "10.00", "3.25", "6.75"]
+    assert total[1:] == ["", "2", "10.00", "3.25", "6.75"]
+
+=== END AC category-report-calculates-flows ===
+
+=== AC category-report-rejects-unknown-report ===
+Intent: An unknown category report name returns a usage error without output.
+from cli.testing import cli_runner
+import os
+import tempfile
+
+with tempfile.TemporaryDirectory() as directory:
+    os.environ["DATABASE_URL"] = os.path.join(directory, "ledger.db")
+    code, output, _ = cli_runner("report", "unknown")
+    assert code == 2
+    assert output == ""
+
+=== END AC category-report-rejects-unknown-report ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Zero-activity categories are included.
+- Outflow is reported as a positive amount.
+- Totals are computed from persisted rows.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Report-Monthly.md ===
+# FEATURE: Monthly Report
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Report transaction totals grouped by calendar month. |
+| Depends On  | FEATURE-Transaction-Management.md |
+| Provides    | report monthly |
+| Consumes    | transactions.list |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The monthly report groups transactions by their `YYYY-MM` calendar month, orders months ascending, and appends a computed total row.
+
+## Workflow
+
+Query transactions, derive each month from the validated date, calculate counts and flow totals in integer cents, order months ascending, format amounts with two decimals, and emit the total.
+
+## Programmatic Acceptance
+
+=== AC monthly-report-groups-months ===
+Intent: The monthly report groups persisted transactions by ascending calendar month.
+from cli.testing import cli_runner
+import csv
+import io
+import os
+import tempfile
+
+with tempfile.TemporaryDirectory() as directory:
+    os.environ["DATABASE_URL"] = os.path.join(directory, "ledger.db")
+    assert cli_runner("init")[0] == 0
+    assert cli_runner("account", "add", "A", "Account")[0] == 0
+    assert cli_runner("category", "add", "C", "Category")[0] == 0
+    assert cli_runner("txn", "post", "A", "C", "2.00", "later")[0] == 0
+    assert cli_runner("txn", "post", "A", "C", "3.50", "earlier")[0] == 0
+
+    code, output, _ = cli_runner("report", "monthly")
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(output)))
+    months = [row[0] for row in rows[1:-1]]
+    assert months == ["2026-01"]
+
+    assert rows[1][1:] == ["2", "5.50", "0.00", "5.50"]
+
+=== END AC monthly-report-groups-months ===
+
+=== AC monthly-report-separates-months ===
+Intent: Transactions in separate months produce separate monthly rows and a computed total.
+from cli.testing import cli_runner
+import csv
+import io
+import os
+import tempfile
+
+with tempfile.TemporaryDirectory() as directory:
+    os.environ["DATABASE_URL"] = os.path.join(directory, "ledger.db")
+    assert cli_runner("init")[0] == 0
+    assert cli_runner("account", "add", "A", "Account")[0] == 0
+    assert cli_runner("category", "add", "C", "Category")[0] == 0
+    assert cli_runner("txn", "post", "A", "C", "2.00", "jan")[0] == 0
+    assert cli_runner("txn", "post", "A", "C", "-1.25", "feb")[0] == 0
+
+    code, output, _ = cli_runner("report", "monthly")
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(output)))
+    assert len(rows) == 4
+    assert rows[-1][1:] == ["2", "2.00", "1.25", "0.75"]
+
+=== END AC monthly-report-separates-months ===
+
+=== AC monthly-report-empty ===
+Intent: An initialized empty ledger produces only the monthly header and total row.
+from cli.testing import cli_runner
+import csv
+import io
+import os
+import tempfile
+
+with tempfile.TemporaryDirectory() as directory:
+    os.environ["DATABASE_URL"] = os.path.join(directory, "ledger.db")
+    assert cli_runner("init")[0] == 0
+    code, output, _ = cli_runner("report", "monthly")
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(output)))
+    assert len(rows) == 2
+    assert rows[-1][0] == "TOTAL"
+
+=== END AC monthly-report-empty ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Months are ordered ascending.
+- Monthly totals are derived from persisted transactions.
+- Money calculations use integer cents.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Project-Tests.md ===
+# FEATURE: Project Test Suite
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Provide the automated project test runner and comprehensive ledger test suite. |
+| Depends On  | FEATURE-CLI-Validation.md, FEATURE-Account-Management.md, FEATURE-Transaction-Management.md, FEATURE-Transfers.md, FEATURE-Report-Balances.md, FEATURE-Report-Categories.md, FEATURE-Report-Monthly.md |
+| Provides    | bin/test.sh, pytest suite |
+| Consumes    | ledger command surface |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Provide a POSIX-compatible `bin/test.sh` that runs the complete pytest suite from the application root and returns success only when every project test passes.
+
+## Test Scope
+
+The suite covers:
+
+- command dispatch and usage errors;
+- database initialization and configuration;
+- account and category loading;
+- transaction loading and atomic rejection;
+- account and transaction CRUD;
+- balance invariants and atomic transfers;
+- balance, category, and monthly reports;
+- validation boundaries and all documented exit codes.
+
+The suite uses temporary databases and does not modify supplied sources.
+
+## Programmatic Acceptance
+
+=== AC project-test-runner ===
+Intent: The project test runner exists, is executable, and passes the automated suite.
+import os
+import subprocess
+
+runner = "bin/test.sh"
+assert os.path.isfile(runner)
+assert os.access(runner, os.X_OK)
+
+result = subprocess.run(["sh", runner], capture_output=True, text=True)
+print(result.stdout)
+print(result.stderr)
+assert result.returncode == 0
+
+=== END AC project-test-runner ===
+
+=== AC project-test-runner-is-repeatable ===
+Intent: Running the project test runner twice succeeds independently.
+import subprocess
+
+first = subprocess.run(["sh", "bin/test.sh"], capture_output=True, text=True)
+print(first.stdout)
+print(first.stderr)
+assert first.returncode == 0
+
+second = subprocess.run(["sh", "bin/test.sh"], capture_output=True, text=True)
+print(second.stdout)
+print(second.stderr)
+assert second.returncode == 0
+
+=== END AC project-test-runner-is-repeatable ===
+
+=== AC project-test-surface ===
+Intent: The project suite exercises the executable ledger command surface.
+from cli.testing import cli_runner
+import os
+import tempfile
+
+with tempfile.TemporaryDirectory() as directory:
+    os.environ["DATABASE_URL"] = os.path.join(directory, "ledger.db")
+    assert cli_runner("init")[0] == 0
+    assert cli_runner("count")[0] == 0
+    assert cli_runner("report", "balances")[0] == 0
+    assert cli_runner("report", "categories")[0] == 0
+    assert cli_runner("report", "monthly")[0] == 0
+
+=== END AC project-test-surface ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- `bin/test.sh` is POSIX-compatible.
+- The runner exits zero only when every automated test passes.
+- Tests use real temporary databases and preserve supplied source files.
+=== END ARTIFACT ===

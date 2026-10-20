@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/ARCHITECTURE.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/ARCHITECTURE.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/ARCHITECTURE.md">Raw file</a></div></header>
+<article class="doc"><h1>ARCHITECTURE: Ledger Application</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Define the command-line ledger boundaries, validation flow, and persistence encapsulation.</td></tr><tr><td>Depends On</td><td>—</td></tr><tr><td>Provides</td><td>application module boundaries, CLI boundary, configuration boundary, validation boundary</td></tr><tr><td>Consumes</td><td>—</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>The application is a Python 3.11+ command-line executable named <code>ledger</code>. Commands are dispatched through a thin CLI boundary into configuration, validation, service, reporting, and persistence callers.</p>
+<h2>Modules and Boundaries</h2>
+<div class="scroll"><table><thead><tr><th>Module</th><th>Responsibility</th></tr></thead><tbody><tr><td><code>ledger</code> / CLI package</td><td>Parse command arguments, dispatch commands, emit CSV, and map failures to exit codes.</td></tr><tr><td>Configuration</td><td>Resolve <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code>.</td></tr><tr><td>Validation and services</td><td>Parse and validate codes, text, dates, amounts, references, balances, and atomic workflows before writes.</td></tr><tr><td>Persistence callers</td><td>Use only <code>persistence.open_database</code> and generated table operations.</td></tr><tr><td>Reporting</td><td>Query persisted rows and calculate report values using integer cents.</td></tr></tbody></table></div>
+<p>Application code must never import or open a database driver directly. All database access crosses the shipped persistence library boundary. Monetary values remain integer cents at every application and persistence layer; floating-point arithmetic is prohibited.</p>
+<h2>Command Flow</h2>
+<p>Commands resolve configuration, open the database through the persistence package, validate the complete operation, perform writes within an atomic workflow, and serialize successful results as CSV. Diagnostics go to standard error. Exit codes are <code>0</code> for success, <code>1</code> for operational failure, <code>2</code> for usage errors, <code>3</code> for rejected input or invariant violations, and <code>4</code> for absent records.</p>
+<h2>Technology Stack</h2>
+<ul><li>Python 3.11 or newer implements the application and tests.</li><li>SQLite is the supplied database path, accessed through the shipped persistence library.</li><li>PostgreSQL DSNs are supported through the same persistence boundary.</li><li>The CLI is the executable <code>ledger</code>.</li><li>pytest runs the project suite.</li><li>POSIX shell runs <code>bin/test.sh</code> and the supplied harness.</li></ul>
+<h2>Module Ownership</h2>
+<div class="scroll"><table><thead><tr><th>Boundary</th><th>Owner</th><th>Allowed low-level access</th></tr></thead><tbody><tr><td>Persistence</td><td>generated <code>persistence</code> package</td><td>database driver internals only</td></tr><tr><td>Configuration</td><td>application configuration module</td><td>environment variables and path handling</td></tr><tr><td>File input</td><td>load services</td><td>CSV file reading</td></tr><tr><td>CLI</td><td>command dispatcher</td><td>argument parsing, stdout, stderr, exit codes</td></tr><tr><td>Domain validation</td><td>service layer</td><td>validation and transaction planning</td></tr><tr><td>Reports</td><td>report services</td><td>declared persistence operations</td></tr></tbody></table></div>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC architecture-imports ===<br>Intent: The built application exposes the selected CLI and persistence foundation packages. from importlib import import_module</p>
+<p>cli_module = import_module(&quot;cli&quot;) persistence_module = import_module(&quot;persistence&quot;) assert hasattr(cli_module, &quot;main&quot;) assert hasattr(persistence_module, &quot;open_database&quot;) === END AC architecture-imports ===</p>
+<p>=== AC architecture-cli-contract ===<br>Intent: The CLI foundation exposes an in-process callable accepting an argument list. from cli import main import inspect</p>
+<p>signature = inspect.signature(main) assert &quot;argv&quot; in signature.parameters assert main([]) == 2 === END AC architecture-cli-contract ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Application code must not open a database driver directly.</li><li>Money must not use floating-point representation or arithmetic.</li><li>Report values must be computed from persisted state.</li></ul></article>
+</main>
+</body>
+</html>

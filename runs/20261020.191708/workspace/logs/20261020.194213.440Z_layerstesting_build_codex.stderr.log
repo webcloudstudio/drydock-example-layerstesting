@@ -1,0 +1,4 @@
+2026-10-20T19:42:32.303144Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to find expected lines in /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/ledger:
+def report(db,k):
+ aa,cc,ts=rows(db)
+ if k=='balances':emit([['account','name','transactions','balance']]+[bal(db,a.account) for a in aa]+[['TOTAL','',len(ts),money(sum(t.amount for t in ts))]])

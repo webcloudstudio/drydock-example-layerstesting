@@ -1,0 +1,11 @@
+RESULT: SUCCESS
+
+FILES CHANGED:
+- bin/test.sh
+- tests/test_project_test_runner.py
+
+SUMMARY:
+Added a caller-independent POSIX test runner and project runner/surface tests. `pytest` passed twice with 46 tests; terminal harness passed 43/43 checks.
+
+BLOCKERS:
+- None

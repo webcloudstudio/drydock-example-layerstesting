@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Account-Category-Loading.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Account-Category-Loading.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Account-Category-Loading.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Account and Category Loading</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Atomically validate and load account and category CSV files.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, FEATURE-CLI-Dispatcher.md, FEATURE-CLI-Validation.md, FEATURE-Database-Configuration.md</td></tr><tr><td>Provides</td><td>load accounts, load categories</td></tr><tr><td>Consumes</td><td>command dispatch, database configuration, accounts.create, categories.create</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger load accounts &lt;csv&gt;</code> and <code>ledger load categories &lt;csv&gt;</code> import validated master data. Files must be readable, have the exact table header, contain valid codes and text, and contain no duplicate keys. Validation completes before any row is written.</p>
+<h2>Workflow</h2>
+<ol><li>Resolve the configured database.</li><li>Read and validate the complete file.</li><li>Reject malformed rows, duplicate keys, or conflicts with existing rows without changing state.</li><li>Insert all rows atomically.</li><li>Emit the loaded table and count.</li></ol>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-DB-002</code> — read-write: create an account - supplies: <code>account</code>, <code>name</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-DB-003</code> — read-write: create a category - supplies: <code>category</code>, <code>description</code> - returns: <code>category</code>, <code>description</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC account-category-load-roundtrip ===<br>Intent: Valid account and category files are loaded and their persisted rows are readable. import csv import os import tempfile from pathlib import Path from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as d: os.environ[&quot;DATABASE_PATH&quot;] = str(Path(d) / &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 accounts = Path(d) / &quot;accounts.csv&quot; categories = Path(d) / &quot;categories.csv&quot; account_rows = [[&quot;account&quot;, &quot;name&quot;], [&quot;A1&quot;, &quot;Drawer&quot;]] category_rows = [[&quot;category&quot;, &quot;description&quot;], [&quot;C1&quot;, &quot;Sales&quot;]] accounts.write_text(&quot;\n&quot;.join(&quot;,&quot;.join(r) for r in account_rows) + &quot;\n&quot;) categories.write_text(&quot;\n&quot;.join(&quot;,&quot;.join(r) for r in category_rows) + &quot;\n&quot;) assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, str(accounts))[0] == 0 assert cli_runner(&quot;load&quot;, &quot;categories&quot;, str(categories))[0] == 0 code, out, _ = cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;A1&quot;) assert code == 0 assert list(csv.reader(out.splitlines()))[1][0:2] == account_rows[1] === END AC account-category-load-roundtrip ===</p>
+<p>=== AC account-category-load-rejects-without-write ===<br>Intent: An unreadable or invalid master-data file is rejected without changing persisted data. import os import tempfile from pathlib import Path from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as d: os.environ[&quot;DATABASE_PATH&quot;] = str(Path(d) / &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 path = Path(d) / &quot;bad.csv&quot; path.write_text(&quot;wrong,header\nA1,Drawer\n&quot;) before = cli_runner(&quot;count&quot;) assert before[0] == 0 assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, str(path))[0] == 3 after = cli_runner(&quot;count&quot;) assert after[0] == 0 assert after[1] == before[1] assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, str(Path(d) / &quot;missing.csv&quot;))[0] == 1 === END AC account-category-load-rejects-without-write ===</p>
+<p>=== AC account-category-load-validation ===<br>Intent: Duplicate and invalid master-data fields return the rejected-command status. import os import tempfile from pathlib import Path from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as d: os.environ[&quot;DATABASE_PATH&quot;] = str(Path(d) / &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 duplicate = Path(d) / &quot;duplicate.csv&quot; duplicate.write_text(&quot;account,name\nA1,One\nA1,Two\n&quot;) assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, str(duplicate))[0] == 3 invalid = Path(d) / &quot;invalid.csv&quot; invalid.write_text(&quot;category,description\nbad-code,Sales\n&quot;) assert cli_runner(&quot;load&quot;, &quot;categories&quot;, str(invalid))[0] == 3 === END AC account-category-load-validation ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A rejected load writes no rows.</li><li>Application code uses only the shipped persistence library.</li><li>Imported files are never modified.</li></ul></article>
+</main>
+</body>
+</html>

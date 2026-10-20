@@ -1,0 +1,1 @@
+2026-10-20T19:29:58.795203Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to read /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/build/LayersTesting/build_marker.tmp: No such file or directory (os error 2)

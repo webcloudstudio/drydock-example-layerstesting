@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/configuration.py</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/configuration.py</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../build/LayersTesting/configuration.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Runtime configuration resolution for database access.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+
+def database_dsn(environ: dict[str, str] | None = None) -&gt; str:
+    &quot;&quot;&quot;Resolve database configuration by the application contract&#x27;s precedence.&quot;&quot;&quot;
+    values = os.environ if environ is None else environ
+    return values.get(&quot;DATABASE_URL&quot;) or values.get(&quot;DATABASE_PATH&quot;) or &quot;data/app.db&quot;
+
+
+def database_path(environ: dict[str, str] | None = None) -&gt; Path:
+    &quot;&quot;&quot;Return the configured SQLite path when the selected DSN is a filesystem path.&quot;&quot;&quot;
+    return Path(database_dsn(environ))
+</pre></article>
+</main>
+</body>
+</html>

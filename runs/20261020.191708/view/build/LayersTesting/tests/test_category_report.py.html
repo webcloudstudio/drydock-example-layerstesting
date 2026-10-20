@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_category_report.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_category_report.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_category_report.py">Raw file</a></div></header>
+<article class="doc"><pre>import csv
+
+from cli.testing import cli_runner
+
+
+def _database(tmp_path, monkeypatch):
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, str(tmp_path / &quot;ledger.db&quot;))
+    monkeypatch.delenv(&quot;DATABASE_PATH&quot;, raising=False)
+    assert cli_runner(&quot;init&quot;)[0] == 0
+
+
+def _report_rows():
+    code, output, stderr = cli_runner(&quot;report&quot;, &quot;categories&quot;)
+    return code, list(csv.reader(output.splitlines())), stderr
+
+
+def test_category_report_includes_zero_activity_categories_in_code_order(tmp_path, monkeypatch):
+    _database(tmp_path, monkeypatch)
+    assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;Z&quot;, &quot;Last&quot;)[0] == 0
+    assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;A&quot;, &quot;First&quot;)[0] == 0
+    assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;CASH&quot;, &quot;Cash&quot;)[0] == 0
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;CASH&quot;, &quot;Z&quot;, &quot;5.00&quot;, &quot;2026-01-01&quot;, &quot;sale&quot;)[0] == 0
+
+    code, rows, stderr = _report_rows()
+
+    assert code == 0
+    assert stderr == &quot;&quot;
+    assert [row[0] for row in rows[1:-1]] == [&quot;A&quot;, &quot;Z&quot;]
+    assert rows[1] == [&quot;A&quot;, &quot;First&quot;, &quot;0&quot;, &quot;0.00&quot;, &quot;0.00&quot;, &quot;0.00&quot;]
+
+
+def test_category_report_calculates_inflow_outflow_and_net_from_transactions(
+    tmp_path, monkeypatch
+):
+    _database(tmp_path, monkeypatch)
+    assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;CASH&quot;, &quot;Cash&quot;)[0] == 0
+    assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;SALES&quot;, &quot;Sales&quot;)[0] == 0
+    assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;FEES&quot;, &quot;Fees&quot;)[0] == 0
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;CASH&quot;, &quot;SALES&quot;, &quot;10.00&quot;, &quot;2026-01-01&quot;, &quot;sale&quot;)[0] == 0
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;CASH&quot;, &quot;SALES&quot;, &quot;-3.25&quot;, &quot;2026-01-02&quot;, &quot;fee&quot;)[0] == 0
+
+    code, rows, stderr = _report_rows()
+
+    assert code == 0
+    assert stderr == &quot;&quot;
+    assert rows[1] == [&quot;FEES&quot;, &quot;Fees&quot;, &quot;0&quot;, &quot;0.00&quot;, &quot;0.00&quot;, &quot;0.00&quot;]
+    assert rows[2] == [&quot;SALES&quot;, &quot;Sales&quot;, &quot;2&quot;, &quot;10.00&quot;, &quot;3.25&quot;, &quot;6.75&quot;]
+    assert rows[-1] == [&quot;TOTAL&quot;, &quot;&quot;, &quot;2&quot;, &quot;10.00&quot;, &quot;3.25&quot;, &quot;6.75&quot;]
+
+
+def test_category_report_empty_ledger_has_zero_total(tmp_path, monkeypatch):
+    _database(tmp_path, monkeypatch)
+
+    code, rows, stderr = _report_rows()
+
+    assert code == 0
+    assert stderr == &quot;&quot;
+    assert rows == [[&quot;category&quot;, &quot;description&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;],
+                    [&quot;TOTAL&quot;, &quot;&quot;, &quot;0&quot;, &quot;0.00&quot;, &quot;0.00&quot;, &quot;0.00&quot;]]
+</pre></article>
+</main>
+</body>
+</html>

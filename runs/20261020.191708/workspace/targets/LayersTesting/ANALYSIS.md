@@ -1,0 +1,162 @@
+# Blueprint Analysis: drydock Layers Testing Uat Case
+
+## Commander Expectations
+
+- assert the cash ledger passes the supplied conformance harness and provides atomic, persistent account and transaction operations.
+
+## Crew
+
+| Crew | Charge |
+|---|---|
+| Commander | Defines intent and decides what done means. |
+| Team Lead | Confirms epic completeness and stakeholder expectations. |
+| Planning Crew | Authors atomic specifications and the ordered Manifest. |
+| Shipyard Crew | Builds the tickets without synchronous Commander access. |
+
+## Story List
+
+### Feature: CLI Foundation
+
+| ID | Story | High-level AC |
+|---|---|---|
+| CLI-001 | Provide the executable command dispatcher | `ledger` is executable, recognizes every documented command, emits CSV on success, diagnostics on failure, and uses the specified exit codes. |
+| CLI-002 | Provide command usage and argument validation | Invalid commands, reports, tables, and argument counts are rejected consistently, with help text available for every command and sub-verb. |
+
+### Feature: Persistence and Schema
+
+| ID | Story | High-level AC |
+|---|---|---|
+| DB-001 | Create and reinitialize the ledger schema | `ledger init` drops and recreates the three tables through the shipped persistence layer and leaves them empty. |
+| DB-002 | Resolve configured database storage | The application selects `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`, supporting SQLite paths and PostgreSQL DSNs through the persistence boundary. |
+
+### Feature: CSV Import
+
+| ID | Story | High-level AC |
+|---|---|---|
+| LOAD-001 | Load validated account and category CSV files | Valid account and category files load atomically and report the table and row count. |
+| LOAD-002 | Load validated transaction CSV files atomically | Transaction files validate headers, fields, references, duplicate keys, and balance rules before any write; rejected files leave all tables unchanged. |
+
+### Feature: Ledger Operations
+
+| ID | Story | High-level AC |
+|---|---|---|
+| ACCT-001 | Manage accounts | Users can add, get, rename, and delete accounts with correct rows, duplicate and in-use rejection, and not-found behavior. |
+| TXN-001 | Post, read, amend, and delete transactions | Users can post, get, amend, and delete transactions with generated identifiers, validation, formatted amounts, and not-found behavior. |
+| TXN-002 | Enforce non-negative balances | Any posting, amendment, deletion, or load that would make an account balance negative is rejected atomically. |
+| TRANSFER-001 | Execute atomic account transfers | A transfer creates outgoing and incoming rows with consecutive IDs and transfer memos, or creates neither row when rejected. |
+
+### Feature: Reports
+
+| ID | Story | High-level AC |
+|---|---|---|
+| REPORT-001 | Report balances by account | The balances report lists accounts in code order with transaction counts, balances, and a total row. |
+| REPORT-002 | Report totals by category | The category report includes zero-activity categories, calculates inflow, outflow, and net values, and emits a total row. |
+| REPORT-003 | Report totals by month | The monthly report groups transactions by ascending `YYYY-MM`, calculates totals, and emits a total row. |
+
+### Feature: Verification
+
+| ID | Story | High-level AC |
+|---|---|---|
+| TEST-001 | Provide the project test runner | `bin/test.sh` runs the automated suite and exits zero only when every test passes. |
+| TEST-002 | Pass the supplied conformance harness | The complete supplied harness passes without modifying its assertions, fixtures, or execution sequence. |
+
+## Story Guidance
+
+Named stories planning must produce. Authoritative record: `STORY_GUIDANCE.json`.
+
+None.
+
+## Surfaced Acceptance Criteria
+
+| ID | Story ID | Criterion |
+|---|---|---|
+| AC-001 | CLI-002 | The CLI shall provide discoverable help text for every command and sub-verb defined by the product contract. |
+| AC-002 | DB-002 | When the configured database is unreachable or required tables are missing, the CLI shall report an operational failure with exit code 1 and no standard-output data. |
+| AC-003 | TXN-001 | Transaction amounts shall be stored as integer cents and rendered with exactly two decimal places. |
+| AC-004 | TXN-001 | Invalid calendar dates, malformed amounts, invalid codes, and invalid text lengths shall be rejected before writing. |
+| AC-005 | LOAD-001 | A load with an unreadable file or mismatched header shall fail without changing persisted data. |
+
+## Source Inventory
+
+| Path | Content kind | Disposition | Reason |
+|---|---|---|---|
+| `sources/INSTRUCTIONS.md` | markdown | analyzed | readable UTF-8 |
+| `sources/run.sh` | code | analyzed | readable UTF-8 |
+| `sources/seed_accounts.csv` | text | analyzed | readable UTF-8 |
+| `sources/seed_categories.csv` | text | analyzed | readable UTF-8 |
+| `sources/seed_transactions.csv` | text | analyzed | readable UTF-8 |
+| `sources/seed_transactions_bad.csv` | text | analyzed | readable UTF-8 |
+
+## Relationship Model
+
+| Source or group | Relationship type | Related source or group | Evidence | Delivery implication |
+|---|---|---|---|---|
+| `sources/INSTRUCTIONS.md` | instruction-to-test | `sources/run.sh` | The instructions define the command, data, output, and exit-code contract exercised by the harness. | Build stories from the normative contract and reserve the full harness for terminal verification. |
+| `sources/run.sh` | test-kit-to-implementation | `ledger` | The harness invokes the executable through schema, load, report, CRUD, transfer, error, and reinitialization phases. | Every implementation story must expose the command behavior used by its scoped checks. |
+| `sources/seed_accounts.csv`, `sources/seed_categories.csv`, `sources/seed_transactions.csv` | fixture-to-verification | `sources/run.sh` | The harness loads these files and compares known counts and reports. | Stage all fixtures and preserve their contents. |
+| `sources/seed_transactions_bad.csv` | fixture-to-verification | `LOAD-002`, `sources/run.sh` | The bad fixture verifies atomic rejection when a later row references an unknown account. | Load validation must occur before the first write. |
+| `sources/INSTRUCTIONS.md` | dependency | shipped persistence library | The application must access relational storage only through the shipped library. | Repository calls and configuration belong behind the persistence boundary. |
+
+## Source Roles
+
+| Path | Role | Plan disposition | Build disposition |
+|---|---|---|---|
+| `sources/INSTRUCTIONS.md` | normative specification | prompt-only | prompt-only |
+| `sources/run.sh` | conformance harness | context | stage |
+| `sources/seed_accounts.csv` | asset | context | stage |
+| `sources/seed_categories.csv` | asset | context | stage |
+| `sources/seed_transactions.csv` | asset | context | stage |
+| `sources/seed_transactions_bad.csv` | asset | context | stage |
+
+## Planning Instructions
+
+### Delivery Shape
+
+Deliver an executable Python CLI named `ledger` backed by the shipped relational persistence library. It consumes command arguments and CSV files, persists accounts, categories, and transactions, and emits deterministic CSV reports or diagnostics. The required flow is schema initialization, validated atomic loading, ledger mutations, reporting, and scoped tests followed by the complete conformance harness.
+
+### Story Realization Map
+
+| Story | Blueprint scope | Evidence | Related files | Delivery kind |
+|---|---|---|---|---|
+| CLI-001 | command dispatch and output contract | `sources/INSTRUCTIONS.md`, `sources/run.sh` | `ledger` | capability |
+| CLI-002 | usage and argument validation | `sources/INSTRUCTIONS.md` | `ledger` | capability |
+| DB-001 | schema lifecycle | `sources/INSTRUCTIONS.md`, `sources/run.sh` | persistence package | migration |
+| DB-002 | database configuration and failure handling | `sources/INSTRUCTIONS.md` | persistence package | integration |
+| LOAD-001 | account/category imports | `sources/INSTRUCTIONS.md`, seed CSVs | `sources/seed_accounts.csv`, `sources/seed_categories.csv` | capability |
+| LOAD-002 | transaction imports and atomic validation | `sources/INSTRUCTIONS.md`, bad fixture | `sources/seed_transactions.csv`, `sources/seed_transactions_bad.csv` | capability |
+| ACCT-001 | account CRUD | `sources/INSTRUCTIONS.md`, `sources/run.sh` | `ledger` | capability |
+| TXN-001 | transaction CRUD | `sources/INSTRUCTIONS.md`, `sources/run.sh` | `ledger` | capability |
+| TXN-002 | balance invariant | `sources/INSTRUCTIONS.md`, `sources/run.sh` | persistence/domain validation | capability |
+| TRANSFER-001 | atomic transfers | `sources/INSTRUCTIONS.md`, `sources/run.sh` | `ledger` | capability |
+| REPORT-001 | balance report | `sources/INSTRUCTIONS.md`, `sources/run.sh` | `ledger` | capability |
+| REPORT-002 | category report | `sources/INSTRUCTIONS.md`, `sources/run.sh` | `ledger` | capability |
+| REPORT-003 | monthly report | `sources/INSTRUCTIONS.md`, `sources/run.sh` | `ledger` | capability |
+| TEST-001 | local automated suite | `sources/INSTRUCTIONS.md` | `bin/test.sh` | test harness |
+| TEST-002 | full supplied verification | `sources/run.sh` | staged harness and fixtures | acceptance contract |
+
+### Test and Acceptance Strategy
+
+Each implementation story receives focused tests for its commands, validation, formatting, and persistence behavior. Feature verification remains scoped to the story under test. `TEST-002` is the single terminal verification story; its acceptance assertion declares `Suite: full` and runs the complete supplied harness. It depends on every implementation story. `TEST-001` runs the project suite only.
+
+### Sequencing and Dependencies
+
+Create the Python and persistence foundation before command stories. Establish schema and repository contracts before imports, mutations, and reports. Implement validation before writes and fixtures before verification. Build `bin/test.sh` after the application test structure exists. Run the full harness only after all implementation stories and staged fixtures are complete. PostgreSQL support is an integration path; SQLite is the supplied execution path.
+
+### Source Conflicts and Gaps
+
+No contradictory product definitions were found. The sources define a CLI, persistence model, command contract, validation rules, fixtures, and complete verification flow. Help text is not specified in detail, so its minimum discoverable coverage is surfaced for planning. No authentication, external service, UI, or sensitive-data workflow is implied.
+
+## Analysis Notes
+generated: 2026-10-20
+blueprint: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/workspace/targets/LayersTesting/blueprint
+
+Quality: Ready
+  blockers: 0
+  questions: 0
+  features: 6
+  stories: 15
+  stack: Python 3.11+, SQLite, shipped persistence library, pytest, POSIX shell
+  display_name: not proposed
+  short_description: not proposed
+
+Project type: cli. No unresolved cross-source conflicts or human-owned decisions remain.

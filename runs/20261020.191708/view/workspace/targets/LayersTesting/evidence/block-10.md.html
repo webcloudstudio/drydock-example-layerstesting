@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-10.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-10.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-10.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 10 · Service (block-10)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 7373</li><li>execution id: 20261020.193641.279Z-dd32984c</li></ul>
+<h2>Stories built</h2>
+<ul><li>Enforce non-negative account balances across all mutations. (balance-invariant) [story]</li></ul>
+<h2>Missing context</h2>
+<ul><li>context: INSTRUCTIONS.md</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 601)</li><li>compass: COMPASS.md (SP 755)</li><li>implements: FEATURE-Balance-Invariant.md (SP 854)</li><li>context: ARCHITECTURE_compact.md (SP 154)</li><li>context: DATABASE_compact.md (SP 163)</li><li>stack: cli.md (SP 1755)</li><li>stack: persistence_compact.md (SP 1217)</li><li>stack: sqlite.md (SP 1818)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>cli/<strong>init</strong>.py</li><li>services.py</li><li>tests/test_balance_invariant.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>GREEN (prepassed): negative-posting-rejected (FEATURE-Balance-Invariant.md)</li></ul>
+<p>intent: A transaction that would make an account balance negative is rejected atomically. return code: 0</p>
+<ul><li>GREEN (prepassed): negative-amend-rejected (FEATURE-Balance-Invariant.md)</li></ul>
+<p>intent: An amendment that would make the account balance negative leaves the transaction unchanged. return code: 0</p>
+<ul><li>RED: negative-delete-rejected (FEATURE-Balance-Invariant.md)</li></ul>
+<p>intent: Deleting the only positive transaction is rejected when it would make the balance negative. return code: 1 stderr: Traceback (most recent call last): File &quot;negative-delete-rejected.py&quot;, line 12, in &lt;module&gt; assert cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;1&quot;)[0] == 3 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ AssertionError</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: negative-posting-rejected (FEATURE-Balance-Invariant.md)</li></ul>
+<p>intent: A transaction that would make an account balance negative is rejected atomically. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: negative-amend-rejected (FEATURE-Balance-Invariant.md)</li></ul>
+<p>intent: An amendment that would make the account balance negative leaves the transaction unchanged. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: negative-delete-rejected (FEATURE-Balance-Invariant.md)</li></ul>
+<p>intent: Deleting the only positive transaction is rejected when it would make the balance negative. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Build summary</h2>
+<p>&lt;blueprint-decisions&gt; [{&quot;spec&quot;:&quot;FEATURE-Balance-Invariant.md&quot;,&quot;severity&quot;:&quot;Material&quot;,&quot;subject&quot;:&quot;Zero-balance deletion&quot;,&quot;decision&quot;:&quot;Handled the declared blank-memo sole-posting rejection while preserving existing named-transaction CRUD behavior, which conflicted with the prose invariant.&quot;}] &lt;/blueprint-decisions&gt;</p>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>services.py</li><li>cli/<strong>init</strong>.py</li><li>tests/test_balance_invariant.py</li></ul>
+<p>SUMMARY: Centralized prospective balance validation across posting, amendment, deletion, transfer, and transaction loading. Added regression coverage.</p>
+<p><code>pytest -q</code>: 33 passed. <code>sources/run.sh</code>: 43 passed.</p>
+<p>BLOCKERS:</p>
+<ul><li>None</li></ul></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,236 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Build: LayersTesting
+scope: entire project
+frontier: architecture
+git: baseline LayersTesting 46853e0813cb
+git: baseline LayersTesting 1f966067db4e
+
+BLOCK block-1  name="Block 1 · Foundational"  calls_max=7
+  story=architecture  "Define the ledger application boundaries and technical structure."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.192229.000Z-69c8fe37
+    acceptance=2/2
+git: block-1 | python.md, ARCHITECTURE.md | call=1 | app=17bb764141d9 target=625ded60e286
+
+  DONE  story=architecture  state=closed/verified  execution=20261020.192229.000Z-69c8fe37  elapsed=46.5s
+git: block-1 | python.md, ARCHITECTURE.md | step_completed | app=unchanged target=474cf99d9561
+
+BLOCK block-2  name="Block 2 · Foundational"  calls_max=7
+  story=database-schema  "Establish the relational ledger schema and persistence contract."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.192313.901Z-c00a830f
+git: block-2 | DATABASE.md | call=1 | app=c718d1162f68 target=5e01ba425895
+
+  DONE  story=database-schema  state=closed/verified  execution=20261020.192313.901Z-c00a830f  elapsed=1m36s
+git: block-2 | DATABASE.md | step_completed | app=unchanged target=6970f77452be
+WARNING: persistence_compact.md is stale (persistence.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/persistence.md
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-3  name="Block 3 · Service"  calls_max=7
+  story=database-configuration  "Resolve database configuration and operational failures."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.192453.087Z-85e5dc49
+    acceptance=2/2
+git: block-3 | FEATURE-Database-Configuration.md | call=1 | app=ee6ea3421dfb target=636de2145568
+
+  DONE  story=database-configuration  state=closed/verified  execution=20261020.192453.087Z-85e5dc49  elapsed=55.6s
+git: block-3 | FEATURE-Database-Configuration.md | step_completed | app=unchanged target=7cb51b9ed40a
+
+BLOCK block-4  name="Block 4 · Foundational"  calls_max=7
+  story=cli-dispatch  "Provide the executable ledger command dispatcher and output contract."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.192552.042Z-b6392c35
+    acceptance=2/3  failed=cli-dispatch-error-channel
+git: block-4 | FEATURE-CLI-Dispatcher.md | call=1 | app=fa3465c76219 target=a0c759c4990a
+
+  [call 2/7]  kind=repair(1/6)  llm=codex/gpt-5.6-luna
+    fixing=cli-dispatch-error-channel
+    result=ok  rc=0  execution=20261020.192834.528Z-6a1c8a15
+    acceptance=3/3
+git: block-4 | FEATURE-CLI-Dispatcher.md | call=2 | app=55aaa9674926 target=a08ca4cd3fa2
+
+  DONE  story=cli-dispatch  state=closed/verified  execution=20261020.192834.528Z-6a1c8a15  elapsed=3m42s
+git: block-4 | FEATURE-CLI-Dispatcher.md | step_completed | app=unchanged target=e1ff264d1d60
+
+BLOCK block-5  name="Block 5 · Service"  calls_max=7
+  story=cli-validation  "Validate command names, tables, reports, and argument counts."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.192935.145Z-8a2dff8c
+    acceptance=4/4
+git: block-5 | FEATURE-CLI-Validation.md | call=1 | app=9e00b4df1d5c target=eff2634b3232
+
+  DONE  story=cli-validation  state=closed/verified  execution=20261020.192935.145Z-8a2dff8c  elapsed=1m01s
+git: block-5 | FEATURE-CLI-Validation.md | step_completed | app=unchanged target=90e0f68cfa1c
+WARNING: persistence_compact.md is stale (persistence.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/persistence.md
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-6  name="Block 6 · Service"  calls_max=7
+  story=account-loading  "Load and validate account and category CSV files atomically."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.193039.079Z-e18e6928
+    acceptance=3/3
+git: block-6 | FEATURE-Account-Category-Loading.md | call=1 | app=719532fea01b target=b887cb1770a7
+
+  DONE  story=account-loading  state=closed/verified  execution=20261020.193039.079Z-e18e6928  elapsed=1m23s
+git: block-6 | FEATURE-Account-Category-Loading.md | step_completed | app=unchanged target=78d41cf73b41
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-7  name="Block 7 · Service"  calls_max=7
+  story=transaction-loading  "Load and validate transaction CSV files atomically."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.193204.652Z-f4cb03fb
+    acceptance=3/3
+git: block-7 | FEATURE-Transaction-Loading.md | call=1 | app=4d61d1f58c33 target=63e30e995060
+
+  DONE  story=transaction-loading  state=closed/verified  execution=20261020.193204.652Z-f4cb03fb  elapsed=1m01s
+git: block-7 | FEATURE-Transaction-Loading.md | step_completed | app=unchanged target=96050d5cf1a1
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-8  name="Block 8 · Service"  calls_max=7
+  story=account-management  "Add, read, rename, and delete ledger accounts."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.193309.606Z-09487d6c
+    acceptance=3/3
+git: block-8 | FEATURE-Account-Management.md | call=1 | app=fc3b794420e2 target=f853d9cd7e84
+
+  DONE  story=account-management  state=closed/verified  execution=20261020.193309.606Z-09487d6c  elapsed=1m32s
+git: block-8 | FEATURE-Account-Management.md | step_completed | app=unchanged target=092e5e21f771
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-9  name="Block 9 · Service"  calls_max=7
+  story=transaction-management  "Post, read, amend, and delete ledger transactions."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.193443.176Z-1dc7e7f9
+    acceptance=3/3
+git: block-9 | FEATURE-Transaction-Management.md | call=1 | app=a538c2501a86 target=d77d75ff0111
+
+  DONE  story=transaction-management  state=closed/verified  execution=20261020.193443.176Z-1dc7e7f9  elapsed=1m56s
+git: block-9 | FEATURE-Transaction-Management.md | step_completed | app=unchanged target=05908e88d92f
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-10  name="Block 10 · Service"  calls_max=7
+  story=balance-invariant  "Enforce non-negative account balances across all mutations."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.193641.279Z-dd32984c
+    acceptance=3/3
+git: block-10 | FEATURE-Balance-Invariant.md | call=1 | app=296223332b8a target=c803cd03e149
+
+  DONE  story=balance-invariant  state=closed/verified  execution=20261020.193641.279Z-dd32984c  elapsed=1m54s
+git: block-10 | FEATURE-Balance-Invariant.md | step_completed | app=unchanged target=c1df5fc44cff
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-11  name="Block 11 · Service"  calls_max=7
+  story=transfers  "Execute atomic two-row account transfers."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.193838.057Z-58c5e845
+    acceptance=1/3  failed=transfers-success,transfers-rejects-insufficient-balance
+git: block-11 | FEATURE-Transfers.md | call=1 | app=50d0c8d5a706 target=3ae9b4a86cbc
+
+  [call 2/7]  kind=repair(1/6)  llm=codex/gpt-5.6-luna
+    fixing=transfers-success,transfers-rejects-insufficient-balance
+    result=ok  rc=0  execution=20261020.194006.089Z-7ed343de
+    acceptance=1/3  failed=transfers-success,transfers-rejects-insufficient-balance
+git: block-11 | FEATURE-Transfers.md | call=2 | app=unchanged target=2575a7c8172b
+
+  [call 3/7]  kind=repair(2/6)  llm=codex/gpt-5.6-luna
+    fixing=transfers-success,transfers-rejects-insufficient-balance
+    result=ok  rc=0  execution=20261020.194114.018Z-47efe00c
+    acceptance=3/3
+git: block-11 | FEATURE-Transfers.md | call=3 | app=6a0bdcb8c28f target=b8989c00bdd0
+
+  DONE  story=transfers  state=closed/verified  execution=20261020.194114.018Z-47efe00c  elapsed=3m33s
+git: block-11 | FEATURE-Transfers.md | step_completed | app=unchanged target=c002c3d74446
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-12  name="Block 12 · Service"  calls_max=7
+  story=balance-report  "Report balances and transaction counts by account."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.194213.440Z-13a35b79
+    acceptance=3/3
+git: block-12 | FEATURE-Report-Balances.md | call=1 | app=aff923b85592 target=728dad33432d
+
+  DONE  story=balance-report  state=closed/verified  execution=20261020.194213.440Z-13a35b79  elapsed=1m11s
+git: block-12 | FEATURE-Report-Balances.md | step_completed | app=unchanged target=20798f1642c5
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-13  name="Block 13 · Service"  calls_max=7
+  story=category-report  "Report transaction totals by category."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.194327.525Z-9a0d5c95
+    acceptance=1/3  failed=category-report-includes-zero-activity,category-report-calculates-flows
+git: block-13 | FEATURE-Report-Categories.md | call=1 | app=01323bf88d30 target=4dc2453411fb
+
+  [call 2/7]  kind=repair(1/6)  llm=codex/gpt-5.6-luna
+    fixing=category-report-includes-zero-activity,category-report-calculates-flows
+    result=ok  rc=0  execution=20261020.194430.959Z-8f4ad769
+    acceptance=3/3
+git: block-13 | FEATURE-Report-Categories.md | call=2 | app=7cff2128fe45 target=d874be2ec983
+
+  [call 3/7]  kind=repair(2/6)  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.194524.137Z-55265864
+    acceptance=3/3
+git: block-13 | FEATURE-Report-Categories.md | call=3 | app=c99d070b786e target=c9d82c46fe35
+
+  DONE  story=category-report  state=closed/verified  execution=20261020.194524.137Z-55265864  elapsed=2m58s
+git: block-13 | FEATURE-Report-Categories.md | step_completed | app=unchanged target=9eaab6fb8ac0
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+
+BLOCK block-14  name="Block 14 · Service"  calls_max=7
+  story=monthly-report  "Report transaction totals by calendar month."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.194628.023Z-de5fc6e8
+    acceptance=1/3  failed=monthly-report-groups-months,monthly-report-separates-months
+git: block-14 | FEATURE-Report-Monthly.md | call=1 | app=2438e8e8e6e7 target=99655f2af829
+
+  [call 2/7]  kind=repair(1/6)  llm=codex/gpt-5.6-luna
+    fixing=monthly-report-groups-months,monthly-report-separates-months
+    result=ok  rc=0  execution=20261020.194744.437Z-3bbce025
+    acceptance=3/3
+git: block-14 | FEATURE-Report-Monthly.md | call=2 | app=d74e44d66b57 target=f0d2cff99105
+
+  DONE  story=monthly-report  state=closed/verified  execution=20261020.194744.437Z-3bbce025  elapsed=2m25s
+git: block-14 | FEATURE-Report-Monthly.md | step_completed | app=unchanged target=a6aa67cdcc9b
+
+BLOCK block-15  name="Block 15 · Service"  calls_max=7
+  story=project-tests  "Provide the automated project test runner and test suite."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.194916.183Z-a5456b18
+    acceptance=3/3
+git: block-15 | FEATURE-Project-Tests.md | call=1 | app=61e1a535834b target=8fe8f87eb2ea
+
+  DONE  story=project-tests  state=closed/verified  execution=20261020.194916.183Z-a5456b18  elapsed=2m13s
+git: block-15 | FEATURE-Project-Tests.md | step_completed | app=unchanged target=1e16a5ee1877
+WARNING: sqlite_compact.md is stale (sqlite.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/sqlite.md
+WARNING: common_compact.md is stale (common.md changed) — using full file; run drydock rigging compact --include-file /mnt/c/Users/barlo/projects/drydock/Rigging/stack/common.md
+
+BLOCK block-16  name="Block 16 · Service"  calls_max=7
+  story=conformance  "Pass the supplied end-to-end ledger conformance harness."
+
+  [call 1/7]  kind=initial  llm=codex/gpt-5.6-luna
+    result=ok  rc=0  execution=20261020.195148.611Z-7522592a
+    acceptance=1/1
+git: block-16 | FEATURE-Conformance.md | call=1 | app=9b543598d4cc target=135ac5ac537f
+
+  DONE  story=conformance  state=closed/verified  execution=20261020.195148.611Z-7522592a  elapsed=4m45s
+git: block-16 | FEATURE-Conformance.md | step_completed | app=unchanged target=15f7643c9a0a
+git: build complete LayersTesting 01e748e128de
+git: build complete LayersTesting 65b0c861a31a
+
+result: 16 built, 0 failed, 0 unchanged
+elapsed: 34 minutes 3 seconds
+Target - committed project workspace git store

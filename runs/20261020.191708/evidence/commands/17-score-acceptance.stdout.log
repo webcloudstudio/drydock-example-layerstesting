@@ -1,0 +1,225 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+  ✓ PASS        [1/42]  architecture-imports                         architecture            ARCHITECTURE.md
+  ✓ PASS        [2/42]  architecture-cli-contract                    architecture            ARCHITECTURE.md
+  ✓ PASS        [3/42]  database-config-precedence                   database-configuration  FEATURE-Database-Configuration.md
+  ✓ PASS        [4/42]  database-config-operational-failure          database-configuration  FEATURE-Database-Configuration.md
+  ✓ PASS        [5/42]  cli-dispatch-executable                      cli-dispatch            FEATURE-CLI-Dispatcher.md
+  ✓ PASS        [6/42]  cli-dispatch-init-and-count                  cli-dispatch            FEATURE-CLI-Dispatcher.md
+  ✓ PASS        [7/42]  cli-dispatch-error-channel                   cli-dispatch            FEATURE-CLI-Dispatcher.md
+  ✓ PASS        [8/42]  cli-validation-unknown-command               cli-validation          FEATURE-CLI-Validation.md
+  ✓ PASS        [9/42]  cli-validation-unknown-report                cli-validation          FEATURE-CLI-Validation.md
+  ✓ PASS        [10/42]  cli-validation-argument-count                cli-validation          FEATURE-CLI-Validation.md
+  ✓ PASS        [11/42]  cli-validation-help                          cli-validation          FEATURE-CLI-Validation.md
+  ✓ PASS        [12/42]  account-category-load-roundtrip              account-loading         FEATURE-Account-Category-Loading.md
+  ✓ PASS        [13/42]  account-category-load-rejects-without-write  account-loading         FEATURE-Account-Category-Loading.md
+  ✓ PASS        [14/42]  account-category-load-validation             account-loading         FEATURE-Account-Category-Loading.md
+  ✓ PASS        [15/42]  transaction-load-roundtrip                   transaction-loading     FEATURE-Transaction-Loading.md
+  ✓ PASS        [16/42]  transaction-load-atomic-rejection            transaction-loading     FEATURE-Transaction-Loading.md
+  ✓ PASS        [17/42]  transaction-load-validation                  transaction-loading     FEATURE-Transaction-Loading.md
+  ✓ PASS        [18/42]  account-crud-roundtrip                       account-management      FEATURE-Account-Management.md
+  ✓ PASS        [19/42]  account-rejection-contract                   account-management      FEATURE-Account-Management.md
+  ✓ PASS        [20/42]  account-in-use-protection                    account-management      FEATURE-Account-Management.md
+  ✓ PASS        [21/42]  transaction-crud-roundtrip                   transaction-management  FEATURE-Transaction-Management.md
+  ✓ PASS        [22/42]  transaction-validation                       transaction-management  FEATURE-Transaction-Management.md
+  ✓ PASS        [23/42]  transaction-id-generation                    transaction-management  FEATURE-Transaction-Management.md
+  ✓ PASS        [24/42]  negative-posting-rejected                    balance-invariant       FEATURE-Balance-Invariant.md
+  ✓ PASS        [25/42]  negative-amend-rejected                      balance-invariant       FEATURE-Balance-Invariant.md
+  ✓ PASS        [26/42]  negative-delete-rejected                     balance-invariant       FEATURE-Balance-Invariant.md
+  ✓ PASS        [27/42]  transfers-success                            transfers               FEATURE-Transfers.md
+  ✓ PASS        [28/42]  transfers-rejects-insufficient-balance       transfers               FEATURE-Transfers.md
+  ✓ PASS        [29/42]  transfers-rejects-invalid-accounts           transfers               FEATURE-Transfers.md
+  ✓ PASS        [30/42]  balance-report-empty                         balance-report          FEATURE-Report-Balances.md
+  ✓ PASS        [31/42]  balance-report-computes-persisted-state      balance-report          FEATURE-Report-Balances.md
+  ✓ PASS        [32/42]  balance-report-missing-database              balance-report          FEATURE-Report-Balances.md
+  ✓ PASS        [33/42]  category-report-includes-zero-activity       category-report         FEATURE-Report-Categories.md
+  ✓ PASS        [34/42]  category-report-calculates-flows             category-report         FEATURE-Report-Categories.md
+  ✓ PASS        [35/42]  category-report-rejects-unknown-report       category-report         FEATURE-Report-Categories.md
+  ✓ PASS        [36/42]  monthly-report-groups-months                 monthly-report          FEATURE-Report-Monthly.md
+  ✓ PASS        [37/42]  monthly-report-separates-months              monthly-report          FEATURE-Report-Monthly.md
+  ✓ PASS        [38/42]  monthly-report-empty                         monthly-report          FEATURE-Report-Monthly.md
+  ✓ PASS        [39/42]  project-test-runner                          project-tests           FEATURE-Project-Tests.md
+  ✓ PASS        [40/42]  project-test-runner-is-repeatable            project-tests           FEATURE-Project-Tests.md
+  ✓ PASS        [41/42]  project-test-surface                         project-tests           FEATURE-Project-Tests.md
+  ✓ PASS        [42/42]  conformance-full                             conformance             FEATURE-Conformance.md
+
+Acceptance verification: LayersTesting  (2026-10-20T19:56:47+00:00)
+  PASS 21   FAIL 0   UNVERIFIED 0   PREPASSED 21   (42 AC)
+
+  ✓ PASS        architecture-imports                         architecture            ARCHITECTURE.md
+  ✓ PASS        architecture-cli-contract                    architecture            ARCHITECTURE.md
+  ✓ PASS        database-config-precedence                   database-configuration  FEATURE-Database-Configuration.md
+  ✓ PASS        database-config-operational-failure          database-configuration  FEATURE-Database-Configuration.md
+  ~ PREPASSED   cli-dispatch-executable                      cli-dispatch            FEATURE-CLI-Dispatcher.md
+  ✓ PASS        cli-dispatch-init-and-count                  cli-dispatch            FEATURE-CLI-Dispatcher.md
+  ✓ PASS        cli-dispatch-error-channel                   cli-dispatch            FEATURE-CLI-Dispatcher.md
+  ✓ PASS        cli-validation-unknown-command               cli-validation          FEATURE-CLI-Validation.md
+  ✓ PASS        cli-validation-unknown-report                cli-validation          FEATURE-CLI-Validation.md
+  ✓ PASS        cli-validation-argument-count                cli-validation          FEATURE-CLI-Validation.md
+  ~ PREPASSED   cli-validation-help                          cli-validation          FEATURE-CLI-Validation.md
+  ~ PREPASSED   account-category-load-roundtrip              account-loading         FEATURE-Account-Category-Loading.md
+  ✓ PASS        account-category-load-rejects-without-write  account-loading         FEATURE-Account-Category-Loading.md
+  ✓ PASS        account-category-load-validation             account-loading         FEATURE-Account-Category-Loading.md
+  ~ PREPASSED   transaction-load-roundtrip                   transaction-loading     FEATURE-Transaction-Loading.md
+  ~ PREPASSED   transaction-load-atomic-rejection            transaction-loading     FEATURE-Transaction-Loading.md
+  ~ PREPASSED   transaction-load-validation                  transaction-loading     FEATURE-Transaction-Loading.md
+  ~ PREPASSED   account-crud-roundtrip                       account-management      FEATURE-Account-Management.md
+  ~ PREPASSED   account-rejection-contract                   account-management      FEATURE-Account-Management.md
+  ✓ PASS        account-in-use-protection                    account-management      FEATURE-Account-Management.md
+  ~ PREPASSED   transaction-crud-roundtrip                   transaction-management  FEATURE-Transaction-Management.md
+  ~ PREPASSED   transaction-validation                       transaction-management  FEATURE-Transaction-Management.md
+  ~ PREPASSED   transaction-id-generation                    transaction-management  FEATURE-Transaction-Management.md
+  ~ PREPASSED   negative-posting-rejected                    balance-invariant       FEATURE-Balance-Invariant.md
+  ~ PREPASSED   negative-amend-rejected                      balance-invariant       FEATURE-Balance-Invariant.md
+  ✓ PASS        negative-delete-rejected                     balance-invariant       FEATURE-Balance-Invariant.md
+  ✓ PASS        transfers-success                            transfers               FEATURE-Transfers.md
+  ✓ PASS        transfers-rejects-insufficient-balance       transfers               FEATURE-Transfers.md
+  ✓ PASS        transfers-rejects-invalid-accounts           transfers               FEATURE-Transfers.md
+  ~ PREPASSED   balance-report-empty                         balance-report          FEATURE-Report-Balances.md
+  ✓ PASS        balance-report-computes-persisted-state      balance-report          FEATURE-Report-Balances.md
+  ~ PREPASSED   balance-report-missing-database              balance-report          FEATURE-Report-Balances.md
+  ✓ PASS        category-report-includes-zero-activity       category-report         FEATURE-Report-Categories.md
+  ✓ PASS        category-report-calculates-flows             category-report         FEATURE-Report-Categories.md
+  ~ PREPASSED   category-report-rejects-unknown-report       category-report         FEATURE-Report-Categories.md
+  ✓ PASS        monthly-report-groups-months                 monthly-report          FEATURE-Report-Monthly.md
+  ✓ PASS        monthly-report-separates-months              monthly-report          FEATURE-Report-Monthly.md
+  ~ PREPASSED   monthly-report-empty                         monthly-report          FEATURE-Report-Monthly.md
+  ~ PREPASSED   project-test-runner                          project-tests           FEATURE-Project-Tests.md
+  ~ PREPASSED   project-test-runner-is-repeatable            project-tests           FEATURE-Project-Tests.md
+  ~ PREPASSED   project-test-surface                         project-tests           FEATURE-Project-Tests.md
+  ~ PREPASSED   conformance-full                             conformance             FEATURE-Conformance.md
+
+  ~ PREPASSED   cli-dispatch-executable
+        intent: The application root contains an executable ledger entry point.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   cli-validation-help
+        intent: Help is available for the command dispatcher and documented command families.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   account-category-load-roundtrip
+        intent: Valid account and category files are loaded and their persisted rows are readable.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   transaction-load-roundtrip
+        intent: A valid transaction file persists integer-cent data and remains readable.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   transaction-load-atomic-rejection
+        intent: A later invalid reference rejects the entire transaction batch.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   transaction-load-validation
+        intent: Invalid dates, amounts, duplicate IDs, and negative prospective balances are rejected.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   account-crud-roundtrip
+        intent: Account creation, retrieval, rename, and deletion persist through the public CLI.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   account-rejection-contract
+        intent: Duplicate, invalid, absent, and in-use account operations return their specified statuses.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   transaction-crud-roundtrip
+        intent: Posting, reading, amending, and deleting a transaction persist the documented fields.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   transaction-validation
+        intent: Invalid references, amounts, dates, memos, and absent identifiers are rejected.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   transaction-id-generation
+        intent: A posted transaction receives the next identifier after existing rows.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   negative-posting-rejected
+        intent: A transaction that would make an account balance negative is rejected atomically.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   negative-amend-rejected
+        intent: An amendment that would make the account balance negative leaves the transaction unchanged.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   balance-report-empty
+        intent: The balances report succeeds for an initialized empty ledger and reports no account rows.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   balance-report-missing-database
+        intent: A balances report against an unavailable database path returns an operational failure.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   category-report-rejects-unknown-report
+        intent: An unknown category report name returns a usage error without output.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   monthly-report-empty
+        intent: An initialized empty ledger produces only the monthly header and total row.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   project-test-runner
+        intent: The project test runner exists, is executable, and passes the automated suite.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   project-test-runner-is-repeatable
+        intent: Running the project test runner twice succeeds independently.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   project-test-surface
+        intent: The project suite exercises the executable ledger command surface.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  ~ PREPASSED   conformance-full
+        intent: The completed ledger passes the supplied end-to-end conformance harness.
+        green at this block's baseline too, before its code existed — confirm the criterion exercises the story's work
+
+  Run `drydock score ac LayersTesting --full` for untruncated output per failure.
+
+
+  Proof coverage: 21 of 42 criteria are proof — green here, and observed red before the work that turned them green.
+    21 are not. Each names a story whose acceptance did not test it.
+
+    PREPASSED  cli-dispatch-executable  cli-dispatch  FEATURE-CLI-Dispatcher.md
+               green before its block built
+    PREPASSED  cli-validation-help  cli-validation  FEATURE-CLI-Validation.md
+               green before its block built
+    PREPASSED  account-category-load-roundtrip  account-loading  FEATURE-Account-Category-Loading.md
+               green before its block built
+    PREPASSED  transaction-load-roundtrip  transaction-loading  FEATURE-Transaction-Loading.md
+               green before its block built
+    PREPASSED  transaction-load-atomic-rejection  transaction-loading  FEATURE-Transaction-Loading.md
+               green before its block built
+    PREPASSED  transaction-load-validation  transaction-loading  FEATURE-Transaction-Loading.md
+               green before its block built
+    PREPASSED  account-crud-roundtrip  account-management  FEATURE-Account-Management.md
+               green before its block built
+    PREPASSED  account-rejection-contract  account-management  FEATURE-Account-Management.md
+               green before its block built
+    PREPASSED  transaction-crud-roundtrip  transaction-management  FEATURE-Transaction-Management.md
+               green before its block built
+    PREPASSED  transaction-validation  transaction-management  FEATURE-Transaction-Management.md
+               green before its block built
+    PREPASSED  transaction-id-generation  transaction-management  FEATURE-Transaction-Management.md
+               green before its block built
+    PREPASSED  negative-posting-rejected  balance-invariant  FEATURE-Balance-Invariant.md
+               green before its block built
+    PREPASSED  negative-amend-rejected  balance-invariant  FEATURE-Balance-Invariant.md
+               green before its block built
+    PREPASSED  balance-report-empty  balance-report  FEATURE-Report-Balances.md
+               green before its block built
+    PREPASSED  balance-report-missing-database  balance-report  FEATURE-Report-Balances.md
+               green before its block built
+    PREPASSED  category-report-rejects-unknown-report  category-report  FEATURE-Report-Categories.md
+               green before its block built
+    PREPASSED  monthly-report-empty  monthly-report  FEATURE-Report-Monthly.md
+               green before its block built
+    PREPASSED  project-test-runner  project-tests  FEATURE-Project-Tests.md
+               green before its block built
+    PREPASSED  project-test-runner-is-repeatable  project-tests  FEATURE-Project-Tests.md
+               green before its block built
+    PREPASSED  project-test-surface  project-tests  FEATURE-Project-Tests.md
+               green before its block built
+    PREPASSED  conformance-full  conformance  FEATURE-Conformance.md
+               green before its block built
+
+Soundings: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261020.191708/workspace/targets/LayersTesting/SOUNDINGS.md
+Target - committed project workspace git store

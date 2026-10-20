@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-6.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-6.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-6.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 6 · Service (block-6)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 8792</li><li>execution id: 20261020.193039.079Z-e18e6928</li></ul>
+<h2>Stories built</h2>
+<ul><li>Load and validate account and category CSV files atomically. (account-loading) [story]</li></ul>
+<h2>Reusable compacts</h2>
+<ul><li>seed_accounts_compact.md</li><li>seed_categories_compact.md</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 601)</li><li>compass: COMPASS.md (SP 755)</li><li>implements: FEATURE-Account-Category-Loading.md (SP 1019)</li><li>context: seed_accounts.csv (SP 22)</li><li>context: seed_categories.csv (SP 40)</li><li>context: ARCHITECTURE_compact.md (SP 154)</li><li>context: DATABASE_compact.md (SP 163)</li><li>stack: cli.md (SP 1755)</li><li>stack: persistence.md (SP 2407)</li><li>stack: sqlite.md (SP 1818)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>cli/<strong>init</strong>.py</li><li>tests/test_account_category_loading.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>GREEN (prepassed): account-category-load-roundtrip (FEATURE-Account-Category-Loading.md)</li></ul>
+<p>intent: Valid account and category files are loaded and their persisted rows are readable. return code: 0</p>
+<ul><li>RED: account-category-load-rejects-without-write (FEATURE-Account-Category-Loading.md)</li></ul>
+<p>intent: An unreadable or invalid master-data file is rejected without changing persisted data. return code: 1 stderr: --- drydock: values at failure --- d = &#x27;/tmp/tmpciy4d2d_&#x27; --- drydock: end values --- Traceback (most recent call last): File &quot;account-category-load-rejects-without-write.py&quot;, line 17, in &lt;module&gt; assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, str(Path(d) / &quot;missing.csv&quot;))[0] == 1 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ AssertionError</p>
+<ul><li>RED: account-category-load-validation (FEATURE-Account-Category-Loading.md)</li></ul>
+<p>intent: Duplicate and invalid master-data fields return the rejected-command status. return code: 1 stderr: --- drydock: values at failure --- invalid = PosixPath(&#x27;/tmp/tmp0hq5x03f/invalid.csv&#x27;) --- drydock: end values --- Traceback (most recent call last): File &quot;account-category-load-validation.py&quot;, line 14, in &lt;module&gt; assert cli_runner(&quot;load&quot;, &quot;categories&quot;, str(invalid))[0] == 3 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ AssertionError</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: account-category-load-roundtrip (FEATURE-Account-Category-Loading.md)</li></ul>
+<p>intent: Valid account and category files are loaded and their persisted rows are readable. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: account-category-load-rejects-without-write (FEATURE-Account-Category-Loading.md)</li></ul>
+<p>intent: An unreadable or invalid master-data file is rejected without changing persisted data. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: account-category-load-validation (FEATURE-Account-Category-Loading.md)</li></ul>
+<p>intent: Duplicate and invalid master-data fields return the rejected-command status. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Build summary</h2>
+<p>&lt;reusable-compact filename=&quot;seed_accounts.csv&quot;&gt;<br>CSV contract: header <code>account,name</code>; account codes are uppercase alphanumeric, 1–12 characters; names are non-empty, up to 40 characters. Seed rows: DRAWER1, DRAWER2, PETTY, SAFE. &lt;/reusable-compact&gt;</p>
+<p>&lt;reusable-compact filename=&quot;seed_categories.csv&quot;&gt;<br>CSV contract: header <code>category,description</code>; category codes are uppercase alphanumeric, 1–12 characters; descriptions are non-empty, up to 40 characters. Seed categories: OPENING, PAYROLL, REFUND, RENT, SALES, SUPPLY, TRANSFER. &lt;/reusable-compact&gt;</p>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>cli/<strong>init</strong>.py</li><li>tests/test_account_category_loading.py</li></ul>
+<p>SUMMARY: Implemented strict, atomic-style prevalidated account/category CSV loading with exact headers, validation, duplicate/conflict rejection, and correct error classification. Tests pass; staged grader reports 43/43 checks passed.</p>
+<p>BLOCKERS:</p>
+<ul><li>None</li></ul></article>
+</main>
+</body>
+</html>

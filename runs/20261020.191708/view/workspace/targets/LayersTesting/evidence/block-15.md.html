@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-15.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-15.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-15.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 15 · Service (block-15)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 4249</li><li>execution id: 20261020.194916.183Z-a5456b18</li></ul>
+<h2>Stories built</h2>
+<ul><li>Provide the automated project test runner and test suite. (project-tests) [story]</li></ul>
+<h2>Missing context</h2>
+<ul><li>context: INSTRUCTIONS.md</li><li>stack: pytest.md</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 601)</li><li>compass: COMPASS.md (SP 755)</li><li>implements: FEATURE-Project-Tests.md (SP 707)</li><li>context: ARCHITECTURE_compact.md (SP 154)</li><li>context: DATABASE_compact.md (SP 163)</li><li>stack: common.md (SP 1812)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>bin/test.sh</li><li>tests/test_project_test_runner.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>GREEN (prepassed): project-test-runner (FEATURE-Project-Tests.md)</li></ul>
+<p>intent: The project test runner exists, is executable, and passes the automated suite. return code: 0 stdout: ............................................                             [100%]</p>
+<ul><li>GREEN (prepassed): project-test-runner-is-repeatable (FEATURE-Project-Tests.md)</li></ul>
+<p>intent: Running the project test runner twice succeeds independently. return code: 0 stdout: ............................................                             [100%]</p>
+<p>............................................                             [100%]</p>
+<ul><li>GREEN (prepassed): project-test-surface (FEATURE-Project-Tests.md)</li></ul>
+<p>intent: The project suite exercises the executable ledger command surface. return code: 0</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: project-test-runner (FEATURE-Project-Tests.md)</li></ul>
+<p>intent: The project test runner exists, is executable, and passes the automated suite. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0 stdout: ..............................................                           [100%]</p>
+<ul><li>PASS: project-test-runner-is-repeatable (FEATURE-Project-Tests.md)</li></ul>
+<p>intent: Running the project test runner twice succeeds independently. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0 stdout: ..............................................                           [100%]</p>
+<p>..............................................                           [100%]</p>
+<ul><li>PASS: project-test-surface (FEATURE-Project-Tests.md)</li></ul>
+<p>intent: The project suite exercises the executable ledger command surface. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Build summary</h2>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>bin/test.sh</li><li>tests/test_project_test_runner.py</li></ul>
+<p>SUMMARY: Added a caller-independent POSIX test runner and project runner/surface tests. <code>pytest</code> passed twice with 46 tests; terminal harness passed 43/43 checks.</p>
+<p>BLOCKERS:</p>
+<ul><li>None</li></ul></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,19 @@
+<reusable-compact filename="seed_transactions.csv">
+CSV contract: header `txn_id,date,account,category,amount,memo`; transaction IDs are integers, dates use ISO `YYYY-MM-DD`, amounts are decimal currency values converted to integer cents, accounts/categories reference existing master rows, and memos are strings. The staged dataset contains 120 valid transactions.
+</reusable-compact>
+
+<reusable-compact filename="seed_transactions_bad.csv">
+CSV contract matches `seed_transactions.csv`. The staged dataset contains 11 rows: 10 valid transactions followed by one transaction referencing `NOSUCH`; the complete batch must be rejected atomically with no rows inserted.
+</reusable-compact>
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli/__init__.py
+- tests/test_transaction_loading.py
+
+SUMMARY:
+Implemented exact transaction CSV header/row validation, integer-cent parsing, reference checks, duplicate detection, date/amount validation, prospective balance checks, and atomic rejection behavior. Project tests pass: 24 passed. Terminal acceptance passes: 43 passed, 0 failed.
+
+BLOCKERS:
+- None

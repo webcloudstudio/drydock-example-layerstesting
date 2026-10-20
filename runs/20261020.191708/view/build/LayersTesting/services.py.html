@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/services.py</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/services.py</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../build/LayersTesting/services.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Application service boundary for validated, atomic ledger workflows.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+from collections.abc import Callable
+from typing import Iterable, TypeVar
+
+T = TypeVar(&quot;T&quot;)
+
+
+def validate_before_write(validate: Callable[[], T], write: Callable[[T], object]) -&gt; object:
+    &quot;&quot;&quot;Validate a complete operation, then perform its write plan.&quot;&quot;&quot;
+    plan = validate()
+    return write(plan)
+
+
+def ensure_non_negative_balances(
+    transactions: Iterable[object],
+    changes: Iterable[tuple[str, int]],
+) -&gt; None:
+    &quot;&quot;&quot;Reject a mutation whose resulting account balances contain a negative value.
+
+    ``transactions`` are persisted transaction rows and ``changes`` is the complete
+    delta that the caller intends to apply.  Keeping the calculation here means every
+    mutation validates the same prospective state before it calls a persistence write.
+    &quot;&quot;&quot;
+    balances: dict[str, int] = {}
+    for transaction in transactions:
+        account = getattr(transaction, &quot;account&quot;)
+        balances[account] = balances.get(account, 0) + getattr(transaction, &quot;amount&quot;)
+    for account, amount in changes:
+        balances[account] = balances.get(account, 0) + amount
+    if any(balance &lt; 0 for balance in balances.values()):
+        raise ValueError(&quot;negative balance&quot;)
+
+
+def create_transfer(
+    database: object,
+    *,
+    first_id: int,
+    date: str,
+    source: str,
+    destination: str,
+    category: str,
+    amount: int,
+) -&gt; tuple[object, object]:
+    &quot;&quot;&quot;Create both transfer rows, compensating if the second write fails.
+
+    The persistence contract exposes row operations rather than SQL or connection state. All
+    validation, including the prospective balance check, is performed by the caller first.
+    &quot;&quot;&quot;
+    transactions = getattr(database, &quot;transactions&quot;)
+    outgoing = transactions.create(
+        txn_id=first_id,
+        date=date,
+        account=source,
+        category=category,
+        amount=-amount,
+        memo=f&quot;transfer to {destination}&quot;,
+    )
+    try:
+        incoming = transactions.create(
+            txn_id=first_id + 1,
+            date=date,
+            account=destination,
+            category=category,
+            amount=amount,
+            memo=f&quot;transfer from {source}&quot;,
+        )
+    except Exception:
+        transactions.delete(txn_id=first_id)
+        raise
+    return outgoing, incoming
+</pre></article>
+</main>
+</body>
+</html>

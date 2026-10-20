@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Report-Monthly.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Report-Monthly.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Report-Monthly.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Monthly Report</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Report transaction totals grouped by calendar month.</td></tr><tr><td>Depends On</td><td>FEATURE-Transaction-Management.md</td></tr><tr><td>Provides</td><td>report monthly</td></tr><tr><td>Consumes</td><td>transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>The monthly report groups transactions by their <code>YYYY-MM</code> calendar month, orders months ascending, and appends a computed total row.</p>
+<h2>Workflow</h2>
+<p>Query transactions, derive each month from the validated date, calculate counts and flow totals in integer cents, order months ascending, format amounts with two decimals, and emit the total.</p>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC monthly-report-groups-months ===<br>Intent: The monthly report groups persisted transactions by ascending calendar month. from cli.testing import cli_runner import csv import io import os import tempfile</p>
+<p>with tempfile.TemporaryDirectory() as directory: os.environ[&quot;DATABASE_URL&quot;] = os.path.join(directory, &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Account&quot;)[0] == 0 assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;C&quot;, &quot;Category&quot;)[0] == 0 assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;C&quot;, &quot;2.00&quot;, &quot;later&quot;)[0] == 0 assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;C&quot;, &quot;3.50&quot;, &quot;earlier&quot;)[0] == 0</p>
+<p>code, output, _ = cli_runner(&quot;report&quot;, &quot;monthly&quot;) assert code == 0 rows = list(csv.reader(io.StringIO(output))) months = [row[0] for row in rows[1:-1]] assert months == [&quot;2026-01&quot;]</p>
+<p>assert rows[1][1:] == [&quot;2&quot;, &quot;5.50&quot;, &quot;0.00&quot;, &quot;5.50&quot;]</p>
+<p>=== END AC monthly-report-groups-months ===</p>
+<p>=== AC monthly-report-separates-months ===<br>Intent: Transactions in separate months produce separate monthly rows and a computed total. from cli.testing import cli_runner import csv import io import os import tempfile</p>
+<p>with tempfile.TemporaryDirectory() as directory: os.environ[&quot;DATABASE_URL&quot;] = os.path.join(directory, &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;Account&quot;)[0] == 0 assert cli_runner(&quot;category&quot;, &quot;add&quot;, &quot;C&quot;, &quot;Category&quot;)[0] == 0 assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;C&quot;, &quot;2.00&quot;, &quot;jan&quot;)[0] == 0 assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;C&quot;, &quot;-1.25&quot;, &quot;feb&quot;)[0] == 0</p>
+<p>code, output, _ = cli_runner(&quot;report&quot;, &quot;monthly&quot;) assert code == 0 rows = list(csv.reader(io.StringIO(output))) assert len(rows) == 4 assert rows[-1][1:] == [&quot;2&quot;, &quot;2.00&quot;, &quot;1.25&quot;, &quot;0.75&quot;]</p>
+<p>=== END AC monthly-report-separates-months ===</p>
+<p>=== AC monthly-report-empty ===<br>Intent: An initialized empty ledger produces only the monthly header and total row. from cli.testing import cli_runner import csv import io import os import tempfile</p>
+<p>with tempfile.TemporaryDirectory() as directory: os.environ[&quot;DATABASE_URL&quot;] = os.path.join(directory, &quot;ledger.db&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 code, output, _ = cli_runner(&quot;report&quot;, &quot;monthly&quot;) assert code == 0 rows = list(csv.reader(io.StringIO(output))) assert len(rows) == 2 assert rows[-1][0] == &quot;TOTAL&quot;</p>
+<p>=== END AC monthly-report-empty ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Months are ordered ascending.</li><li>Monthly totals are derived from persisted transactions.</li><li>Money calculations use integer cents.</li></ul></article>
+</main>
+</body>
+</html>

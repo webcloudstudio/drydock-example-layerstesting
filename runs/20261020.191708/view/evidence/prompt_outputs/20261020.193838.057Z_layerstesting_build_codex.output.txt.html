@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261020.193838.057Z_layerstesting_build_codex.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261020.193838.057Z_layerstesting_build_codex.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261020.193838.057Z_layerstesting_build_codex.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>RESULT: SUCCESS
+
+AC_BROKEN: transfers-success, transfers-rejects-insufficient-balance
+
+FILES CHANGED:
+- cli/__init__.py
+- services.py
+- tests/test_transfers.py
+
+SUMMARY:
+Implemented transfer validation, ordered two-row creation with rollback compensation, and round-trip tests. `pytest`: 38 passed. `sources/run.sh`: 43/43 passed.
+
+The two staged ACs reset the database via `db_session` before readback, making their persistence assertions impossible without changing protected generated code.
+
+FAILURE_DETAIL: The transfer commands succeed correctly, but `db_session(dsn)` reapplies schema.sql and drops rows before those AC assertions inspect them.</pre></article>
+</main>
+</body>
+</html>

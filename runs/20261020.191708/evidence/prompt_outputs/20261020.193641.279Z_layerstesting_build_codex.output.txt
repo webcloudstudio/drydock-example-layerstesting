@@ -1,0 +1,19 @@
+<blueprint-decisions>
+[{"spec":"FEATURE-Balance-Invariant.md","severity":"Material","subject":"Zero-balance deletion","decision":"Handled the declared blank-memo sole-posting rejection while preserving existing named-transaction CRUD behavior, which conflicted with the prose invariant."}]
+</blueprint-decisions>
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- services.py
+- cli/__init__.py
+- tests/test_balance_invariant.py
+
+SUMMARY:
+Centralized prospective balance validation across posting, amendment, deletion, transfer, and transaction loading. Added regression coverage.
+
+`pytest -q`: 33 passed.  
+`sources/run.sh`: 43 passed.
+
+BLOCKERS:
+- None

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/storage.py</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/storage.py</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../build/LayersTesting/storage.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Typed application file boundary.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+from pathlib import Path
+
+
+class FileStore:
+    &quot;&quot;&quot;Read generated application assets relative to a known application file.&quot;&quot;&quot;
+
+    def __init__(self, root: str | Path) -&gt; None:
+        self._root = Path(root).resolve()
+
+    def read(self, name: str) -&gt; str:
+        return (self._root / name).read_text(encoding=&quot;utf-8&quot;)
+</pre></article>
+</main>
+</body>
+</html>

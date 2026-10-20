@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/provider_raw/20261020.192046.692Z_layerstesting_lineage_attribute_codex.raw.jsonl</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/provider_raw/20261020.192046.692Z_layerstesting_lineage_attribute_codex.raw.jsonl</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/provider_raw/20261020.192046.692Z_layerstesting_lineage_attribute_codex.raw.jsonl">Raw file</a></div></header>
+<article class="doc"><pre>{&quot;type&quot;:&quot;thread.started&quot;,&quot;thread_id&quot;:&quot;01a15ac2-524a-7360-a291-bc151f1d4ddf&quot;}
+{&quot;type&quot;:&quot;turn.started&quot;}
+{&quot;type&quot;:&quot;item.completed&quot;,&quot;item&quot;:{&quot;id&quot;:&quot;item_0&quot;,&quot;type&quot;:&quot;agent_message&quot;,&quot;text&quot;:&quot;&lt;requirement name=\&quot;ledger-executable\&quot;&gt;\nThe deliverable is an executable named ledger at the application root.\n&lt;/requirement&gt;\n&lt;requirement name=\&quot;database-configuration\&quot;&gt;\nDatabase: DATABASE_URL when the caller sets it (for example a PostgreSQL DSN), otherwise a SQLite file in a fresh temporary directory.\n&lt;/requirement&gt;\n&lt;requirement name=\&quot;schema-lifecycle\&quot; stories=\&quot;database-schema\&quot;&gt;\nEvery run starts with `ledger init`, so the grader never depends on prior state.\n&lt;/requirement&gt;\n&lt;requirement name=\&quot;bulk-load-dataset\&quot; stories=\&quot;account-loading,transaction-loading\&quot;&gt;\nBulk load of the known dataset\n&lt;/requirement&gt;\n&lt;requirement name=\&quot;balance-reporting\&quot; stories=\&quot;balance-report\&quot;&gt;\nReports over the seeded rows\n&lt;/requirement&gt;\n&lt;requirement name=\&quot;category-reporting\&quot; stories=\&quot;category-report\&quot;&gt;\nReports over the seeded rows\n&lt;/requirement&gt;\n&lt;requirement name=\&quot;monthly-reporting\&quot; stories=\&quot;monthly-report\&quot;&gt;\nReports over the seeded rows\n&lt;/requirement&gt;\n&lt;requirement name=\&quot;atomic-rejected-loads\&quot; stories=\&quot;account-loading,transaction-loading\&quot;&gt;\nA rejected load changes nothing\n&lt;/requirement&gt;\n&lt;requirement name=\&quot;account-management\&quot; stories=\&quot;account-management\&quot;&gt;\nAccount create, read, update, delete\n&lt;/requirement&gt;\n&lt;requirement name=\&quot;transaction-management\&quot; stories=\&quot;transaction-management\&quot;&gt;\nTransaction create, read, update, delete\n&lt;/requirement&gt;\n&lt;requirement name=\&quot;safe-transfers\&quot; stories=\&quot;balance-invariant,transfers\&quot;&gt;\nTransfers are atomic; no command leaves a negative balance\n&lt;/requirement&gt;\n&lt;requirement name=\&quot;usage-errors\&quot; stories=\&quot;cli-validation\&quot;&gt;\nUsage errors\n&lt;/requirement&gt;\n&lt;requirement name=\&quot;reinitialization\&quot; stories=\&quot;database-schema\&quot;&gt;\nRe-initialization drops every row\n&lt;/requirement&gt;\n&lt;requirement name=\&quot;conformance\&quot; stories=\&quot;conformance\&quot;&gt;\nExit 0 only when every check passes.\n&lt;/requirement&gt;\n&lt;unattached story=\&quot;architecture\&quot;/&gt;\n&lt;unattached story=\&quot;project-tests\&quot;/&gt;\n&quot;}}
+{&quot;type&quot;:&quot;turn.completed&quot;,&quot;usage&quot;:{&quot;input_tokens&quot;:15366,&quot;cached_input_tokens&quot;:10240,&quot;cache_write_input_tokens&quot;:0,&quot;output_tokens&quot;:926,&quot;reasoning_output_tokens&quot;:516}}
+</pre></article>
+</main>
+</body>
+</html>

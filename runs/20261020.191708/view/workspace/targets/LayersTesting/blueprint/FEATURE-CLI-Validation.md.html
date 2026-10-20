@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-CLI-Validation.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-CLI-Validation.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-CLI-Validation.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: CLI Validation</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Validate command names, subcommands, reports, tables, and argument counts.</td></tr><tr><td>Depends On</td><td>FEATURE-CLI-Dispatcher.md</td></tr><tr><td>Provides</td><td>command usage validation, command help</td></tr><tr><td>Consumes</td><td>command dispatch</td></tr></tbody></table></div>
+<h2>Validation Rules</h2>
+<p>The CLI rejects unknown commands, unknown tables, unknown reports, and incorrect argument counts with exit code <code>2</code>. Every documented command and sub-verb has discoverable help text. Validation occurs before database mutation.</p>
+<p>Documented command families and subcommands include:</p>
+<ul><li><code>init</code></li><li><code>count</code></li><li><code>load</code></li><li><code>account add</code>, <code>account get</code>, <code>account rename</code>, <code>account delete</code></li><li><code>txn post</code>, <code>txn get</code>, <code>txn amend</code>, <code>txn delete</code></li><li><code>transfer</code></li><li><code>report balances</code>, <code>report categories</code>, <code>report monthly</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC cli-validation-unknown-command ===<br>Intent: An unknown command is rejected as a usage error. from cli.testing import cli_runner</p>
+<p>code, stdout, stderr = cli_runner(&quot;frobnicate&quot;) assert code == 2 assert stdout == &quot;&quot; assert stderr != &quot;&quot; === END AC cli-validation-unknown-command ===</p>
+<p>=== AC cli-validation-unknown-report ===<br>Intent: An unknown report is rejected as a usage error. from cli.testing import cli_runner</p>
+<p>code, stdout, stderr = cli_runner(&quot;report&quot;, &quot;nosuch&quot;) assert code == 2 assert stdout == &quot;&quot; assert stderr != &quot;&quot; === END AC cli-validation-unknown-report ===</p>
+<p>=== AC cli-validation-argument-count ===<br>Intent: A documented command with an incorrect argument count is rejected as a usage error. from cli.testing import cli_runner</p>
+<p>code, stdout, stderr = cli_runner(&quot;account&quot;, &quot;add&quot;) assert code == 2 assert stdout == &quot;&quot; assert stderr != &quot;&quot; === END AC cli-validation-argument-count ===</p>
+<p>=== AC cli-validation-help ===<br>Intent: Help is available for the command dispatcher and documented command families. from cli.testing import cli_runner</p>
+<p>for arguments in ((&quot;--help&quot;,), (&quot;account&quot;, &quot;--help&quot;), (&quot;txn&quot;, &quot;--help&quot;), (&quot;report&quot;, &quot;--help&quot;)): code, stdout, stderr = cli_runner(*arguments) assert code == 0 assert stdout != &quot;&quot; === END AC cli-validation-help ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Usage errors must return exit code <code>2</code>.</li><li>Argument validation must happen before writes.</li><li>Help must cover every documented command family and sub-verb.</li></ul></article>
+</main>
+</body>
+</html>

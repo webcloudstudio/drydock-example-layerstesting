@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_architecture.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_architecture.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_architecture.py">Raw file</a></div></header>
+<article class="doc"><pre>from importlib import import_module
+import inspect
+
+
+def test_cli_and_persistence_packages_are_importable():
+    cli = import_module(&quot;cli&quot;)
+    persistence = import_module(&quot;persistence&quot;)
+    assert hasattr(cli, &quot;main&quot;)
+    assert hasattr(persistence, &quot;open_database&quot;)
+
+
+def test_cli_main_accepts_argv_and_reports_missing_command():
+    from cli import main
+
+    assert &quot;argv&quot; in inspect.signature(main).parameters
+    assert main([]) == 2
+
+
+def test_configuration_precedence():
+    from configuration import database_dsn
+
+    assert database_dsn({}) == &quot;data/app.db&quot;
+    assert database_dsn({&quot;DATABASE_PATH&quot;: &quot;path.db&quot;}) == &quot;path.db&quot;
+    assert database_dsn({&quot;DATABASE_URL&quot;: &quot;url&quot;, &quot;DATABASE_PATH&quot;: &quot;path.db&quot;}) == &quot;url&quot;
+
+
+def test_validation_keeps_money_as_integer_cents():
+    from validation import validate_cents
+
+    assert validate_cents(125) == 125
+
+
+def test_validation_rejects_punctuation_in_codes():
+    import pytest
+
+    from validation import validate_code
+
+    with pytest.raises(ValueError):
+        validate_code(&quot;BAD-CODE&quot;)
+</pre></article>
+</main>
+</body>
+</html>

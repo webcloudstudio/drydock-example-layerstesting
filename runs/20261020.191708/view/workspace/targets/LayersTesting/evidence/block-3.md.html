@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-3.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-3.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-3.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 3 · Service (block-3)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-20</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 6730</li><li>execution id: 20261020.192453.087Z-85e5dc49</li></ul>
+<h2>Stories built</h2>
+<ul><li>Resolve database configuration and operational failures. (database-configuration) [story]</li></ul>
+<h2>Missing context</h2>
+<ul><li>context: INSTRUCTIONS.md</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 601)</li><li>compass: COMPASS.md (SP 755)</li><li>implements: FEATURE-Database-Configuration.md (SP 765)</li><li>context: ARCHITECTURE_compact.md (SP 154)</li><li>context: DATABASE_compact.md (SP 163)</li><li>stack: persistence.md (SP 2407)</li><li>stack: sqlite.md (SP 1818)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>cli/<strong>init</strong>.py</li><li>cli/testing.py</li><li>storage.py</li><li>tests/test_database_configuration.py</li><li>cli.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>RED: database-config-precedence (FEATURE-Database-Configuration.md)</li></ul>
+<p>intent: The CLI uses a configured SQLite database and initializes it successfully. return code: 1 stderr: Traceback (most recent call last): File &quot;database-config-precedence.py&quot;, line 3, in &lt;module&gt; from cli.testing import cli_runner<br>ModuleNotFoundError: No module named &#x27;cli.testing&#x27;; &#x27;cli&#x27; is not a package</p>
+<ul><li>RED: database-config-operational-failure (FEATURE-Database-Configuration.md)</li></ul>
+<p>intent: A database with missing required tables produces an operational failure with no data output. return code: 1 stderr: Traceback (most recent call last): File &quot;database-config-operational-failure.py&quot;, line 3, in &lt;module&gt; from cli.testing import cli_runner<br>ModuleNotFoundError: No module named &#x27;cli.testing&#x27;; &#x27;cli&#x27; is not a package</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: database-config-precedence (FEATURE-Database-Configuration.md)</li></ul>
+<p>intent: The CLI uses a configured SQLite database and initializes it successfully. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: database-config-operational-failure (FEATURE-Database-Configuration.md)</li></ul>
+<p>intent: A database with missing required tables produces an operational failure with no data output. target interpreter: /mnt/c/Users/barlo/projects/drydock/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Build summary</h2>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>cli.py</li><li>cli/<strong>init</strong>.py</li><li>cli/testing.py</li><li>storage.py</li><li>tests/test_database_configuration.py</li></ul>
+<p>SUMMARY: Implemented database initialization, configuration precedence, operational failure handling, and CLI test support. Full pytest suite passes: 11 tests.</p>
+<p>BLOCKERS:</p>
+<ul><li>None</li></ul></article>
+</main>
+</body>
+</html>

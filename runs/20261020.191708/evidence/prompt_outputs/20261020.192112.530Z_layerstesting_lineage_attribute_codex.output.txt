@@ -1,0 +1,22 @@
+<requirement name="load-seed-transactions" stories="database-schema,transaction-loading">
+txn_id,date,account,category,amount,memo
+</requirement>
+<requirement name="record-account-transactions" stories="transaction-management">
+1,2026-01-01,SAFE,OPENING,5000.00,opening float
+</requirement>
+<requirement name="execute-transfers" stories="transfers">
+27,2026-01-14,DRAWER1,TRANSFER,-1000.00,transfer to SAFE
+28,2026-01-14,SAFE,TRANSFER,1000.00,transfer from DRAWER1
+</requirement>
+<unattached story="architecture"/>
+<unattached story="database-configuration"/>
+<unattached story="cli-dispatch"/>
+<unattached story="cli-validation"/>
+<unattached story="account-loading"/>
+<unattached story="account-management"/>
+<unattached story="balance-invariant"/>
+<unattached story="balance-report"/>
+<unattached story="category-report"/>
+<unattached story="monthly-report"/>
+<unattached story="project-tests"/>
+<unattached story="conformance"/>

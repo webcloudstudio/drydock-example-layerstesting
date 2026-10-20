@@ -1,0 +1,31 @@
+<requirement name="load-transaction-csv" stories="transaction-loading">
+txn_id,date,account,category,amount,memo
+201,2026-04-01,DRAWER1,SALES,10.00,bad batch 1
+202,2026-04-01,DRAWER1,SALES,10.00,bad batch 2
+203,2026-04-01,DRAWER1,SALES,10.00,bad batch 3
+204,2026-04-01,DRAWER1,SALES,10.00,bad batch 4
+205,2026-04-01,DRAWER1,SALES,10.00,bad batch 5
+206,2026-04-01,DRAWER1,SALES,10.00,bad batch 6
+207,2026-04-01,DRAWER1,SALES,10.00,bad batch 7
+208,2026-04-01,DRAWER1,SALES,10.00,bad batch 8
+209,2026-04-01,DRAWER1,SALES,10.00,bad batch 9
+210,2026-04-01,DRAWER1,SALES,10.00,bad batch 10
+</requirement>
+<requirement name="reject-unknown-account" stories="transaction-loading">
+211,2026-04-01,NOSUCH,SALES,10.00,unknown account
+</requirement>
+<unattached story="architecture"/>
+<unattached story="database-schema"/>
+<unattached story="database-configuration"/>
+<unattached story="cli-dispatch"/>
+<unattached story="cli-validation"/>
+<unattached story="account-loading"/>
+<unattached story="account-management"/>
+<unattached story="transaction-management"/>
+<unattached story="balance-invariant"/>
+<unattached story="transfers"/>
+<unattached story="balance-report"/>
+<unattached story="category-report"/>
+<unattached story="monthly-report"/>
+<unattached story="project-tests"/>
+<unattached story="conformance"/>
