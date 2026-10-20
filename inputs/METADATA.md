@@ -2,7 +2,7 @@
 
 name: LayersTesting
 display_name: drydock Layers Testing Uat Case
-short_description: Drydock uat - LayersTesting exercises the language and persistence layers. The source is an original brief for a command-line cash ledger with three tables (accounts, categories, transactions) reached only through the shipped persistence library. The supplied grader, bin/run.sh in the kit and sources/run.sh in the build, initializes a fresh database, loads 131 known rows, and runs 43 checks of exit code and output: row counts, three reports with known totals, create/read/update/delete on accounts and transactions, atomic rejected loads and transfers, the non-negative balance rule, and a final drop and recreate. TECHNOLOGY_STACK_python.md (the default) and TECHNOLOGY_STACK_go.md select Python or Go over SQLite; uat.json names the one in use, and the exam is identical for both. Run with drydock uat LayersTesting. Source Repo: none, the brief is original to this kit.
+short_description: Drydock uat - LayersTesting exercises the language and persistence layers. The source is an original brief for a command-line cash ledger with three tables (accounts, categories, transactions) reached only through the shipped persistence library. The supplied grader, sources/run.sh, initializes a fresh database, loads 131 known rows, and runs 43 checks of exit code and output: row counts, three reports with known totals, create/read/update/delete on accounts and transactions, atomic rejected loads and transfers, the non-negative balance rule, and a final drop and recreate. This build is in Python over SQLite. Run with drydock uat LayersTesting. Source Repo: none, the brief is original to this kit.
 stack: Python
 version: 
 build_state: 

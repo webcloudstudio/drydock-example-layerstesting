@@ -8,7 +8,7 @@ ledger. The brief is original to this kit.
 | `sources/INSTRUCTIONS.md` | The specification imported into the Target. |
 | `sources/seed_*.csv` | Known dataset: 4 accounts, 7 categories, 120 transactions; plus an 11-row file rejected on row 11. |
 | `bin/run.sh` | The grader. Staged into the build as `sources/run.sh`; `acceptance.full` runs it. |
-| `inputs/` | Frozen `SEA_TRIALS.md`, `TECHNOLOGY_STACK_python.md`, `TECHNOLOGY_STACK_go.md`, `COMPASS.md`, `METADATA.md`. |
+| `inputs/` | Frozen `SEA_TRIALS.md`, `TECHNOLOGY_STACK.md`, `COMPASS.md`, `METADATA.md`, plus `_python` / `_go` versions. |
 
 ## Grading
 
@@ -33,13 +33,22 @@ set, so `DATABASE_URL=postgresql://... bin/run.sh APP` grades the same build aga
 
 ## Variants
 
-Two stack files carry the same exam. `uat.json` `technology_stack` selects one; the known answers
-do not change with the stack.
+`uat.json` reads the canonical files. Three of them have a `_python` and a `_go` version. Copy one
+language's versions over the canonical files and commit; the exam and known answers do not change.
 
-| File | Stack |
+| Canonical file | Varies by |
 |---|---|
-| `inputs/TECHNOLOGY_STACK_python.md` | Python, SQLite, pytest (default) |
-| `inputs/TECHNOLOGY_STACK_go.md` | Go, SQLite, go test |
+| `inputs/TECHNOLOGY_STACK.md` | Language, test-runner rows |
+| `inputs/METADATA.md` | `stack:` field, one sentence of `short_description` |
+| `sources/INSTRUCTIONS.md` | `## Stack` section |
 
-For PostgreSQL, replace `sqlite.md` with `postgres.md` in either file. The Go file has no `CLI`
+```sh
+for f in inputs/TECHNOLOGY_STACK inputs/METADATA sources/INSTRUCTIONS; do cp "${f}_go.md" "$f.md"; done
+```
+
+The canonical files currently hold the Python versions. For PostgreSQL, replace `sqlite.md` with
+`postgres.md` in the stack file and `SQLite` in the brief's `## Stack`. The Go stack has no `CLI`
 row because `cli.md` requires `python.md`.
+
+Analyze sees the brief, COMPASS, and METADATA's description but not `TECHNOLOGY_STACK.md` or
+`uat.json`. Those three files never name a kit file the model cannot read.

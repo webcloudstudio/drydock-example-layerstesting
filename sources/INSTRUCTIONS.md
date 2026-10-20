@@ -10,9 +10,11 @@ The product is an executable named `ledger` at the application root. It stores e
 relational database through the shipped persistence library, and every command either completes
 in full or changes nothing.
 
-The implementation language and database are fixed by this Target's `TECHNOLOGY_STACK.md`. The
-contract below is language-neutral and database-neutral: the same commands, the same output, and
-the same exit codes on every supported language and database.
+## Stack
+
+Implement in Python 3.11 or newer over SQLite, through the shipped Python persistence
+library. Tests run under pytest. The contract below is the same for every language and database: the same
+commands, the same output, and the same exit codes.
 
 ## Run Harness
 

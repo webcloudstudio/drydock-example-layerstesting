@@ -12,8 +12,7 @@ known answers computed from the seed files. The goal is every check passing.
 
 ## Constraints
 
-- Implement in the language selected in `TECHNOLOGY_STACK.md`, against the database selected
-  there.
+- Implement in the language and database named under `## Stack` in `sources/INSTRUCTIONS.md`.
 - Provide an executable named `ledger` at the application root, invoked as `./ledger <command>`.
 - Read the database location from `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`.
 - Store amounts as integer cents.
