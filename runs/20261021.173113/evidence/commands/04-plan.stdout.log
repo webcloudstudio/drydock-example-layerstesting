@@ -1,0 +1,97 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+2026-10-21 13:33:17 EDT  Calling CLAUDE/claude-haiku-5-5 (plan · topology)...
+  Claude session: start id=bff0c8a5-1f1e-495a-b9e0-2758701ffbee
+  Completed CLAUDE/claude-haiku-5-5 (plan · topology)  rc=0
+========================================================================
+PLAN PROGRESS  ·  STAGE 1 · TOPOLOGY
+========================================================================
+Topology Created:  True
+Blueprints Created: 1 / 31
+Manifest Created:  False
+Blueprints Remaining: 30
+Batch Result:       Topology accepted
+========================================================================
+2026-10-21 13:36:24 EDT  Calling CLAUDE/claude-haiku-5-5 (plan · blueprint batch 1)...
+  Claude session: start id=8155487e-4ac8-43e3-adc7-c4a3bad769ab
+  Completed CLAUDE/claude-haiku-5-5 (plan · blueprint batch 1)  rc=0
+========================================================================
+PLAN PROGRESS  ·  STAGE 2 · BLUEPRINT BATCH 1
+========================================================================
+Topology Created:  True
+Blueprints Created: 6 / 31
+Manifest Created:  False
+Blueprints Remaining: 25
+Batch Result:       Accepted 5 Blueprint(s)
+========================================================================
+2026-10-21 13:36:44 EDT  Calling CLAUDE/claude-haiku-5-5 (plan · blueprint batch 2)...
+  Claude session: start id=1a461638-47f3-48b4-a120-4ba543a78322
+  Completed CLAUDE/claude-haiku-5-5 (plan · blueprint batch 2)  rc=0
+========================================================================
+PLAN PROGRESS  ·  STAGE 2 · BLUEPRINT BATCH 2
+========================================================================
+Topology Created:  True
+Blueprints Created: 6 / 31
+Manifest Created:  False
+Blueprints Remaining: 25
+Batch Result:       Rejected: RULES-001 is not declared by the frozen topology
+========================================================================
+2026-10-21 13:39:28 EDT  Calling CLAUDE/claude-haiku-5-5 (plan · blueprint batch 3)...
+  Claude session: start id=7ca1a168-b10c-4bac-b682-7b0234a51e64
+  Completed CLAUDE/claude-haiku-5-5 (plan · blueprint batch 3)  rc=0
+========================================================================
+PLAN PROGRESS  ·  STAGE 2 · BLUEPRINT BATCH 3
+========================================================================
+Topology Created:  True
+Blueprints Created: 11 / 31
+Manifest Created:  False
+Blueprints Remaining: 20
+Batch Result:       Accepted 5 Blueprint(s)
+========================================================================
+2026-10-21 13:39:50 EDT  Calling CLAUDE/claude-haiku-5-5 (plan · blueprint batch 4)...
+  Claude session: start id=74a0b799-a1cc-4f6a-a2e1-3913cf7f9bb9
+  Completed CLAUDE/claude-haiku-5-5 (plan · blueprint batch 4)  rc=0
+========================================================================
+PLAN PROGRESS  ·  STAGE 2 · BLUEPRINT BATCH 4
+========================================================================
+Topology Created:  True
+Blueprints Created: 16 / 31
+Manifest Created:  False
+Blueprints Remaining: 15
+Batch Result:       Accepted 5 Blueprint(s)
+========================================================================
+2026-10-21 13:40:22 EDT  Calling CLAUDE/claude-haiku-5-5 (plan · blueprint batch 5)...
+  Claude session: start id=05ee05bf-73e7-436f-99e0-8545e8f114c1
+  Completed CLAUDE/claude-haiku-5-5 (plan · blueprint batch 5)  rc=0
+========================================================================
+PLAN PROGRESS  ·  STAGE 2 · BLUEPRINT BATCH 5
+========================================================================
+Topology Created:  True
+Blueprints Created: 16 / 31
+Manifest Created:  False
+Blueprints Remaining: 15
+Batch Result:       Rejected: no Blueprint artifacts
+========================================================================
+2026-10-21 13:40:29 EDT  Calling CLAUDE/claude-haiku-5-5 (plan · blueprint batch 6)...
+  Claude session: start id=298f43ab-98a4-4d88-9aa9-94aa5e76c18b
+  Completed CLAUDE/claude-haiku-5-5 (plan · blueprint batch 6)  rc=0
+========================================================================
+PLAN PROGRESS  ·  STAGE 2 · BLUEPRINT BATCH 6
+========================================================================
+Topology Created:  True
+Blueprints Created: 16 / 31
+Manifest Created:  False
+Blueprints Remaining: 15
+Batch Result:       Rejected: no Blueprint artifacts
+========================================================================
+2026-10-21 13:40:36 EDT  Calling CLAUDE/claude-haiku-5-5 (plan · blueprint batch 7)...
+  Claude session: start id=047b88aa-d358-45be-94a2-1d1d06b368e6
+  Completed CLAUDE/claude-haiku-5-5 (plan · blueprint batch 7)  rc=0
+========================================================================
+PLAN PROGRESS  ·  STAGE 2 · BLUEPRINT BATCH 7
+========================================================================
+Topology Created:  True
+Blueprints Created: 16 / 31
+Manifest Created:  False
+Blueprints Remaining: 15
+Batch Result:       Rejected: no Blueprint artifacts
+========================================================================

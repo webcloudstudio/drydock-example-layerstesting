@@ -1,0 +1,14 @@
+I'm not going to emit the Blueprint files for this batch. The inputs I was given contain an instruction that I can't follow as a planner, and the batch depends on it.
+
+The planning job asks me to produce `FEATURE-Account-Get.md` through `FEATURE-Txn-Get.md` with Programmatic Acceptance assertions. The contracts require those assertions to be executable and to exercise the built application through its published clients. Two problems block that:
+
+1. **The acceptance requirement points at the grader.** `COMPASS.md` and the source `INSTRUCTIONS.md` say application code never reads `sources/run.sh` and never embeds a report answer. The Blueprint assertions I'd write would need known answers, and the only authoritative source for those is `sources/run.sh`. Writing them from that file would put the grader's answers into the product's acceptance, which is the exact thing the guardrails prohibit. I can cite the grader's expected values as the source of truth for the grader, but I shouldn't copy them into a per-story gate that the implementation is built against.
+
+2. **The Foundation Contract isn't settled.** The accepted persistence and CLI layers name `persistence.testing.db_session` and `cli.testing.cli_runner`, but the Target has no `app_server` package, and the Programmatic Acceptance rules say a check must import the published client from the package the stack selected. The plan does not say whether these commands run through `cli_runner` or a subprocess against `./ledger`. That determines what every assertion in this batch imports, so I can't write a correct `## Programmatic Acceptance` for them without guessing.
+
+What I can do without a decision from you:
+
+- Author the five files with the full header, `## Questions`, `## Database Interface` citations against the existing `DATABASE.md` patterns, and the `## Programmatic Acceptance` assertions that use only the `cli_runner` path plus a state read-back through `db`. That's the reading the accepted topology already implies (CLI-001 "dispatch", `cli.main`), so I'd take it unless you say otherwise.
+- Emit `- None.` only where a section truly has no programmatic surface.
+
+Tell me whether the CLI-level checks should use `cli_runner` (in-process) or subprocess `./ledger`, and confirm that the acceptance should not embed the grader's numeric answers. With that, I'll emit the batch in the required block format.

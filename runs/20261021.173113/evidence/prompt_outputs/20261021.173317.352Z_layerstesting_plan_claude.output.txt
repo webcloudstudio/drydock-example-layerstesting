@@ -1,0 +1,541 @@
+=== BEGIN ARTIFACT TOPOLOGY.md ===
+## Declarations
+
+## story foundation
+summary:      Establish the Python project root, uv environment, dependency manifest, and POSIX test wrapper.
+type:         foundational
+kind:         capability
+phase:        1
+implements:   ARCHITECTURE.md
+stack:        common.md, python.md
+provides:     pyproject.toml, uv.lock, .venv, bin/test.sh
+depends:
+acceptance:   yes
+instructions: |
+  Declare Python 3.11 or newer and pytest in pyproject.toml, commit uv.lock, and create .venv with uv venv.
+  Add a POSIX bin/test.sh that runs pytest -q from the application root.
+  Record the module layout in ARCHITECTURE.md: cli, persistence use, rules, load, and command modules.
+
+## story SCHEMA-003
+summary:      Declare the accounts, categories, and transactions tables with keys, references, and integer-cent amounts.
+type:         foundational
+kind:         capability
+phase:        1
+implements:   DATABASE.md
+covers:       SCHEMA-003
+accepts:      st-009
+stack:        persistence.md, sqlite.md, python.md
+provides:     accounts, categories, transactions tables
+depends:      foundation
+acceptance:   yes
+instructions: |
+  Declare the three tables and their keys from sources/INSTRUCTIONS.md Database, with amount as INTEGER cents.
+  Declare an access pattern for each repository operation the commands need. This story writes no persistence code; Drydock generates it.
+
+## story CLI-003
+summary:      Resolve the database location from DATABASE_URL, then DATABASE_PATH, then data/app.db.
+type:         foundational
+kind:         integration
+phase:        1
+implements:   FEATURE-Database-Location.md
+covers:       CLI-003
+accepts:      st-009
+stack:        persistence.md, sqlite.md, python.md
+provides:     open_database configuration
+depends:      foundation, SCHEMA-003
+acceptance:   yes
+instructions: |
+  Resolve the DSN in the order DATABASE_URL, DATABASE_PATH, data/app.db.
+  Classify postgres:// and postgresql:// as PostgreSQL DSNs, never as file paths.
+  Reach the store only through persistence.db; apply schema.sql before any command runs.
+
+## story CLI-001
+summary:      Provide the ledger executable at the application root with command dispatch and CSV success output.
+type:         foundational
+kind:         capability
+phase:        1
+implements:   FEATURE-CLI-Entry.md
+covers:       CLI-001
+stack:        cli.md, python.md
+provides:     ./ledger, dispatch registry
+depends:      foundation, SCHEMA-003
+acceptance:   yes
+instructions: |
+  Create the executable ledger at the application root that calls cli.main.
+  Register each command handler in one dispatch table; each command story adds its own handler.
+  Successes print CSV to stdout; diagnostics go to stderr.
+
+## story SCHEMA-001
+summary:      Drop and recreate the three tables empty.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Schema-Init.md
+covers:       SCHEMA-001
+accepts:      st-003
+stack:        cli.md, python.md, persistence.md
+provides:     ledger init
+depends:      CLI-001, CLI-003
+acceptance:   yes
+instructions: |
+  Implement ledger init to drop and recreate accounts, categories, and transactions with no rows.
+  Init writes nothing to stdout and exits 0.
+
+## story SCHEMA-002
+summary:      Print row counts per table in fixed order.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Schema-Count.md
+covers:       SCHEMA-002
+stack:        cli.md, python.md, persistence.md
+provides:     ledger count
+depends:      SCHEMA-001
+acceptance:   yes
+instructions: |
+  Implement ledger count printing table,rows then accounts, categories, and transactions counts from the database.
+
+## story RULES-001
+summary:      Parse and format amounts as integer cents.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Rules-Amount.md
+covers:       RULES-001
+stack:        python.md
+provides:     amount parse and format helpers
+depends:      foundation
+acceptance:   yes
+instructions: |
+  Accept input matching -?DIGITS[.D[D]] with no zero amount, and convert it to integer cents.
+  Format output with exactly two decimals, a leading minus when negative, and no separator.
+
+## story RULES-002
+summary:      Validate codes, names, descriptions, and memos.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Rules-Text.md
+covers:       RULES-002
+stack:        python.md
+provides:     code, name, and memo validators
+depends:      foundation
+acceptance:   yes
+instructions: |
+  Codes are 1 to 12 characters from A-Z and 0-9. Names and descriptions are 1 to 40 characters. Memos are 0 to 60 characters.
+  Reject any value containing a comma or newline.
+
+## story RULES-003
+summary:      Validate calendar dates.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Rules-Date.md
+covers:       RULES-003
+stack:        python.md
+provides:     date validator
+depends:      foundation
+acceptance:   yes
+instructions: |
+  Accept only YYYY-MM-DD values that are real calendar dates. Reject 2026-02-30.
+
+## story RULES-004
+summary:      Refuse any command that would leave an account balance below zero.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Rules-Balance.md
+covers:       RULES-004
+accepts:      st-008
+stack:        python.md, persistence.md
+provides:     balance check
+depends:      CLI-003, RULES-001
+acceptance:   yes
+instructions: |
+  Compute each balance as the sum of its transaction amounts. Expose a check that every resulting balance is non-negative, run before any write by post, amend, delete, transfer, and load.
+
+## story load-core
+summary:      Share CSV parsing, row validation, and all-or-nothing writes across the three load commands.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Load-Core.md
+stack:        cli.md, python.md, persistence.md
+provides:     ledger load <table> <csv>
+depends:      CLI-001, CLI-003, RULES-001, RULES-002, RULES-003, RULES-004
+acceptance:   yes
+instructions: |
+  Implement the load dispatch and shared path. Validate the header and every row, check balances for transactions, and write nothing unless every row passes.
+  An unreadable file exits 1; any rejected row exits 3.
+
+## story LOAD-001
+summary:      Load accounts from a file with header account,name.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Load-Accounts.md
+covers:       LOAD-001
+accepts:      st-004
+stack:        cli.md, python.md, persistence.md
+provides:     ledger load accounts
+depends:      load-core, SCHEMA-001
+acceptance:   yes
+instructions: |
+  Load accounts and print table,loaded then accounts,N. A header-only file loads zero rows with exit 0.
+
+## story LOAD-002
+summary:      Load categories from a file with header category,description.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Load-Categories.md
+covers:       LOAD-002
+accepts:      st-004
+stack:        cli.md, python.md, persistence.md
+provides:     ledger load categories
+depends:      load-core, SCHEMA-001
+acceptance:   yes
+instructions: |
+  Load categories with the same output and exit behavior as accounts.
+
+## story LOAD-003
+summary:      Load transactions, keeping txn_id from the file.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Load-Transactions.md
+covers:       LOAD-003
+accepts:      st-004
+stack:        cli.md, python.md, persistence.md
+provides:     ledger load transactions
+depends:      load-core, LOAD-001, LOAD-002, RULES-004
+acceptance:   yes
+instructions: |
+  Load transactions with the file's txn_id values. An unknown account or category, or any invalid row, exits 3. Load accounts and categories before transactions.
+
+## story LOAD-004
+summary:      Prove that any rejected load stores none of its rows.
+type:         feature
+kind:         capability
+phase:        1
+implements:   FEATURE-Load-Atomic.md
+covers:       LOAD-004
+accepts:      st-007
+stack:        python.md
+depends:      LOAD-001, LOAD-002, LOAD-003
+acceptance:   yes
+instructions: |
+  Assembly: run the rejected transaction batch and a rejected accounts reload against the loaded store.
+  Assert exit 3 and that every table is unchanged.
+
+## story ACCOUNT-001
+summary:      Add an account with zero transactions and a zero balance.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Account-Add.md
+covers:       ACCOUNT-001
+accepts:      st-006
+stack:        cli.md, python.md, persistence.md
+provides:     ledger account add
+depends:      CLI-001, CLI-003, RULES-002
+acceptance:   yes
+instructions: |
+  Validate the code and name, insert the row, and print the account row with 0 transactions and 0.00. A duplicate code exits 3.
+
+## story ACCOUNT-002
+summary:      Get an account with its transaction count and balance.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Account-Get.md
+covers:       ACCOUNT-002
+accepts:      st-006
+stack:        cli.md, python.md, persistence.md
+provides:     ledger account get
+depends:      ACCOUNT-001, RULES-004
+acceptance:   yes
+instructions: |
+  Print the account row with its count and balance. An absent code exits 4.
+
+## story ACCOUNT-003
+summary:      Rename an account and print the updated row.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Account-Rename.md
+covers:       ACCOUNT-003
+accepts:      st-006
+stack:        cli.md, python.md, persistence.md
+provides:     ledger account rename
+depends:      ACCOUNT-001, RULES-002
+acceptance:   yes
+instructions: |
+  Change only the name. An absent code exits 4; an invalid name exits 3.
+
+## story ACCOUNT-004
+summary:      Delete an unused account.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Account-Delete.md
+covers:       ACCOUNT-004
+accepts:      st-006
+stack:        cli.md, python.md, persistence.md
+provides:     ledger account delete
+depends:      ACCOUNT-001, LOAD-003
+acceptance:   yes
+instructions: |
+  Print deleted and the code when the account has no transactions. An account in use exits 3; an absent code exits 4.
+
+## story TXN-001
+summary:      Post a transaction with the next free txn_id.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Txn-Post.md
+covers:       TXN-001
+accepts:      st-006
+stack:        cli.md, python.md, persistence.md
+provides:     ledger txn post
+depends:      RULES-001, RULES-002, RULES-003, RULES-004, SCHEMA-001
+acceptance:   yes
+instructions: |
+  Validate every input, check the balance rule, then insert one more than the largest txn_id (or 1) and print the row. Invalid input exits 3.
+
+## story TXN-002
+summary:      Get a transaction by id.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Txn-Get.md
+covers:       TXN-002
+accepts:      st-006
+stack:        cli.md, python.md, persistence.md
+provides:     ledger txn get
+depends:      TXN-001
+acceptance:   yes
+instructions: |
+  Print the transaction row. An absent id exits 4.
+
+## story TXN-003
+summary:      Amend a transaction amount.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Txn-Amend.md
+covers:       TXN-003
+accepts:      st-006, st-008
+stack:        cli.md, python.md, persistence.md
+provides:     ledger txn amend
+depends:      TXN-001, RULES-004
+acceptance:   yes
+instructions: |
+  Change only the amount, check the resulting balance before writing, and print the updated row. A negative balance exits 3; an absent id exits 4.
+
+## story TXN-004
+summary:      Delete a transaction by id.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Txn-Delete.md
+covers:       TXN-004
+accepts:      st-006, st-008
+stack:        cli.md, python.md, persistence.md
+provides:     ledger txn delete
+depends:      TXN-001, RULES-004
+acceptance:   yes
+instructions: |
+  Check the resulting balance before deleting. Print deleted and the id. A negative balance exits 3; an absent id exits 4.
+
+## story TRANSFER-001
+summary:      Post a paired transfer as two TRANSFER rows.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Transfer-Post.md
+covers:       TRANSFER-001
+stack:        cli.md, python.md, persistence.md
+provides:     ledger transfer
+depends:      TXN-001, RULES-002, RULES-003, RULES-004
+acceptance:   yes
+instructions: |
+  Write the outgoing row with the next id and the incoming row with the id after it, both in category TRANSFER. Print both rows.
+
+## story TRANSFER-002
+summary:      Reject an invalid transfer without writing either row.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Transfer-Reject.md
+covers:       TRANSFER-002
+accepts:      st-007, st-008
+stack:        cli.md, python.md, persistence.md
+depends:      TRANSFER-001
+acceptance:   yes
+instructions: |
+  Reject a non-positive amount, identical accounts, an unknown account, or a resulting negative balance with exit 3. Write neither row.
+
+## story REPORT-001
+summary:      Balances report by account code with a total row.
+type:         service
+kind:         capability
+phase:        3
+implements:   FEATURE-Report-Balances.md
+covers:       REPORT-001
+accepts:      st-005
+stack:        cli.md, python.md, persistence.md
+provides:     ledger report balances
+depends:      LOAD-004, ACCOUNT-003, ACCOUNT-004, TXN-003, TXN-004, TRANSFER-002
+acceptance:   yes
+instructions: |
+  Print account,name,transactions,balance per account ordered by code, then TOTAL,,<count>,<sum>. With no accounts, print the header and TOTAL,,0,0.00.
+
+## story REPORT-002
+summary:      Categories report with inflow, outflow, and net.
+type:         service
+kind:         capability
+phase:        3
+implements:   FEATURE-Report-Categories.md
+covers:       REPORT-002
+accepts:      st-005
+stack:        cli.md, python.md, persistence.md
+provides:     ledger report categories
+depends:      LOAD-004, ACCOUNT-003, ACCOUNT-004, TXN-003, TXN-004, TRANSFER-002
+acceptance:   yes
+instructions: |
+  List every category by code, including categories with no transactions (shown as 0 and 0.00), then the TOTAL row.
+
+## story REPORT-003
+summary:      Monthly report in ascending YYYY-MM order.
+type:         service
+kind:         capability
+phase:        3
+implements:   FEATURE-Report-Monthly.md
+covers:       REPORT-003
+accepts:      st-005
+stack:        cli.md, python.md, persistence.md
+provides:     ledger report monthly
+depends:      LOAD-004, ACCOUNT-003, ACCOUNT-004, TXN-003, TXN-004, TRANSFER-002
+acceptance:   yes
+instructions: |
+  List each YYYY-MM with transactions in ascending order, then the TOTAL row. Compute every value from the database.
+
+## story CLI-002
+summary:      Usage errors exit 2 and every command and sub-verb has help text.
+type:         service
+kind:         capability
+phase:        3
+implements:   FEATURE-CLI-Usage.md
+covers:       CLI-002
+stack:        cli.md, python.md
+depends:      CLI-001, ACCOUNT-004, TXN-004, TRANSFER-002, LOAD-004, SCHEMA-002, REPORT-001, REPORT-002, REPORT-003
+acceptance:   yes
+instructions: |
+  Unknown commands, unknown tables or reports, and wrong argument counts exit 2 with empty stdout.
+  Add help text for every command and sub-verb, written against the finished command table.
+
+## story VERIFY-001
+summary:      Test suite under bin/test.sh covering each command, exit code, and rule.
+type:         feature
+kind:         test harness
+phase:        3
+implements:   FEATURE-Test-Suite.md
+covers:       VERIFY-001
+accepts:      st-002
+stack:        common.md, python.md
+depends:      ACCOUNT-002, TXN-002, CLI-002, REPORT-001, REPORT-002, REPORT-003
+acceptance:   yes
+instructions: |
+  Assembly: confirm the pytest suite runs against a real temporary database and covers each command, exit code, and rule.
+  Confirm sh bin/test.sh exits zero only when every test passes.
+
+## story VERIFY-002
+summary:      Terminal grader gate: the supplied harness exits zero against the completed application.
+type:         feature
+kind:         test harness
+phase:        3
+implements:   FEATURE-Grader-Gate.md
+covers:       VERIFY-002
+accepts:      st-001
+stack:        common.md, python.md
+depends:      VERIFY-001, REPORT-001, REPORT-002, REPORT-003, CLI-002
+acceptance:   yes
+instructions: |
+  Terminal story. Run sh sources/run.sh as the full-suite gate; all 43 checks must pass and the exit status must be zero.
+  Its transitive dependencies cover every implementation story. Do not modify sources/.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT DECISIONS.json ===
+[
+  {
+    "id": "Q-001",
+    "type": "choice",
+    "severity": "material",
+    "blueprint": "ARCHITECTURE.md",
+    "story": "foundation",
+    "title": "Persistence stack follows the approved TECHNOLOGY_STACK.md",
+    "description": "ANALYSIS.md Analysis Notes say sqlalchemy.md and alembic.md are selected in TECHNOLOGY_STACK.md, but the approved file lists only Python, SQLite, CLI, pytest, and Shell, and it is the sole stack authority. The plan uses persistence.md with sqlite.md through the shipped library, with no ORM or migration framework.",
+    "options": [
+      { "value": "approved-file", "label": "Follow the approved TECHNOLOGY_STACK.md" },
+      { "value": "add-orm", "label": "Add sqlalchemy.md and alembic.md" }
+    ],
+    "system_choice": "approved-file"
+  },
+  {
+    "id": "Q-002",
+    "type": "choice",
+    "severity": "low",
+    "blueprint": "ARCHITECTURE.md",
+    "story": "load-core",
+    "title": "Shared load path is a plan-introduced story",
+    "description": "The three load commands share CSV parsing, row validation, and all-or-nothing writes. The load-core story owns that path, so LOAD-001 to LOAD-003 carry only table specifics. load-core has no covers because no analyzed story owns it.",
+    "options": [
+      { "value": "shared-core", "label": "Shared load-core story" },
+      { "value": "per-table", "label": "Each load story implements its own path" }
+    ],
+    "system_choice": "shared-core"
+  },
+  {
+    "id": "Q-003",
+    "type": "choice",
+    "severity": "low",
+    "blueprint": "FEATURE-Test-Suite.md",
+    "story": "VERIFY-001",
+    "title": "bin/test.sh scaffold placed in the foundation",
+    "description": "Compass requires every behavioral story to run sh bin/test.sh, but VERIFY-001 follows the stories it covers. The foundation creates the POSIX bin/test.sh wrapper around pytest -q, and VERIFY-001 is the assembly story that proves the suite covers every command, exit code, and rule.",
+    "options": [
+      { "value": "foundation-scaffold", "label": "Scaffold in foundation, assemble in VERIFY-001" },
+      { "value": "verify-only", "label": "Create bin/test.sh only in VERIFY-001" }
+    ],
+    "system_choice": "foundation-scaffold"
+  },
+  {
+    "id": "Q-004",
+    "type": "choice",
+    "severity": "low",
+    "blueprint": "FEATURE-CLI-Usage.md",
+    "story": "CLI-002",
+    "title": "Help text is written in the usage story at phase 3",
+    "description": "AC-001 requires help text for every command and sub-verb, and the sources do not state its content. CLI-002 runs after every command exists, so help text is written against the finished command table.",
+    "options": [
+      { "value": "phase3", "label": "Write help in CLI-002 after all commands exist" },
+      { "value": "incremental", "label": "Each command story writes its own help" }
+    ],
+    "system_choice": "phase3"
+  },
+  {
+    "id": "Q-005",
+    "type": "choice",
+    "severity": "low",
+    "blueprint": "ARCHITECTURE.md",
+    "story": null,
+    "title": "Covering stories use analysis IDs as story ids",
+    "description": "STORY_GUIDANCE.json requires exact story ids. Each story that covers an analyzed story uses that ANALYSIS.md ID as its id, so the guidance ids exist verbatim. Plan-introduced stories (foundation, load-core) use slugs.",
+    "options": [
+      { "value": "analysis-ids", "label": "Use analysis IDs for covering stories" },
+      { "value": "slugs", "label": "Use descriptive slugs for every story" }
+    ],
+    "system_choice": "analysis-ids"
+  }
+]
+=== END ARTIFACT ===

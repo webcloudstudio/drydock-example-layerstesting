@@ -1,0 +1,745 @@
+=== BEGIN ARTIFACT DATABASE.md ===
+## Access Patterns
+
+### FEATURE-LOAD-001 — Insert an account
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Load-Core.md |
+| Access | write |
+| Repository operation | `accounts.create` |
+| Compatibility | unchanged |
+
+Input: AccountRow
+
+| Field | Type |
+|---|---|
+| account | VARCHAR(12) |
+| name | VARCHAR(40) |
+
+Output: AccountRow
+
+| Field | Type |
+|---|---|
+| account | VARCHAR(12) |
+| name | VARCHAR(40) |
+
+### FEATURE-LOAD-002 — Insert a category
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Load-Core.md |
+| Access | write |
+| Repository operation | `categories.create` |
+| Compatibility | unchanged |
+
+Input: CategoryRow
+
+| Field | Type |
+|---|---|
+| category | VARCHAR(12) |
+| description | VARCHAR(40) |
+
+Output: CategoryRow
+
+| Field | Type |
+|---|---|
+| category | VARCHAR(12) |
+| description | VARCHAR(40) |
+
+### FEATURE-LOAD-003 — Insert a transaction
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Load-Core.md |
+| Access | write |
+| Repository operation | `transactions.create` |
+| Compatibility | unchanged |
+
+Input: TransactionRow
+
+| Field | Type |
+|---|---|
+| txn_id | INTEGER |
+| date | TEXT |
+| account | VARCHAR(12) |
+| category | VARCHAR(12) |
+| amount | INTEGER |
+| memo | VARCHAR(60) |
+
+Output: TransactionRow
+
+| Field | Type |
+|---|---|
+| txn_id | INTEGER |
+| date | TEXT |
+| account | VARCHAR(12) |
+| category | VARCHAR(12) |
+| amount | INTEGER |
+| memo | VARCHAR(60) |
+
+### FEATURE-LOAD-004 — List accounts
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Load-Core.md |
+| Access | read |
+| Repository operation | `accounts.list` |
+| Compatibility | unchanged |
+
+Input: NoInput
+
+| Field | Type |
+|---|---|
+| none | — |
+
+Output: AccountRow
+
+| Field | Type |
+|---|---|
+| account | VARCHAR(12) |
+| name | VARCHAR(40) |
+
+### FEATURE-LOAD-005 — List categories
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Load-Core.md |
+| Access | read |
+| Repository operation | `categories.list` |
+| Compatibility | unchanged |
+
+Input: NoInput
+
+| Field | Type |
+|---|---|
+| none | — |
+
+Output: CategoryRow
+
+| Field | Type |
+|---|---|
+| category | VARCHAR(12) |
+| description | VARCHAR(40) |
+
+### FEATURE-LOAD-006 — List transactions
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Load-Core.md |
+| Access | read |
+| Repository operation | `transactions.list` |
+| Compatibility | unchanged |
+
+Input: NoInput
+
+| Field | Type |
+|---|---|
+| none | — |
+
+Output: TransactionRow
+
+| Field | Type |
+|---|---|
+| txn_id | INTEGER |
+| date | TEXT |
+| account | VARCHAR(12) |
+| category | VARCHAR(12) |
+| amount | INTEGER |
+| memo | VARCHAR(60) |
+
+### FEATURE-BALANCE-001 — Read transactions for a balance
+
+| Field | Value |
+|---|---|
+| Owner | FEATURE-Rules-Balance.md |
+| Access | read |
+| Repository operation | `transactions.list` |
+| Compatibility | unchanged |
+
+Input: TransactionFilter
+
+| Field | Type |
+|---|---|
+| account | VARCHAR(12) |
+
+Output: TransactionRow
+
+| Field | Type |
+|---|---|
+| txn_id | INTEGER |
+| date | TEXT |
+| account | VARCHAR(12) |
+| category | VARCHAR(12) |
+| amount | INTEGER |
+| memo | VARCHAR(60) |
+
+## `accounts`
+
+| Field | Type | Notes |
+|---|---|---|
+| account | VARCHAR(12) PK | Account code, 1 to 12 characters from A-Z and 0-9 |
+| name | VARCHAR(40) NOT NULL | Account name |
+
+## `categories`
+
+| Field | Type | Notes |
+|---|---|---|
+| category | VARCHAR(12) PK | Category code, 1 to 12 characters from A-Z and 0-9 |
+| description | VARCHAR(40) NOT NULL | Category description |
+
+## `transactions`
+
+| Field | Type | Notes |
+|---|---|---|
+| txn_id | INTEGER PK | Transaction id, kept from the source file or assigned by post |
+| date | TEXT NOT NULL | Calendar date, YYYY-MM-DD |
+| account | VARCHAR(12) NOT NULL REFERENCES accounts(account) | Account the amount moves through |
+| category | VARCHAR(12) NOT NULL REFERENCES categories(category) | Category of the transaction |
+| amount | INTEGER NOT NULL | Signed amount in integer cents |
+| memo | VARCHAR(60) NOT NULL | Memo, 0 to 60 characters |
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT RULES-001 ===
+# FEATURE: Rules Amount
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Parses and formats cash amounts as integer cents. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | rules.amount.parse_amount, rules.amount.format_amount |
+| Consumes    | — |
+
+## Questions
+
+- None.
+
+## Behavior
+
+- `parse_amount(text: str) -> int` lives in `rules/amount.py`. It accepts text matching `-?DIGITS[.D[D]]`: an optional leading minus, one or more digits, and an optional decimal point followed by one or two digits. It returns the value in integer cents.
+- Zero in any spelling (`0`, `0.00`, `-0.00`) is rejected. Every other non-matching text is rejected.
+- A rejected text raises `ValueError`. Callers map `ValueError` to exit code 3.
+- `format_amount(cents: int) -> str` writes exactly two decimal places, a leading `-` when negative, and no thousands separator. Zero formats as `0.00`.
+- No floating-point value is used at any step.
+
+## Programmatic Acceptance
+
+=== AC amount-round-trip ===
+Intent: Parsing a canonical amount text and formatting the cents returns the original text.
+
+from rules.amount import parse_amount, format_amount
+
+for text in ["-12.50", "5000.00", "0.05", "-0.05", "1234.56"]:
+    cents = parse_amount(text)
+    assert isinstance(cents, int)
+    assert format_amount(cents) == text
+=== END AC amount-round-trip ===
+
+=== AC amount-whole-and-tenths ===
+Intent: Whole, one-decimal, and negative inputs parse to the expected integer cents.
+
+from rules.amount import parse_amount
+
+assert parse_amount("5000") == 500000
+assert parse_amount("1.5") == 150
+assert parse_amount("-0.5") == -50
+=== END AC amount-whole-and-tenths ===
+
+=== AC amount-rejects-invalid ===
+Intent: Zero, excess precision, malformed, and empty amounts raise ValueError.
+
+from rules.amount import parse_amount
+
+def rejected(text):
+    try:
+        parse_amount(text)
+    except ValueError:
+        return True
+    return False
+
+for text in ["0", "0.00", "-0.00", "1.234", "1,00", ".5", "5.", "", "abc"]:
+    assert rejected(text)
+=== END AC amount-rejects-invalid ===
+
+=== AC amount-format-no-separator ===
+Intent: Formatted amounts have exactly two decimal places and no thousands separator.
+
+from rules.amount import parse_amount, format_amount
+
+text = format_amount(parse_amount("1234.56"))
+assert "," not in text
+assert len(text.split(".")[1]) == 2
+=== END AC amount-format-no-separator ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Amount parsing and formatting perform no I/O and open no database driver.
+- Money is never represented as a floating-point value at any layer.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT RULES-002 ===
+# FEATURE: Rules Text
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Validates account and category codes, names, descriptions, and memos. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | rules.text.validate_code, rules.text.validate_name, rules.text.validate_memo |
+| Consumes    | — |
+
+## Questions
+
+- None.
+
+## Behavior
+
+- Module: `rules/text.py`. Each validator returns its input unchanged when valid and raises `ValueError` when invalid. Callers map `ValueError` to exit code 3.
+- `validate_code(value: str)` accepts 1 to 12 characters, each from `A-Z` or `0-9`. Lowercase letters, spaces, and any other character are rejected.
+- `validate_name(value: str)` accepts 1 to 40 characters. The same rule applies to category descriptions.
+- `validate_memo(value: str)` accepts 0 to 60 characters. An empty memo is valid.
+- `validate_name` and `validate_memo` reject any value containing a comma or a newline.
+
+## Programmatic Acceptance
+
+=== AC text-round-trip ===
+Intent: Valid codes, names, and memos are returned unchanged.
+
+from rules.text import validate_code, validate_name, validate_memo
+
+code = "DRAWER1"
+name = "Front Drawer"
+memo = "walk in sale"
+assert validate_code(code) == code
+assert validate_name(name) == name
+assert validate_memo(memo) == memo
+=== END AC text-round-trip ===
+
+=== AC text-boundaries-accepted ===
+Intent: Values at each declared length limit are accepted, and an empty memo is accepted.
+
+from rules.text import validate_code, validate_name, validate_memo
+
+code = "A" * 12
+name = "N" * 40
+memo = "M" * 60
+empty = ""
+assert validate_code(code) == code
+assert validate_name(name) == name
+assert validate_memo(memo) == memo
+assert validate_memo(empty) == empty
+=== END AC text-boundaries-accepted ===
+
+=== AC text-rejects-invalid ===
+Intent: Values outside the declared character set, length, or forbidden punctuation raise ValueError.
+
+from rules.text import validate_code, validate_name, validate_memo
+
+def rejected(check, value):
+    try:
+        check(value)
+    except ValueError:
+        return True
+    return False
+
+assert rejected(validate_code, "")
+assert rejected(validate_code, "drawer1")
+assert rejected(validate_code, "A" * 13)
+assert rejected(validate_code, "AB CD")
+assert rejected(validate_code, "AB,C")
+assert rejected(validate_name, "")
+assert rejected(validate_name, "N" * 41)
+assert rejected(validate_name, "Front,Drawer")
+assert rejected(validate_name, "Front\nDrawer")
+assert rejected(validate_memo, "M" * 61)
+assert rejected(validate_memo, "memo,comma")
+assert rejected(validate_memo, "memo\nline")
+=== END AC text-rejects-invalid ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Validators perform no I/O and open no database driver.
+- A validator never alters the value it accepts.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT RULES-003 ===
+# FEATURE: Rules Date
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Validates calendar dates written YYYY-MM-DD. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | rules.date.validate_date |
+| Consumes    | — |
+
+## Questions
+
+- None.
+
+## Behavior
+
+- Module: `rules/date.py`. `validate_date(value: str) -> datetime.date` accepts only text written `YYYY-MM-DD` that names a real calendar date, including leap days in leap years.
+- Any other text raises `ValueError`, including impossible dates such as `2026-02-30`, a different separator or ordering, a missing zero pad, a time component, and empty text. Callers map `ValueError` to exit code 3.
+
+## Programmatic Acceptance
+
+=== AC date-round-trip ===
+Intent: Valid calendar dates are accepted and format back to the same text.
+
+from rules.date import validate_date
+
+for text in ["2026-04-01", "2028-02-29", "2026-12-31"]:
+    assert validate_date(text).isoformat() == text
+=== END AC date-round-trip ===
+
+=== AC date-returns-date ===
+Intent: The validator returns a calendar date object.
+
+import datetime
+
+from rules.date import validate_date
+
+assert isinstance(validate_date("2026-04-01"), datetime.date)
+=== END AC date-returns-date ===
+
+=== AC date-rejects-invalid ===
+Intent: Impossible, malformed, and empty dates raise ValueError.
+
+from rules.date import validate_date
+
+def rejected(text):
+    try:
+        validate_date(text)
+    except ValueError:
+        return True
+    return False
+
+for text in ["2026-02-30", "2026-02-29", "2026-13-01", "2026-4-1", "04/01/2026", "2026-04-01T00:00", ""]:
+    assert rejected(text)
+=== END AC date-rejects-invalid ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- The validator performs no I/O and reads no clock value.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT RULES-004 ===
+# FEATURE: Rules Balance
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Refuses any command whose resulting account balance would be negative. |
+| Depends On  | FEATURE-Database-Location.md, FEATURE-Rules-Amount.md, DATABASE.md |
+| Provides    | rules.balance.check_non_negative |
+| Consumes    | db.transactions.list |
+
+## Questions
+
+- None.
+
+## Behavior
+
+- Module: `rules/balance.py`. `check_non_negative(db, deltas: dict[str, int]) -> None` takes the signed integer-cent change per account code that the calling command is about to apply. The caller aggregates a batch's changes per account before calling.
+- For each account in `deltas`, the current balance is the sum of the `amount` values of that account's transactions, read through `FEATURE-BALANCE-001`. An account with no transactions has a current balance of zero.
+- If any current balance plus its delta is below zero, the function raises `ValueError` naming the account. Otherwise it returns `None`.
+- The function performs no writes. Callers invoke it before their first write and map `ValueError` to exit code 3.
+
+## Database Interface
+
+- `FEATURE-BALANCE-001` — read: list the transactions of one account - supplies: `account` - returns: `account`, `amount`
+
+## Programmatic Acceptance
+
+=== AC balance-allows-and-refuses ===
+Intent: A delta that leaves a balance at zero or above is allowed; a delta that goes below zero is refused, and a refusal writes nothing.
+
+from persistence.testing import db_session
+from rules.balance import check_non_negative
+
+def rejected(db, deltas):
+    try:
+        check_non_negative(db, deltas)
+    except ValueError:
+        return True
+    return False
+
+with db_session() as db:
+    db.accounts.create(account="PETTY", name="Petty Cash")
+    db.categories.create(category="SUPPLY", description="Supplies")
+    row = db.transactions.create(txn_id=1, date="2026-04-01", account="PETTY", category="SUPPLY", amount=1000, memo="opening")
+    assert row.amount == 1000
+    assert check_non_negative(db, {"PETTY": -1000}) is None
+    assert check_non_negative(db, {"PETTY": 500}) is None
+    assert rejected(db, {"PETTY": -1001})
+    assert len(db.transactions.list()) == 1
+=== END AC balance-allows-and-refuses ===
+
+=== AC balance-no-transactions-is-zero ===
+Intent: An account with no transactions has a balance of zero, so any negative delta is refused.
+
+from persistence.testing import db_session
+from rules.balance import check_non_negative
+
+def rejected(db, deltas):
+    try:
+        check_non_negative(db, deltas)
+    except ValueError:
+        return True
+    return False
+
+with db_session() as db:
+    assert check_non_negative(db, {"SAFE": 0}) is None
+    assert rejected(db, {"SAFE": -1})
+=== END AC balance-no-transactions-is-zero ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- The balance check performs no writes.
+- The balance check reads transactions only through the persistence package, never through a database driver.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Load-Core.md ===
+# FEATURE: Load Core
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Shared CSV load path for the accounts, categories, and transactions tables with all-or-nothing writes. |
+| Depends On  | FEATURE-Database-Location.md, FEATURE-Rules-Amount.md, FEATURE-Rules-Text.md, FEATURE-Rules-Date.md, FEATURE-Rules-Balance.md, DATABASE.md |
+| Provides    | ledger load <table> <csv>, load.core.load_file |
+| Consumes    | db.accounts.create, db.categories.create, db.transactions.create, db.accounts.list, db.categories.list, db.transactions.list, rules.balance.check_non_negative |
+
+## Questions
+
+- None.
+
+## Behavior
+
+- Module: `load/core.py`. `load_file(db, table: str, path: str) -> int` is the shared path for `ledger load <table> <csv>`. It returns the number of rows stored.
+- `table` must be `accounts`, `categories`, or `transactions`. Any other name raises `KeyError`, which the dispatcher maps to exit code 2.
+- The header line must equal exactly: `account,name` for accounts; `category,description` for categories; `txn_id,date,account,category,amount,memo` for transactions. Any other header raises `ValueError`.
+- Each data row is split on commas. A row whose field count differs from the header raises `ValueError`. A header-only file has zero rows and is valid.
+- Row rules: accounts use `validate_code` and `validate_name`; categories use `validate_code` and `validate_name` on the description; transactions use `txn_id` (digits, at least 1), `validate_date`, `parse_amount`, and `validate_memo`. A transaction's account and category must already exist in the store.
+- A key duplicated within the file or already present in the store raises `ValueError`.
+- For transactions, the per-account sum of the file's amounts is passed to `check_non_negative`. A refusal raises `ValueError`.
+- Every row is validated and every balance is checked before the first write. Only then are rows written with `db.<table>.create` in file order, and the count is returned.
+- The `ledger load` handler prints `table,loaded` and `<table>,<count>` on success. An unreadable file raises `OSError`, which maps to exit code 1. Any `ValueError` maps to exit code 3. Diagnostics go to standard error.
+
+## Database Interface
+
+- `FEATURE-LOAD-001` — write: insert validated account rows - supplies: `account`, `name` - returns: `account`, `name`
+- `FEATURE-LOAD-002` — write: insert validated category rows - supplies: `category`, `description` - returns: `category`, `description`
+- `FEATURE-LOAD-003` — write: insert validated transaction rows - supplies: `txn_id`, `date`, `account`, `category`, `amount`, `memo` - returns: `txn_id`, `amount`
+- `FEATURE-LOAD-004` — read: list existing accounts for key and reference checks - returns: `account`
+- `FEATURE-LOAD-005` — read: list existing categories for key and reference checks - returns: `category`
+- `FEATURE-LOAD-006` — read: list existing transactions for key checks - returns: `txn_id`
+
+## Programmatic Acceptance
+
+=== AC load-accounts-through-cli ===
+Intent: The load command stores a valid accounts file and exits zero.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+workdir = tempfile.mkdtemp()
+dsn = os.path.join(workdir, "ledger.db")
+path = os.path.join(workdir, "accounts.csv")
+with open(path, "w", encoding="ascii") as handle:
+    handle.write("account,name\nDRAWER1,Front Drawer\nSAFE,Store Safe\n")
+os.environ["DATABASE_URL"] = dsn
+
+with db_session(dsn) as db:
+    code, out, err = cli_runner("load", "accounts", path)
+    assert code == 0
+    assert len(db.accounts.list()) == 2
+=== END AC load-accounts-through-cli ===
+
+=== AC load-header-only-loads-zero ===
+Intent: A header-only accounts file loads zero rows and exits zero.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+workdir = tempfile.mkdtemp()
+dsn = os.path.join(workdir, "ledger.db")
+path = os.path.join(workdir, "accounts.csv")
+with open(path, "w", encoding="ascii") as handle:
+    handle.write("account,name\n")
+os.environ["DATABASE_URL"] = dsn
+
+with db_session(dsn) as db:
+    code, out, err = cli_runner("load", "accounts", path)
+    assert code == 0
+    assert len(db.accounts.list()) == 0
+=== END AC load-header-only-loads-zero ===
+
+=== AC load-unreadable-exits-one ===
+Intent: A missing file exits 1 and stores nothing.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+workdir = tempfile.mkdtemp()
+dsn = os.path.join(workdir, "ledger.db")
+missing = os.path.join(workdir, "absent.csv")
+os.environ["DATABASE_URL"] = dsn
+
+with db_session(dsn) as db:
+    code, out, err = cli_runner("load", "accounts", missing)
+    assert code == 1
+    assert len(db.accounts.list()) == 0
+=== END AC load-unreadable-exits-one ===
+
+=== AC load-header-mismatch-rejected ===
+Intent: A file whose header does not match the table's columns exits 3 and stores nothing.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+workdir = tempfile.mkdtemp()
+dsn = os.path.join(workdir, "ledger.db")
+path = os.path.join(workdir, "accounts.csv")
+with open(path, "w", encoding="ascii") as handle:
+    handle.write("acct,name\nSAFE,Store Safe\n")
+os.environ["DATABASE_URL"] = dsn
+
+with db_session(dsn) as db:
+    code, out, err = cli_runner("load", "accounts", path)
+    assert code == 3
+    assert len(db.accounts.list()) == 0
+=== END AC load-header-mismatch-rejected ===
+
+=== AC load-duplicate-key-rejected ===
+Intent: A reload containing an existing account code exits 3 and leaves the stored rows unchanged.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+workdir = tempfile.mkdtemp()
+dsn = os.path.join(workdir, "ledger.db")
+path = os.path.join(workdir, "accounts.csv")
+with open(path, "w", encoding="ascii") as handle:
+    handle.write("account,name\nSAFE,Store Safe\nPETTY,Petty Cash\n")
+os.environ["DATABASE_URL"] = dsn
+
+with db_session(dsn) as db:
+    db.accounts.create(account="SAFE", name="Store Safe")
+    code, out, err = cli_runner("load", "accounts", path)
+    assert code == 3
+    assert len(db.accounts.list()) == 1
+=== END AC load-duplicate-key-rejected ===
+
+=== AC load-transactions-atomic ===
+Intent: A transactions file with one unknown account exits 3 and stores none of its valid rows.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+workdir = tempfile.mkdtemp()
+dsn = os.path.join(workdir, "ledger.db")
+path = os.path.join(workdir, "transactions.csv")
+with open(path, "w", encoding="ascii") as handle:
+    handle.write("txn_id,date,account,category,amount,memo\n1,2026-04-01,SAFE,SALES,10.00,sale\n2,2026-04-01,NOSUCH,SALES,10.00,unknown\n")
+os.environ["DATABASE_URL"] = dsn
+
+with db_session(dsn) as db:
+    db.accounts.create(account="SAFE", name="Store Safe")
+    db.categories.create(category="SALES", description="Sales receipts")
+    code, out, err = cli_runner("load", "transactions", path)
+    assert code == 3
+    assert len(db.transactions.list()) == 0
+=== END AC load-transactions-atomic ===
+
+=== AC load-transactions-keep-ids ===
+Intent: A valid transactions file keeps each txn_id and amount from the file.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+workdir = tempfile.mkdtemp()
+dsn = os.path.join(workdir, "ledger.db")
+path = os.path.join(workdir, "transactions.csv")
+with open(path, "w", encoding="ascii") as handle:
+    handle.write("txn_id,date,account,category,amount,memo\n1,2026-04-01,SAFE,SALES,10.00,sale\n7,2026-04-02,SAFE,SALES,5.50,sale\n")
+os.environ["DATABASE_URL"] = dsn
+
+with db_session(dsn) as db:
+    db.accounts.create(account="SAFE", name="Store Safe")
+    db.categories.create(category="SALES", description="Sales receipts")
+    code, out, err = cli_runner("load", "transactions", path)
+    assert code == 0
+    rows = db.transactions.list()
+    assert sorted(row.txn_id for row in rows) == [1, 7]
+    assert sorted(row.amount for row in rows) == [550, 1000]
+=== END AC load-transactions-keep-ids ===
+
+=== AC load-transactions-negative-balance-refused ===
+Intent: A transactions batch that would leave an account below zero exits 3 and stores nothing.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+workdir = tempfile.mkdtemp()
+dsn = os.path.join(workdir, "ledger.db")
+path = os.path.join(workdir, "transactions.csv")
+with open(path, "w", encoding="ascii") as handle:
+    handle.write("txn_id,date,account,category,amount,memo\n1,2026-04-01,SAFE,SALES,-10.00,overdraw\n")
+os.environ["DATABASE_URL"] = dsn
+
+with db_session(dsn) as db:
+    db.accounts.create(account="SAFE", name="Store Safe")
+    db.categories.create(category="SALES", description="Sales receipts")
+    code, out, err = cli_runner("load", "transactions", path)
+    assert code == 3
+    assert len(db.transactions.list()) == 0
+=== END AC load-transactions-negative-balance-refused ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- No row is written until every row of the file has passed validation and every balance has been checked.
+- Load code reaches the store only through the persistence package and never opens a database driver.
+- Amounts are integer cents at every step of the load path.
+=== END ARTIFACT ===

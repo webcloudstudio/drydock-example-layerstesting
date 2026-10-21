@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261021.173624.262Z_layerstesting_plan_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261021.173624.262Z_layerstesting_plan_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261021.173624.262Z_layerstesting_plan_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT ARCHITECTURE.md ===
+# ARCHITECTURE: Cash Ledger
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Module layout, boundaries, and technical decisions for the LayersTesting cash ledger CLI. |
+| Depends On  | |
+| Provides    | |
+| Consumes    | |
+
+## Questions
+
+- None.
+
+## Purpose
+
+A single-user command-line cash ledger named `ledger`, implemented in Python 3.11 or newer over
+SQLite. Every command validates all input and rules before its first write, and a rejected command
+changes nothing.
+
+## Technology Stack
+
+- Python 3.11+ — implementation language.
+- SQLite — database, reached through the shipped persistence library (`persistence.db`,
+  `open_database(dsn)`).
+- CLI — the `ledger` executable at the application root, calling `cli.main`.
+- pytest — test runner behind `bin/test.sh`.
+- POSIX sh — `bin/test.sh` and the supplied grader.
+
+## Foundation Layout
+
+- `pyproject.toml` declares Python 3.11 or newer and `pytest`. `uv.lock` is committed.
+- `.venv` is created by `uv venv`.
+- `bin/test.sh` is a POSIX wrapper that runs `pytest -q` from the application root.
+- `ledger` at the application root calls `cli.main`.
+
+## Modules
+
+| Module | Responsibility |
+|--------|----------------|
+| `cli` | Command-line entry point, dispatch table, usage errors, help text, CSV output. |
+| `persistence` | Generated and shipped database package. Application code reaches the store only through it. |
+| `rules` | Amount codec, code/name/memo validation, date validation, non-negative balance check. |
+| `load` | Shared CSV load path: header check, row validation, all-or-nothing write. |
+| `commands` | Account, transaction, transfer, schema, and report command handlers. |
+
+## Boundaries
+
+| Boundary | Owner | Allowed access |
+|----------|-------|----------------|
+| Database location | `cli` (resolves `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`) | Passes the DSN to `persistence.open_database`. |
+| Store access | `persistence` | Only `persistence.db.&lt;table&gt;.&lt;verb&gt;(...)` callers. No driver import outside the library. |
+| Business rules | `rules` | Pure functions; no storage access. |
+| Command handlers | `commands` | Call `rules` and `persistence`; never a driver. |
+
+## Module Ownership
+
+| Boundary | Module that owns it | Low-level APIs that module may access |
+|----------|---------------------|----------------------------------------|
+| Persistence | `persistence` (generated from `DATABASE.md`) | `sqlite3` via the shipped library only |
+| Configuration | `cli` | `os.environ` for the three location variables |
+| File stores | None | Not used |
+| External services | None | Not used |
+
+## Technical Decisions
+
+- Amounts are stored and computed as integer cents. No floating point at any layer.
+- Each command checks every rule before its first write, so a rejected command writes nothing.
+- The database DSN selects the engine: `postgres://` and `postgresql://` are PostgreSQL DSNs; any
+  other value is a SQLite file path, optionally prefixed `sqlite://`.
+- Exit codes follow the source contract: 0 success, 1 operational, 2 usage, 3 rejected, 4 not found.
+
+## Programmatic Acceptance
+
+- None. Architecture is verified through the feature and story acceptance that implements it.
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Do not open a database driver outside the shipped persistence library.
+- Do not hardcode report rows, counts, or totals.
+- Do not read `sources/run.sh` or any seed file from application code.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Database-Location.md ===
+# FEATURE: Database Location
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Resolve the database location and open the store through the persistence library. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | open_database configuration |
+| Consumes    | |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Select the store named by `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`, and open it
+through `persistence.open_database`. A `postgres://` or `postgresql://` value is a PostgreSQL DSN
+and is never treated as a file path.
+
+## Database Interface
+
+- None — persistence is owned by FEATURE-Schema-Init.md.
+
+## Programmatic Acceptance
+
+=== AC database-location-precedence ===
+Intent: DATABASE_URL takes precedence over DATABASE_PATH when both are set.
+Requires: executable=python3; scope=test
+
+import os
+from cli.config import database_dsn
+
+os.environ[&quot;DATABASE_URL&quot;] = &quot;/tmp/url-wins.db&quot;
+os.environ[&quot;DATABASE_PATH&quot;] = &quot;/tmp/path-loses.db&quot;
+dsn = database_dsn()
+assert dsn == &quot;/tmp/url-wins.db&quot;
+=== END AC database-location-precedence ===
+
+=== AC database-location-default ===
+Intent: With neither variable set, the default store is data/app.db.
+Requires: executable=python3; scope=test
+
+import os
+from cli.config import database_dsn
+
+os.environ.pop(&quot;DATABASE_URL&quot;, None)
+os.environ.pop(&quot;DATABASE_PATH&quot;, None)
+dsn = database_dsn()
+assert dsn == &quot;data/app.db&quot;
+=== END AC database-location-default ===
+
+=== AC database-location-postgres ===
+Intent: A postgres:// DSN is classified as PostgreSQL and never as a file path.
+Requires: executable=python3; scope=test
+
+import os
+from cli.config import database_dsn, is_postgres_dsn
+
+os.environ[&quot;DATABASE_URL&quot;] = &quot;postgres://user@localhost/ledger&quot;
+dsn = database_dsn()
+assert dsn == &quot;postgres://user@localhost/ledger&quot;
+assert is_postgres_dsn(dsn) is True
+=== END AC database-location-postgres ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Never treat a `postgres://` or `postgresql://` DSN as a file path.
+- Never open a database driver directly; reach the store only through `persistence.open_database`.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-CLI-Entry.md ===
+# FEATURE: CLI Entry
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | The `ledger` executable at the application root and its command dispatch. |
+| Depends On  | ARCHITECTURE.md, FEATURE-Database-Location.md |
+| Provides    | ./ledger, dispatch registry |
+| Consumes    | |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Provide `ledger` at the application root. It calls `cli.main` and dispatches each command through
+one table. Successes print CSV to standard output; diagnostics go to standard error.
+
+## Database Interface
+
+- None — persistence is owned by FEATURE-Schema-Init.md.
+
+## Programmatic Acceptance
+
+=== AC cli-entry-executable ===
+Intent: The ledger file exists at the application root and is executable.
+Requires: executable=python3; scope=test
+
+import os
+
+assert os.path.isfile(&quot;ledger&quot;)
+assert os.access(&quot;ledger&quot;, os.X_OK)
+=== END AC cli-entry-executable ===
+
+=== AC cli-entry-dispatch ===
+Intent: The dispatch table routes a known command name to a registered handler.
+Requires: executable=python3; scope=test
+
+from cli import main
+from cli.dispatch import COMMANDS
+
+assert &quot;count&quot; in COMMANDS
+assert callable(COMMANDS[&quot;count&quot;])
+=== END AC cli-entry-dispatch ===
+
+=== AC cli-entry-unknown-command ===
+Intent: An unknown command returns the usage exit code 2 with no standard output.
+Requires: executable=python3; scope=test
+
+import io
+import contextlib
+from cli import main
+
+out = io.StringIO()
+with contextlib.redirect_stdout(out):
+    code = main([&quot;frobnicate&quot;])
+assert code == 2
+assert out.getvalue() == &quot;&quot;
+=== END AC cli-entry-unknown-command ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Diagnostics go to standard error only.
+- Each command handler is registered in the single dispatch table; no second table.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Schema-Init.md ===
+# FEATURE: Schema Init
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | `ledger init` drops and recreates the three tables empty. |
+| Depends On  | ARCHITECTURE.md, FEATURE-Database-Location.md, FEATURE-CLI-Entry.md |
+| Provides    | ledger init |
+| Consumes    | |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger init` drops `accounts`, `categories`, and `transactions` if present, recreates them empty,
+writes nothing to standard output, and exits 0.
+
+## Database Interface
+
+- `FEATURE-SCHEMA-001` — write: drop and recreate all declared tables - returns: none
+
+## Programmatic Acceptance
+
+=== AC schema-init-empty ===
+Intent: After init, count reports zero rows in each of the three tables.
+Requires: executable=python3; scope=test
+
+import subprocess
+import sys
+
+result = subprocess.run(
+    [sys.executable, &quot;ledger&quot;, &quot;init&quot;],
+    capture_output=True, text=True,
+    env={**__import__(&quot;os&quot;).environ, &quot;DATABASE_URL&quot;: &quot;/tmp/schema-init.db&quot;},
+)
+print(result.stderr, file=sys.stderr)
+assert result.returncode == 0
+assert result.stdout == &quot;&quot;
+=== END AC schema-init-empty ===
+
+=== AC schema-init-recreates ===
+Intent: Init called twice leaves zero rows, proving drop-and-recreate.
+Requires: executable=python3; scope=test
+
+import subprocess
+import sys
+import os
+
+env = {**os.environ, &quot;DATABASE_URL&quot;: &quot;/tmp/schema-init-twice.db&quot;}
+first = subprocess.run([sys.executable, &quot;ledger&quot;, &quot;init&quot;], capture_output=True, text=True, env=env)
+second = subprocess.run([sys.executable, &quot;ledger&quot;, &quot;init&quot;], capture_output=True, text=True, env=env)
+print(first.stderr, second.stderr, file=sys.stderr)
+assert first.returncode == 0
+assert second.returncode == 0
+assert second.stdout == &quot;&quot;
+=== END AC schema-init-recreates ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- `init` writes nothing to standard output.
+- Init drops and recreates all three tables; it never migrates existing tables.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Schema-Count.md ===
+# FEATURE: Schema Count
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | `ledger count` prints row counts per table in fixed order. |
+| Depends On  | ARCHITECTURE.md, FEATURE-Schema-Init.md |
+| Provides    | ledger count |
+| Consumes    | |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger count` prints `table,rows` followed by the `accounts`, `categories`, and `transactions`
+row counts, read from the database, in that order.
+
+## Database Interface
+
+- `FEATURE-SCHEMA-002` — read: count rows in each declared table - returns: `rows`
+
+## Programmatic Acceptance
+
+=== AC schema-count-header ===
+Intent: The count report begins with the table,rows header line.
+Requires: executable=python3; scope=test
+
+import subprocess
+import sys
+import os
+
+env = {**os.environ, &quot;DATABASE_URL&quot;: &quot;/tmp/schema-count.db&quot;}
+subprocess.run([sys.executable, &quot;ledger&quot;, &quot;init&quot;], capture_output=True, text=True, env=env)
+result = subprocess.run([sys.executable, &quot;ledger&quot;, &quot;count&quot;], capture_output=True, text=True, env=env)
+print(result.stdout)
+print(result.stderr, file=sys.stderr)
+assert result.returncode == 0
+lines = result.stdout.splitlines()
+assert lines[0] == &quot;table,rows&quot;
+=== END AC schema-count-header ===
+
+=== AC schema-count-order ===
+Intent: The count rows appear in accounts, categories, transactions order.
+Requires: executable=python3; scope=test
+
+import subprocess
+import sys
+import os
+
+env = {**os.environ, &quot;DATABASE_URL&quot;: &quot;/tmp/schema-count-order.db&quot;}
+subprocess.run([sys.executable, &quot;ledger&quot;, &quot;init&quot;], capture_output=True, text=True, env=env)
+result = subprocess.run([sys.executable, &quot;ledger&quot;, &quot;count&quot;], capture_output=True, text=True, env=env)
+print(result.stdout)
+print(result.stderr, file=sys.stderr)
+assert result.returncode == 0
+names = [line.split(&quot;,&quot;)[0] for line in result.stdout.splitlines()[1:]]
+assert names == [&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;]
+=== END AC schema-count-order ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Every count is computed from the database; no count is hardcoded.
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

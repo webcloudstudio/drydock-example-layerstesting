@@ -1,0 +1,759 @@
+=== BEGIN ARTIFACT FEATURE-Load-Accounts.md ===
+# FEATURE: Load Accounts
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Bulk-load the accounts table from a CSV file with header account,name. |
+| Depends On  | ARCHITECTURE.md, FEATURE-Load-Core.md, FEATURE-Schema-Init.md |
+| Provides    | ledger load accounts |
+| Consumes    | |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger load accounts <csv>` reads an accounts file and inserts every row into the `accounts`
+table. The file's header must be exactly `account,name`. On success the command prints
+`table,loaded` then `accounts,N`, where N is the number of rows loaded. A header-only file loads
+zero rows and exits 0. An unreadable file exits 1. Any rejected row exits 3 and the store is left
+unchanged.
+
+## Behavior
+
+- Argument form: `ledger load accounts <csv>`.
+- Header must match `account,name` in that order; otherwise the file is rejected with exit 3.
+- Each data row is validated with the code rule (1 to 12 characters from `A-Z` and `0-9`) and the
+  name rule (1 to 40 characters, no comma, no newline). A duplicate code, whether within the file
+  or already present in `accounts`, is a rejected row.
+- All rows are validated before the first write; any rejected row writes nothing (see
+  FEATURE-Load-Core.md).
+- Success output is CSV on stdout: `table,loaded` then `accounts,N`.
+- An unreadable file exits 1; diagnostics go to stderr.
+
+## Routes
+
+- Command: `ledger load accounts <csv>`
+
+## Reads
+
+- `accounts` (duplicate-code check)
+
+## Writes
+
+- `accounts` (insert validated rows)
+
+## Database Interface
+
+- `FEATURE-ACCOUNT-001` — write: insert a validated account row - supplies: `account`, `name` - returns: `account`, `name`
+
+## Programmatic Acceptance
+
+=== AC load-accounts-round-trip ===
+Intent: Loading a valid accounts file stores every row and reading the count back returns the loaded rows.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+import os
+import tempfile
+
+with db_session() as db:
+    os.environ["DATABASE_URL"] = db.dsn if hasattr(db, "dsn") else os.environ.get("DATABASE_URL", "")
+    code, out, err = cli_runner("init")
+    assert code == 0
+
+    path = os.path.join(tempfile.mkdtemp(), "accounts.csv")
+    with open(path, "w", encoding="ascii") as f:
+        f.write("account,name\nDRAWER1,Front Drawer\nPETTY,Petty Cash\n")
+
+    code, out, err = cli_runner("load", "accounts", path)
+    print(out)
+    print(err)
+    assert code == 0
+
+    rows = db.accounts.list()
+    assert len(rows) == 2
+    assert {r.account for r in rows} == {"DRAWER1", "PETTY"}
+=== END AC load-accounts-round-trip ===
+
+=== AC load-accounts-output ===
+Intent: Successful load prints table,loaded then accounts,N with the row count.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+
+import os
+import tempfile
+
+path = os.path.join(tempfile.mkdtemp(), "accounts.csv")
+with open(path, "w", encoding="ascii") as f:
+    f.write("account,name\nSAFE,Store Safe\n")
+
+code, out, err = cli_runner("load", "accounts", path)
+print(out)
+print(err)
+assert code == 0
+assert out.splitlines()[0] == "table,loaded"
+assert out.splitlines()[1] == "accounts,1"
+=== END AC load-accounts-output ===
+
+=== AC load-accounts-header-only ===
+Intent: A header-only accounts file loads zero rows and exits 0.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+
+import os
+import tempfile
+
+path = os.path.join(tempfile.mkdtemp(), "accounts.csv")
+with open(path, "w", encoding="ascii") as f:
+    f.write("account,name\n")
+
+code, out, err = cli_runner("load", "accounts", path)
+print(out)
+print(err)
+assert code == 0
+assert out.splitlines()[-1] == "accounts,0"
+=== END AC load-accounts-header-only ===
+
+=== AC load-accounts-unreadable ===
+Intent: A missing accounts file exits 1.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("load", "accounts", "/nonexistent/path/accounts.csv")
+print(out)
+print(err)
+assert code == 1
+
+=== END AC load-accounts-unreadable ===
+
+=== AC load-accounts-bad-header ===
+Intent: An accounts file with a wrong header is rejected with exit 3.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+
+import os
+import tempfile
+
+path = os.path.join(tempfile.mkdtemp(), "accounts.csv")
+with open(path, "w", encoding="ascii") as f:
+    f.write("name,account\nSAFE,Store Safe\n")
+
+code, out, err = cli_runner("load", "accounts", path)
+print(out)
+print(err)
+assert code == 3
+=== END AC load-accounts-bad-header ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A load that rejects any row must store none of the file's rows.
+- Application code must not open a database driver directly; all access goes through `db.accounts`.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Load-Categories.md ===
+# FEATURE: Load Categories
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Bulk-load the categories table from a CSV file with header category,description. |
+| Depends On  | ARCHITECTURE.md, FEATURE-Load-Core.md, FEATURE-Schema-Init.md |
+| Provides    | ledger load categories |
+| Consumes    | |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger load categories <csv>` reads a categories file and inserts every row into the `categories`
+table. The file's header must be exactly `category,description`. On success the command prints
+`table,loaded` then `categories,N`. A header-only file loads zero rows and exits 0. An unreadable
+file exits 1. Any rejected row exits 3 and the store is left unchanged.
+
+## Behavior
+
+- Argument form: `ledger load categories <csv>`.
+- Header must match `category,description` in that order; otherwise the file is rejected with exit 3.
+- Each data row is validated with the code rule (1 to 12 characters from `A-Z` and `0-9`) and the
+  description rule (1 to 40 characters, no comma, no newline). A duplicate code is a rejected row.
+- All rows are validated before the first write; any rejected row writes nothing.
+- Success output is CSV on stdout: `table,loaded` then `categories,N`.
+- An unreadable file exits 1; diagnostics go to stderr.
+
+## Routes
+
+- Command: `ledger load categories <csv>`
+
+## Reads
+
+- `categories` (duplicate-code check)
+
+## Writes
+
+- `categories` (insert validated rows)
+
+## Database Interface
+
+- `FEATURE-CATEGORY-001` — write: insert a validated category row - supplies: `category`, `description` - returns: `category`, `description`
+
+## Programmatic Acceptance
+
+=== AC load-categories-round-trip ===
+Intent: Loading a valid categories file stores every row and reading them back returns the loaded rows.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+import os
+import tempfile
+
+with db_session() as db:
+    code, out, err = cli_runner("init")
+    assert code == 0
+
+    path = os.path.join(tempfile.mkdtemp(), "categories.csv")
+    with open(path, "w", encoding="ascii") as f:
+        f.write("category,description\nSALES,Sales receipts\nRENT,Rent\n")
+
+    code, out, err = cli_runner("load", "categories", path)
+    print(out)
+    print(err)
+    assert code == 0
+
+    rows = db.categories.list()
+    assert len(rows) == 2
+    assert {r.category for r in rows} == {"SALES", "RENT"}
+=== END AC load-categories-round-trip ===
+
+=== AC load-categories-output ===
+Intent: Successful load prints table,loaded then categories,N with the row count.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+
+import os
+import tempfile
+
+path = os.path.join(tempfile.mkdtemp(), "categories.csv")
+with open(path, "w", encoding="ascii") as f:
+    f.write("category,description\nSUPPLY,Supplies\n")
+
+code, out, err = cli_runner("load", "categories", path)
+print(out)
+print(err)
+assert code == 0
+assert out.splitlines()[0] == "table,loaded"
+assert out.splitlines()[1] == "categories,1"
+=== END AC load-categories-output ===
+
+=== AC load-categories-header-only ===
+Intent: A header-only categories file loads zero rows and exits 0.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+
+import os
+import tempfile
+
+path = os.path.join(tempfile.mkdtemp(), "categories.csv")
+with open(path, "w", encoding="ascii") as f:
+    f.write("category,description\n")
+
+code, out, err = cli_runner("load", "categories", path)
+print(out)
+print(err)
+assert code == 0
+assert out.splitlines()[-1] == "categories,0"
+=== END AC load-categories-header-only ===
+
+=== AC load-categories-unreadable ===
+Intent: A missing categories file exits 1.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("load", "categories", "/nonexistent/path/categories.csv")
+print(out)
+print(err)
+assert code == 1
+=== END AC load-categories-unreadable ===
+
+=== AC load-categories-bad-header ===
+Intent: A categories file with a wrong header is rejected with exit 3.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+
+import os
+import tempfile
+
+path = os.path.join(tempfile.mkdtemp(), "categories.csv")
+with open(path, "w", encoding="ascii") as f:
+    f.write("description,category\nSALES,Sales receipts\n")
+
+code, out, err = cli_runner("load", "categories", path)
+print(out)
+print(err)
+assert code == 3
+=== END AC load-categories-bad-header ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A load that rejects any row must store none of the file's rows.
+- Application code must not open a database driver directly; all access goes through `db.categories`.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Load-Transactions.md ===
+# FEATURE: Load Transactions
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Bulk-load the transactions table from a CSV file, keeping each txn_id from the file. |
+| Depends On  | ARCHITECTURE.md, FEATURE-Load-Core.md, FEATURE-Load-Accounts.md, FEATURE-Load-Categories.md, FEATURE-Rules-Balance.md |
+| Provides    | ledger load transactions |
+| Consumes    | |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger load transactions <csv>` reads a transactions file and inserts every row into the
+`transactions` table, keeping the `txn_id` each row carries. The file's header must be exactly
+`txn_id,date,account,category,amount,memo`. On success the command prints `table,loaded` then
+`transactions,N`. An unknown account or category, or any invalid row, exits 3. Nothing is written
+unless every row passes.
+
+## Behavior
+
+- Argument form: `ledger load transactions <csv>`.
+- Header must match `txn_id,date,account,category,amount,memo` in that order; otherwise exit 3.
+- Each row is validated: `txn_id` is a positive integer not already present; `date` passes the
+  calendar rule (`YYYY-MM-DD`); `account` and `category` must exist in their tables; `amount`
+  passes the amount rule; `memo` is 0 to 60 characters with no comma or newline.
+- The balance rule is checked over the whole batch before the first write: no account balance may
+  fall below zero after the load.
+- Any rejected row, or a balance violation, writes nothing and exits 3.
+- Success output is CSV on stdout: `table,loaded` then `transactions,N`.
+- An unreadable file exits 1; diagnostics go to stderr.
+
+## Routes
+
+- Command: `ledger load transactions <csv>`
+
+## Reads
+
+- `accounts`, `categories`, `transactions` (validation and balance check)
+
+## Writes
+
+- `transactions` (insert validated rows)
+
+## Database Interface
+
+- `FEATURE-TRANSACTION-001` — write: insert a validated transaction row with its file txn_id - supplies: `txn_id`, `date`, `account`, `category`, `amount`, `memo` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+
+## Programmatic Acceptance
+
+=== AC load-transactions-round-trip ===
+Intent: Loading a valid transactions file after its accounts and categories stores every row with its file txn_id.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+import os
+import tempfile
+
+with db_session() as db:
+    code, out, err = cli_runner("init")
+    assert code == 0
+
+    d = tempfile.mkdtemp()
+    acc = os.path.join(d, "accounts.csv")
+    with open(acc, "w", encoding="ascii") as f:
+        f.write("account,name\nSAFE,Store Safe\n")
+    cat = os.path.join(d, "categories.csv")
+    with open(cat, "w", encoding="ascii") as f:
+        f.write("category,description\nOPENING,Opening balance\n")
+    assert cli_runner("load", "accounts", acc)[0] == 0
+    assert cli_runner("load", "categories", cat)[0] == 0
+
+    txn = os.path.join(d, "transactions.csv")
+    with open(txn, "w", encoding="ascii") as f:
+        f.write("txn_id,date,account,category,amount,memo\n1,2026-01-01,SAFE,OPENING,5000.00,opening float\n")
+
+    code, out, err = cli_runner("load", "transactions", txn)
+    print(out)
+    print(err)
+    assert code == 0
+
+    rows = db.transactions.list()
+    assert len(rows) == 1
+    assert rows[0].txn_id == 1
+=== END AC load-transactions-round-trip ===
+
+=== AC load-transactions-unknown-account ===
+Intent: A transactions file naming an unknown account exits 3 and stores no rows.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+import os
+import tempfile
+
+with db_session() as db:
+    code, out, err = cli_runner("init")
+    assert code == 0
+
+    d = tempfile.mkdtemp()
+    cat = os.path.join(d, "categories.csv")
+    with open(cat, "w", encoding="ascii") as f:
+        f.write("category,description\nSALES,Sales receipts\n")
+    assert cli_runner("load", "categories", cat)[0] == 0
+
+    txn = os.path.join(d, "transactions.csv")
+    with open(txn, "w", encoding="ascii") as f:
+        f.write("txn_id,date,account,category,amount,memo\n1,2026-01-01,NOSUCH,SALES,10.00,unknown\n")
+
+    code, out, err = cli_runner("load", "transactions", txn)
+    print(out)
+    print(err)
+    assert code == 3
+    assert db.transactions.list() == []
+=== END AC load-transactions-unknown-account ===
+
+=== AC load-transactions-bad-header ===
+Intent: A transactions file with a wrong header is rejected with exit 3.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+
+import os
+import tempfile
+
+path = os.path.join(tempfile.mkdtemp(), "transactions.csv")
+with open(path, "w", encoding="ascii") as f:
+    f.write("txn_id,account,date,category,amount,memo\n1,SAFE,2026-01-01,SALES,10.00,x\n")
+
+code, out, err = cli_runner("load", "transactions", path)
+print(out)
+print(err)
+assert code == 3
+=== END AC load-transactions-bad-header ===
+
+=== AC load-transactions-unreadable ===
+Intent: A missing transactions file exits 1.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("load", "transactions", "/nonexistent/path/transactions.csv")
+print(out)
+print(err)
+assert code == 1
+=== END AC load-transactions-unreadable ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A rejected row or balance violation must store none of the file's rows.
+- Application code must not open a database driver directly; all access goes through `db.transactions`.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Load-Atomic.md ===
+# FEATURE: Load Atomic
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Prove that any rejected load, across all three load commands, stores none of its rows and leaves every table unchanged. |
+| Depends On  | ARCHITECTURE.md, FEATURE-Load-Accounts.md, FEATURE-Load-Categories.md, FEATURE-Load-Transactions.md |
+| Provides    | |
+| Consumes    | ledger load accounts, ledger load categories, ledger load transactions |
+
+## Questions
+
+- None.
+
+## Purpose
+
+This feature is the assembly check for atomic loading. A rejected load must exit 3 and leave the
+`accounts`, `categories`, and `transactions` tables exactly as they were before the command ran.
+It owns no new behavior; it verifies the all-or-nothing rule across the three load commands.
+
+## Behavior
+
+- A load that contains any rejected row exits 3 and writes no rows.
+- A rejected accounts reload (duplicate codes against existing rows) leaves every table unchanged.
+- A rejected transactions batch (unknown account) leaves every table unchanged.
+
+## Routes
+
+- None. This feature is assembly and verification only.
+
+## Reads
+
+- `accounts`, `categories`, `transactions` (before and after snapshots)
+
+## Writes
+
+- None.
+
+## Database Interface
+
+- None — persistence is owned by FEATURE-Load-Transactions.md and FEATURE-Load-Accounts.md.
+
+## Programmatic Acceptance
+
+=== AC load-atomic-transactions ===
+Intent: A transactions batch containing one unknown account exits 3 and leaves every table unchanged.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+import os
+import tempfile
+
+with db_session() as db:
+    code, out, err = cli_runner("init")
+    assert code == 0
+
+    d = tempfile.mkdtemp()
+    acc = os.path.join(d, "accounts.csv")
+    with open(acc, "w", encoding="ascii") as f:
+        f.write("account,name\nSAFE,Store Safe\n")
+    cat = os.path.join(d, "categories.csv")
+    with open(cat, "w", encoding="ascii") as f:
+        f.write("category,description\nSALES,Sales receipts\n")
+    assert cli_runner("load", "accounts", acc)[0] == 0
+    assert cli_runner("load", "categories", cat)[0] == 0
+
+    before_accounts = db.accounts.list()
+    before_categories = db.categories.list()
+    before_transactions = db.transactions.list()
+
+    bad = os.path.join(d, "transactions.csv")
+    with open(bad, "w", encoding="ascii") as f:
+        f.write("txn_id,date,account,category,amount,memo\n1,2026-01-01,SAFE,SALES,10.00,ok\n2,2026-01-01,NOSUCH,SALES,10.00,bad\n")
+
+    code, out, err = cli_runner("load", "transactions", bad)
+    print(out)
+    print(err)
+    assert code == 3
+
+    assert db.accounts.list() == before_accounts
+    assert db.categories.list() == before_categories
+    assert db.transactions.list() == before_transactions
+=== END AC load-atomic-transactions ===
+
+=== AC load-atomic-accounts-reload ===
+Intent: Reloading accounts that already exist exits 3 and leaves the accounts table unchanged.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+import os
+import tempfile
+
+with db_session() as db:
+    code, out, err = cli_runner("init")
+    assert code == 0
+
+    d = tempfile.mkdtemp()
+    acc = os.path.join(d, "accounts.csv")
+    with open(acc, "w", encoding="ascii") as f:
+        f.write("account,name\nSAFE,Store Safe\n")
+    assert cli_runner("load", "accounts", acc)[0] == 0
+
+    before = db.accounts.list()
+
+    code, out, err = cli_runner("load", "accounts", acc)
+    print(out)
+    print(err)
+    assert code == 3
+    assert db.accounts.list() == before
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Account-Add.md ===
+# FEATURE: Account Add
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Add an account with zero transactions and a zero balance, printing the new row. |
+| Depends On  | ARCHITECTURE.md, FEATURE-CLI-Entry.md, FEATURE-Database-Location.md, FEATURE-Rules-Text.md |
+| Provides    | ledger account add |
+| Consumes    | |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger account add <code> <name>` inserts one account row and prints it. The code and name are
+validated before the write. A new account has zero transactions and a balance of `0.00`. A
+duplicate code exits 3 and writes nothing.
+
+## Behavior
+
+- Argument form: `ledger account add <code> <name>`.
+- Code must satisfy the code rule (1 to 12 characters from `A-Z` and `0-9`); name must satisfy the
+  name rule (1 to 40 characters, no comma, no newline). Either failing exits 3.
+- A code already present in `accounts` exits 3 and writes nothing.
+- Success output is CSV on stdout: header `account,name,transactions,balance`, then the row
+  `<code>,<name>,0,0.00`.
+
+## Routes
+
+- Command: `ledger account add <code> <name>`
+
+## Reads
+
+- `accounts` (duplicate-code check)
+
+## Writes
+
+- `accounts` (insert one row)
+
+## Database Interface
+
+- `FEATURE-ACCOUNT-002` — write: insert a validated account row - supplies: `account`, `name` - returns: `account`, `name`
+
+## Programmatic Acceptance
+
+=== AC account-add-round-trip ===
+Intent: Adding an account stores it and reading it back returns the same code and name.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    code, out, err = cli_runner("init")
+    assert code == 0
+
+    code, out, err = cli_runner("account", "add", "CASH9", "Event Float")
+    print(out)
+    print(err)
+    assert code == 0
+
+    row = db.accounts.get("CASH9")
+    assert row.account == "CASH9"
+    assert row.name == "Event Float"
+=== END AC account-add-round-trip ===
+
+=== AC account-add-output ===
+Intent: Adding an account prints the header and a zero-transaction, zero-balance row.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    code, out, err = cli_runner("init")
+    assert code == 0
+
+    code, out, err = cli_runner("account", "add", "CASH9", "Event Float")
+    print(out)
+    print(err)
+    assert code == 0
+    lines = out.splitlines()
+    assert lines[0] == "account,name,transactions,balance"
+    assert lines[1] == "CASH9,Event Float,0,0.00"
+=== END AC account-add-output ===
+
+=== AC account-add-duplicate ===
+Intent: Adding an account whose code already exists exits 3 and leaves the existing row unchanged.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    code, out, err = cli_runner("init")
+    assert code == 0
+    assert cli_runner("account", "add", "CASH9", "Event Float")[0] == 0
+
+    before = db.accounts.list()
+
+    code, out, err = cli_runner("account", "add", "CASH9", "Other Name")
+    print(out)
+    print(err)
+    assert code == 3
+    assert db.accounts.list() == before
+=== END AC account-add-duplicate ===
+
+=== AC account-add-invalid-code ===
+Intent: Adding an account with a code containing a lowercase letter exits 3 and writes nothing.
+Suite: scoped
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    code, out, err = cli_runner("init")
+    assert code == 0
+    before = db.accounts.list()
+
+    code, out, err = cli_runner("account", "add", "cash9", "Event Float")
+    print(out)
+    print(err)
+    assert code == 3
+    assert db.accounts.list() == before
+=== END AC account-add-invalid-code ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A rejected account add must write nothing.
+- Application code must not open a database driver directly; all access goes through `db.accounts`.
+=== END ARTIFACT ===

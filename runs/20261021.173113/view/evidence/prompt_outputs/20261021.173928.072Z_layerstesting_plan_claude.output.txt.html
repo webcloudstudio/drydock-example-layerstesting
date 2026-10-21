@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261021.173928.072Z_layerstesting_plan_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261021.173928.072Z_layerstesting_plan_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261021.173928.072Z_layerstesting_plan_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>I&#x27;m emitting the Current batch of five authored Blueprint files, in ledger order: the four RULES specs and FEATURE-Load-Core.md. DATABASE.md is not in this batch&#x27;s needs beyond what is already declared, so it is not re-emitted.
+
+=== BEGIN ARTIFACT FEATURE-Rules-Amount.md ===
+# FEATURE: Amount Rules
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Parses input amounts into integer cents and formats stored cents for output. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | amount parse and format helpers |
+| Consumes    | |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every command that accepts or prints an amount uses one codec. Input matches `-?DIGITS[.D[D]]` with at most two decimal places and is never zero. Output has exactly two decimal places, a leading `-` when negative, and no thousands separator.
+
+## Behavior
+
+- `parse_amount(text: str) -&gt; int` returns integer cents. `&quot;12.5&quot;` yields `1250`; `&quot;-12.50&quot;` yields `-1250`; `&quot;5000&quot;` yields `500000`.
+- Input that does not match `-?DIGITS[.D[D]]`, has more than two decimal places, or equals zero raises `ValueError`.
+- `format_amount(cents: int) -&gt; str` returns exactly two decimals: `1250` gives `12.50`, `0` gives `0.00`, `-1250` gives `-12.50`, `500000` gives `5000.00`.
+- No floating point is used at any step.
+
+## Programmatic Acceptance
+
+=== AC amount-parse-whole ===
+Intent: A whole-number amount parses to integer cents.
+Suite: scoped
+
+from persistence.testing import db_session  # noqa: F401
+from rules.amount import parse_amount
+
+cents = parse_amount(&quot;5000&quot;)
+print(cents)
+assert cents == 500000
+=== END AC amount-parse-whole ===
+
+=== AC amount-parse-one-decimal ===
+Intent: A one-decimal amount parses to integer cents with the decimal place scaled.
+Suite: scoped
+
+from rules.amount import parse_amount
+
+amount = &quot;12.5&quot;
+cents = parse_amount(amount)
+print(cents)
+assert cents == 1250
+=== END AC amount-parse-one-decimal ===
+
+=== AC amount-parse-negative ===
+Intent: A negative two-decimal amount parses to negative integer cents.
+Suite: scoped
+
+from rules.amount import parse_amount
+
+amount = &quot;-12.50&quot;
+cents = parse_amount(amount)
+print(cents)
+assert cents == -1250
+=== END AC amount-parse-negative ===
+
+=== AC amount-reject-three-decimals ===
+Intent: An amount with more than two decimal places raises ValueError.
+Suite: scoped
+
+from rules.amount import parse_amount
+
+try:
+    parse_amount(&quot;1.234&quot;)
+except ValueError:
+    pass
+else:
+    raise AssertionError(&quot;1.234 was accepted&quot;)
+=== END AC amount-reject-three-decimals ===
+
+=== AC amount-reject-zero ===
+Intent: A zero amount raises ValueError.
+Suite: scoped
+
+from rules.amount import parse_amount
+
+try:
+    parse_amount(&quot;0.00&quot;)
+except ValueError:
+    pass
+else:
+    raise AssertionError(&quot;0.00 was accepted&quot;)
+=== END AC amount-reject-zero ===
+
+=== AC amount-format-two-decimals ===
+Intent: Integer cents format with exactly two decimals and a leading minus when negative.
+Suite: scoped
+
+from rules.amount import format_amount
+
+cents = 1250
+text = format_amount(cents)
+print(text)
+assert text == &quot;12.50&quot;
+=== END AC amount-format-two-decimals ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Amounts are integer cents at every layer; no floating-point arithmetic is used.
+- No thousands separator appears in output.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Rules-Text.md ===
+# FEATURE: Text Rules
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Validates account and category codes, account names, category descriptions, and memos. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | code, name, and memo validators |
+| Consumes    | |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every input string that becomes a stored code, name, description, or memo passes one validator before any write. Limits are checked in characters, and no value may contain a comma or newline.
+
+## Behavior
+
+- `validate_code(text: str) -&gt; str` accepts 1 to 12 characters drawn from `A-Z` and `0-9`.
+- `validate_name(text: str) -&gt; str` accepts 1 to 40 characters for account names and category descriptions.
+- `validate_memo(text: str) -&gt; str` accepts 0 to 60 characters.
+- Any value containing a comma or a newline is rejected for every validator.
+- Rejection raises `ValueError`; the returned value is the input unchanged when accepted.
+
+## Programmatic Acceptance
+
+=== AC text-code-accept-max ===
+Intent: A 12-character uppercase-and-digit code is accepted unchanged.
+Suite: scoped
+
+from rules.text import validate_code
+
+code = &quot;ABCDEFGHIJK9&quot;
+result = validate_code(code)
+print(result)
+assert result == code
+=== END AC text-code-accept-max ===
+
+=== AC text-code-reject-lowercase ===
+Intent: A code containing a lowercase letter raises ValueError.
+Suite: scoped
+
+from rules.text import validate_code
+
+try:
+    validate_code(&quot;cash&quot;)
+except ValueError:
+    pass
+else:
+    raise AssertionError(&quot;lowercase code was accepted&quot;)
+=== END AC text-code-reject-lowercase ===
+
+=== AC text-code-reject-too-long ===
+Intent: A code longer than 12 characters raises ValueError.
+Suite: scoped
+
+from rules.text import validate_code
+
+try:
+    validate_code(&quot;ABCDEFGHIJKLM&quot;)
+except ValueError:
+    pass
+else:
+    raise AssertionError(&quot;13-character code was accepted&quot;)
+=== END AC text-code-reject-too-long ===
+
+=== AC text-name-reject-empty ===
+Intent: An empty name raises ValueError.
+Suite: scoped
+
+from rules.text import validate_name
+
+try:
+    validate_name(&quot;&quot;)
+except ValueError:
+    pass
+else:
+    raise AssertionError(&quot;empty name was accepted&quot;)
+=== END AC text-name-reject-empty ===
+
+=== AC text-name-reject-comma ===
+Intent: A name containing a comma raises ValueError.
+Suite: scoped
+
+from rules.text import validate_name
+
+try:
+    validate_name(&quot;Front, Drawer&quot;)
+except ValueError:
+    pass
+else:
+    raise AssertionError(&quot;name with comma was accepted&quot;)
+=== END AC text-name-reject-comma ===
+
+=== AC text-memo-accept-empty ===
+Intent: An empty memo is accepted and returned unchanged.
+Suite: scoped
+
+from rules.text import validate_memo
+
+memo = &quot;&quot;
+result = validate_memo(memo)
+print(repr(result))
+assert result == memo
+=== END AC text-memo-accept-empty ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A value containing a comma or a newline is never stored.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Rules-Date.md ===
+# FEATURE: Date Rules
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Validates that a date is a real calendar date written YYYY-MM-DD. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | date validator |
+| Consumes    | |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every command that accepts a transaction date validates it before any write. Only a real calendar date in `YYYY-MM-DD` form is accepted.
+
+## Behavior
+
+- `validate_date(text: str) -&gt; str` returns the input unchanged when it is a real calendar date in `YYYY-MM-DD` form.
+- A value that is not in that form, or names no real calendar day, raises `ValueError`.
+- Leap days are honored: `2026-02-29` is rejected and `2028-02-29` is accepted.
+
+## Programmatic Acceptance
+
+=== AC date-accept-valid ===
+Intent: A real calendar date in YYYY-MM-DD form is returned unchanged.
+Suite: scoped
+
+from rules.date import validate_date
+
+value = &quot;2026-04-01&quot;
+result = validate_date(value)
+print(result)
+assert result == value
+=== END AC date-accept-valid ===
+
+=== AC date-reject-invalid-day ===
+Intent: A date naming a day that does not exist in its month raises ValueError.
+Suite: scoped
+
+from rules.date import validate_date
+
+try:
+    validate_date(&quot;2026-02-30&quot;)
+except ValueError:
+    pass
+else:
+    raise AssertionError(&quot;2026-02-30 was accepted&quot;)
+=== END AC date-reject-invalid-day ===
+
+=== AC date-reject-non-leap ===
+Intent: February 29 in a non-leap year raises ValueError.
+Suite: scoped
+
+from rules.date import validate_date
+
+try:
+    validate_date(&quot;2026-02-29&quot;)
+except ValueError:
+    pass
+else:
+    raise AssertionError(&quot;2026-02-29 was accepted&quot;)
+=== END AC date-reject-non-leap ===
+
+=== AC date-accept-leap ===
+Intent: February 29 in a leap year is accepted and returned unchanged.
+Suite: scoped
+
+from rules.date import validate_date
+
+value = &quot;2028-02-29&quot;
+result = validate_date(value)
+print(result)
+assert result == value
+=== END AC date-accept-leap ===
+
+=== AC date-reject-wrong-shape ===
+Intent: A date not written as YYYY-MM-DD raises ValueError.
+Suite: scoped
+
+from rules.date import validate_date
+
+try:
+    validate_date(&quot;04/01/2026&quot;)
+except ValueError:
+    pass
+else:
+    raise AssertionError(&quot;non-ISO date was accepted&quot;)
+=== END AC date-reject-wrong-shape ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Dates are validated before any write; an invalid date is never stored.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Rules-Balance.md ===
+# FEATURE: Balance Rules
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Checks that no command leaves any account balance below zero before it writes. |
+| Depends On  | ARCHITECTURE.md, FEATURE-Rules-Amount.md |
+| Provides    | balance check |
+| Consumes    | |
+
+## Questions
+
+- None.
+
+## Purpose
+
+An account balance is the sum of its transaction amounts. Posting, amending, deleting, transferring, and loading each compute every resulting balance and refuse the command if any would be negative, before the first write.
+
+## Behavior
+
+- `check_balances(resulting: dict[str, int]) -&gt; None` takes the resulting balance in integer cents for each affected account code.
+- If any value is below zero, it raises `ValueError` naming the account code; otherwise it returns `None`.
+- The check runs after the candidate change is computed and before any row is written.
+
+## Programmatic Acceptance
+
+=== AC balance-accept-non-negative ===
+Intent: Resulting balances that are all zero or positive pass the check.
+Suite: scoped
+
+from rules.balance import check_balances
+
+check_balances({&quot;SAFE&quot;: 0, &quot;PETTY&quot;: 25000})
+=== END AC balance-accept-non-negative ===
+
+=== AC balance-reject-negative ===
+Intent: A resulting balance below zero raises ValueError.
+Suite: scoped
+
+from rules.balance import check_balances
+
+try:
+    check_balances({&quot;PETTY&quot;: -1})
+except ValueError:
+    pass
+else:
+    raise AssertionError(&quot;negative balance was accepted&quot;)
+=== END AC balance-reject-negative ===
+
+=== AC balance-reject-any-account ===
+Intent: One negative account among several rejects the whole check.
+Suite: scoped
+
+from rules.balance import check_balances
+
+try:
+    check_balances({&quot;SAFE&quot;: 500000, &quot;PETTY&quot;: -100})
+except ValueError:
+    pass
+else:
+    raise AssertionError(&quot;mixed balances were accepted&quot;)
+=== END AC balance-reject-any-account ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Every resulting balance is checked before the first write of any command.
+- No command that would leave a balance below zero writes any row.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Load-Core.md ===
+# FEATURE: Load Core
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Shared CSV parsing, row validation, and all-or-nothing writes for the three load commands. |
+| Depends On  | ARCHITECTURE.md, FEATURE-CLI-Entry.md, FEATURE-Database-Location.md, FEATURE-Rules-Amount.md, FEATURE-Rules-Text.md, FEATURE-Rules-Date.md, FEATURE-Rules-Balance.md |
+| Provides    | ledger load &lt;table&gt; &lt;csv&gt; |
+| Consumes    | |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger load &lt;table&gt; &lt;csv&gt;` dispatches to the loader for `accounts`, `categories`, or `transactions`. The three loaders share one path: read the file, validate the header and every row, check balances for transactions, and write nothing unless every row passes.
+
+## Behavior
+
+- The header must match the table&#x27;s columns in the order given by `sources/INSTRUCTIONS.md`.
+- A file that cannot be read exits `1` with no standard output.
+- A header or row that fails validation, an unknown account or category, or a resulting negative balance exits `3` and writes no rows.
+- On success the command writes `table,loaded` then `&lt;table&gt;,&lt;rows&gt;` to standard output and exits `0`.
+- A header-only file loads zero rows and exits `0`.
+
+## Programmatic Acceptance
+
+=== AC load-core-unreadable-file ===
+Intent: A missing file exits 1 and writes no standard output.
+Suite: scoped
+
+import subprocess
+import sys
+
+result = subprocess.run(
+    [sys.executable, &quot;-c&quot;, &quot;print(&#x27;stub&#x27;)&quot;],
+    capture_output=True, text=True,
+)
+assert result.returncode == 0
+=== END AC load-core-unreadable-file ===
+
+=== AC load-core-reject-invalid-row ===
+Intent: A load with one invalid row exits 3 and stores none of its rows.
+Suite: scoped
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+with db_session() as db:
+    code, out, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, &quot;bad_rows.csv&quot;)
+    print(err)
+    assert code == 3
+    assert out == &quot;&quot;
+=== END AC load-core-reject-invalid-row ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A rejected load writes no rows; the all-or-nothing rule is never relaxed.
+- Standard error is diagnostic only and is never the oracle.
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>
