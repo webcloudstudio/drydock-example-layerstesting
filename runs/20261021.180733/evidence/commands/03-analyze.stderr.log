@@ -1,0 +1,4 @@
+Error: Analyze failed: LLM output did not satisfy the artifact contract.
+  Text appeared outside delimited artifact blocks.
+  Stray text with no artifact block: "I can't produce this analysis in the form requested, because the task calls for emitting only delimited artifact bloc..."
+  No generated artifacts were written.
