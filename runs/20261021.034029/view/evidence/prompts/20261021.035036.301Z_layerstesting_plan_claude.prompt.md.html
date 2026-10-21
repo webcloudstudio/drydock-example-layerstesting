@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompts/20261021.035036.301Z_layerstesting_plan_claude.prompt.md</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompts/20261021.035036.301Z_layerstesting_plan_claude.prompt.md</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompts/20261021.035036.301Z_layerstesting_plan_claude.prompt.md">Raw file</a></div></header>
+<article class="doc"><p>&lt;pblock label=&quot;Plan artifact repair&quot; kind=&quot;repair&quot;&gt;</p>
+<h1>Plan Artifact Repair</h1>
+<p>Drydock accepted the Plan response shape but rejected the emitted Blueprint artifact(s) below. Repair only the deterministic defect. Preserve all unrelated content, contracts, headings, decisions, and acceptance assertions byte-for-byte where possible. Do not remove or weaken a valid assertion while adding a missing one. Every artifact with a programmatic surface retains at least two concrete Python acceptance assertions. Every DECISIONS.json is the sole decision disclosure surface; do not emit Markdown question sections.</p>
+<p>Emit each artifact below in exactly this form, and emit no other text:</p>
+<p>=== BEGIN ARTIFACT &lt;FILENAME&gt; === &lt;the complete file body&gt; === END ARTIFACT ===</p>
+<p>The filename appears once, in the opening delimiter. The closing delimiter is the constant token above and never carries a name.</p>
+<p>Emit exactly one such block for each of: DATABASE.md.</p>
+<p>Repair pass: 1</p>
+<p>Deterministic validation defect: DATABASE.md [## Access Patterns]: DATABASE.md: ## Access Patterns has no named operation</p>
+<p>Every <code>| Owner |</code> names one of these Features, exactly as written, or <code>DATABASE.md</code> for a pattern no single Feature owns — a log or other surface several Features reach, which any Blueprint may then cite. There are no other legal values: a Screen, a service, a module, and a file not on this list are each a defect.</p>
+<ul><li>FEATURE-Acct-Add.md</li><li>FEATURE-Acct-Delete.md</li><li>FEATURE-Acct-Get.md</li><li>FEATURE-Acct-Rename.md</li><li>FEATURE-Cli-Reinit.md</li><li>FEATURE-Cli-Usage.md</li><li>FEATURE-Grader-Verification.md</li><li>FEATURE-Load-Accounts.md</li><li>FEATURE-Load-Atomic.md</li><li>FEATURE-Load-Categories.md</li><li>FEATURE-Load-Duplicate.md</li><li>FEATURE-Load-Transactions.md</li><li>FEATURE-Report-Balances.md</li><li>FEATURE-Report-Categories.md</li><li>FEATURE-Report-Monthly.md</li><li>FEATURE-Report-Unknown.md</li><li>FEATURE-Schema-Count.md</li><li>FEATURE-Schema-Init.md</li><li>FEATURE-Transfer.md</li><li>FEATURE-Txn-Amend.md</li><li>FEATURE-Txn-Delete.md</li><li>FEATURE-Txn-Get.md</li><li>FEATURE-Txn-Post.md</li></ul>
+<p>Normative Compass sections. They bind every assertion you write or retain, including one you add to satisfy the defect above.</p>
+<h2>Constraints</h2>
+<ul><li>Implement in the language and database named under <code>## Stack</code> in <code>sources/INSTRUCTIONS.md</code>.</li><li>Provide an executable named <code>ledger</code> at the application root, invoked as <code>./ledger &lt;command&gt;</code>.</li><li>Read the database location from <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code>.</li><li>Store amounts as integer cents.</li><li>Check every command in full before its first write.</li><li>Run without network access other than to a PostgreSQL server named by <code>DATABASE_URL</code>.</li><li>Diagnostics go to standard error and are never compared.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Do not modify, rewrite, regenerate, or substitute any file under <code>sources/</code>.</li><li>Do not read <code>sources/run.sh</code> or any seed file from application code. Seed files reach the</li></ul>
+<p>database only through <code>ledger load</code>.</p>
+<ul><li>Do not hardcode a report row, a count, or a total. Every value comes from a query.</li><li>Do not open a database driver outside the shipped persistence library.</li><li>Do not use floating point for money at any layer.</li></ul>
+<h2>Verification Protocol</h2>
+<div class="scroll"><table><thead><tr><th>Story kind</th><th>Command</th><th>Asserts</th></tr></thead><tbody><tr><td>Every behavioral story</td><td><code>sh bin/test.sh</code></td><td>exit <code>0</code></td></tr><tr><td>Terminal story (once, last)</td><td><code>sh sources/run.sh</code></td><td>exit <code>0</code></td></tr></tbody></table></div>
+<p>&lt;!-- drydock:build-write-guardrail:start --&gt;</p>
+<p>Original DATABASE.md, in the same form your reply must use: === BEGIN ARTIFACT DATABASE.md ===</p>
+<h1>DATABASE: LayersTesting</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261020 V1</td></tr><tr><td>Description</td><td>Persistence contract for the cash ledger: three tables, their access patterns, and integer-cent amounts.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md</td></tr><tr><td>Provides</td><td>persistence.open_database, accounts, categories, transactions tables</td></tr></tbody></table></div>
+<h2>Questions</h2>
+<ul><li>None.</li></ul>
+<h2>Access Patterns</h2>
+<p>Access patterns are owned by the feature that reaches them. Each operation below names exactly one table and one verb.</p>
+<div class="scroll"><table><thead><tr><th>Pattern</th><th>Owner</th><th>Access</th><th>Repository operation</th><th>Compatibility</th></tr></thead><tbody><tr><td><code>FEATURE-LEDGER-001</code></td><td>DATABASE.md</td><td>read-write</td><td><code>accounts.create</code></td><td>unchanged</td></tr><tr><td><code>FEATURE-LEDGER-002</code></td><td>DATABASE.md</td><td>read</td><td><code>accounts.get</code></td><td>unchanged</td></tr><tr><td><code>FEATURE-LEDGER-003</code></td><td>DATABASE.md</td><td>read</td><td><code>accounts.list</code></td><td>unchanged</td></tr><tr><td><code>FEATURE-LEDGER-004</code></td><td>DATABASE.md</td><td>read-write</td><td><code>accounts.update</code></td><td>unchanged</td></tr><tr><td><code>FEATURE-LEDGER-005</code></td><td>DATABASE.md</td><td>read-write</td><td><code>accounts.delete</code></td><td>unchanged</td></tr><tr><td><code>FEATURE-LEDGER-006</code></td><td>DATABASE.md</td><td>read-write</td><td><code>categories.create</code></td><td>unchanged</td></tr><tr><td><code>FEATURE-LEDGER-007</code></td><td>DATABASE.md</td><td>read</td><td><code>categories.get</code></td><td>unchanged</td></tr><tr><td><code>FEATURE-LEDGER-008</code></td><td>DATABASE.md</td><td>read</td><td><code>categories.list</code></td><td>unchanged</td></tr><tr><td><code>FEATURE-LEDGER-009</code></td><td>DATABASE.md</td><td>read-write</td><td><code>transactions.create</code></td><td>unchanged</td></tr><tr><td><code>FEATURE-LEDGER-010</code></td><td>DATABASE.md</td><td>read</td><td><code>transactions.get</code></td><td>unchanged</td></tr><tr><td><code>FEATURE-LEDGER-011</code></td><td>DATABASE.md</td><td>read</td><td><code>transactions.list</code></td><td>unchanged</td></tr><tr><td><code>FEATURE-LEDGER-012</code></td><td>DATABASE.md</td><td>read-write</td><td><code>transactions.update</code></td><td>unchanged</td></tr><tr><td><code>FEATURE-LEDGER-013</code></td><td>DATABASE.md</td><td>read-write</td><td><code>transactions.delete</code></td><td>unchanged</td></tr></tbody></table></div>
+<h2>Schema</h2>
+<h2><code>accounts</code></h2>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td><code>account</code></td><td>VARCHAR(12) PK NOT NULL</td><td>Account code, <code>A-Z</code> and <code>0-9</code>.</td></tr><tr><td><code>name</code></td><td>VARCHAR(40) NOT NULL</td><td>Account name; no comma or newline.</td></tr></tbody></table></div>
+<h2><code>categories</code></h2>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td><code>category</code></td><td>VARCHAR(12) PK NOT NULL</td><td>Category code, <code>A-Z</code> and <code>0-9</code>.</td></tr><tr><td><code>description</code></td><td>VARCHAR(40) NOT NULL</td><td>Category description; no comma or newline.</td></tr></tbody></table></div>
+<h2><code>transactions</code></h2>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td><code>txn_id</code></td><td>INTEGER PK NOT NULL</td><td>Transaction id.</td></tr><tr><td><code>date</code></td><td>TEXT NOT NULL</td><td>Calendar date, <code>YYYY-MM-DD</code>.</td></tr><tr><td><code>account</code></td><td>VARCHAR(12) NOT NULL REFERENCES accounts(account)</td><td>Owning account.</td></tr><tr><td><code>category</code></td><td>VARCHAR(12) NOT NULL REFERENCES categories(category)</td><td>Category.</td></tr><tr><td><code>amount</code></td><td>INTEGER NOT NULL</td><td>Amount in integer cents.</td></tr><tr><td><code>memo</code></td><td>VARCHAR(60)</td><td>Memo; 0 to 60 characters, no comma or newline.</td></tr></tbody></table></div>
+<h2>Programmatic Acceptance</h2>
+<ul><li>None. Drydock owns SQLite schema construction and connectivity invariants deterministically.</li></ul>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Amounts are stored as integer cents and never as floating point.</li><li>Application code reaches the store only through the generated persistence package.</li><li>Within a release the schema is built once and never migrated.</li></ul>
+<p>=== END ARTIFACT === &lt;/pblock&gt;</p></article>
+</main>
+</body>
+</html>

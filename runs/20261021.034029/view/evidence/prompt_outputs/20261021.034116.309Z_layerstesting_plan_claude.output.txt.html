@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261021.034116.309Z_layerstesting_plan_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261021.034116.309Z_layerstesting_plan_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261021.034116.309Z_layerstesting_plan_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT TOPOLOGY.md ===
+## Declarations
+
+## story foundation
+summary:      Stand up the Python project tree, the root ledger launcher, and CLI dispatch.
+type:         foundational
+kind:         capability
+phase:        1
+implements:   ARCHITECTURE.md
+covers:       
+accepts:      st-009
+stack:        common.md, python.md, cli.md
+provides:     ./ledger executable, cli.main
+acceptance:   yes
+instructions: |
+  Create the project tree with pyproject.toml and a committed uv.lock, the .venv created by uv venv,
+  and the cli package exposing main(argv) -&gt; int. Provide the executable ledger at the application
+  root as a POSIX sh launcher that runs the cli package under .venv. Dispatch commands to handlers
+  and map usage errors to exit code 2 with a diagnostic on standard error.
+
+## story database
+summary:      Declare the ledger store and generate the persistence package.
+type:         foundational
+kind:         migration
+phase:        1
+implements:   DATABASE.md
+accepts:      st-009
+depends:      foundation
+stack:        persistence.md, sqlite.md, python.md
+provides:     persistence.open_database, accounts, categories, transactions tables
+acceptance:   yes
+instructions: |
+  Declare the accounts, categories, and transactions tables with the columns and keys in
+  INSTRUCTIONS.md. Amounts are INTEGER cents. Declare one access pattern per operation the feature
+  stories use. Resolve the DSN from DATABASE_URL, then DATABASE_PATH, then data/app.db. Application
+  code reaches the store only through the generated persistence package.
+
+## story schema-init
+summary:      Initialize the three-table schema with ledger init.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Schema-Init.md
+covers:       SCHEMA-001
+accepts:      st-003
+depends:      database
+context:      DATABASE.md
+stack:        python.md, cli.md
+provides:     ledger init
+acceptance:   yes
+instructions: |
+  Drop and recreate accounts, categories, and transactions empty. Write nothing to standard output
+  and exit 0. Exit 1 when the store is unreachable.
+
+## story schema-count
+summary:      Count rows per table with ledger count.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Schema-Count.md
+covers:       SCHEMA-002
+accepts:      st-003
+depends:      schema-init
+context:      DATABASE.md
+stack:        python.md, cli.md
+provides:     ledger count
+acceptance:   yes
+instructions: |
+  Write the header table,rows then accounts, categories, transactions counts in that order, read
+  from the database through a query.
+
+## story cli-usage
+summary:      Map unknown commands and wrong argument counts to exit code 2.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Cli-Usage.md
+covers:       CLI-001
+accepts:      st-001
+depends:      foundation
+stack:        python.md, cli.md
+provides:     usage error handling
+acceptance:   yes
+instructions: |
+  Any unknown command or wrong argument count exits 2 with one diagnostic line on standard error and
+  nothing on standard output.
+
+## story cli-reinit
+summary:      Re-initialization drops every row.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Cli-Reinit.md
+covers:       CLI-002
+accepts:      st-003
+depends:      schema-init
+context:      DATABASE.md
+stack:        python.md, cli.md
+acceptance:   yes
+instructions: |
+  A second ledger init leaves all three tables at zero rows.
+
+## story load-accounts
+summary:      Load accounts from CSV with ledger load accounts.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Load-Accounts.md
+covers:       LOAD-001
+accepts:      st-004
+depends:      schema-init
+context:      DATABASE.md
+stack:        python.md, cli.md
+provides:     ledger load accounts
+acceptance:   yes
+instructions: |
+  Load the four seed accounts from the CSV with the header matching accounts columns. Write
+  table,loaded then accounts,4.
+
+## story load-categories
+summary:      Load categories from CSV with ledger load categories.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Load-Categories.md
+covers:       LOAD-002
+accepts:      st-004
+depends:      schema-init
+context:      DATABASE.md
+stack:        python.md, cli.md
+provides:     ledger load categories
+acceptance:   yes
+instructions: |
+  Load the seven seed categories. Write table,loaded then categories,7.
+
+## story load-transactions
+summary:      Load transactions from CSV with ledger load transactions.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Load-Transactions.md
+covers:       LOAD-003
+accepts:      st-004, st-005
+depends:      load-accounts, load-categories
+context:      DATABASE.md
+stack:        python.md, cli.md
+provides:     ledger load transactions
+acceptance:   yes
+instructions: |
+  Load the 120 seed transactions. Keep each txn_id from the file. Write table,loaded then
+  transactions,120. A load into a non-empty table adds rows only when every row validates and no key
+  collides.
+
+## story load-atomic
+summary:      Reject a load containing an invalid row atomically.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Load-Atomic.md
+covers:       LOAD-004
+accepts:      st-007, st-008
+depends:      load-transactions
+context:      DATABASE.md
+stack:        python.md, cli.md
+acceptance:   yes
+instructions: |
+  A load with an invalid row, including an unknown account, exits 3, writes nothing to standard
+  output, emits one diagnostic line on standard error, and stores none of the rows.
+
+## story load-duplicate
+summary:      Reject a load whose keys collide with existing rows.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Load-Duplicate.md
+covers:       LOAD-005
+accepts:      st-007
+depends:      load-accounts
+context:      DATABASE.md
+stack:        python.md, cli.md
+acceptance:   yes
+instructions: |
+  A duplicate key exits 3 and leaves every table unchanged.
+
+## story report-balances
+summary:      Balances report by account, computed from the database.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Report-Balances.md
+covers:       REPORT-001
+accepts:      st-005
+depends:      load-transactions
+context:      DATABASE.md
+stack:        python.md, cli.md
+provides:     ledger report balances
+acceptance:   yes
+instructions: |
+  Emit account,name,transactions,balance per account by code, then TOTAL,,count,sum. Compute every
+  value from a query.
+
+## story report-categories
+summary:      Categories report with inflow, outflow, and net.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Report-Categories.md
+covers:       REPORT-002
+accepts:      st-005
+depends:      load-transactions
+context:      DATABASE.md
+stack:        python.md, cli.md
+provides:     ledger report categories
+acceptance:   yes
+instructions: |
+  Emit a row per category by code, including categories with no transactions, then the TOTAL row.
+
+## story report-monthly
+summary:      Monthly report by YYYY-MM.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Report-Monthly.md
+covers:       REPORT-003
+accepts:      st-005
+depends:      load-transactions
+context:      DATABASE.md
+stack:        python.md, cli.md
+provides:     ledger report monthly
+acceptance:   yes
+instructions: |
+  Emit a row per month that has transactions, ascending, then the TOTAL row.
+
+## story report-unknown
+summary:      Reject an unknown report name with exit code 2.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Report-Unknown.md
+covers:       REPORT-004
+accepts:      st-005
+depends:      cli-usage
+stack:        python.md, cli.md
+acceptance:   yes
+instructions: |
+  An unknown report name exits 2 and writes nothing to standard output.
+
+## story acct-add
+summary:      Add an account with ledger account add.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Acct-Add.md
+covers:       ACCT-001
+accepts:      st-006, st-007
+depends:      database, schema-init
+context:      DATABASE.md
+stack:        python.md, cli.md
+provides:     ledger account add
+acceptance:   yes
+instructions: |
+  Write the new account row. A duplicate code exits 3. Validate code and name before writing.
+
+## story acct-get
+summary:      Get an account with ledger account get.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Acct-Get.md
+covers:       ACCT-002
+accepts:      st-006
+depends:      acct-add
+context:      DATABASE.md
+stack:        python.md, cli.md
+provides:     ledger account get
+acceptance:   yes
+instructions: |
+  Write the account row. An absent code exits 4.
+
+## story acct-rename
+summary:      Rename an account with ledger account rename.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Acct-Rename.md
+covers:       ACCT-003
+accepts:      st-006
+depends:      acct-add
+context:      DATABASE.md
+stack:        python.md, cli.md
+provides:     ledger account rename
+acceptance:   yes
+instructions: |
+  Write the updated row. An absent code exits 4.
+
+## story acct-delete
+summary:      Delete an account with ledger account delete.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Acct-Delete.md
+covers:       ACCT-004
+accepts:      st-006, st-007
+depends:      acct-add, txn-post
+context:      DATABASE.md
+stack:        python.md, cli.md
+provides:     ledger account delete
+acceptance:   yes
+instructions: |
+  Refuse with exit 3 while the account has transactions and leave it in place. Write deleted and the
+  code on success. An absent code exits 4.
+
+## story txn-post
+summary:      Post a transaction with ledger txn post.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Txn-Post.md
+covers:       TXN-001
+accepts:      st-006, st-007, st-008
+depends:      acct-add, load-categories
+context:      DATABASE.md
+stack:        python.md, cli.md
+provides:     ledger txn post
+acceptance:   yes
+instructions: |
+  Validate account, category, amount as integer cents, and date before any write. Assign id one more
+  than the largest present, or 1 when empty. A balance that would go negative exits 3.
+
+## story txn-get
+summary:      Get a transaction with ledger txn get.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Txn-Get.md
+covers:       TXN-002
+accepts:      st-006
+depends:      txn-post
+context:      DATABASE.md
+stack:        python.md, cli.md
+provides:     ledger txn get
+acceptance:   yes
+instructions: |
+  Write the transaction row. An absent id exits 4.
+
+## story txn-amend
+summary:      Amend a transaction amount with ledger txn amend.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Txn-Amend.md
+covers:       TXN-003
+accepts:      st-006, st-007, st-008
+depends:      txn-post
+context:      DATABASE.md
+stack:        python.md, cli.md
+provides:     ledger txn amend
+acceptance:   yes
+instructions: |
+  Change only the amount. An absent id exits 4. An amount that leaves a balance negative exits 3 and
+  changes nothing.
+
+## story txn-delete
+summary:      Delete a transaction with ledger txn delete.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Txn-Delete.md
+covers:       TXN-004
+accepts:      st-006, st-007, st-008
+depends:      txn-post
+context:      DATABASE.md
+stack:        python.md, cli.md
+provides:     ledger txn delete
+acceptance:   yes
+instructions: |
+  Write deleted and the id on success. An absent id exits 4. A deletion that leaves a balance
+  negative exits 3 and changes nothing.
+
+## story transfer
+summary:      Transfer between accounts with ledger transfer.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-Transfer.md
+covers:       XFER-001
+accepts:      st-006, st-007, st-008
+depends:      txn-post
+context:      DATABASE.md
+stack:        python.md, cli.md
+provides:     ledger transfer
+acceptance:   yes
+instructions: |
+  Write two TRANSFER rows, ids N and N+1, atomically. Reject equal accounts or a non-positive
+  amount with exit 3. Reject a transfer that would leave either balance negative.
+
+## story grader
+summary:      Verify the completed ledger against the supplied grader and the application test suite.
+type:         feature
+kind:         test harness
+phase:        1
+implements:   FEATURE-Grader-Verification.md
+covers:       
+accepts:      st-001, st-002
+depends:      foundation, database, schema-init, schema-count, cli-usage, cli-reinit, load-accounts, load-categories, load-transactions, load-atomic, load-duplicate, report-balances, report-categories, report-monthly, report-unknown, acct-add, acct-get, acct-rename, acct-delete, txn-post, txn-get, txn-amend, txn-delete, transfer
+stack:        common.md, python.md
+acceptance:   yes
+instructions: |
+  Terminal story. Provide bin/test.sh as a POSIX sh wrapper that runs pytest -q from the application
+  root and exits 0 only on success. Run sh sources/run.sh from the application root as the terminal
+  criterion. Do not modify anything under sources/.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT DECISIONS.json ===
+[
+  {
+    &quot;id&quot;: &quot;Q-001&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;blueprint&quot;: &quot;ARCHITECTURE.md&quot;,
+    &quot;story&quot;: &quot;foundation&quot;,
+    &quot;title&quot;: &quot;Launcher form for the ledger executable&quot;,
+    &quot;description&quot;: &quot;COMPASS requires an executable named ledger at the application root. The Python implementation runs from a virtual environment.&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;ledger is a POSIX sh launcher that executes the cli package under .venv/bin/python.&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-002&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;material&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-Load-Transactions.md&quot;,
+    &quot;story&quot;: &quot;load-transactions&quot;,
+    &quot;title&quot;: &quot;Load into a non-empty table&quot;,
+    &quot;description&quot;: &quot;Sources do not state behavior for loading into a non-empty table. The narrowest consistent reading is taken.&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;A load adds rows only when every row validates and no key collides; otherwise it exits 3 and changes nothing.&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-003&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;blueprint&quot;: &quot;DATABASE.md&quot;,
+    &quot;story&quot;: &quot;database&quot;,
+    &quot;title&quot;: &quot;Persistence engine&quot;,
+    &quot;description&quot;: &quot;TECHNOLOGY_STACK names SQLite. DATABASE_URL may also name a PostgreSQL DSN, which the shipped library supports.&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;Build on SQLite through persistence.md and sqlite.md. The DSN selects the engine at runtime.&quot;
+  }
+]
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

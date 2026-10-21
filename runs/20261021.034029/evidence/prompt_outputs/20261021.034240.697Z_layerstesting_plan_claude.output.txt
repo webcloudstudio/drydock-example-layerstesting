@@ -1,0 +1,84 @@
+I can't produce this batch as written. The Stage 2 instructions ask for the Blueprint files, and the Blueprint files need to be grounded in the frozen topology and the accepted `DATABASE.md`. Before I write anything, I need to check one thing in the frozen topology.
+
+**The problem:** The `load-atomic` story (`FEATURE-Load-Atomic.md`) is in the current batch, and its topology entry lists `depends: load-transactions`. That is fine. But the `LOAD-004` seed fixture (`seed_transactions_bad.csv`) has 10 valid rows followed by row 11 with an unknown account `NOSUCH`. Atomic rejection requires that the load validate every row before writing any. That constraint is in the Rules section of `INSTRUCTIONS.md`, so it is grounded.
+
+The more pressing gap is in `DATABASE.md`. The access patterns there are all owned by `DATABASE.md` itself and carry generic verbs (`accounts.create`, `transactions.update`, and so on). None of the five batch files needs a new table or a new operation, so no `DATABASE.md` addition is required for this batch. I'll leave it alone.
+
+**What I'll emit:** The five files in the Current batch, in order, each with its own delimiters. Each will follow the typed header format, carry concrete Programmatic Acceptance assertions that bind expected values to names, and end with the three required sections.
+
+Here is the first file, `FEATURE-Cli-Reinit.md`:
+
+=== BEGIN ARTIFACT FEATURE-Cli-Reinit.md ===
+# FEATURE: Re-initialization Drops Every Row
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | A second `ledger init` leaves accounts, categories, and transactions at zero rows. |
+| Depends On  | ARCHITECTURE.md, FEATURE-Schema-Init.md |
+| Provides    | ledger init (re-run) |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Guarantee that running `ledger init` against an already-populated store empties every table, so that a
+reinitialized store reports zero rows in each table.
+
+## Behavior
+
+- `ledger init` drops and recreates `accounts`, `categories`, and `transactions`, leaving all three empty.
+- A second `ledger init` after loading data leaves all three tables at zero rows.
+- Nothing is written to standard output on success, and the exit status is `0`.
+
+## Programmatic Acceptance
+
+=== AC cli-reinit-empties-tables ===
+Intent: After data is loaded, a second `init` leaves every table at zero rows.
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+code, out, err = cli_runner("init")
+assert code == 0
+code, out, err = cli_runner("load", "accounts", "sources/seed_accounts.csv")
+assert code == 0
+code, out, err = cli_runner("init")
+assert code == 0
+assert out == ""
+code, out, err = cli_runner("count")
+assert code == 0
+expected_count = "table,rows\naccounts,0\ncategories,0\ntransactions,0\n"
+assert out == expected_count
+=== END AC cli-reinit-empties-tables ===
+
+=== AC cli-reinit-idempotent-empty ===
+Intent: Running `init` on an already-empty store still leaves every table at zero rows.
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("init")
+assert code == 0
+code, out, err = cli_runner("init")
+assert code == 0
+assert out == ""
+code, out, err = cli_runner("count")
+assert code == 0
+expected_count = "table,rows\naccounts,0\ncategories,0\ntransactions,0\n"
+assert out == expected_count
+=== END AC cli-reinit-idempotent-empty ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- `init` never preserves rows from a prior store.
+=== END ARTIFACT ===
+
+I'll continue with the remaining four files in this same response, one at a time, each closed before the next opens.

@@ -1,0 +1,742 @@
+=== BEGIN ARTIFACT FEATURE-Report-Balances.md ===
+# FEATURE: Report Balances
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | The `ledger report balances` command writes each account's transaction count and balance, then a TOTAL row, all computed from the database. |
+| Depends On  | DATABASE.md, FEATURE-Load-Accounts.md, FEATURE-Load-Transactions.md |
+| Provides    | ledger report balances |
+| Consumes    | accounts.list, transactions.list |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger report balances` reads the accounts and transactions tables and writes one CSV row per account, ordered by account code, followed by a TOTAL row.
+
+## Behavior
+
+- Header row: `account,name,transactions,balance`.
+- One row per account: `account,name,transactions,balance`. `transactions` is the count of that account's transactions. `balance` is the sum of their amounts.
+- Amounts are written with exactly two decimal places, a leading `-` when negative, and no thousands separator.
+- TOTAL row: `TOTAL,,<count>,<sum>`, where the count and sum cover all transactions.
+- Every value comes from a query. No report answer is embedded in application code.
+- Exit `0` on success. Exit `1` when the database is unreachable or the tables are missing.
+
+## Database Interface
+
+- `FEATURE-LEDGER-003` — read: list accounts for the report - returns: `account`, `name`
+- `FEATURE-LEDGER-011` — read: list transactions to total each account - returns: `account`, `amount`
+
+## Programmatic Acceptance
+
+=== AC balances-seeded-known-answer ===
+Intent: Balances over the seeded dataset match the known answer computed from the database.
+Cite: sources/run.sh:84-89
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "ledger.db")
+
+from cli.testing import cli_runner
+
+for args in (
+    ("init",),
+    ("load", "accounts", "sources/seed_accounts.csv"),
+    ("load", "categories", "sources/seed_categories.csv"),
+    ("load", "transactions", "sources/seed_transactions.csv"),
+):
+    code, out, err = cli_runner(*args)
+    print(err, file=sys.stderr)
+    assert code == 0, args
+
+expected = """account,name,transactions,balance
+DRAWER1,Front Drawer,39,2299.38
+DRAWER2,Back Drawer,39,1378.32
+PETTY,Petty Cash,21,306.25
+SAFE,Store Safe,21,250.00
+TOTAL,,120,4233.95
+"""
+
+code, out, err = cli_runner("report", "balances")
+print(out)
+print(err, file=sys.stderr)
+assert code == 0
+assert out == expected
+=== END AC balances-seeded-known-answer ===
+
+=== AC balances-total-matches-rows ===
+Intent: The TOTAL row count and balance equal the sums of the per-account rows, and the total count is 120 for the seeded dataset.
+
+import os
+import sys
+import tempfile
+from decimal import Decimal
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "ledger.db")
+
+from cli.testing import cli_runner
+
+for args in (
+    ("init",),
+    ("load", "accounts", "sources/seed_accounts.csv"),
+    ("load", "categories", "sources/seed_categories.csv"),
+    ("load", "transactions", "sources/seed_transactions.csv"),
+):
+    code, out, err = cli_runner(*args)
+    print(err, file=sys.stderr)
+    assert code == 0, args
+
+code, out, err = cli_runner("report", "balances")
+print(out)
+print(err, file=sys.stderr)
+assert code == 0
+rows = [line.split(",") for line in out.splitlines()]
+accounts = rows[1:-1]
+total = rows[-1]
+assert total[0] == "TOTAL"
+assert sum(int(row[2]) for row in accounts) == int(total[2])
+assert int(total[2]) == 120
+assert sum(Decimal(row[3]) for row in accounts) == Decimal(total[3])
+=== END AC balances-total-matches-rows ===
+
+=== AC balances-empty-store ===
+Intent: With accounts loaded and no transactions, every account reports a zero count and the TOTAL row reports a zero count.
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "ledger.db")
+
+from cli.testing import cli_runner
+
+for args in (
+    ("init",),
+    ("load", "accounts", "sources/seed_accounts.csv"),
+):
+    code, out, err = cli_runner(*args)
+    print(err, file=sys.stderr)
+    assert code == 0, args
+
+code, out, err = cli_runner("report", "balances")
+print(out)
+print(err, file=sys.stderr)
+assert code == 0
+rows = [line.split(",") for line in out.splitlines()]
+assert len(rows) == 6
+assert all(row[2] == "0" for row in rows[1:-1])
+assert rows[-1][0] == "TOTAL" and rows[-1][2] == "0"
+=== END AC balances-empty-store ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Balances are computed from the transactions table on every call; no cached or embedded totals.
+- Amounts are integer cents internally and are never handled as floating point.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Report-Categories.md ===
+# FEATURE: Report Categories
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | The `ledger report categories` command writes inflow, outflow, and net per category, including categories with no transactions, then a TOTAL row, all computed from the database. |
+| Depends On  | DATABASE.md, FEATURE-Load-Categories.md, FEATURE-Load-Transactions.md |
+| Provides    | ledger report categories |
+| Consumes    | categories.list, transactions.list |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger report categories` reads the categories and transactions tables and writes one CSV row per category, ordered by category code, followed by a TOTAL row.
+
+## Behavior
+
+- Header row: `category,description,transactions,inflow,outflow,net`.
+- One row per category, including categories with no transactions, which show zero counts and zero amounts.
+- `inflow` is the sum of positive amounts. `outflow` is the sum of the absolute values of negative amounts, written as a positive number. `net` is `inflow - outflow`.
+- TOTAL row: `TOTAL,,<count>,<inflow>,<outflow>,<net>`.
+- Amount formatting follows the same two-decimal rule as the balances report.
+- Exit `0` on success. Exit `1` when the database is unreachable or the tables are missing.
+
+## Database Interface
+
+- `FEATURE-LEDGER-008` — read: list categories for the report - returns: `category`, `description`
+- `FEATURE-LEDGER-011` — read: list transactions to total each category - returns: `category`, `amount`
+
+## Programmatic Acceptance
+
+=== AC categories-seeded-known-answer ===
+Intent: Categories over the seeded dataset match the known answer computed from the database.
+Cite: sources/run.sh:92-100
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "ledger.db")
+
+from cli.testing import cli_runner
+
+for args in (
+    ("init",),
+    ("load", "accounts", "sources/seed_accounts.csv"),
+    ("load", "categories", "sources/seed_categories.csv"),
+    ("load", "transactions", "sources/seed_transactions.csv"),
+):
+    code, out, err = cli_runner(*args)
+    print(err, file=sys.stderr)
+    assert code == 0, args
+
+expected = """category,description,transactions,inflow,outflow,net
+OPENING,Opening balance,2,5200.00,0.00,5200.00
+PAYROLL,Payroll,6,0.00,7200.00,-7200.00
+REFUND,Customer refunds,12,0.00,101.25,-101.25
+RENT,Rent,3,0.00,2700.00,-2700.00
+SALES,Sales receipts,64,9578.95,0.00,9578.95
+SUPPLY,Supplies,15,0.00,543.75,-543.75
+TRANSFER,Internal transfer,18,5100.00,5100.00,0.00
+TOTAL,,120,19878.95,15645.00,4233.95
+"""
+
+code, out, err = cli_runner("report", "categories")
+print(out)
+print(err, file=sys.stderr)
+assert code == 0
+assert out == expected
+=== END AC categories-seeded-known-answer ===
+
+=== AC categories-empty-rows-are-zero ===
+Intent: Categories with no transactions appear with zero counts and zero amounts, and the report has one row per category plus header and TOTAL.
+
+import os
+import sys
+import tempfile
+from decimal import Decimal
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "ledger.db")
+
+from cli.testing import cli_runner
+
+for args in (
+    ("init",),
+    ("load", "categories", "sources/seed_categories.csv"),
+):
+    code, out, err = cli_runner(*args)
+    print(err, file=sys.stderr)
+    assert code == 0, args
+
+code, out, err = cli_runner("report", "categories")
+print(out)
+print(err, file=sys.stderr)
+assert code == 0
+rows = [line.split(",") for line in out.splitlines()]
+assert len(rows) == 9
+for row in rows[1:-1]:
+    assert row[2] == "0"
+    assert Decimal(row[3]) == 0
+    assert Decimal(row[4]) == 0
+    assert Decimal(row[5]) == 0
+=== END AC categories-empty-rows-are-zero ===
+
+=== AC categories-net-identity ===
+Intent: Each category's net equals its inflow minus its outflow, and the TOTAL row sums the categories to 120 transactions.
+
+import os
+import sys
+import tempfile
+from decimal import Decimal
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "ledger.db")
+
+from cli.testing import cli_runner
+
+for args in (
+    ("init",),
+    ("load", "accounts", "sources/seed_accounts.csv"),
+    ("load", "categories", "sources/seed_categories.csv"),
+    ("load", "transactions", "sources/seed_transactions.csv"),
+):
+    code, out, err = cli_runner(*args)
+    print(err, file=sys.stderr)
+    assert code == 0, args
+
+code, out, err = cli_runner("report", "categories")
+print(out)
+print(err, file=sys.stderr)
+assert code == 0
+rows = [line.split(",") for line in out.splitlines()]
+body = rows[1:-1]
+total = rows[-1]
+assert total[0] == "TOTAL"
+for row in body:
+    assert Decimal(row[3]) - Decimal(row[4]) == Decimal(row[5])
+assert Decimal(total[3]) - Decimal(total[4]) == Decimal(total[5])
+assert sum(int(row[2]) for row in body) == int(total[2])
+assert int(total[2]) == 120
+assert sum(Decimal(row[5]) for row in body) == Decimal(total[5])
+=== END AC categories-net-identity ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Every category appears in the report even when it has no transactions.
+- Amounts are integer cents internally and are never handled as floating point.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Report-Monthly.md ===
+# FEATURE: Report Monthly
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | The `ledger report monthly` command writes inflow, outflow, and net per calendar month that has transactions, in ascending order, then a TOTAL row, all computed from the database. |
+| Depends On  | DATABASE.md, FEATURE-Load-Transactions.md |
+| Provides    | ledger report monthly |
+| Consumes    | transactions.list |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger report monthly` groups the transactions table by calendar month and writes one CSV row per month that has transactions, followed by a TOTAL row.
+
+## Behavior
+
+- Header row: `month,transactions,inflow,outflow,net`.
+- One row per `YYYY-MM` that has at least one transaction, in ascending order. Months with no transactions are omitted.
+- `inflow`, `outflow`, and `net` follow the same definitions as the categories report.
+- TOTAL row: `TOTAL,<count>,<inflow>,<outflow>,<net>`.
+- Exit `0` on success. Exit `1` when the database is unreachable or the tables are missing.
+
+## Database Interface
+
+- `FEATURE-LEDGER-011` — read: list transactions to group by month - returns: `date`, `amount`
+
+## Programmatic Acceptance
+
+=== AC monthly-seeded-known-answer ===
+Intent: Monthly totals over the seeded dataset match the known answer computed from the database.
+Cite: sources/run.sh:103-107
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "ledger.db")
+
+from cli.testing import cli_runner
+
+for args in (
+    ("init",),
+    ("load", "accounts", "sources/seed_accounts.csv"),
+    ("load", "categories", "sources/seed_categories.csv"),
+    ("load", "transactions", "sources/seed_transactions.csv"),
+):
+    code, out, err = cli_runner(*args)
+    print(err, file=sys.stderr)
+    assert code == 0, args
+
+expected = """month,transactions,inflow,outflow,net
+2026-01,40,9659.45,5215.00,4444.45
+2026-02,40,4979.65,5215.00,-235.35
+2026-03,40,5239.85,5215.00,24.85
+TOTAL,120,19878.95,15645.00,4233.95
+"""
+
+code, out, err = cli_runner("report", "monthly")
+print(out)
+print(err, file=sys.stderr)
+assert code == 0
+assert out == expected
+=== END AC monthly-seeded-known-answer ===
+
+=== AC monthly-empty-store-omits-months ===
+Intent: With no transactions loaded, the monthly report contains no month rows and only a TOTAL row with a zero count.
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "ledger.db")
+
+from cli.testing import cli_runner
+
+for args in (
+    ("init",),
+    ("load", "accounts", "sources/seed_accounts.csv"),
+    ("load", "categories", "sources/seed_categories.csv"),
+):
+    code, out, err = cli_runner(*args)
+    print(err, file=sys.stderr)
+    assert code == 0, args
+
+code, out, err = cli_runner("report", "monthly")
+print(out)
+print(err, file=sys.stderr)
+assert code == 0
+rows = [line.split(",") for line in out.splitlines()]
+assert len(rows) == 2
+assert rows[-1][0] == "TOTAL"
+assert rows[-1][1] == "0"
+=== END AC monthly-empty-store-omits-months ===
+
+=== AC monthly-ascending-order ===
+Intent: The month rows are in strictly ascending order with no duplicate months, and there are three months in the seeded dataset.
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "ledger.db")
+
+from cli.testing import cli_runner
+
+for args in (
+    ("init",),
+    ("load", "accounts", "sources/seed_accounts.csv"),
+    ("load", "categories", "sources/seed_categories.csv"),
+    ("load", "transactions", "sources/seed_transactions.csv"),
+):
+    code, out, err = cli_runner(*args)
+    print(err, file=sys.stderr)
+    assert code == 0, args
+
+code, out, err = cli_runner("report", "monthly")
+print(out)
+print(err, file=sys.stderr)
+assert code == 0
+rows = [line.split(",") for line in out.splitlines()]
+months = [row[0] for row in rows[1:-1]]
+assert months == sorted(months)
+assert len(set(months)) == len(months) == 3
+assert all(len(month) == 7 and month[4] == "-" for month in months)
+=== END AC monthly-ascending-order ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Months are derived from the stored dates by query; no month list is embedded in application code.
+- Amounts are integer cents internally and are never handled as floating point.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Report-Unknown.md ===
+# FEATURE: Report Unknown
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | An unknown or missing report name exits 2 with a diagnostic on standard error and writes nothing to standard output. |
+| Depends On  | FEATURE-Cli-Usage.md |
+| Provides    | ledger report (report name validation) |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger report <name>` accepts only the names `balances`, `categories`, and `monthly`. Any other name, or a missing name, is a usage error.
+
+## Behavior
+
+- An unknown report name exits `2`.
+- A missing report name (`ledger report` with no name) exits `2`.
+- Usage errors are checked before the database is opened, so they never produce exit `1`.
+- Standard output is empty on every usage error. One diagnostic line is written to standard error.
+
+## Database Interface
+
+- None — report name validation happens before any database access.
+
+## Programmatic Acceptance
+
+=== AC report-unknown-name-exits-2 ===
+Intent: An unknown report name exits 2 and writes nothing to standard output.
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "ledger.db")
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("report", "nosuch")
+print(out)
+print(err, file=sys.stderr)
+assert code == 2
+assert out == ""
+=== END AC report-unknown-name-exits-2 ===
+
+=== AC report-missing-name-exits-2 ===
+Intent: A report command with no report name exits 2 and writes nothing to standard output.
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "ledger.db")
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("report")
+print(out)
+print(err, file=sys.stderr)
+assert code == 2
+assert out == ""
+=== END AC report-missing-name-exits-2 ===
+
+=== AC report-unknown-name-before-database ===
+Intent: An unknown report name exits 2 rather than 1 even when the configured database does not exist.
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "absent" / "ledger.db")
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("report", "nosuch")
+print(out)
+print(err, file=sys.stderr)
+assert code == 2
+assert out == ""
+=== END AC report-unknown-name-before-database ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A report name is never executed as a query or used to build SQL.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Acct-Add.md ===
+# FEATURE: Account Add
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | The `ledger account add` command validates an account code and name, rejects duplicates, and writes the new account row. |
+| Depends On  | DATABASE.md, FEATURE-Schema-Init.md |
+| Provides    | ledger account add |
+| Consumes    | accounts.create, accounts.get |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger account add <code> <name>` creates one account with no transactions and writes its row to standard output.
+
+## Behavior
+
+- Code: 1 to 12 characters from `A-Z` and `0-9`. Otherwise exit `3`.
+- Name: 1 to 40 characters, with no comma or newline. Otherwise exit `3`.
+- An existing code exits `3`.
+- All validation and the duplicate check run before the first write, so a rejected add writes nothing.
+- On success, standard output is the header `account,name,transactions,balance` followed by the new row with `transactions` `0` and `balance` `0.00`.
+- Exit `0` on success. Exit `1` when the database is unreachable or the tables are missing.
+
+## Database Interface
+
+- `FEATURE-LEDGER-001` — write: insert the new account - supplies: `account`, `name` - returns: `account`, `name`
+- `FEATURE-LEDGER-002` — read: look up an account by code to detect a duplicate - supplies: `account` - returns: `account`, `name`
+
+## Programmatic Acceptance
+
+=== AC acct-add-known-row ===
+Intent: Adding an account writes the header and the new account row with zero transactions and a zero balance.
+Cite: sources/run.sh:122-123
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "ledger.db")
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("init")
+print(err, file=sys.stderr)
+assert code == 0
+
+expected = """account,name,transactions,balance
+CASH9,Event Float,0,0.00
+"""
+
+code, out, err = cli_runner("account", "add", "CASH9", "Event Float")
+print(out)
+print(err, file=sys.stderr)
+assert code == 0
+assert out == expected
+=== END AC acct-add-known-row ===
+
+=== AC acct-add-duplicate-rejected ===
+Intent: A second add of the same code exits 3 and writes nothing, which shows the first add persisted.
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "ledger.db")
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("init")
+print(err, file=sys.stderr)
+assert code == 0
+
+code, out, err = cli_runner("account", "add", "CASH9", "Event Float")
+print(out)
+print(err, file=sys.stderr)
+assert code == 0
+
+code, out, err = cli_runner("account", "add", "CASH9", "Event Float")
+print(out)
+print(err, file=sys.stderr)
+assert code == 3
+assert out == ""
+=== END AC acct-add-duplicate-rejected ===
+
+=== AC acct-add-rejects-long-code ===
+Intent: A code longer than 12 characters exits 3 and writes nothing to standard output.
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "ledger.db")
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("init")
+print(err, file=sys.stderr)
+assert code == 0
+
+code, out, err = cli_runner("account", "add", "A" * 13, "Event Float")
+print(out)
+print(err, file=sys.stderr)
+assert code == 3
+assert out == ""
+=== END AC acct-add-rejects-long-code ===
+
+=== AC acct-add-rejects-code-charset ===
+Intent: A code containing a character outside A-Z and 0-9 exits 3 and writes nothing to standard output.
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "ledger.db")
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("init")
+print(err, file=sys.stderr)
+assert code == 0
+
+code, out, err = cli_runner("account", "add", "cash-9", "Event Float")
+print(out)
+print(err, file=sys.stderr)
+assert code == 3
+assert out == ""
+=== END AC acct-add-rejects-code-charset ===
+
+=== AC acct-add-rejects-name-with-comma ===
+Intent: A name containing a comma exits 3 and leaves no row, so the same code is still free for a valid add.
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "ledger.db")
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("init")
+print(err, file=sys.stderr)
+assert code == 0
+
+code, out, err = cli_runner("account", "add", "CASH9", "Float, Event")
+print(out)
+print(err, file=sys.stderr)
+assert code == 3
+assert out == ""
+
+code, out, err = cli_runner("account", "add", "CASH9", "Event Float")
+print(out)
+print(err, file=sys.stderr)
+assert code == 0
+=== END AC acct-add-rejects-name-with-comma ===
+
+=== AC acct-add-rejects-long-name ===
+Intent: A name longer than 40 characters exits 3 and writes nothing to standard output.
+
+import os
+import sys
+import tempfile
+from pathlib import Path
+
+os.environ["DATABASE_URL"] = str(Path(tempfile.mkdtemp()) / "ledger.db")
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("init")
+print(err, file=sys.stderr)
+assert code == 0
+
+code, out, err = cli_runner("account", "add", "CASH9", "N" * 41)
+print(out)
+print(err, file=sys.stderr)
+assert code == 3
+assert out == ""
+=== END AC acct-add-rejects-long-name ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Validation and the duplicate check complete before the first write.
+- The new account's transaction count and balance are zero by construction; no other value is written.
+=== END ARTIFACT ===

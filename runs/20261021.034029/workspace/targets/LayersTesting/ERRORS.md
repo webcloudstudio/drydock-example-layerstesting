@@ -1,0 +1,23 @@
+# BIG ERRORS — action required
+
+- Command: `plan`
+- Phase: post-output validation
+- State: Error
+- Timestamp: 2026-10-21T03:53:11+00:00
+- Execution ID: 20261021.034116.309Z-a8661541
+- Challenge Execution ID: -
+- Classification: plan output validation failed
+- Evidence / logs: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261021.034029/workspace/logs
+
+## Diagnostic
+
+Plan generation failed: the persistence declaration and the Blueprints that cite it disagree.
+  DATABASE.md [## Access Patterns]: DATABASE.md: ## Access Patterns has no named operation
+  No Blueprint or Manifest artifacts were written.
+  Execution output: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261021.034029/workspace/logs/20261021.035221.129Z_layerstesting_plan_claude.output.txt
+  contributing execution ids: 20261021.034116.309Z-a8661541, 20261021.034158.199Z-ed326a01, 20261021.034217.877Z-c1750590, 20261021.034240.697Z-a96e6d6f, 20261021.034249.826Z-1661a80a, 20261021.034417.605Z-fa149729, 20261021.034644.050Z-dab47acf, 20261021.034852.045Z-5b5ab4cc
+  No files were changed.
+
+## Recovery
+
+Correct the plan input or model artifact, then run: drydock plan LayersTesting

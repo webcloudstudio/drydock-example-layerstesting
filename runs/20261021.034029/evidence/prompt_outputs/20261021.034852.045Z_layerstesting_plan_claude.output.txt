@@ -1,0 +1,658 @@
+=== BEGIN ARTIFACT FEATURE-Txn-Amend.md ===
+# FEATURE: Txn Amend
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Amend the amount of a posted transaction with `ledger txn amend`, rejecting negative balances and absent ids. |
+| Depends On  | DATABASE.md, FEATURE-Txn-Post.md |
+| Provides    | ledger txn amend |
+| Consumes    | None. |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger txn amend <id> <amount>` changes the amount of one existing transaction. Only the amount
+changes. The command validates the amount and the resulting account balance before its first write.
+On success it writes the updated transaction row as CSV.
+
+## Behavior
+
+- An absent id exits 4 and changes nothing.
+- An amount with more than two decimal places exits 3 and changes nothing.
+- An amount that would leave the account balance below zero exits 3 and changes nothing.
+- On success the row is written with header `txn_id,date,account,category,amount,memo`.
+
+## Programmatic Acceptance
+
+=== AC txn-amend-roundtrip ===
+Intent: `ledger txn amend` changes only the amount of a posted transaction, and a read-back returns the new amount with every other field unchanged.
+
+import csv
+import io
+import os
+import tempfile
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+from cli.testing import cli_runner
+
+
+def rows_of(text):
+    return list(csv.reader(io.StringIO(text)))
+
+
+def as_row(text):
+    rows = rows_of(text)
+    return dict(zip(rows[0], rows[1]))
+
+
+code, out, err = cli_runner("init")
+assert code == 0, err
+code, out, err = cli_runner("load", "accounts", "sources/seed_accounts.csv")
+assert code == 0, err
+code, out, err = cli_runner("load", "categories", "sources/seed_categories.csv")
+assert code == 0, err
+
+account = "DRAWER1"
+category = "SALES"
+original = "10.00"
+new_amount = "54.50"
+date = "2026-04-01"
+memo = "sale"
+
+code, out, err = cli_runner("txn", "post", account, category, original, date, memo)
+print(out, err)
+assert code == 0, err
+posted = as_row(out)
+txn_id = posted["txn_id"]
+
+code, out, err = cli_runner("txn", "amend", txn_id, new_amount)
+print(out, err)
+assert code == 0, err
+
+code, out, err = cli_runner("txn", "get", txn_id)
+print(out, err)
+assert code == 0, err
+amended = as_row(out)
+assert amended["amount"] == new_amount
+for field in ("txn_id", "date", "account", "category", "memo"):
+    assert amended[field] == posted[field], field
+=== END AC txn-amend-roundtrip ===
+
+=== AC txn-amend-absent ===
+Intent: `ledger txn amend` on an absent id exits 4 and writes nothing to standard output.
+
+import os
+import tempfile
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("init")
+assert code == 0, err
+code, out, err = cli_runner("load", "accounts", "sources/seed_accounts.csv")
+assert code == 0, err
+code, out, err = cli_runner("load", "categories", "sources/seed_categories.csv")
+assert code == 0, err
+
+code, out, err = cli_runner("txn", "amend", "999999", "1.00")
+print(out, err)
+assert code == 4, err
+=== END AC txn-amend-absent ===
+
+=== AC txn-amend-negative-balance ===
+Intent: `ledger txn amend` that would leave the account balance negative exits 3 and leaves the stored amount unchanged.
+
+import csv
+import io
+import os
+import tempfile
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+from cli.testing import cli_runner
+
+
+def as_row(text):
+    rows = list(csv.reader(io.StringIO(text)))
+    return dict(zip(rows[0], rows[1]))
+
+
+code, out, err = cli_runner("init")
+assert code == 0, err
+code, out, err = cli_runner("load", "accounts", "sources/seed_accounts.csv")
+assert code == 0, err
+code, out, err = cli_runner("load", "categories", "sources/seed_categories.csv")
+assert code == 0, err
+
+account = "DRAWER1"
+category = "SALES"
+original = "10.00"
+rejected_amount = "-20.00"
+date = "2026-04-01"
+memo = "sale"
+
+code, out, err = cli_runner("txn", "post", account, category, original, date, memo)
+print(out, err)
+assert code == 0, err
+txn_id = as_row(out)["txn_id"]
+
+code, out, err = cli_runner("txn", "amend", txn_id, rejected_amount)
+print(out, err)
+assert code == 3, err
+
+code, out, err = cli_runner("txn", "get", txn_id)
+print(out, err)
+assert code == 0, err
+assert as_row(out)["amount"] == original
+=== END AC txn-amend-negative-balance ===
+
+=== AC txn-amend-fractional-cent ===
+Intent: `ledger txn amend` with an amount that has more than two decimal places exits 3 and leaves the stored amount unchanged.
+
+import csv
+import io
+import os
+import tempfile
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+from cli.testing import cli_runner
+
+
+def as_row(text):
+    rows = list(csv.reader(io.StringIO(text)))
+    return dict(zip(rows[0], rows[1]))
+
+
+code, out, err = cli_runner("init")
+assert code == 0, err
+code, out, err = cli_runner("load", "accounts", "sources/seed_accounts.csv")
+assert code == 0, err
+code, out, err = cli_runner("load", "categories", "sources/seed_categories.csv")
+assert code == 0, err
+
+account = "DRAWER1"
+category = "SALES"
+original = "10.00"
+fractional_amount = "1.234"
+date = "2026-04-01"
+memo = "sale"
+
+code, out, err = cli_runner("txn", "post", account, category, original, date, memo)
+print(out, err)
+assert code == 0, err
+txn_id = as_row(out)["txn_id"]
+
+code, out, err = cli_runner("txn", "amend", txn_id, fractional_amount)
+print(out, err)
+assert code == 3, err
+
+code, out, err = cli_runner("txn", "get", txn_id)
+print(out, err)
+assert code == 0, err
+assert as_row(out)["amount"] == original
+=== END AC txn-amend-fractional-cent ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- `ledger txn amend` changes only the amount. It must never change the account, category, date, or memo of a transaction.
+- A rejected amend must leave the table exactly as it was.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Txn-Delete.md ===
+# FEATURE: Txn Delete
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Delete a transaction with `ledger txn delete`, rejecting deletions that would leave a negative balance and absent ids. |
+| Depends On  | DATABASE.md, FEATURE-Txn-Post.md |
+| Provides    | ledger txn delete |
+| Consumes    | None. |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger txn delete <id>` removes one transaction. The command checks the resulting account balance
+before its first write. On success it writes `deleted` and the id as CSV.
+
+## Behavior
+
+- Success writes `deleted` and the id, then exits 0. The transaction is no longer retrievable.
+- An absent id exits 4 and changes nothing.
+- A deletion that would leave the account balance below zero exits 3 and changes nothing.
+
+## Programmatic Acceptance
+
+=== AC txn-delete-roundtrip ===
+Intent: `ledger txn delete` removes a posted transaction, reports the deleted id, and a read-back then reports the id as absent.
+
+import csv
+import io
+import os
+import tempfile
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+from cli.testing import cli_runner
+
+
+def rows_of(text):
+    return list(csv.reader(io.StringIO(text)))
+
+
+def as_row(text):
+    rows = rows_of(text)
+    return dict(zip(rows[0], rows[1]))
+
+
+code, out, err = cli_runner("init")
+assert code == 0, err
+code, out, err = cli_runner("load", "accounts", "sources/seed_accounts.csv")
+assert code == 0, err
+code, out, err = cli_runner("load", "categories", "sources/seed_categories.csv")
+assert code == 0, err
+
+account = "DRAWER1"
+category = "SALES"
+amount = "10.00"
+date = "2026-04-01"
+memo = "sale"
+
+code, out, err = cli_runner("txn", "post", account, category, amount, date, memo)
+print(out, err)
+assert code == 0, err
+txn_id = as_row(out)["txn_id"]
+
+code, out, err = cli_runner("txn", "delete", txn_id)
+print(out, err)
+assert code == 0, err
+assert rows_of(out)[-1] == [txn_id]
+
+code, out, err = cli_runner("txn", "get", txn_id)
+print(out, err)
+assert code == 4, err
+=== END AC txn-delete-roundtrip ===
+
+=== AC txn-delete-absent ===
+Intent: `ledger txn delete` on an absent id exits 4 and writes nothing to standard output.
+
+import os
+import tempfile
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("init")
+assert code == 0, err
+code, out, err = cli_runner("load", "accounts", "sources/seed_accounts.csv")
+assert code == 0, err
+code, out, err = cli_runner("load", "categories", "sources/seed_categories.csv")
+assert code == 0, err
+
+code, out, err = cli_runner("txn", "delete", "999999")
+print(out, err)
+assert code == 4, err
+=== END AC txn-delete-absent ===
+
+=== AC txn-delete-negative-balance ===
+Intent: `ledger txn delete` that would leave the account balance negative exits 3 and leaves both transactions in place.
+
+import csv
+import io
+import os
+import tempfile
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+from cli.testing import cli_runner
+
+
+def as_row(text):
+    rows = list(csv.reader(io.StringIO(text)))
+    return dict(zip(rows[0], rows[1]))
+
+
+code, out, err = cli_runner("init")
+assert code == 0, err
+code, out, err = cli_runner("load", "accounts", "sources/seed_accounts.csv")
+assert code == 0, err
+code, out, err = cli_runner("load", "categories", "sources/seed_categories.csv")
+assert code == 0, err
+
+account = "DRAWER1"
+category = "SALES"
+deposit = "10.00"
+withdrawal = "-10.00"
+date = "2026-04-01"
+
+code, out, err = cli_runner("txn", "post", account, category, deposit, date, "deposit")
+print(out, err)
+assert code == 0, err
+deposit_id = as_row(out)["txn_id"]
+
+code, out, err = cli_runner("txn", "post", account, category, withdrawal, date, "withdrawal")
+print(out, err)
+assert code == 0, err
+withdrawal_id = as_row(out)["txn_id"]
+
+code, out, err = cli_runner("txn", "delete", deposit_id)
+print(out, err)
+assert code == 3, err
+
+code, out, err = cli_runner("txn", "get", deposit_id)
+assert code == 0, err
+assert as_row(out)["amount"] == deposit
+
+code, out, err = cli_runner("txn", "get", withdrawal_id)
+assert code == 0, err
+assert as_row(out)["amount"] == withdrawal
+=== END AC txn-delete-negative-balance ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A rejected delete must leave the table exactly as it was.
+- A deleted transaction id is not reused for a different row by this command.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Transfer.md ===
+# FEATURE: Transfer
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Move cash between two accounts with `ledger transfer`, writing two linked rows atomically or changing nothing. |
+| Depends On  | DATABASE.md, FEATURE-Txn-Post.md |
+| Provides    | ledger transfer |
+| Consumes    | None. |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger transfer <from> <to> <amount> <date>` records a movement of cash between two accounts as
+two rows in category `TRANSFER`. The outgoing row carries `-amount` on `<from>` and the incoming row
+carries `+amount` on `<to>`. Both rows are written together or neither is written.
+
+## Behavior
+
+- The amount must be positive. The two accounts must differ. Either violation exits 3 and changes nothing.
+- A transfer that would leave either account balance below zero exits 3 and changes nothing.
+- On success the two rows take ids N and N+1, where N is one more than the largest id present.
+- On success the output header is `txn_id,date,account,category,amount,memo`, followed by the outgoing row and then the incoming row.
+
+## Programmatic Acceptance
+
+=== AC transfer-roundtrip ===
+Intent: `ledger transfer` writes two TRANSFER rows with ids N and N+1, with opposite signed amounts on the two accounts, and both rows read back correctly.
+
+import csv
+import io
+import os
+import tempfile
+from decimal import Decimal
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+from cli.testing import cli_runner
+
+
+def rows_of(text):
+    return list(csv.reader(io.StringIO(text)))
+
+
+def as_row(text):
+    rows = rows_of(text)
+    return dict(zip(rows[0], rows[1]))
+
+
+code, out, err = cli_runner("init")
+assert code == 0, err
+code, out, err = cli_runner("load", "accounts", "sources/seed_accounts.csv")
+assert code == 0, err
+code, out, err = cli_runner("load", "categories", "sources/seed_categories.csv")
+assert code == 0, err
+
+from_account = "DRAWER1"
+to_account = "SAFE"
+transfer_category = "TRANSFER"
+funding = "100.00"
+amount = "25.00"
+date = "2026-04-03"
+
+code, out, err = cli_runner("txn", "post", from_account, "SALES", funding, "2026-04-01", "funding")
+print(out, err)
+assert code == 0, err
+funding_id = as_row(out)["txn_id"]
+
+code, out, err = cli_runner("transfer", from_account, to_account, amount, date)
+print(out, err)
+assert code == 0, err
+data = rows_of(out)[1:]
+assert len(data) == 2
+first_id = str(int(funding_id) + 1)
+second_id = str(int(funding_id) + 2)
+assert [data[0][0], data[1][0]] == [first_id, second_id]
+
+code, out, err = cli_runner("txn", "get", first_id)
+print(out, err)
+assert code == 0, err
+outgoing = as_row(out)
+
+code, out, err = cli_runner("txn", "get", second_id)
+print(out, err)
+assert code == 0, err
+incoming = as_row(out)
+
+assert outgoing["account"] == from_account
+assert incoming["account"] == to_account
+assert outgoing["category"] == transfer_category
+assert incoming["category"] == transfer_category
+assert outgoing["date"] == date
+assert incoming["date"] == date
+assert Decimal(outgoing["amount"]) == -Decimal(amount)
+assert Decimal(incoming["amount"]) == Decimal(amount)
+=== END AC transfer-roundtrip ===
+
+=== AC transfer-equal-accounts ===
+Intent: `ledger transfer` between an account and itself exits 3 and leaves the transaction count unchanged.
+
+import csv
+import io
+import os
+import tempfile
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+from cli.testing import cli_runner
+
+
+def counts():
+    code, out, err = cli_runner("count")
+    assert code == 0, err
+    rows = list(csv.reader(io.StringIO(out)))
+    return {row[0]: row[1] for row in rows[1:]}
+
+
+code, out, err = cli_runner("init")
+assert code == 0, err
+code, out, err = cli_runner("load", "accounts", "sources/seed_accounts.csv")
+assert code == 0, err
+code, out, err = cli_runner("load", "categories", "sources/seed_categories.csv")
+assert code == 0, err
+
+account = "DRAWER1"
+funding = "100.00"
+code, out, err = cli_runner("txn", "post", account, "SALES", funding, "2026-04-01", "funding")
+print(out, err)
+assert code == 0, err
+
+before = counts()
+code, out, err = cli_runner("transfer", account, account, "25.00", "2026-04-03")
+print(out, err)
+assert code == 3, err
+assert counts() == before
+=== END AC transfer-equal-accounts ===
+
+=== AC transfer-non-positive-amount ===
+Intent: `ledger transfer` with a zero or negative amount exits 3 and leaves the transaction count unchanged.
+
+import csv
+import io
+import os
+import tempfile
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+from cli.testing import cli_runner
+
+
+def counts():
+    code, out, err = cli_runner("count")
+    assert code == 0, err
+    rows = list(csv.reader(io.StringIO(out)))
+    return {row[0]: row[1] for row in rows[1:]}
+
+
+code, out, err = cli_runner("init")
+assert code == 0, err
+code, out, err = cli_runner("load", "accounts", "sources/seed_accounts.csv")
+assert code == 0, err
+code, out, err = cli_runner("load", "categories", "sources/seed_categories.csv")
+assert code == 0, err
+
+from_account = "DRAWER1"
+to_account = "SAFE"
+funding = "100.00"
+code, out, err = cli_runner("txn", "post", from_account, "SALES", funding, "2026-04-01", "funding")
+print(out, err)
+assert code == 0, err
+
+before = counts()
+for amount in ("0.00", "-5.00"):
+    code, out, err = cli_runner("transfer", from_account, to_account, amount, "2026-04-03")
+    print(out, err)
+    assert code == 3, err
+    assert counts() == before
+=== END AC transfer-non-positive-amount ===
+
+=== AC transfer-insufficient-balance ===
+Intent: `ledger transfer` that would leave the source balance negative exits 3 and writes neither row.
+
+import csv
+import io
+import os
+import tempfile
+from decimal import Decimal
+
+os.environ["DATABASE_URL"] = os.path.join(tempfile.mkdtemp(), "ledger.db")
+from cli.testing import cli_runner
+
+
+def counts():
+    code, out, err = cli_runner("count")
+    assert code == 0, err
+    rows = list(csv.reader(io.StringIO(out)))
+    return {row[0]: row[1] for row in rows[1:]}
+
+
+code, out, err = cli_runner("init")
+assert code == 0, err
+code, out, err = cli_runner("load", "accounts", "sources/seed_accounts.csv")
+assert code == 0, err
+code, out, err = cli_runner("load", "categories", "sources/seed_categories.csv")
+assert code == 0, err
+
+from_account = "DRAWER1"
+to_account = "SAFE"
+funding = "100.00"
+over = str(Decimal(funding) + Decimal("0.01"))
+code, out, err = cli_runner("txn", "post", from_account, "SALES", funding, "2026-04-01", "funding")
+print(out, err)
+assert code == 0, err
+
+before = counts()
+code, out, err = cli_runner("transfer", from_account, to_account, over, "2026-04-03")
+print(out, err)
+assert code == 3, err
+assert counts() == before
+=== END AC transfer-insufficient-balance ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A transfer stores both of its rows or neither. A partial transfer must never persist.
+- Transfer rows use category `TRANSFER` and never use a category outside the categories table.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Grader-Verification.md ===
+# FEATURE: Grader Verification
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Terminal verification: the supplied grader and the application test suite must both pass against the completed ledger. |
+| Depends On  | ARCHITECTURE.md, DATABASE.md, FEATURE-Schema-Init.md, FEATURE-Schema-Count.md, FEATURE-Cli-Usage.md, FEATURE-Cli-Reinit.md, FEATURE-Load-Accounts.md, FEATURE-Load-Categories.md, FEATURE-Load-Transactions.md, FEATURE-Load-Atomic.md, FEATURE-Load-Duplicate.md, FEATURE-Report-Balances.md, FEATURE-Report-Categories.md, FEATURE-Report-Monthly.md, FEATURE-Report-Unknown.md, FEATURE-Acct-Add.md, FEATURE-Acct-Get.md, FEATURE-Acct-Rename.md, FEATURE-Acct-Delete.md, FEATURE-Txn-Post.md, FEATURE-Txn-Get.md, FEATURE-Txn-Amend.md, FEATURE-Txn-Delete.md, FEATURE-Transfer.md |
+| Provides    | None. |
+| Consumes    | None. |
+
+## Questions
+
+- None.
+
+## Purpose
+
+This is the terminal verification story. It runs after every other story closes. It runs the
+supplied grader `sh sources/run.sh` as the sole acceptance verdict, and it runs the application's own
+test suite through `sh bin/test.sh`. It builds no product behavior of its own. `bin/test.sh` is a
+POSIX sh wrapper that runs `pytest -q` from the application root and exits 0 only on success.
+
+## Programmatic Acceptance
+
+=== AC grader-run-sh ===
+Intent: The completed ledger makes `sh sources/run.sh` exit zero; the grader's exit status is the sole acceptance verdict.
+Suite: full
+Requires: executable=sh; scope=test
+
+import subprocess
+import sys
+
+result = subprocess.run(["sh", "sources/run.sh"], capture_output=True, text=True)
+print(result.stdout)
+print(result.stderr, file=sys.stderr)
+assert result.returncode == 0
+=== END AC grader-run-sh ===
+
+=== AC grader-test-suite ===
+Intent: `sh bin/test.sh` runs the application's pytest suite from the application root and exits zero when every test passes.
+Requires: executable=sh; scope=test
+Requires: python-package=pytest; scope=test
+
+import subprocess
+import sys
+
+result = subprocess.run(["sh", "bin/test.sh"], capture_output=True, text=True)
+print(result.stdout)
+print(result.stderr, file=sys.stderr)
+assert result.returncode == 0
+=== END AC grader-test-suite ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Do not modify, rewrite, regenerate, or substitute anything under `sources/`.
+- Application code never reads `sources/run.sh` or any seed file. Seed files reach the database only through `ledger load`.
+=== END ARTIFACT ===

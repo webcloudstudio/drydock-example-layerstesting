@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261021.034158.199Z_layerstesting_plan_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261021.034158.199Z_layerstesting_plan_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261021.034158.199Z_layerstesting_plan_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>I&#x27;m emitting the current batch of five Blueprint artifacts, in order, under the frozen Stage 1 topology. No `TOPOLOGY.md` or `DECISIONS.json` is included, per the continuation instructions.
+
+=== BEGIN ARTIFACT ARCHITECTURE.md ===
+# ARCHITECTURE: LayersTesting
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Architecture of the cash ledger command-line executable, its persistence boundary, and its command dispatch. |
+| Depends On  | COMPASS.md |
+| Provides    | ./ledger, cli.main |
+| Consumes    | persistence.open_database |
+
+## Questions
+
+- None.
+
+## Overview
+
+The product is a command-line cash ledger named `ledger`, located at the application root and invoked as `./ledger &lt;command&gt;`. The application is a Python 3.11+ package tree with a `.venv` environment created by `uv venv`, a `pyproject.toml`, and a committed `uv.lock`. Commands read arguments from the command line and CSV files; results are written as CSV on standard output and diagnostics on standard error.
+
+## Modules and Boundaries
+
+| Module | Owns | May access |
+|---|---|---|
+| `ledger` (POSIX sh launcher) | Process entry at the application root; runs the `cli` package under `.venv/bin/python`. | `.venv` interpreter only |
+| `cli` | Argument parsing, command dispatch, usage errors (exit 2), CSV output formatting. | `persistence` public interface only |
+| `persistence` (generated, shipped library) | Store access, transactions, schema application, DSN engine selection. | Declared table operations only |
+| `services` (per-feature modules) | Validation rules (codes, names, amounts, dates, memos), balance checks, atomic write composition. | `persistence` public interface |
+
+No module outside `persistence` opens a database driver. Application code never reads `sources/run.sh` or any seed file; seed data reaches the store only through `ledger load`.
+
+## Module Ownership for Persistence, Configuration, and File Boundaries
+
+| Boundary | Owner | Notes |
+|---|---|---|
+| Store access | `persistence` | Selected by `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`. |
+| Configuration | `cli` | Resolves the DSN and passes it to `persistence.open_database`. |
+| Seed files | `cli` (load command) | Read as CSV input only; never referenced by application code otherwise. |
+| Output | `cli` | CSV to standard output; diagnostics to standard error. |
+
+## Routes, Commands, and Interfaces
+
+- Commands: `init`, `count`, `load`, `account`, `txn`, `transfer`, `report`.
+- Exit codes: `0` success, `1` operational failure, `2` usage error, `3` rejected, `4` not found.
+- Integer cents are the only money representation; floating point is not used at any layer.
+
+## Technical Decisions
+
+- Launcher: a POSIX sh `ledger` script at the application root executes the `cli` package under `.venv/bin/python` (see DECISIONS.json Q-001).
+- Engine: SQLite through the shipped persistence library; a PostgreSQL DSN selects the PostgreSQL engine at runtime (see DECISIONS.json Q-003).
+- Every command validates all inputs and rules before its first write; a failing command changes nothing.
+
+## Technology Stack
+
+- Python 3.11+ (language, `python.md`).
+- SQLite (database, `sqlite.md`, reached through the shipped persistence library).
+- CLI (`cli.md`, the `ledger` executable).
+- pytest (test runner behind `bin/test.sh`).
+- POSIX sh (`bin/test.sh`, the `ledger` launcher, and the supplied grader).
+
+## Programmatic Acceptance
+
+- None. Architecture is realized and verified by the stories that implement the features it names; the executable surface is asserted in the `foundation` story and the feature specifications.
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Do not modify, rewrite, regenerate, or substitute any file under `sources/`.
+- Do not read `sources/run.sh` or any seed file from application code.
+- Do not hardcode a report row, a count, or a total; every value comes from a query.
+- Do not open a database driver outside the shipped persistence library.
+- Do not use floating point for money at any layer.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT DATABASE.md ===
+# DATABASE: LayersTesting
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Persistence contract for the cash ledger: three tables, their access patterns, and integer-cent amounts. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | persistence.open_database, accounts, categories, transactions tables |
+
+## Questions
+
+- None.
+
+## Access Patterns
+
+Access patterns are owned by the feature that reaches them. Each operation below names exactly one table and one verb.
+
+| Pattern | Owner | Access | Repository operation | Compatibility |
+|---|---|---|---|---|
+| `FEATURE-LEDGER-001` | DATABASE.md | read-write | `accounts.create` | unchanged |
+| `FEATURE-LEDGER-002` | DATABASE.md | read | `accounts.get` | unchanged |
+| `FEATURE-LEDGER-003` | DATABASE.md | read | `accounts.list` | unchanged |
+| `FEATURE-LEDGER-004` | DATABASE.md | read-write | `accounts.update` | unchanged |
+| `FEATURE-LEDGER-005` | DATABASE.md | read-write | `accounts.delete` | unchanged |
+| `FEATURE-LEDGER-006` | DATABASE.md | read-write | `categories.create` | unchanged |
+| `FEATURE-LEDGER-007` | DATABASE.md | read | `categories.get` | unchanged |
+| `FEATURE-LEDGER-008` | DATABASE.md | read | `categories.list` | unchanged |
+| `FEATURE-LEDGER-009` | DATABASE.md | read-write | `transactions.create` | unchanged |
+| `FEATURE-LEDGER-010` | DATABASE.md | read | `transactions.get` | unchanged |
+| `FEATURE-LEDGER-011` | DATABASE.md | read | `transactions.list` | unchanged |
+| `FEATURE-LEDGER-012` | DATABASE.md | read-write | `transactions.update` | unchanged |
+| `FEATURE-LEDGER-013` | DATABASE.md | read-write | `transactions.delete` | unchanged |
+
+## Schema
+
+## `accounts`
+
+| Field | Type | Notes |
+|---|---|---|
+| `account` | VARCHAR(12) PK NOT NULL | Account code, `A-Z` and `0-9`. |
+| `name` | VARCHAR(40) NOT NULL | Account name; no comma or newline. |
+
+## `categories`
+
+| Field | Type | Notes |
+|---|---|---|
+| `category` | VARCHAR(12) PK NOT NULL | Category code, `A-Z` and `0-9`. |
+| `description` | VARCHAR(40) NOT NULL | Category description; no comma or newline. |
+
+## `transactions`
+
+| Field | Type | Notes |
+|---|---|---|
+| `txn_id` | INTEGER PK NOT NULL | Transaction id. |
+| `date` | TEXT NOT NULL | Calendar date, `YYYY-MM-DD`. |
+| `account` | VARCHAR(12) NOT NULL REFERENCES accounts(account) | Owning account. |
+| `category` | VARCHAR(12) NOT NULL REFERENCES categories(category) | Category. |
+| `amount` | INTEGER NOT NULL | Amount in integer cents. |
+| `memo` | VARCHAR(60) | Memo; 0 to 60 characters, no comma or newline. |
+
+## Programmatic Acceptance
+
+- None. Drydock owns SQLite schema construction and connectivity invariants deterministically.
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Amounts are stored as integer cents and never as floating point.
+- Application code reaches the store only through the generated persistence package.
+- Within a release the schema is built once and never migrated.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Schema-Init.md ===
+# FEATURE: Schema Init
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | `ledger init` drops and recreates the three tables empty. |
+| Depends On  | DATABASE.md, ARCHITECTURE.md |
+| Provides    | ledger init |
+| Consumes    | persistence.open_database |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger init` resets the store to an empty schema: it drops the `accounts`, `categories`, and `transactions` tables if present, then creates them empty. It writes nothing to standard output and exits 0.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC schema-init-empty ===
+Intent: `ledger init` exits zero and writes nothing to standard output.
+Requires: executable=python3; scope=test
+
+import subprocess
+
+result = subprocess.run([&quot;./ledger&quot;, &quot;init&quot;], capture_output=True, text=True)
+print(result.stdout)
+print(result.stderr)
+assert result.returncode == 0
+assert result.stdout == &quot;&quot;
+=== END AC schema-init-empty ===
+
+=== AC schema-init-counts-zero ===
+Intent: After `ledger init`, `ledger count` reports zero rows in each table.
+Requires: executable=python3; scope=test
+
+import subprocess
+
+subprocess.run([&quot;./ledger&quot;, &quot;init&quot;], capture_output=True, text=True)
+result = subprocess.run([&quot;./ledger&quot;, &quot;count&quot;], capture_output=True, text=True)
+print(result.stdout)
+print(result.stderr)
+assert result.returncode == 0
+assert result.stdout.splitlines()[1:] == [&quot;accounts,0&quot;, &quot;categories,0&quot;, &quot;transactions,0&quot;]
+=== END AC schema-init-counts-zero ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Do not open a database driver outside the shipped persistence library.
+- Init must not read `sources/run.sh` or any seed file.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Schema-Count.md ===
+# FEATURE: Schema Count
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | `ledger count` reports the row count of each table. |
+| Depends On  | DATABASE.md, FEATURE-Schema-Init.md |
+| Provides    | ledger count |
+| Consumes    | persistence.open_database |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger count` writes a `table,rows` header, then one row each for `accounts`, `categories`, and `transactions`, in that order. Every count is computed from a query against the database.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC schema-count-header ===
+Intent: `ledger count` writes the `table,rows` header first, then the three table rows in order.
+Requires: executable=python3; scope=test
+
+import subprocess
+
+subprocess.run([&quot;./ledger&quot;, &quot;init&quot;], capture_output=True, text=True)
+result = subprocess.run([&quot;./ledger&quot;, &quot;count&quot;], capture_output=True, text=True)
+print(result.stdout)
+print(result.stderr)
+assert result.returncode == 0
+lines = result.stdout.splitlines()
+assert lines[0] == &quot;table,rows&quot;
+assert [line.split(&quot;,&quot;)[0] for line in lines[1:]] == [&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;]
+=== END AC schema-count-header ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Counts come from a query; no count is hardcoded.
+- Do not read `sources/run.sh` or any seed file from application code.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Cli-Usage.md ===
+# FEATURE: Cli Usage
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261020 V1 |
+| Description | Unknown commands and wrong argument counts exit 2 with a diagnostic on standard error. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | usage error handling |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Any unknown command, unknown table or report name, or wrong argument count exits 2. The command writes nothing to standard output and one diagnostic line to standard error.
+
+## Database Interface
+
+- None — persistence is owned by ARCHITECTURE.md.
+
+## Programmatic Acceptance
+
+=== AC cli-usage-unknown-command ===
+Intent: An unknown command exits 2 with nothing on standard output.
+Requires: executable=python3; scope=test
+
+import subprocess
+
+result = subprocess.run([&quot;./ledger&quot;, &quot;frobnicate&quot;], capture_output=True, text=True)
+print(result.stdout)
+print(result.stderr)
+assert result.returncode == 2
+assert result.stdout == &quot;&quot;
+assert len(result.stderr.strip().splitlines()) == 1
+=== END AC cli-usage-unknown-command ===
+
+=== AC cli-usage-wrong-arg-count ===
+Intent: A known command given the wrong argument count exits 2 with nothing on standard output.
+Requires: executable=python3; scope=test
+
+import subprocess
+
+result = subprocess.run([&quot;./ledger&quot;, &quot;load&quot;], capture_output=True, text=True)
+print(result.stdout)
+print(result.stderr)
+assert result.returncode == 2
+assert result.stdout == &quot;&quot;
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>
