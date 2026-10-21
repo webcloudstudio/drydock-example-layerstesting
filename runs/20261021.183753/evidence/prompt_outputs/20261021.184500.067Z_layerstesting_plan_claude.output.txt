@@ -1,0 +1,562 @@
+Stage 2 batch: I'm authoring the five Current batch Blueprints. Per the ledger, `DATABASE.md` additions are needed only if a batch file needs storage the declaration does not hold. `count-rows` needs the `accounts`, `categories`, and `transactions` list operations, which `DATABASE.md` already declares (FEATURE-COUNT-001 to 003), so no `DATABASE.md` additions are required.
+
+=== BEGIN ARTIFACT FEATURE-Count.md ===
+# FEATURE: Count
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Report row counts for the accounts, categories, and transactions tables. |
+| Depends On  | ARCHITECTURE.md, DATABASE.md |
+| Provides    | ledger count |
+| Consumes    | accounts.list, categories.list, transactions.list |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger count` reports how many rows each of the three tables holds, so the operator can confirm the state of the ledger after `init` and each bulk load.
+
+## Trigger
+
+The operator runs `./ledger count` with no further arguments.
+
+## Behavior
+
+- Output is CSV on standard output: header `table,rows`, then one row each for `accounts`, `categories`, and `transactions`, in that order.
+- Each count is computed by the database from the persistence library, using the list operations declared in `DATABASE.md` (`FEATURE-COUNT-001` to `FEATURE-COUNT-003`). No count is stored or hardcoded.
+- The command changes nothing.
+- Exit code `0` on success.
+- A database that is unreachable or lacks the declared tables exits `1` with one diagnostic line on standard error and nothing on standard output.
+- Extra arguments exit `2` with nothing on standard output (usage error, per dispatch).
+
+## Access
+
+| Pattern | Owner | Access | Operation |
+|---------|-------|--------|-----------|
+| FEATURE-COUNT-001 | FEATURE-Count.md | read | `accounts.list` |
+| FEATURE-COUNT-002 | FEATURE-Count.md | read | `categories.list` |
+| FEATURE-COUNT-003 | FEATURE-Count.md | read | `transactions.list` |
+
+## Database Interface
+
+- `FEATURE-COUNT-001` — read: list accounts - returns: `account`
+- `FEATURE-COUNT-002` — read: list categories - returns: `category`
+- `FEATURE-COUNT-003` — read: list transactions - returns: `txn_id`
+
+## Programmatic Acceptance
+
+=== AC count-empty-after-init ===
+Intent: A fresh initialized database reports zero rows in each table with the declared header and order.
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("init")
+assert code == 0
+code, out, err = cli_runner("count")
+assert code == 0
+expected = "table,rows\naccounts,0\ncategories,0\ntransactions,0\n"
+assert out == expected
+=== END AC count-empty-after-init ===
+
+=== AC count-reflects-inserted-accounts ===
+Intent: Count reads the accounts table from the database, so an inserted account is reflected in the accounts row only.
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("init")
+assert code == 0
+with db_session() as db:
+    db.accounts.create(account="CASH1", name="Till One")
+code, out, err = cli_runner("count")
+assert code == 0
+lines = out.splitlines()
+assert lines[0] == "table,rows"
+assert lines[1] == "accounts,1"
+assert lines[2] == "categories,0"
+assert lines[3] == "transactions,0"
+=== END AC count-reflects-inserted-accounts ===
+
+=== AC count-rejects-extra-argument ===
+Intent: A count with a trailing argument is a usage error that exits 2 and writes nothing to standard output.
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("init")
+assert code == 0
+code, out, err = cli_runner("count", "extra")
+assert code == 2
+assert out == ""
+=== END AC count-rejects-extra-argument ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- The count is always computed from the database; no row count is stored or hardcoded.
+- `count` never writes to any table.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Field-Validation.md ===
+# FEATURE: Field Validation
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Validate account and category codes, names, descriptions, and memos before any write. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | validate_code, validate_name, validate_memo |
+| Consumes    | |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every command that accepts a code, name, description, or memo validates it before reading the database or writing. Shared validators keep the rule identical across account add, rename, load, and post.
+
+## Trigger
+
+Invoked by every command story that accepts a code, name, description, or memo, before any write.
+
+## Behavior
+
+- `validate_code(value)`: accepts 1 to 12 characters, each from `A-Z` or `0-9`. Lowercase, punctuation, whitespace, and any other character is rejected.
+- `validate_name(value)`: accepts 1 to 40 characters for names and descriptions. Used for account names, category descriptions, and any other 1-to-40 text field.
+- `validate_memo(value)`: accepts 0 to 60 characters. An empty string is valid and is stored as an empty memo.
+- All three reject any value containing a comma (`,`) or a newline (`\n` or `\r`).
+- A rejected value raises a validation error that the calling command maps to exit `3` with one diagnostic line on standard error and nothing on standard output.
+- Validators are pure: they read no database and write nothing.
+
+## Programmatic Acceptance
+
+=== AC field-code-accepts-valid ===
+Intent: Codes of 1 to 12 characters from A-Z and 0-9 are accepted and returned unchanged.
+Requires: executable=python3; scope=test
+
+from cli.validation import validate_code
+
+value = "DRAWER1"
+assert validate_code(value) == value
+longest = "ABCDEFGHIJKL"
+assert validate_code(longest) == longest
+=== END AC field-code-accepts-valid ===
+
+=== AC field-code-rejects-lowercase ===
+Intent: A code containing a lowercase letter is rejected, and the rejection is a validation error.
+Requires: executable=python3; scope=test
+
+from cli.validation import validate_code, ValidationError
+
+raised = False
+try:
+    validate_code("drawer1")
+except ValidationError:
+    raised = True
+assert raised
+=== END AC field-code-rejects-lowercase ===
+
+=== AC field-code-rejects-length ===
+Intent: A code of 13 characters or an empty code is rejected.
+Requires: executable=python3; scope=test
+
+from cli.validation import validate_code, ValidationError
+
+for bad in ("ABCDEFGHIJKLM", ""):
+    raised = False
+    try:
+        validate_code(bad)
+    except ValidationError:
+        raised = True
+    assert raised
+=== END AC field-code-rejects-length ===
+
+=== AC field-name-length-bounds ===
+Intent: Names are accepted at 1 and 40 characters and rejected at 0 and 41 characters.
+Requires: executable=python3; scope=test
+
+from cli.validation import validate_name, ValidationError
+
+assert validate_name("A") == "A"
+forty = "X" * 40
+assert validate_name(forty) == forty
+for bad in ("", "X" * 41):
+    raised = False
+    try:
+        validate_name(bad)
+    except ValidationError:
+        raised = True
+    assert raised
+=== END AC field-name-length-bounds ===
+
+=== AC field-memo-bounds ===
+Intent: Memos are accepted at 0 and 60 characters and rejected at 61 characters.
+Requires: executable=python3; scope=test
+
+from cli.validation import validate_memo, ValidationError
+
+assert validate_memo("") == ""
+sixty = "M" * 60
+assert validate_memo(sixty) == sixty
+raised = False
+try:
+    validate_memo("M" * 61)
+except ValidationError:
+    raised = True
+assert raised
+=== END AC field-memo-bounds ===
+
+=== AC field-rejects-comma-and-newline ===
+Intent: Names and memos containing a comma or a newline are rejected.
+Requires: executable=python3; scope=test
+
+from cli.validation import validate_name, validate_memo, ValidationError
+
+for validator, bad in ((validate_name, "a,b"), (validate_name, "a\nb"), (validate_memo, "a,b"), (validate_memo, "a\rb")):
+    raised = False
+    try:
+        validator(bad)
+    except ValidationError:
+        raised = True
+    assert raised
+=== END AC field-rejects-comma-and-newline ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Validators never touch the database and never write.
+- A value that fails validation is never stored, partially or otherwise.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Amount-Parsing.md ===
+# FEATURE: Amount Parsing
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Parse input amounts to integer cents and format output amounts with exactly two decimals. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | parse_amount_cents, format_cents |
+| Consumes    | |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every amount-bearing command parses its input into integer cents and formats stored cents back to decimal text. Money never passes through floating point at any layer.
+
+## Trigger
+
+Invoked by every command that accepts an amount: `txn post`, `txn amend`, `transfer`, and `load transactions`.
+
+## Behavior
+
+- `parse_amount_cents(text)` accepts input matching `-?DIGITS[.D[D]]`: an optional leading minus, one or more digits, and an optional decimal point followed by one or two digits.
+- The parsed value is non-zero. `0`, `0.00`, and `-0.00` are rejected.
+- Accepted input returns a Python `int` of cents, computed by integer arithmetic on the digit strings (for example `"-12.5"` returns `-1250`, `"45"` returns `4500`).
+- Any other input (a third decimal place, a `+` sign, a thousands separator, whitespace, exponent notation, a non-numeric string) is rejected.
+- A rejected amount raises a validation error that the calling command maps to exit `3`.
+- `format_cents(cents)` returns the decimal text with exactly two decimal places, a leading `-` when negative, and no thousands separator (for example `-1250` returns `-12.50`, `0` returns `0.00`, `500000` returns `5000.00`).
+- No function in this feature uses floating point.
+
+## Programmatic Acceptance
+
+=== AC amount-parse-valid-forms ===
+Intent: Valid amount forms parse to the integer cents they denote.
+Requires: executable=python3; scope=test
+
+from cli.money import parse_amount_cents
+
+assert parse_amount_cents("45") == 4500
+assert parse_amount_cents("45.5") == 4550
+assert parse_amount_cents("45.50") == 4550
+assert parse_amount_cents("-12.34") == -1234
+=== END AC amount-parse-valid-forms ===
+
+=== AC amount-parse-rejects-zero ===
+Intent: Zero amounts, including a negative zero, are rejected.
+Requires: executable=python3; scope=test
+
+from cli.money import parse_amount_cents, ValidationError
+
+for bad in ("0", "0.00", "-0.00"):
+    raised = False
+    try:
+        parse_amount_cents(bad)
+    except ValidationError:
+        raised = True
+    assert raised
+=== END AC amount-parse-rejects-zero ===
+
+=== AC amount-parse-rejects-malformed ===
+Intent: Amounts with three decimals, a plus sign, a separator, whitespace, or non-numeric text are rejected.
+Requires: executable=python3; scope=test
+
+from cli.money import parse_amount_cents, ValidationError
+
+for bad in ("1.234", "+5", "1,000.00", " 5", "abc", "1e3", ""):
+    raised = False
+    try:
+        parse_amount_cents(bad)
+    except ValidationError:
+        raised = True
+    assert raised
+=== END AC amount-parse-rejects-malformed ===
+
+=== AC amount-format-two-decimals ===
+Intent: Stored cents format to text with exactly two decimals, a leading minus when negative, and no separator.
+Requires: executable=python3; scope=test
+
+from cli.money import format_cents, parse_amount_cents
+
+assert format_cents(-1250) == "-12.50"
+assert format_cents(0) == "0.00"
+assert format_cents(500000) == "5000.00"
+assert format_cents(parse_amount_cents("-7.05")) == "-7.05"
+=== END AC amount-format-two-decimals ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- No floating-point type or operation is used to represent, parse, or format money.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Date-Validation.md ===
+# FEATURE: Date Validation
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Accept only YYYY-MM-DD dates that name a real calendar day, including leap days. |
+| Depends On  | ARCHITECTURE.md |
+| Provides    | validate_date |
+| Consumes    | |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every command that accepts a date validates it before writing, so no transaction is stored with a date that is malformed or does not exist.
+
+## Trigger
+
+Invoked by every command that accepts a date: `txn post`, `transfer`, and `load transactions`.
+
+## Behavior
+
+- `validate_date(text)` accepts only the exact form `YYYY-MM-DD` (four digits, hyphen, two digits, hyphen, two digits) that names a real calendar day.
+- Leap days are accepted only in leap years: `2024-02-29` is valid; `2026-02-29` is not.
+- Impossible days are rejected, including `2026-02-30`, `2026-04-31`, and month `00` or `13`.
+- Any other form (missing zero padding such as `2026-1-05`, a time component, a slash separator, whitespace) is rejected.
+- Returns the input unchanged when valid. A rejected date raises a validation error that the calling command maps to exit `3`.
+- The validator reads no database and writes nothing.
+
+## Programmatic Acceptance
+
+=== AC date-accepts-real-days ===
+Intent: Ordinary dates and a leap day in a leap year are accepted and returned unchanged.
+Requires: executable=python3; scope=test
+
+from cli.dates import validate_date
+
+value = "2026-01-01"
+assert validate_date(value) == value
+leap = "2024-02-29"
+assert validate_date(leap) == leap
+=== END AC date-accepts-real-days ===
+
+=== AC date-rejects-impossible-days ===
+Intent: Dates that name no real calendar day are rejected as validation errors.
+Requires: executable=python3; scope=test
+
+from cli.dates import validate_date, ValidationError
+
+for bad in ("2026-02-30", "2026-02-29", "2026-04-31", "2026-00-10", "2026-13-01"):
+    raised = False
+    try:
+        validate_date(bad)
+    except ValidationError:
+        raised = True
+    assert raised
+=== END AC date-rejects-impossible-days ===
+
+=== AC date-rejects-malformed-form ===
+Intent: Dates not in the exact YYYY-MM-DD form are rejected.
+Requires: executable=python3; scope=test
+
+from cli.dates import validate_date, ValidationError
+
+for bad in ("2026-1-05", "2026/01/05", "2026-01-05T00:00", " 2026-01-05", ""):
+    raised = False
+    try:
+        validate_date(bad)
+    except ValidationError:
+        raised = True
+    assert raised
+=== END AC date-rejects-malformed-form ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Dates are never stored unless they pass `validate_date`.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Non-Negative-Balance.md ===
+# FEATURE: Non-Negative Balance
+
+| Field       | Value |
+|-------------|-------|
+| Version     | 20261021 V1 |
+| Description | Reject any change that would leave an account balance below zero, checked against the database before the first write. |
+| Depends On  | ARCHITECTURE.md, DATABASE.md, FEATURE-Init.md |
+| Provides    | check_balances_after(changes) |
+| Consumes    | transactions.list |
+
+## Questions
+
+- None.
+
+## Purpose
+
+No command may leave any account with a negative balance. The balance is the sum of that account's transaction amounts. The check runs against the database for every account a command would change, before that command writes anything.
+
+## Trigger
+
+Invoked by every command that changes transactions: `txn post`, `txn amend`, `txn delete`, `transfer`, and `load transactions`.
+
+## Behavior
+
+- `check_balances_after(changes)` takes a list of `(account, delta_cents)` pairs describing the proposed change. A delta is the signed cents a command would add to that account.
+- For each distinct affected account, it computes the current balance as the sum of the account's transaction amounts read from the database, then adds the summed deltas for that account.
+- If any resulting balance is below zero, it raises a rule-breach error that the calling command maps to exit `3`, and nothing is written.
+- If every resulting balance is zero or greater, it returns normally and the calling command proceeds to write.
+- An account with no transactions has a current balance of zero.
+- The check is read-only.
+- Several changes to one account in the same command are summed before the comparison, so a transfer that drives one account negative is rejected even if each leg alone would not be.
+
+## Access
+
+| Pattern | Owner | Access | Operation |
+|---------|-------|--------|-----------|
+| FEATURE-COUNT-003 | FEATURE-Count.md | read | `transactions.list` |
+
+The balance check reads the transaction list through the same declared read operation used by Count, and it cites that pattern rather than adding one. Account-scoped reads are computed in the persistence layer's query, not by a new repository operation.
+
+## Database Interface
+
+- `FEATURE-COUNT-003` — read: list transactions - returns: `account`, `amount`
+
+## Programmatic Acceptance
+
+=== AC balance-allows-zero-result ===
+Intent: A change that leaves an account at exactly zero is allowed.
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+from cli.balance import check_balances_after
+from persistence.testing import db_session
+
+code, out, err = cli_runner("init")
+assert code == 0
+with db_session() as db:
+    db.accounts.create(account="CASH1", name="Till One")
+    db.categories.create(category="SALES", description="Sales")
+    db.transactions.create(txn_id=1, date="2026-01-01", account="CASH1", category="SALES", amount=500, memo="")
+    check_balances_after([("CASH1", -500)])
+=== END AC balance-allows-zero-result ===
+
+=== AC balance-rejects-negative-result ===
+Intent: A change that would leave an account below zero raises a rule breach and leaves the table unchanged.
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+from cli.balance import check_balances_after, RuleBreach
+from persistence.testing import db_session
+
+code, out, err = cli_runner("init")
+assert code == 0
+with db_session() as db:
+    db.accounts.create(account="CASH1", name="Till One")
+    db.categories.create(category="SALES", description="Sales")
+    db.transactions.create(txn_id=1, date="2026-01-01", account="CASH1", category="SALES", amount=500, memo="")
+    before = db.transactions.list()
+    raised = False
+    try:
+        check_balances_after([("CASH1", -501)])
+    except RuleBreach:
+        raised = True
+    assert raised
+    assert db.transactions.list() == before
+=== END AC balance-rejects-negative-result ===
+
+=== AC balance-sums-changes-per-account ===
+Intent: Several changes to one account are summed before the comparison, so a combined breach is rejected even when each leg alone is allowed.
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+from cli.balance import check_balances_after, RuleBreach
+from persistence.testing import db_session
+
+code, out, err = cli_runner("init")
+assert code == 0
+with db_session() as db:
+    db.accounts.create(account="CASH1", name="Till One")
+    db.categories.create(category="SALES", description="Sales")
+    db.transactions.create(txn_id=1, date="2026-01-01", account="CASH1", category="SALES", amount=500, memo="")
+    check_balances_after([("CASH1", -300)])
+    raised = False
+    try:
+        check_balances_after([("CASH1", -300), ("CASH1", -300)])
+    except RuleBreach:
+        raised = True
+    assert raised
+=== END AC balance-sums-changes-per-account ===
+
+=== AC balance-empty-account-is-zero ===
+Intent: An account with no transactions has a balance of zero, so any debit is rejected and any credit is allowed.
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+from cli.balance import check_balances_after, RuleBreach
+from persistence.testing import db_session
+
+code, out, err = cli_runner("init")
+assert code == 0
+with db_session() as db:
+    db.accounts.create(account="CASH1", name="Till One")
+    check_balances_after([("CASH1", 100)])
+    raised = False
+    try:
+        check_balances_after([("CASH1", -1)])
+    except RuleBreach:
+        raised = True
+    assert raised
+=== END AC balance-empty-account-is-zero ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- The check never writes; a rejected change is never partially applied.
+- Balances are always derived from transaction rows, never from a stored balance column.
+=== END ARTIFACT ===

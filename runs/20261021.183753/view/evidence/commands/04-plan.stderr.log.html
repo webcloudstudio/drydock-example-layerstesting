@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/commands/04-plan.stderr.log</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/commands/04-plan.stderr.log</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/commands/04-plan.stderr.log">Raw file</a></div></header>
+<article class="doc"><pre>========================================================================
+POST-LLM FAILURE  ·  plan  ·  plan generation stalled
+========================================================================
+
+  Blueprint generation stalled after TOPOLOGY.md was accepted and
+  frozen, after 5 Stage 2 pass(es).
+  topology:  1  (30 stories declared)
+  specs:     11 / 30  accepted
+  manifest:  0  (not serialized)
+  missing:   load-accounts -&gt; FEATURE-Load-Accounts.md
+             load-categories -&gt; FEATURE-Load-Categories.md
+             load-transactions -&gt; FEATURE-Load-Transactions.md
+             account-add -&gt; FEATURE-Account-Add.md
+             account-get -&gt; FEATURE-Account-Get.md
+             account-rename -&gt; FEATURE-Account-Rename.md
+             account-delete -&gt; FEATURE-Account-Delete.md
+             txn-post -&gt; FEATURE-Txn-Post.md
+             txn-get -&gt; FEATURE-Txn-Get.md
+             txn-amend -&gt; FEATURE-Txn-Amend.md
+             txn-delete -&gt; FEATURE-Txn-Delete.md
+             transfer -&gt; FEATURE-Transfer.md
+  … (9 more lines truncated)
+
+  Recovery
+    Inspect the failed Stage 2 batch, then run: drydock plan
+    LayersTesting
+
+========================================================================
+</pre></article>
+</main>
+</body>
+</html>
