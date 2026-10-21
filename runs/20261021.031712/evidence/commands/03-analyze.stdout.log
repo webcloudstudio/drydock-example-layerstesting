@@ -1,0 +1,7 @@
+Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Analyzing Blueprint: LayersTesting
+Running analysis...
+2026-10-20 23:17:20 EDT  Calling CLAUDE/claude-haiku-5-5 (analyze)...
+  Completed CLAUDE/claude-haiku-5-5 (analyze)  rc=0
+
+Target - committed project workspace git store

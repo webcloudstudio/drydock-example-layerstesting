@@ -1,0 +1,4 @@
+{"label": "INITIALIZED", "result": "pass", "at": "2026-10-21T03:17:14.240+00:00", "detail": "", "command": "drydock init LayersTesting", "attempts": 1}
+{"label": "IMPORTED", "result": "pass", "at": "2026-10-21T03:17:18.670+00:00", "detail": "", "command": "drydock import LayersTesting", "attempts": 1}
+{"label": "ANALYZED", "result": "fail", "at": "2026-10-21T03:17:46.673+00:00", "detail": "Analyze failed: LLM output did not satisfy the artifact contract. Text appeared outside delimited artifact blocks. Stray text before the first artifact block: \"I'll produce the analysis from the injected sources and job block. No tool calls are needed for this step.\" No generated artifacts were written.", "command": "drydock analyze LayersTesting", "attempts": 1}
+{"state": "ANALYZED", "result": "fail", "at": "2026-10-21T03:17:46.673+00:00", "attempts": 1}
