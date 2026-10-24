@@ -1,8 +1,0 @@
-I can't emit this batch as-is. The Stage 2 instructions ask for five Blueprint files under the output contract, and I'd be writing them from the topology alone, without first checking the files they depend on. Before I author them, I'm going to verify the existing Blueprint and the build-directory state so the specs match what is actually there.
-
-Here is what I'll check first:
-- The accepted `ARCHITECTURE.md` and `FEATURE-*.md` files, so my `Depends On`, `Provides`, and `Consumes` lines point at names that exist.
-- The `DATABASE.md` access patterns, so the `Repository operation` and `supplies`/`returns` citations match what is declared.
-- The `sources/` staging, so the acceptance blocks reference only real staged paths.
-
-I'll start by reading the blueprint directory and the accepted files.

@@ -1,8 +1,0 @@
-Drydock 0.2.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
-plan verify: LayersTesting
-  32 acceptance criteria in 14 files: every one can run
-  ⚠  FEATURE-ACCOUNT-CATEGORY-LOAD.md [load-accounts-round-trip]: expects 'accounts,2', a value re-typed rather than derived from the input or read back from the system
-  ⚠  FEATURE-ACCOUNT-CATEGORY-LOAD.md [load-categories-round-trip]: expects 'categories,2', a value re-typed rather than derived from the input or read back from the system
-  ⚠  FEATURE-ACCOUNT-CATEGORY-LOAD.md [load-rollback-invalid]: expects 'accounts,0', a value re-typed rather than derived from the input or read back from the system
-  ⚠  FEATURE-SCHEMA-LIFECYCLE.md [schema-init-empty]: expects 'table,rows', a value re-typed rather than derived from the input or read back from the system
-  ⚠  FEATURE-SCHEMA-LIFECYCLE.md [schema-count-order]: expects 'table,rows', a value re-typed rather than derived from the input or read back from the system

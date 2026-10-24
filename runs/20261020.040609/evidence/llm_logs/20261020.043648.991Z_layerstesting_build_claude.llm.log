@@ -1,4 +1,0 @@
-  Claude session: resume id=b1ab933c-85aa-4470-b461-44b786e0cfef
-  Completed CLAUDE/claude-haiku-5-5 (build)  rc=0
-    elapsed=7.8s   provider=6.4s   turns=1   cached=56,759 (100% hit)   uncached=2   write 12,767   out=1,255   cost=$0.0271   tps=159.9
-  tokens: cached=56,759 (100% hit) · uncached=2 · write 12,767 · out=1,255 · cost=$0.0271

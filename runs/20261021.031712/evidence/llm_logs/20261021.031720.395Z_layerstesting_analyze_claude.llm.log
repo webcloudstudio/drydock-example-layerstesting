@@ -1,3 +1,0 @@
-2026-10-20 23:17:20 EDT  Calling CLAUDE/claude-haiku-5-5 (analyze)...
-  Completed CLAUDE/claude-haiku-5-5 (analyze)  rc=0
-    elapsed=26.1s   provider=25.0s   turns=1   cached=649 (100% hit)   uncached=2   write 35,202   out=6,608   cost=$0.0104   tps=252.9

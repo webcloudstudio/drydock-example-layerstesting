@@ -1,2 +1,0 @@
-error: build failed for LayersTesting: 1 step(s)
-  INTEG-002 — closed/failed: programmatic acceptance failed: nonneg-rejects-negative-balance, nonneg-sums-all-transactions, nonneg-rejection-changes-nothing

@@ -1,1 +1,0 @@
-2026-10-20T18:43:38.068492Z ERROR codex_core::tools::router: error=apply_patch verification failed: Failed to read file to update /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/build/LayersTesting/ledger_app/services.py: No such file or directory (os error 2)

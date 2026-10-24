@@ -1,3 +1,0 @@
-<!-- Compacted from ARCHITECTURE.md sha256=750530d15ea45e43f4b4233543217a74fc8c77f4775441af30ff82a665b44dbe on 2026-10-20 by drydock build agent -->
-
-Python ledger layers: executable `ledger`; `cli` for parsing, dispatch, and exit mapping; `ledger_app.config` for `DATABASE_URL` → `DATABASE_PATH` → `data/app.db`; `ledger_app.services` for workflows and business rules; shipped `persistence` for all database access. Exit codes: 0 success, 1 operational failure, 2 usage error, 3 rejection, 4 not found. Application code must not import database drivers or read `sources/`. Amounts use integer cents.

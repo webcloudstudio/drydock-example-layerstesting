@@ -1,4 +1,0 @@
---- llm 1/1 · analyze · claude claude-haiku-5-5 · 20261020.033908.357Z-ecfeafc9 ---
-2026-10-19 23:39:08 EDT  Calling CLAUDE/claude-haiku-5-5 (analyze)...
-  Completed CLAUDE/claude-haiku-5-5 (analyze)  rc=0
-    elapsed=27.1s   provider=25.3s   turns=1   cached=649 (100% hit)   uncached=2   write 35,280   out=6,450   cost=$0.0103   tps=238.3

@@ -1,3 +1,0 @@
-Error: Analyze failed: LLM output did not satisfy the artifact contract.
-  Text appeared outside delimited artifact blocks.
-  No generated artifacts were written.

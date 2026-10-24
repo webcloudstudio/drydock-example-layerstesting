@@ -1,3 +1,0 @@
-2026-10-20 09:45:23 EDT  Calling CLAUDE/claude-haiku-5-5 (lineage_attribute)...
-  Completed CLAUDE/claude-haiku-5-5 (lineage_attribute)  rc=0
-    elapsed=11.0s   provider=8.4s   turns=1   cached=2,348 (100% hit)   uncached=2   write 4,187   out=1,870   cost=$0.0018   tps=169.6
