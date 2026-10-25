@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-LoadRejection.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-LoadRejection.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-LoadRejection.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Load Rejection</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>Guarantees that a rejected <code>ledger load</code> exits 3 and leaves every table exactly as it was.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-LoadAccounts.md, FEATURE-LoadCategories.md, FEATURE-LoadTransactions.md, FEATURE-Count.md</td></tr><tr><td>Provides</td><td>atomic load rejection</td></tr><tr><td>Consumes</td><td>ledger load accounts, ledger load categories, ledger load transactions, ledger count</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Prove and enforce the all-or-nothing rule for loads: a file with one invalid row stores none of its rows. A file of ten valid rows followed by an eleventh naming an unknown account stores none of the eleven.</p>
+<h2>Behavior</h2>
+<div class="scroll"><table><thead><tr><th>Scenario</th><th>Result</th></tr></thead><tbody><tr><td>Transactions file whose last row names an unknown account</td><td>Exit 3, nothing on stdout, no table changes.</td></tr><tr><td>Transactions file with an invalid amount, date, or duplicate id on a late row</td><td>Exit 3, no table changes.</td></tr><tr><td>Accounts file reloaded after it was loaded</td><td>Exit 3, no table changes.</td></tr><tr><td>Categories file reloaded after it was loaded</td><td>Exit 3, no table changes.</td></tr></tbody></table></div>
+<p>Row counts of all three tables read through <code>ledger count</code> are identical before and after every rejected command.</p>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-TXN-002</code> — read: verify no transaction row was stored - supplies: <code>account</code> - returns: <code>txn_id</code>, <code>account</code>, <code>amount</code></li><li><code>FEATURE-ACCOUNT-002</code> — read: verify no account row was stored - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC load-rejection-eleventh-row ===<br>Intent: Ten valid rows followed by an unknown-account row are rejected with exit 3 and none of the eleven is stored.</p>
+<p>import csv import io import os import tempfile from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>def counts(): rc, out, err = cli_runner(&quot;count&quot;) assert rc == 0 return {r[0]: int(r[1]) for r in list(csv.reader(io.StringIO(out)))[1:]}</p>
+<p>def load(table, header, rows, tmp, name=None): path = os.path.join(tmp, (name or table) + &quot;.csv&quot;) with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh: w = csv.writer(fh, lineterminator=&quot;\n&quot;) w.writerow(header) w.writerows(rows) return cli_runner(&quot;load&quot;, table, path)</p>
+<p>header = [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;] acct, cat = &quot;LDRJA1&quot;, &quot;LDRJC1&quot; with db_session() as db: base = max([t.txn_id for t in db.transactions.list()], default=0) + 1000 rows = [[base + i, &quot;2026-05-01&quot;, acct, cat, &quot;10.00&quot;, &quot;batch %d&quot; % i] for i in range(1, 11)] rows.append([base + 11, &quot;2026-05-01&quot;, &quot;LDRJNONE&quot;, cat, &quot;10.00&quot;, &quot;unknown account&quot;]) with tempfile.TemporaryDirectory() as tmp: assert load(&quot;accounts&quot;, [&quot;account&quot;, &quot;name&quot;], [[acct, &quot;Reject Account&quot;]], tmp)[0] == 0 assert load(&quot;categories&quot;, [&quot;category&quot;, &quot;description&quot;], [[cat, &quot;Reject Category&quot;]], tmp)[0] == 0 before = counts() rc, out, err = load(&quot;transactions&quot;, header, rows, tmp, &quot;eleven&quot;) print(out, err) assert rc == 3 assert out == &quot;&quot; assert counts() == before with db_session() as db: for i in range(1, 12): assert db.transactions.get(txn_id=base + i) is None === END AC load-rejection-eleventh-row ===</p>
+<p>=== AC load-rejection-staged-bad-file ===<br>Intent: The supplied bad transactions file is rejected with exit 3 and no table row count changes.</p>
+<p>import csv import io from pathlib import Path from cli.testing import cli_runner</p>
+<p>def counts(): rc, out, err = cli_runner(&quot;count&quot;) assert rc == 0 return {r[0]: int(r[1]) for r in list(csv.reader(io.StringIO(out)))[1:]}</p>
+<p>bad = Path(&quot;sources&quot;) / &quot;seed_transactions_bad.csv&quot; assert bad.is_file() before = counts() rc, out, err = cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(bad)) print(out, err) assert rc == 3 assert out == &quot;&quot; assert counts() == before === END AC load-rejection-staged-bad-file ===</p>
+<p>=== AC load-rejection-late-invalid-fields ===<br>Intent: An invalid amount, invalid date, or duplicate id on a late row stores none of the earlier valid rows.</p>
+<p>import csv import io import os import tempfile from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>def counts(): rc, out, err = cli_runner(&quot;count&quot;) assert rc == 0 return {r[0]: int(r[1]) for r in list(csv.reader(io.StringIO(out)))[1:]}</p>
+<p>def load(table, header, rows, tmp, name=None): path = os.path.join(tmp, (name or table) + &quot;.csv&quot;) with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh: w = csv.writer(fh, lineterminator=&quot;\n&quot;) w.writerow(header) w.writerows(rows) return cli_runner(&quot;load&quot;, table, path)</p>
+<p>header = [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;] acct, cat = &quot;LDRLA1&quot;, &quot;LDRLC1&quot; with db_session() as db: base = max([t.txn_id for t in db.transactions.list()], default=0) + 1000 good = [ [base + 1, &quot;2026-05-01&quot;, acct, cat, &quot;40.00&quot;, &quot;first&quot;], [base + 2, &quot;2026-05-02&quot;, acct, cat, &quot;40.00&quot;, &quot;second&quot;], ] late = [ [base + 3, &quot;2026-05-03&quot;, acct, cat, &quot;1.234&quot;, &quot;bad amount&quot;], [base + 4, &quot;2026-02-30&quot;, acct, cat, &quot;5.00&quot;, &quot;bad date&quot;], [base + 1, &quot;2026-05-03&quot;, acct, cat, &quot;5.00&quot;, &quot;duplicate id&quot;], ] with tempfile.TemporaryDirectory() as tmp: assert load(&quot;accounts&quot;, [&quot;account&quot;, &quot;name&quot;], [[acct, &quot;Late Account&quot;]], tmp)[0] == 0 assert load(&quot;categories&quot;, [&quot;category&quot;, &quot;description&quot;], [[cat, &quot;Late Category&quot;]], tmp)[0] == 0 before = counts() for n, bad_row in enumerate(late, start=1): rc, out, err = load(&quot;transactions&quot;, header, good + [bad_row], tmp, &quot;late%d&quot; % n) print(n, out, err) assert rc == 3 assert out == &quot;&quot; assert counts() == before with db_session() as db: assert db.transactions.get(txn_id=base + 1) is None assert db.transactions.get(txn_id=base + 2) is None === END AC load-rejection-late-invalid-fields ===</p>
+<p>=== AC load-rejection-reload-existing ===<br>Intent: Reloading accounts or categories that already exist is rejected with exit 3 and changes no table.</p>
+<p>import csv import io import os import tempfile from cli.testing import cli_runner</p>
+<p>def counts(): rc, out, err = cli_runner(&quot;count&quot;) assert rc == 0 return {r[0]: int(r[1]) for r in list(csv.reader(io.StringIO(out)))[1:]}</p>
+<p>def write(path, header, rows): with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh: w = csv.writer(fh, lineterminator=&quot;\n&quot;) w.writerow(header) w.writerows(rows)</p>
+<p>with tempfile.TemporaryDirectory() as tmp: accounts = os.path.join(tmp, &quot;accounts.csv&quot;) categories = os.path.join(tmp, &quot;categories.csv&quot;) write(accounts, [&quot;account&quot;, &quot;name&quot;], [[&quot;LDRRA1&quot;, &quot;Reload A&quot;], [&quot;LDRRA2&quot;, &quot;Reload B&quot;]]) write(categories, [&quot;category&quot;, &quot;description&quot;], [[&quot;LDRRC1&quot;, &quot;Reload C&quot;]]) assert cli_runner(&quot;load&quot;, &quot;accounts&quot;, accounts)[0] == 0 assert cli_runner(&quot;load&quot;, &quot;categories&quot;, categories)[0] == 0 before = counts() for table, path in ((&quot;accounts&quot;, accounts), (&quot;categories&quot;, categories)): rc, out, err = cli_runner(&quot;load&quot;, table, path) print(table, out, err) assert rc == 3 assert out == &quot;&quot; assert counts() == before === END AC load-rejection-reload-existing ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A rejected load never leaves partial rows in any table.</li><li>Rejected loads write nothing to standard output and one diagnostic line to standard error.</li></ul></article>
+</main>
+</body>
+</html>

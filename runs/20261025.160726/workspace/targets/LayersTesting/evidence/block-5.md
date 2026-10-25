@@ -1,0 +1,134 @@
+# Evidence: Block 5 · Feature (block-5)
+
+- block type: block
+- date: 2026-10-25
+- resulting state: closed/verified
+- story points (combined assembled cost): 11510
+- execution id: 20261025.164213.655Z-bd083b82
+
+## Stories built
+- Assemble and verify the non-negative balance rule across every mutating command. (balance-rule) [story]
+
+## Stacked context
+- stack: python_compact.md (SP 921)
+- compass: COMPASS.md (SP 1156)
+- implements: FEATURE-BalanceRule.md (SP 3200)
+- context: ARCHITECTURE_compact.md (SP 327)
+- context: DATABASE_compact.md (SP 453)
+- stack: cli.md (SP 2689)
+- stack: persistence_compact.md (SP 2693)
+
+## Build directory changes
+- data/logs/test_2026-10-25_124352.log
+- tests/test_balance_rule.py
+
+## Pre-build acceptance observation
+- GREEN (prepassed): balance-rule-post (FEATURE-BalanceRule.md)
+  intent: txn post rejects a withdrawal exceeding the balance and accepts one that brings it to zero.
+  return code: 0
+  stdout:
+    error: account ACPTBP1 would be -0.01; balance may not go negative
+    
+    txn_id,date,account,category,amount,memo
+    2,2026-06-02,ACPTBP1,ACPTBPC,-50.00,
+- GREEN (prepassed): balance-rule-amend (FEATURE-BalanceRule.md)
+  intent: txn amend rejects an amount that would leave the balance negative and leaves the row unchanged.
+  return code: 0
+  stdout:
+    error: account ACPTBA1 would be -0.01; balance may not go negative
+    
+    txn_id,date,account,category,amount,memo
+    1,2026-06-01,ACPTBA1,ACPTBAC,30.00,
+- GREEN (prepassed): balance-rule-delete (FEATURE-BalanceRule.md)
+  intent: txn delete rejects removing a deposit that later withdrawals depend on and keeps the row.
+  return code: 0
+  stdout:
+    error: account ACPTBD1 would be -30.00; balance may not go negative
+    
+    deleted
+    2
+- GREEN (prepassed): balance-rule-transfer (FEATURE-BalanceRule.md)
+  intent: transfer rejects an amount above the source balance and writes neither row.
+  return code: 0
+  stdout:
+    error: account ACPTBT1 would be -0.01; balance may not go negative
+- GREEN (prepassed): balance-rule-load (FEATURE-BalanceRule.md)
+  intent: load transactions rejects a file whose rows leave a balance negative and stores none of its rows.
+  return code: 0
+  stdout:
+    error: account ACPTBL1 would be -0.01; balance may not go negative
+
+## Post-build programmatic acceptance
+- PASS: balance-rule-post (FEATURE-BalanceRule.md)
+  intent: txn post rejects a withdrawal exceeding the balance and accepts one that brings it to zero.
+  target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.160726/build/LayersTesting/.venv/bin/python
+  provisioning: not required
+  return code: 0
+  stdout:
+    error: account ACPTBP1 would be -0.01; balance may not go negative
+    
+    txn_id,date,account,category,amount,memo
+    2,2026-06-02,ACPTBP1,ACPTBPC,-50.00,
+- PASS: balance-rule-amend (FEATURE-BalanceRule.md)
+  intent: txn amend rejects an amount that would leave the balance negative and leaves the row unchanged.
+  target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.160726/build/LayersTesting/.venv/bin/python
+  provisioning: not required
+  return code: 0
+  stdout:
+    error: account ACPTBA1 would be -0.01; balance may not go negative
+    
+    txn_id,date,account,category,amount,memo
+    1,2026-06-01,ACPTBA1,ACPTBAC,30.00,
+- PASS: balance-rule-delete (FEATURE-BalanceRule.md)
+  intent: txn delete rejects removing a deposit that later withdrawals depend on and keeps the row.
+  target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.160726/build/LayersTesting/.venv/bin/python
+  provisioning: not required
+  return code: 0
+  stdout:
+    error: account ACPTBD1 would be -30.00; balance may not go negative
+    
+    deleted
+    2
+- PASS: balance-rule-transfer (FEATURE-BalanceRule.md)
+  intent: transfer rejects an amount above the source balance and writes neither row.
+  target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.160726/build/LayersTesting/.venv/bin/python
+  provisioning: not required
+  return code: 0
+  stdout:
+    error: account ACPTBT1 would be -0.01; balance may not go negative
+- PASS: balance-rule-load (FEATURE-BalanceRule.md)
+  intent: load transactions rejects a file whose rows leave a balance negative and stores none of its rows.
+  target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.160726/build/LayersTesting/.venv/bin/python
+  provisioning: not required
+  return code: 0
+  stdout:
+    error: account ACPTBL1 would be -0.01; balance may not go negative
+
+## Build summary
+I'll start by inspecting the build directory to see what already exists.The earlier blocks are built. Next I'll read the ledger core and the mutating commands to see where the balance guard lives.Most of the guard is already wired: post, amend, delete, transfer, and load all call `balance_guard` before writing. I'll check the existing tests for balance coverage and run the baseline suite.The existing tests already exercise the guard in each command. I'll run the baseline suite and look at the `store` fixture so the new balance-rule tests can reuse it.Baseline is 251 passing. The guard is already wired into every mutating command, so the gap is the explicit cross-command verification this block asks for. Before writing the tests, I'll check how the existing transfer and load tests set up their fixtures.I have what I need. The plan is a new `tests/test_balance_rule.py` that drives each of the five mutating commands through `cli_runner` against a throwaway store, then reads the outcome back through `txn get`, `account get`, and `count`. It won't use the application store, since `cli_runner` commits outside the rollback session.I left a messy expression in `_reject_amend`. Fixing that before running anything.All 20 new tests pass. The spec's five programmatic acceptance criteria are this step's Definition of Done, so I'll run them too. I'll check whether the blueprint spec is on disk so I can extract them verbatim, and whether the store is reachable.The blueprint is on disk. I'll extract the five criteria into a scratch directory outside the build tree, then run them against a throwaway SQLite file rather than the real `data/app.db`, since `cli_runner` commits outside the rollback session.My extraction kept the `Intent:` header line, which isn't Python. Stripping it and re-running.`-I` ignores `PYTHONPATH`, so the app package isn't importable. These scripts are my own extracted files in a scratch directory, so I'll drop `-I` and rely on `PYTHONPATH`.The five criteria don't pass as run here, and the cause is environmental, not the code. `db_session()` opens an uncommitted rollback transaction, and `cli_runner` opens its own SQLite connection, so it can't see the criterion's seeded rows. The Drydock harness is what makes `cli_runner` join that transaction. The two lines `transfer` and `load` exit 0 only because they got a `Rejected` for a missing account, so their assertions pass for the wrong reason. I'll record that rather than count it as verification.
+
+Next, the project's declared test gate, `sh bin/test.sh`, which the COMPASS requires for every behavioral story.The balance rule was already wired into all five mutating commands, so this block only needed verification. I added `tests/test_balance_rule.py` (20 tests) and changed no application code. `sh bin/test.sh` exits 0 with 271 passing (the prior 251 plus the new 20).
+
+**What I found**
+- `txn post`, `txn amend`, `txn delete`, `transfer`, and `load transactions` each call `balance_guard` in `cli/core.py` before their first write. A rejection exits 3 with empty stdout.
+- Existing tests in `test_commands.py` and `test_ledger_core.py` already cover the basic overdraw cases.
+
+**What the new tests cover**
+- Each command's rejection, read back through `txn get`, `account get`, or `count`, so nothing is checked through diagnostic text.
+- Exact-zero acceptance for each command, plus the boundary where a deposit amend or a debit delete is always allowed.
+- A load file that overdraws one account while another account in the same file is fine, and a file that nets an account to exactly zero.
+- A parametrized test that every mutating command exits 3 with empty stdout and writes nothing.
+
+**Spec acceptance criteria: not verified here**
+I extracted the five `balance-rule-*` criteria from `FEATURE-BalanceRule.md` and ran them against a throwaway SQLite file. Post, amend, and delete fail with "no account" or "no transaction". `db_session()` seeds rows in an uncommitted rollback transaction that `cli_runner`'s separate connection can't see. Drydock's harness makes `cli_runner` join that transaction, so this looks like a local-run limitation, not wrong behavior. The transfer and load criteria exit 0 only because they hit a missing-account rejection that happens to match their asserts, so they don't prove the rule in this environment. I didn't emit `AC_BROKEN`, since the expected values look correct. The harness run is the real check on these five.
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- tests/test_balance_rule.py
+
+SUMMARY:
+Verified that post, amend, delete, transfer, and load each call the shared `balance_guard` before any write, and that a rejection exits 3 with no stdout and no table change. Added 20 in-process tests in `tests/test_balance_rule.py` covering rejection, exact-zero acceptance, and a per-command rejection check, all on a `tmp_path` store. Baseline was 251 passing; `sh bin/test.sh` now reports 271 passing, exit 0. The five programmatic acceptance criteria could not be confirmed locally because `cli_runner` does not share the `db_session` transaction outside the harness (see above).
+
+BLOCKERS:
+- The five `balance-rule-*` acceptance criteria were run locally and failed on seeding visibility, not on the balance logic. They need the Drydock harness run to confirm.

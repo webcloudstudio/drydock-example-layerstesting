@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/registry.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/registry.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/registry.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;The command table. Command modules call ``register`` on import; nothing else edits it.&quot;&quot;&quot;
+
+from collections.abc import Callable
+
+from cli.errors import UsageError
+
+Handler = Callable[[list[str]], list[list[str]] | None]
+
+_COMMANDS: dict[tuple[str, ...], tuple[Handler, tuple[int, int]]] = {}
+
+
+def register(words: tuple[str, ...], handler: Handler, nargs: tuple[int, int]) -&gt; None:
+    &quot;&quot;&quot;Add a command. ``words`` is its name, ``nargs`` is the (min, max) argument count after it.&quot;&quot;&quot;
+    if not words:
+        raise ValueError(&quot;a command needs at least one word&quot;)
+    if words in _COMMANDS:
+        raise ValueError(f&quot;command already registered: {&#x27; &#x27;.join(words)}&quot;)
+    low, high = nargs
+    if low &lt; 0 or high &lt; low:
+        raise ValueError(f&quot;invalid argument count {nargs!r} for {&#x27; &#x27;.join(words)}&quot;)
+    _COMMANDS[tuple(words)] = (handler, (low, high))
+
+
+def lookup(argv: list[str]) -&gt; tuple[Handler, list[str]]:
+    &quot;&quot;&quot;Return the handler for the longest registered word prefix of ``argv`` and its arguments.&quot;&quot;&quot;
+    for size in range(len(argv), 0, -1):
+        entry = _COMMANDS.get(tuple(argv[:size]))
+        if entry is not None:
+            handler, (low, high) = entry
+            args = argv[size:]
+            if not low &lt;= len(args) &lt;= high:
+                raise UsageError(f&quot;{&#x27; &#x27;.join(argv[:size])}: expects {_count(low, high)} argument(s)&quot;)
+            return handler, args
+    if not argv:
+        raise UsageError(&quot;no command given&quot;)
+    raise UsageError(f&quot;unknown command: {&#x27; &#x27;.join(argv)}&quot;)
+
+
+def _count(low: int, high: int) -&gt; str:
+    return str(low) if low == high else f&quot;{low} to {high}&quot;
+</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/context.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/context.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/context.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Opens the declared store for a command. The only caller of ``persistence.open_database``.&quot;&quot;&quot;
+
+import os
+from pathlib import Path
+
+from persistence import Database, open_database
+
+from cli.config import resolve_dsn
+from cli.database import database_engine
+
+SQLITE_PREFIX = &quot;sqlite://&quot;
+
+
+def open_store() -&gt; Database:
+    &quot;&quot;&quot;Open the store named by the environment, creating a missing SQLite parent directory first.&quot;&quot;&quot;
+    dsn = resolve_dsn(os.environ)
+    if database_engine(dsn) == &quot;sqlite&quot;:
+        Path(_sqlite_path(dsn)).parent.mkdir(parents=True, exist_ok=True)
+    return open_database(dsn)
+
+
+def _sqlite_path(dsn: str) -&gt; str:
+    &quot;&quot;&quot;Return the file path a SQLite DSN names, with any ``sqlite://`` prefix removed.&quot;&quot;&quot;
+    if dsn.startswith(SQLITE_PREFIX):
+        return dsn[len(SQLITE_PREFIX):]
+    return dsn
+</pre></article>
+</main>
+</body>
+</html>

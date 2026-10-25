@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/views.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/views.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/views.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Output shapes, id parsing, and row builders shared by the command modules.
+
+Commands build their rows here so every table prints the same way. Nothing in this module reads
+or writes the store except ``next_txn_id``, which only reads.
+&quot;&quot;&quot;
+
+import re
+from typing import NamedTuple
+
+from persistence import Database
+
+from cli.core import format_amount
+from cli.errors import Rejected, UsageError
+
+ACCOUNT_COLUMNS = [&quot;account&quot;, &quot;name&quot;]
+CATEGORY_COLUMNS = [&quot;category&quot;, &quot;description&quot;]
+TXN_COLUMNS = [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;]
+ACCOUNT_HEADER = [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;]
+TXN_HEADER = TXN_COLUMNS
+LOADED_HEADER = [&quot;table&quot;, &quot;loaded&quot;]
+TRANSFER_CATEGORY = &quot;TRANSFER&quot;
+
+#: The largest id the transactions table holds (INTEGER on PostgreSQL). A file id must fit it.
+TXN_ID_MAX = 2**31 - 1
+
+_ID_TEXT = re.compile(r&quot;-?[0-9]+&quot;)
+_LOADED_ID = re.compile(r&quot;[0-9]+&quot;)
+
+
+class Txn(NamedTuple):
+    &quot;&quot;&quot;One transaction ready to store, in the column order of the transactions table.&quot;&quot;&quot;
+
+    txn_id: int
+    date: str
+    account: str
+    category: str
+    amount: int
+    memo: str
+
+
+def parse_txn_id(text: str) -&gt; int:
+    &quot;&quot;&quot;Return a transaction id argument. Anything but a base-10 integer is a usage error.&quot;&quot;&quot;
+    if _ID_TEXT.fullmatch(text) is None:
+        raise UsageError(f&quot;transaction id must be an integer: {text!r}&quot;)
+    return int(text)
+
+
+def load_txn_id(text: str) -&gt; int:
+    &quot;&quot;&quot;Return a transaction id read from a file: a positive integer that fits the column.&quot;&quot;&quot;
+    if _LOADED_ID.fullmatch(text) is None or not 1 &lt;= int(text) &lt;= TXN_ID_MAX:
+        raise Rejected(f&quot;txn_id must be a positive integer up to {TXN_ID_MAX}: {text!r}&quot;)
+    return int(text)
+
+
+def next_txn_id(db: Database) -&gt; int:
+    &quot;&quot;&quot;One more than the largest stored transaction id, or 1 when the table is empty.&quot;&quot;&quot;
+    return max((txn.txn_id for txn in db.transactions.list()), default=0) + 1
+
+
+def txn_row(txn) -&gt; list[str]:
+    &quot;&quot;&quot;Print one transaction in the transaction CSV shape, amount in two-decimal text.&quot;&quot;&quot;
+    return [
+        str(txn.txn_id),
+        txn.date,
+        txn.account,
+        txn.category,
+        format_amount(txn.amount),
+        txn.memo,
+    ]
+
+
+def account_row(account, txns) -&gt; list[str]:
+    &quot;&quot;&quot;Print one account with its transaction count and balance computed from ``txns``.&quot;&quot;&quot;
+    balance = sum(txn.amount for txn in txns)
+    return [account.account, account.name, str(len(txns)), format_amount(balance)]
+</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,46 @@
+Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Next: (no actionable steps — all done or blocked)
+
+Blueprint: LayersTesting
+Target: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.160726/workspace/targets/LayersTesting
+Rows: <state> <type>  <Name>  [<id>]   — pass [<id>] to --step
+Block: Build Block 1 · Foundational  [block-1]   — [built] story Stand up the Python project tree, environment, pytest runner, and the `ledger` launcher at the application root.  [foundation] — complete
+
+Block: Build Block 2 · Foundational  [block-2]   — 2/2 stories complete
+  [built]   story  Declare accounts, categories, and transactions and every repository operation the ledger needs.  [database]
+  [built]   story  Build the cli package entry point: dispatch, exit-code mapping, and diagnostic channel.  [cli-entry]
+Block: Build Block 3 · Service  [block-3]   — [built] story Provide shared amount parsing and formatting, field validators, date validation, and the projected-balance guard.  [ledger-core] — complete
+
+Block: Build Block 4 · Service  [block-4]   — 21/21 stories complete
+  [built]   story  Implement `ledger init` to drop and recreate the three tables.  [init]
+  [built]   story  Implement `ledger count` reporting row counts per table.  [count]
+  [built]   story  Implement `ledger account add`.  [account-add]
+  [built]   story  Reject a duplicate account code.  [account-duplicate]
+  [built]   story  Implement `ledger account get`.  [account-get]
+  [built]   story  Implement `ledger account rename`.  [account-rename]
+  [built]   story  Implement `ledger load categories <csv>`.  [load-categories]
+  [built]   story  Implement `ledger load accounts <csv>`.  [load-accounts]
+  [built]   story  Implement `ledger txn post`.  [txn-post]
+  [built]   story  Implement `ledger txn get`.  [txn-get]
+  [built]   story  Validate transaction post inputs.  [txn-validate]
+  [built]   story  Implement `ledger txn delete`.  [txn-delete]
+  [built]   story  Implement `ledger txn amend`.  [txn-amend]
+  [built]   story  Implement `ledger transfer`.  [transfer]
+  [built]   story  Implement `ledger load transactions <csv>` keeping file txn_ids.  [load-transactions]
+  [built]   story  Implement `ledger account delete`.  [account-delete]
+  [built]   story  Reject a transfer that would overdraw the source.  [transfer-overdraw]
+  [built]   story  Implement `ledger report balances`.  [report-balances]
+  [built]   story  Implement `ledger report monthly`.  [report-monthly]
+  [built]   story  Implement `ledger report categories`.  [report-categories]
+  [built]   story  Prove an invalid load is rejected atomically with exit 3.  [load-rejection]
+Block: Build Block 5 · Feature  [block-5]   — [built] story Assemble and verify the non-negative balance rule across every mutating command.  [balance-rule] — complete
+
+Block: Build Block 6 · Service  [block-6]   — 4/4 stories complete
+  [built]   story  Return exit 2 for usage errors.  [cli-usage]
+  [built]   story  Enforce the stdout and stderr output contract.  [cli-output]
+  [built]   story  Resolve the database from DATABASE_URL, DATABASE_PATH, or data/app.db.  [cli-database]
+  [built]   story  Provide bin/test.sh running the application's own pytest suite.  [test-suite]
+Block: Build Block 7 · Feature  [block-7]   — [built] story Run the supplied grader as the terminal release check.  [verification] — complete
+
+Steps: 31 total — 0 done, 31 built (await verify), 0 in review, 0 pending, 0 blocked by questions, 0 failed (0% complete)
+Buildable now: (none)

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-1.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-1.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-1.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 1 · Foundational (block-1)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-25</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 7727</li><li>execution id: 20261025.162723.417Z-93da8fe2</li></ul>
+<h2>Stories built</h2>
+<ul><li>Stand up the Python project tree, environment, pytest runner, and the <code>ledger</code> launcher at the application root. (foundation) [story]</li></ul>
+<h2>Stacked context</h2>
+<ul><li>implements: python.md (SP 1166)</li><li>compass: COMPASS.md (SP 1156)</li><li>implements: ARCHITECTURE.md (SP 2498)</li><li>stack: common.md (SP 2776)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>.env.example</li><li>.gitignore</li><li>bin/test.sh</li><li>ledger</li><li>pyproject.toml</li><li>tests/test_foundation.py</li><li>uv.lock</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>RED: arch-launcher (ARCHITECTURE.md)</li></ul>
+<p>intent: The ledger launcher exists at the application root, is executable, and starts with an interpreter line. return code: 1 stderr: Traceback (most recent call last): File &quot;arch-launcher.py&quot;, line 3, in &lt;module&gt; assert os.path.isfile(&quot;ledger&quot;) ^^^^^^^^^^^^^^^^^^^^^^^^ AssertionError</p>
+<ul><li>RED: arch-project-manifest (ARCHITECTURE.md)</li></ul>
+<p>intent: The project declares a Python requirement in pyproject.toml and commits a uv.lock. return code: 1 stderr: Traceback (most recent call last): File &quot;arch-project-manifest.py&quot;, line 7, in &lt;module&gt; assert os.path.isfile(&quot;uv.lock&quot;) ^^^^^^^^^^^^^^^^^^^^^^^^^ AssertionError</p>
+<ul><li>GREEN (prepassed): arch-no-driver-imports (ARCHITECTURE.md)</li></ul>
+<p>intent: No application file outside the persistence package imports a database driver. return code: 0</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: arch-launcher (ARCHITECTURE.md)</li></ul>
+<p>intent: The ledger launcher exists at the application root, is executable, and starts with an interpreter line. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.160726/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: arch-project-manifest (ARCHITECTURE.md)</li></ul>
+<p>intent: The project declares a Python requirement in pyproject.toml and commits a uv.lock. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.160726/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: arch-no-driver-imports (ARCHITECTURE.md)</li></ul>
+<p>intent: No application file outside the persistence package imports a database driver. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.160726/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Build summary</h2>
+<p>The foundation files are partly present: <code>pyproject.toml</code> is committed but has no test runner, and there is no <code>uv.lock</code>, launcher, or <code>bin/</code>. I&#x27;ll add pytest through <code>uv</code> (verifying the package name first) and then write the launcher and test script.pytest resolved and <code>uv.lock</code> was written. Now the launcher, the test launcher, ignore/env files, and a foundation test.Now I&#x27;ll set the executable bits and run the declared acceptance checks plus the project test command.Two problems surfaced. First, <code>set -u</code> trips inside the venv <code>activate</code> script, which reads <code>OSTYPE</code> unguarded. Second, pytest found the parent <code>drydock/pyproject.toml</code> as its config and inherited its <code>--maxprocesses</code> addopt. I&#x27;ll fix both by giving this project its own pytest config and relaxing <code>-u</code> only around <code>activate</code>.I left the <code>set</code> sequence around <code>activate</code> messy; I&#x27;ll tidy it so only <code>-u</code> is relaxed while sourcing.The test suite passes (9/9) and the acceptance checks pass. The <code>ledger</code> launcher has the same <code>-u</code> issue with <code>activate</code>, so I&#x27;ll apply the same fix there. The <code>No module named &#x27;cli&#x27;</code> error is expected at this stage because <code>cli</code> is a later block.The foundation block is in place: the project tree, the <code>uv</code>-managed environment, the pytest runner, and the <code>ledger</code> launcher. The declared acceptance checks pass and <code>sh bin/test.sh</code> is green with 9 of 9 tests passing.</p>
+<p>I did not commit anything. The changes are left in the working tree.</p>
+<p><strong>What&#x27;s in place</strong></p>
+<ul><li><code>pyproject.toml</code> declares <code>requires-python = &quot;&gt;=3.11&quot;</code>, a <code>dev</code> group with <code>pytest&gt;=9.1.1</code>, and a <code>[tool.pytest.ini_options]</code> block. I added that block so pytest does not pick up the parent <code>drydock/pyproject.toml</code> and inherit its <code>--maxprocesses</code> option, which had made the first run exit 4.</li><li><code>uv.lock</code> is committed. <code>.venv/</code> is created by <code>uv</code> and gitignored.</li><li><code>ledger</code> is a POSIX <code>sh</code> launcher at the application root. It activates <code>.venv</code>, puts the app root on <code>PYTHONPATH</code>, and runs <code>cli.main(sys.argv[1:])</code>, exiting with its return value. It has no business logic.</li><li><code>bin/test.sh</code> runs <code>pytest -q</code> from the project root, logs under <code>data/logs/</code> with <code>tee</code>, and returns pytest&#x27;s exit status. It is POSIX <code>sh</code>, so I captured the status directly rather than through a pipe.</li><li><code>tests/test_foundation.py</code> has 9 tests. They read the manifest, lock, launcher, gitignore, and env example back from disk and check them.</li><li><code>.gitignore</code> and <code>.env.example</code> follow the stack conventions. The env example documents <code>DATABASE_URL</code> and <code>DATABASE_PATH</code>.</li></ul>
+<p><strong>Acceptance checks</strong></p>
+<ul><li><code>arch-launcher</code>, <code>arch-project-manifest</code>, and <code>arch-no-driver-imports</code> all pass when run with the spec&#x27;s own assertions.</li></ul>
+<p><strong>Known gap for later blocks</strong></p>
+<ul><li><code>./ledger</code> currently exits 1 with <code>No module named &#x27;cli&#x27;</code>. That is expected: the <code>cli</code> package belongs to a later block, and this step was limited to the foundation.</li></ul>
+<p><strong>Choices I made</strong></p>
+<ul><li>I did not create <code>CLAUDE.md</code>, <code>Links.md</code>, or the lifecycle scripts (<code>start.sh</code>, <code>stop.sh</code>, <code>build.sh</code>, and so on). Those are generic stack conventions that don&#x27;t fit a CLI project, so I left them out. Say if you want them added.</li><li>I did not touch <code>persistence/</code>, because the architecture says it is generated by Drydock.</li></ul></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-TransferOverdraw.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-TransferOverdraw.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-TransferOverdraw.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Transfer Overdraw Rejection</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>A transfer larger than the source account balance is rejected with exit 3 and writes neither row.</td></tr><tr><td>Depends On</td><td>FEATURE-Transfer.md, FEATURE-LoadTransactions.md, FEATURE-LedgerCore.md, DATABASE.md</td></tr><tr><td>Provides</td><td>transfer overdraw rejection</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger transfer &lt;from&gt; &lt;to&gt; &lt;amount&gt; &lt;date&gt;</code> must never leave the source account below zero. This story proves that the projected balance of the source, computed from its stored transactions minus the transfer amount, is checked before the first write. A rejected transfer exits <code>3</code>, writes nothing to standard output, and leaves the transactions table exactly as it was. A transfer that brings the source to exactly zero is allowed.</p>
+<h2>Behavior</h2>
+<ul><li>The source balance is the sum, in integer cents, of the source account&#x27;s transactions, read from</li></ul>
+<p>the database at command time.</p>
+<ul><li>If the balance minus the transfer amount is below zero, the command exits <code>3</code> before writing either</li></ul>
+<p>the outgoing or the incoming row.</p>
+<ul><li>If the source has no transactions its balance is zero and any positive transfer is rejected.</li><li>A transfer equal to the whole balance succeeds and leaves the source at zero.</li><li>No floating point is used at any step.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-TXN-002</code> — read: list the source account&#x27;s transactions to compute its balance - supplies: <code>account</code> - returns: <code>account</code>, <code>amount</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC transfer-overdraw-rejected ===<br>Intent: A transfer exceeding the source balance exits 3, prints nothing, and writes no rows.</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: src = &quot;ACPTOD1&quot; dst = &quot;ACPTOD2&quot; cat = &quot;ACPTODC&quot; db.accounts.create(account=src, name=&quot;Overdraw Source&quot;) db.accounts.create(account=dst, name=&quot;Overdraw Target&quot;) db.categories.create(category=cat, description=&quot;Overdraw Funding&quot;) if db.categories.get(category=&quot;TRANSFER&quot;) is None: db.categories.create(category=&quot;TRANSFER&quot;, description=&quot;Internal transfer&quot;) tid = max([t.txn_id for t in db.transactions.list()], default=0) + 1 db.transactions.create(txn_id=tid, date=&quot;2026-06-01&quot;, account=src, category=cat, amount=10000, memo=&quot;&quot;) before = len(db.transactions.list()) code, out, err = cli_runner(&quot;transfer&quot;, src, dst, &quot;100.01&quot;, &quot;2026-06-02&quot;) print(out) print(err) assert code == 3 assert out == &quot;&quot; after = len(db.transactions.list()) assert after == before assert db.transactions.list(account=dst) == [] assert sum(t.amount for t in db.transactions.list(account=src)) == 10000 === END AC transfer-overdraw-rejected ===</p>
+<p>=== AC transfer-overdraw-exact-balance ===<br>Intent: A transfer equal to the whole source balance succeeds and leaves the source at zero.</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: src = &quot;ACPTOE1&quot; dst = &quot;ACPTOE2&quot; cat = &quot;ACPTOEC&quot; db.accounts.create(account=src, name=&quot;Exact Source&quot;) db.accounts.create(account=dst, name=&quot;Exact Target&quot;) db.categories.create(category=cat, description=&quot;Exact Funding&quot;) if db.categories.get(category=&quot;TRANSFER&quot;) is None: db.categories.create(category=&quot;TRANSFER&quot;, description=&quot;Internal transfer&quot;) tid = max([t.txn_id for t in db.transactions.list()], default=0) + 1 db.transactions.create(txn_id=tid, date=&quot;2026-06-01&quot;, account=src, category=cat, amount=10000, memo=&quot;&quot;) before = len(db.transactions.list()) code, out, err = cli_runner(&quot;transfer&quot;, src, dst, &quot;100.00&quot;, &quot;2026-06-02&quot;) print(out) print(err) assert code == 0 assert len(db.transactions.list()) == before + 2 assert sum(t.amount for t in db.transactions.list(account=src)) == 0 assert sum(t.amount for t in db.transactions.list(account=dst)) == 10000 === END AC transfer-overdraw-exact-balance ===</p>
+<p>=== AC transfer-overdraw-empty-source ===<br>Intent: A source account with no transactions cannot be the source of any positive transfer.</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: src = &quot;ACPTOM1&quot; dst = &quot;ACPTOM2&quot; db.accounts.create(account=src, name=&quot;Empty Source&quot;) db.accounts.create(account=dst, name=&quot;Empty Target&quot;) if db.categories.get(category=&quot;TRANSFER&quot;) is None: db.categories.create(category=&quot;TRANSFER&quot;, description=&quot;Internal transfer&quot;) before = len(db.transactions.list()) code, out, err = cli_runner(&quot;transfer&quot;, src, dst, &quot;0.01&quot;, &quot;2026-06-02&quot;) print(out) print(err) assert code == 3 assert out == &quot;&quot; assert len(db.transactions.list()) == before assert db.transactions.list(account=src) == [] assert db.transactions.list(account=dst) == [] === END AC transfer-overdraw-empty-source ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A rejected transfer writes neither the outgoing nor the incoming row.</li><li>The balance check runs before the first write and uses integer cents only.</li><li>A rejected command writes nothing to standard output and one diagnostic line to standard error.</li></ul></article>
+</main>
+</body>
+</html>

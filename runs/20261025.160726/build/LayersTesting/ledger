@@ -1,0 +1,22 @@
+#!/bin/sh
+# ledger — command-line cash ledger launcher
+#
+# Activates the project .venv and hands argv to cli.main, exiting with its return value.
+# Contains no business logic; see cli/ for the command implementation.
+set -eu
+
+APP_ROOT=$(cd "$(dirname "$0")" && pwd)
+
+if [ ! -f "$APP_ROOT/.venv/bin/activate" ]; then
+    echo "error: no environment at $APP_ROOT/.venv; run: uv sync" >&2
+    exit 1
+fi
+
+# activate reads unset variables, so relax -u only while sourcing it.
+set +u
+. "$APP_ROOT/.venv/bin/activate"
+set -u
+PYTHONPATH="$APP_ROOT${PYTHONPATH:+:$PYTHONPATH}"
+export PYTHONPATH
+
+exec python -c 'import sys; from cli import main; sys.exit(main(sys.argv[1:]))' "$@"

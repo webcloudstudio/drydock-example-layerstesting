@@ -1,0 +1,28 @@
+The regression is mine. An earlier story's check (`cli-resolve-dsn`) imports `resolve_dsn` from `cli.config`, and I removed it. I'll restore it as a thin wrapper over the new resolver so the precedence logic lives in one place and the old behavior, including the absolute default, is unchanged. I'll also restore the original `test_cli_entry.py`.I restored `cli.config.resolve_dsn`, which was the regression. `cli-resolve-dsn` imports it, and I had removed it when I moved the resolver into `cli/database.py`. `sh bin/test.sh` exits 0 with 348 passed, 0 failed. I did not rerun the `cli-resolve-dsn` check itself. I confirmed that `resolve_dsn` imports again and that `resolve_dsn({})` and `resolve_dsn({'DATABASE_PATH': 'x.db'})` return the same values as before.
+
+- **Precedence in one place:** `resolve_dsn` now calls `resolve_database_dsn` for the DATABASE_URL, DATABASE_PATH, default order. The only thing it adds is turning the unset default into the absolute application-root path, as it always did, so `./ledger` still finds `data/app.db` from any directory.
+- **Command layer:** `cli/context.py` opens the store through `resolve_dsn` and `database_engine`.
+- **Earlier tests:** `tests/test_cli_entry.py` is back to its original content, with the five resolver tests it had before. The spec's relative `data/app.db` default is still what `cli.database.resolve_database_dsn` returns, and `tests/test_database_resolution.py` covers it.
+- **Decision from the first pass, reversed:** I said the spec's relative `data/app.db` default replaced the old absolute path. It no longer does for the command layer, because the earlier story's check needs the old behavior. The relative default only applies if you call `resolve_database_dsn` directly.
+
+<blueprint-decisions>
+[{"spec":"FEATURE-DatabaseResolution.md","severity":"Material","subject":"Two resolvers, one default each","decision":"cli.database.resolve_database_dsn returns the literal 'data/app.db' as the spec states. cli.config.resolve_dsn, required by the earlier FEATURE-CliEntry.md check, wraps it and substitutes the absolute application-root path for the default, so commands run from any directory. Is that acceptable, or should the two defaults be unified on replan?"},{"spec":"FEATURE-DatabaseResolution.md","severity":"Low","subject":"PostgreSQL driver dependency","decision":"Added psycopg[binary] to pyproject.toml via uv, as the stack contract and the driver's own error message require."}]
+</blueprint-decisions>
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli/database.py
+- cli/config.py
+- cli/context.py
+- tests/test_database_resolution.py
+- tests/test_usage_errors.py
+- tests/test_output_contract.py
+- pyproject.toml
+- uv.lock
+
+SUMMARY:
+Block 6 is implemented: usage errors, the output contract, database resolution, and `bin/test.sh`. The repair restores `cli.config.resolve_dsn` as a wrapper over the new resolver and reverts `tests/test_cli_entry.py` to its original content. `sh bin/test.sh` exits 0 with 348 passed, 0 failed. `sources/` is untouched.
+
+BLOCKERS:
+- None.

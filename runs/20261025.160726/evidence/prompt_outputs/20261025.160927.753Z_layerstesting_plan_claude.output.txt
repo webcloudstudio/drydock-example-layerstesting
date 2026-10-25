@@ -1,0 +1,781 @@
+=== BEGIN ARTIFACT DATABASE.md ===
+# DATABASE: LayersTesting
+
+| Field | Value |
+|-------|-------|
+| Version | 20261025 V1 |
+| Description | Persistence stores and typed interfaces for the LayersTesting cash ledger. |
+| Depends On | ARCHITECTURE.md |
+| Provides | accounts table, categories table, transactions table |
+
+## Questions
+
+- None.
+
+## Persistence Boundary
+
+| Boundary | Rule |
+|----------|------|
+| Raw storage access | Only the generated `persistence/` package reaches the store. |
+| Caller dependency | Features depend on declared access patterns and their DTOs, not on schemas. |
+| Implementation | Generated from this file at the DATABASE build step; never written by hand. |
+| Money | Amounts are integer cents in the `amount` column; no floating point at any layer. |
+| Aggregates | Counts, balances, and report totals are computed by callers from `list` results; no aggregate operation exists. |
+| Re-initialization | `ledger init` empties the three tables through the `clear` operations (transactions first, then accounts, then categories), because schema is provisioned only at the DATABASE step. |
+
+## Access Patterns
+
+### FEATURE-ACCOUNT-001 — Get an account
+
+| Field | Value |
+|-------|-------|
+| Owner | FEATURE-AccountGet.md |
+| Access | read |
+| Repository operation | `accounts.get` |
+| Compatibility | unchanged |
+
+Input: AccountsGetInput
+
+| Field | Type |
+|-------|------|
+| account | str |
+
+Output: AccountsGetOutput
+
+| Field | Type |
+|-------|------|
+| account | str |
+| name | str |
+
+### FEATURE-ACCOUNT-002 — List accounts
+
+| Field | Value |
+|-------|-------|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `accounts.list` |
+| Order | `account` asc |
+| Compatibility | unchanged |
+
+Input: AccountsListInput
+
+| Field | Type |
+|-------|------|
+| account | str |
+
+Output: AccountsListOutput
+
+| Field | Type |
+|-------|------|
+| account | str |
+| name | str |
+
+### FEATURE-ACCOUNT-003 — Create an account
+
+| Field | Value |
+|-------|-------|
+| Owner | FEATURE-AccountAdd.md |
+| Access | write |
+| Repository operation | `accounts.create` |
+| Compatibility | unchanged |
+
+Input: AccountsCreateInput
+
+| Field | Type |
+|-------|------|
+| account | str |
+| name | str |
+
+Output: AccountsCreateOutput
+
+| Field | Type |
+|-------|------|
+| account | str |
+| name | str |
+
+### FEATURE-ACCOUNT-004 — Rename an account
+
+| Field | Value |
+|-------|-------|
+| Owner | FEATURE-AccountRename.md |
+| Access | write |
+| Repository operation | `accounts.update` |
+| Match | `account` |
+| Compatibility | unchanged |
+
+Input: AccountsUpdateInput
+
+| Field | Type |
+|-------|------|
+| account | str |
+| name | str |
+
+Output: AccountsUpdateOutput
+
+| Field | Type |
+|-------|------|
+| account | str |
+| name | str |
+
+### FEATURE-ACCOUNT-005 — Delete an account
+
+| Field | Value |
+|-------|-------|
+| Owner | FEATURE-AccountDelete.md |
+| Access | write |
+| Repository operation | `accounts.delete` |
+| Match | `account` |
+| Compatibility | unchanged |
+
+Input: AccountsDeleteInput
+
+| Field | Type |
+|-------|------|
+| account | str |
+
+Output: AccountsDeleteOutput
+
+| Field | Type |
+|-------|------|
+| account | str |
+
+### FEATURE-ACCOUNT-006 — Remove every account
+
+| Field | Value |
+|-------|-------|
+| Owner | FEATURE-Init.md |
+| Access | write |
+| Repository operation | `accounts.clear` |
+| Kind | delete |
+| Match | `account >= first_code` |
+| Compatibility | unchanged |
+
+Input: AccountsClearInput
+
+| Field | Type |
+|-------|------|
+| first_code | str |
+
+Output: AccountsClearOutput
+
+| Field | Type |
+|-------|------|
+
+### FEATURE-CATEGORY-001 — Get a category
+
+| Field | Value |
+|-------|-------|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `categories.get` |
+| Compatibility | unchanged |
+
+Input: CategoriesGetInput
+
+| Field | Type |
+|-------|------|
+| category | str |
+
+Output: CategoriesGetOutput
+
+| Field | Type |
+|-------|------|
+| category | str |
+| description | str |
+
+### FEATURE-CATEGORY-002 — List categories
+
+| Field | Value |
+|-------|-------|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `categories.list` |
+| Order | `category` asc |
+| Compatibility | unchanged |
+
+Input: CategoriesListInput
+
+| Field | Type |
+|-------|------|
+| category | str |
+
+Output: CategoriesListOutput
+
+| Field | Type |
+|-------|------|
+| category | str |
+| description | str |
+
+### FEATURE-CATEGORY-003 — Create a category
+
+| Field | Value |
+|-------|-------|
+| Owner | DATABASE.md |
+| Access | write |
+| Repository operation | `categories.create` |
+| Compatibility | unchanged |
+
+Input: CategoriesCreateInput
+
+| Field | Type |
+|-------|------|
+| category | str |
+| description | str |
+
+Output: CategoriesCreateOutput
+
+| Field | Type |
+|-------|------|
+| category | str |
+| description | str |
+
+### FEATURE-CATEGORY-004 — Remove every category
+
+| Field | Value |
+|-------|-------|
+| Owner | FEATURE-Init.md |
+| Access | write |
+| Repository operation | `categories.clear` |
+| Kind | delete |
+| Match | `category >= first_code` |
+| Compatibility | unchanged |
+
+Input: CategoriesClearInput
+
+| Field | Type |
+|-------|------|
+| first_code | str |
+
+Output: CategoriesClearOutput
+
+| Field | Type |
+|-------|------|
+
+### FEATURE-TXN-001 — Get a transaction
+
+| Field | Value |
+|-------|-------|
+| Owner | FEATURE-TxnGet.md |
+| Access | read |
+| Repository operation | `transactions.get` |
+| Compatibility | unchanged |
+
+Input: TransactionsGetInput
+
+| Field | Type |
+|-------|------|
+| txn_id | int |
+
+Output: TransactionsGetOutput
+
+| Field | Type |
+|-------|------|
+| txn_id | int |
+| date | str |
+| account | str |
+| category | str |
+| amount | int |
+| memo | str |
+
+### FEATURE-TXN-002 — List transactions
+
+| Field | Value |
+|-------|-------|
+| Owner | DATABASE.md |
+| Access | read |
+| Repository operation | `transactions.list` |
+| Order | `txn_id` asc |
+| Compatibility | unchanged |
+
+Input: TransactionsListInput
+
+| Field | Type |
+|-------|------|
+| account | str |
+| category | str |
+
+Output: TransactionsListOutput
+
+| Field | Type |
+|-------|------|
+| txn_id | int |
+| date | str |
+| account | str |
+| category | str |
+| amount | int |
+| memo | str |
+
+### FEATURE-TXN-003 — Create a transaction
+
+| Field | Value |
+|-------|-------|
+| Owner | FEATURE-TxnPost.md |
+| Access | write |
+| Repository operation | `transactions.create` |
+| Compatibility | unchanged |
+
+Input: TransactionsCreateInput
+
+| Field | Type |
+|-------|------|
+| txn_id | int |
+| date | str |
+| account | str |
+| category | str |
+| amount | int |
+| memo | str |
+
+Output: TransactionsCreateOutput
+
+| Field | Type |
+|-------|------|
+| txn_id | int |
+| date | str |
+| account | str |
+| category | str |
+| amount | int |
+| memo | str |
+
+### FEATURE-TXN-004 — Amend a transaction amount
+
+| Field | Value |
+|-------|-------|
+| Owner | FEATURE-TxnAmend.md |
+| Access | write |
+| Repository operation | `transactions.update` |
+| Match | `txn_id` |
+| Compatibility | unchanged |
+
+Input: TransactionsUpdateInput
+
+| Field | Type |
+|-------|------|
+| txn_id | int |
+| amount | int |
+
+Output: TransactionsUpdateOutput
+
+| Field | Type |
+|-------|------|
+| txn_id | int |
+| date | str |
+| account | str |
+| category | str |
+| amount | int |
+| memo | str |
+
+### FEATURE-TXN-005 — Delete a transaction
+
+| Field | Value |
+|-------|-------|
+| Owner | FEATURE-TxnDelete.md |
+| Access | write |
+| Repository operation | `transactions.delete` |
+| Match | `txn_id` |
+| Compatibility | unchanged |
+
+Input: TransactionsDeleteInput
+
+| Field | Type |
+|-------|------|
+| txn_id | int |
+
+Output: TransactionsDeleteOutput
+
+| Field | Type |
+|-------|------|
+| txn_id | int |
+
+### FEATURE-TXN-006 — Remove every transaction
+
+| Field | Value |
+|-------|-------|
+| Owner | FEATURE-Init.md |
+| Access | write |
+| Repository operation | `transactions.clear` |
+| Kind | delete |
+| Match | `txn_id >= min_id` |
+| Compatibility | unchanged |
+
+Input: TransactionsClearInput
+
+| Field | Type |
+|-------|------|
+| min_id | int |
+
+Output: TransactionsClearOutput
+
+| Field | Type |
+|-------|------|
+
+## Schemas
+
+## `accounts`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| account | VARCHAR(12) PK | Account code, 1 to 12 characters of A-Z and 0-9. |
+| name | VARCHAR(40) NOT NULL | 1 to 40 characters, no comma or newline. |
+
+## `categories`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| category | VARCHAR(12) PK | Category code, 1 to 12 characters of A-Z and 0-9. |
+| description | VARCHAR(40) NOT NULL | 1 to 40 characters, no comma or newline. |
+
+## `transactions`
+
+| Field | Type | Notes |
+|-------|------|-------|
+| txn_id | INTEGER PK | Kept from the load file, or max plus one when posted. |
+| date | VARCHAR(10) NOT NULL | Real calendar date written YYYY-MM-DD. |
+| account | VARCHAR(12) NOT NULL REFERENCES accounts(account) | Owning account. |
+| category | VARCHAR(12) NOT NULL REFERENCES categories(category) | Category. |
+| amount | INTEGER NOT NULL | Signed integer cents, never zero. |
+| memo | VARCHAR(60) NOT NULL DEFAULT '' | 0 to 60 characters, no comma or newline. |
+
+## Migrations
+
+Each relational change has one staged record in `migrations/MIGRATION-<AccessPatternId>.md`.
+The record carries Alembic `upgrade`/`downgrade` snippets and progresses from `planned` to `built`
+only when its DATABASE build story completes. Alembic records deployment application separately.
+
+| Access Pattern | Revision | State |
+|----------------|----------|-------|
+
+## Config (.env)
+
+| Key | Type | Required | Notes |
+|-----|------|----------|-------|
+| DATABASE_URL | str | No | PostgreSQL DSN, or a SQLite path optionally prefixed `sqlite://`. |
+| DATABASE_PATH | str | No | Used when DATABASE_URL is unset; falls back to `data/app.db`. |
+
+## File Stores
+
+- None.
+
+## External Services
+
+- None.
+
+## External Libraries
+
+- None.
+
+## Programmatic Acceptance
+
+=== AC accounts-create ===
+Intent: accounts.create stores an account that accounts.get reads back with the supplied name.
+
+from persistence.testing import db_session
+
+with db_session() as db:
+    code = "ACPTCR1"
+    name = "Acceptance Create"
+    created = db.accounts.create(account=code, name=name)
+    assert created.account == code
+    assert created.name == name
+    got = db.accounts.get(account=code)
+    assert got is not None
+    assert got.account == code
+    assert got.name == name
+=== END AC accounts-create ===
+
+=== AC accounts-get ===
+Intent: accounts.get returns the row for a present account and None for an absent one.
+
+from persistence.testing import db_session
+
+with db_session() as db:
+    code = "ACPTGT1"
+    absent = "ACPTGT2"
+    name = "Acceptance Get"
+    db.accounts.create(account=code, name=name)
+    got = db.accounts.get(account=code)
+    assert got is not None
+    assert got.name == name
+    assert db.accounts.get(account=absent) is None
+=== END AC accounts-get ===
+
+=== AC accounts-list ===
+Intent: accounts.list returns created accounts in ascending code order.
+
+from persistence.testing import db_session
+
+with db_session() as db:
+    first = "ACPTLA1"
+    second = "ACPTLB1"
+    db.accounts.create(account=second, name="Second")
+    db.accounts.create(account=first, name="First")
+    codes = [row.account for row in db.accounts.list()]
+    assert first in codes
+    assert second in codes
+    assert codes.index(first) < codes.index(second)
+    assert codes == sorted(codes)
+=== END AC accounts-list ===
+
+=== AC accounts-update ===
+Intent: accounts.update changes only the name and returns None for an absent account.
+
+from persistence.testing import db_session
+
+with db_session() as db:
+    code = "ACPTUP1"
+    absent = "ACPTUP2"
+    before = "Before Name"
+    after = "After Name"
+    db.accounts.create(account=code, name=before)
+    updated = db.accounts.update(account=code, name=after)
+    assert updated is not None
+    assert updated.account == code
+    assert updated.name == after
+    got = db.accounts.get(account=code)
+    assert got is not None
+    assert got.name == after
+    assert db.accounts.update(account=absent, name=after) is None
+=== END AC accounts-update ===
+
+=== AC accounts-delete ===
+Intent: accounts.delete removes the account so a later get finds nothing.
+
+from persistence.testing import db_session
+
+with db_session() as db:
+    code = "ACPTDL1"
+    db.accounts.create(account=code, name="Delete Me")
+    assert db.accounts.get(account=code) is not None
+    removed = db.accounts.delete(account=code)
+    assert removed is not None
+    assert removed.account == code
+    assert db.accounts.get(account=code) is None
+=== END AC accounts-delete ===
+
+=== AC accounts-clear ===
+Intent: accounts.clear removes every account once dependent transactions are cleared.
+
+from persistence.testing import db_session
+
+with db_session() as db:
+    db.transactions.clear(min_id=-2147483647)
+    db.accounts.create(account="ACPTCL1", name="Clear One")
+    db.accounts.create(account="ACPTCL2", name="Clear Two")
+    assert len(db.accounts.list()) >= 2
+    db.accounts.clear(first_code="")
+    assert db.accounts.list() == []
+=== END AC accounts-clear ===
+
+=== AC categories-create ===
+Intent: categories.create stores a category that categories.get reads back with the supplied description.
+
+from persistence.testing import db_session
+
+with db_session() as db:
+    code = "ACPTCAT1"
+    description = "Acceptance Category"
+    created = db.categories.create(category=code, description=description)
+    assert created.category == code
+    assert created.description == description
+    got = db.categories.get(category=code)
+    assert got is not None
+    assert got.description == description
+=== END AC categories-create ===
+
+=== AC categories-get ===
+Intent: categories.get returns a present category and None for an absent one.
+
+from persistence.testing import db_session
+
+with db_session() as db:
+    code = "ACPTCG1"
+    absent = "ACPTCG2"
+    description = "Get Category"
+    db.categories.create(category=code, description=description)
+    got = db.categories.get(category=code)
+    assert got is not None
+    assert got.category == code
+    assert got.description == description
+    assert db.categories.get(category=absent) is None
+=== END AC categories-get ===
+
+=== AC categories-list ===
+Intent: categories.list returns created categories in ascending code order.
+
+from persistence.testing import db_session
+
+with db_session() as db:
+    first = "ACPTCLA"
+    second = "ACPTCLB"
+    db.categories.create(category=second, description="Second")
+    db.categories.create(category=first, description="First")
+    codes = [row.category for row in db.categories.list()]
+    assert first in codes
+    assert second in codes
+    assert codes.index(first) < codes.index(second)
+    assert codes == sorted(codes)
+=== END AC categories-list ===
+
+=== AC categories-clear ===
+Intent: categories.clear removes every category once dependent transactions are cleared.
+
+from persistence.testing import db_session
+
+with db_session() as db:
+    db.transactions.clear(min_id=-2147483647)
+    db.categories.create(category="ACPTCC1", description="Clear One")
+    db.categories.create(category="ACPTCC2", description="Clear Two")
+    assert len(db.categories.list()) >= 2
+    db.categories.clear(first_code="")
+    assert db.categories.list() == []
+=== END AC categories-clear ===
+
+=== AC transactions-create ===
+Intent: transactions.create stores a row that transactions.get reads back with every supplied value.
+
+from persistence.testing import db_session
+
+with db_session() as db:
+    acct = "ACPTTC1"
+    cat = "ACPTTCC1"
+    db.accounts.create(account=acct, name="Txn Account")
+    db.categories.create(category=cat, description="Txn Category")
+    new_id = max([t.txn_id for t in db.transactions.list()], default=0) + 1
+    day = "2026-05-01"
+    cents = 4550
+    memo = "created row"
+    created = db.transactions.create(
+        txn_id=new_id, date=day, account=acct, category=cat, amount=cents, memo=memo
+    )
+    assert created.txn_id == new_id
+    got = db.transactions.get(txn_id=new_id)
+    assert got is not None
+    assert got.date == day
+    assert got.account == acct
+    assert got.category == cat
+    assert got.amount == cents
+    assert got.memo == memo
+=== END AC transactions-create ===
+
+=== AC transactions-get ===
+Intent: transactions.get returns a present row and None for an absent id.
+
+from persistence.testing import db_session
+
+with db_session() as db:
+    acct = "ACPTTG1"
+    cat = "ACPTTGC1"
+    db.accounts.create(account=acct, name="Txn Account")
+    db.categories.create(category=cat, description="Txn Category")
+    new_id = max([t.txn_id for t in db.transactions.list()], default=0) + 1
+    absent_id = new_id + 1
+    db.transactions.create(
+        txn_id=new_id, date="2026-05-02", account=acct, category=cat, amount=100, memo=""
+    )
+    got = db.transactions.get(txn_id=new_id)
+    assert got is not None
+    assert got.txn_id == new_id
+    assert db.transactions.get(txn_id=absent_id) is None
+=== END AC transactions-get ===
+
+=== AC transactions-list ===
+Intent: transactions.list returns rows in ascending txn_id order and filters by account.
+
+from persistence.testing import db_session
+
+with db_session() as db:
+    acct_a = "ACPTTLA"
+    acct_b = "ACPTTLB"
+    cat = "ACPTTLC"
+    db.accounts.create(account=acct_a, name="List A")
+    db.accounts.create(account=acct_b, name="List B")
+    db.categories.create(category=cat, description="List Category")
+    base = max([t.txn_id for t in db.transactions.list()], default=0)
+    id_a = base + 1
+    id_b = base + 2
+    db.transactions.create(txn_id=id_b, date="2026-05-03", account=acct_b, category=cat, amount=200, memo="")
+    db.transactions.create(txn_id=id_a, date="2026-05-03", account=acct_a, category=cat, amount=100, memo="")
+    ids = [t.txn_id for t in db.transactions.list()]
+    assert ids == sorted(ids)
+    assert id_a in ids and id_b in ids
+    only_a = db.transactions.list(account=acct_a)
+    assert [t.txn_id for t in only_a] == [id_a]
+    assert all(t.account == acct_a for t in only_a)
+=== END AC transactions-list ===
+
+=== AC transactions-update ===
+Intent: transactions.update changes only the amount and returns None for an absent id.
+
+from persistence.testing import db_session
+
+with db_session() as db:
+    acct = "ACPTTU1"
+    cat = "ACPTTUC1"
+    db.accounts.create(account=acct, name="Txn Account")
+    db.categories.create(category=cat, description="Txn Category")
+    new_id = max([t.txn_id for t in db.transactions.list()], default=0) + 1
+    absent_id = new_id + 1
+    day = "2026-05-04"
+    memo = "amend me"
+    before = 1000
+    after = 2500
+    db.transactions.create(txn_id=new_id, date=day, account=acct, category=cat, amount=before, memo=memo)
+    updated = db.transactions.update(txn_id=new_id, amount=after)
+    assert updated is not None
+    assert updated.amount == after
+    got = db.transactions.get(txn_id=new_id)
+    assert got is not None
+    assert got.amount == after
+    assert got.date == day
+    assert got.account == acct
+    assert got.category == cat
+    assert got.memo == memo
+    assert db.transactions.update(txn_id=absent_id, amount=after) is None
+=== END AC transactions-update ===
+
+=== AC transactions-delete ===
+Intent: transactions.delete removes the row so a later get finds nothing.
+
+from persistence.testing import db_session
+
+with db_session() as db:
+    acct = "ACPTTD1"
+    cat = "ACPTTDC1"
+    db.accounts.create(account=acct, name="Txn Account")
+    db.categories.create(category=cat, description="Txn Category")
+    new_id = max([t.txn_id for t in db.transactions.list()], default=0) + 1
+    db.transactions.create(txn_id=new_id, date="2026-05-05", account=acct, category=cat, amount=300, memo="")
+    assert db.transactions.get(txn_id=new_id) is not None
+    removed = db.transactions.delete(txn_id=new_id)
+    assert removed is not None
+    assert removed.txn_id == new_id
+    assert db.transactions.get(txn_id=new_id) is None
+=== END AC transactions-delete ===
+
+=== AC transactions-clear ===
+Intent: transactions.clear removes every transaction row.
+
+from persistence.testing import db_session
+
+with db_session() as db:
+    acct = "ACPTTX1"
+    cat = "ACPTTXC1"
+    db.accounts.create(account=acct, name="Txn Account")
+    db.categories.create(category=cat, description="Txn Category")
+    base = max([t.txn_id for t in db.transactions.list()], default=0)
+    db.transactions.create(txn_id=base + 1, date="2026-05-06", account=acct, category=cat, amount=100, memo="")
+    db.transactions.create(txn_id=base + 2, date="2026-05-06", account=acct, category=cat, amount=200, memo="")
+    assert len(db.transactions.list()) >= 2
+    db.transactions.clear(min_id=-2147483647)
+    assert db.transactions.list() == []
+=== END AC transactions-clear ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Amounts are stored as integer cents; no column or caller uses floating point for money.
+- Application code never opens a database driver; it calls the generated persistence package only.
+- No aggregate, report, or balance value is stored; every one is computed from `list` results.
+=== END ARTIFACT ===

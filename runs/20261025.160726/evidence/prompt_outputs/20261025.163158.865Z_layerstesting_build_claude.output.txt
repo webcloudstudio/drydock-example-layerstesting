@@ -1,0 +1,27 @@
+Baseline is green (42 passed). Writing `cli/core.py` now.Now the tests: each declared acceptance assertion gets its own test, plus boundary and negative-path tests.All 110 tests pass (42 existing + 68 new), and `bin/test.sh` exits 0. Let me confirm the rollback left the store clean and check the changed files.Built `cli/core.py` (the ledger-core block) with tests. The project suite passes: 110 tests, 42 existing and 68 new, and `sh bin/test.sh` exits 0.
+
+- **`cli/core.py`** provides the nine functions the spec lists. Amounts are integer cents throughout, with no float anywhere. The validators and `balance_guard` raise `Rejected` and never write.
+- **`tests/test_ledger_core.py`** has a test for every declared acceptance assertion (`core-parse-amount`, `core-validate-date`, `core-balance-guard`, and the others), plus boundary and negative-path tests. The guard tests run inside the shared rollback session, and I confirmed afterwards that no test rows persisted in the store.
+
+I did not run `sources/run.sh`. It is the terminal story for the whole ledger and is not part of this block's gate.
+
+Choice I made that you may want to change: `balance_guard` does not check whether an account exists. The spec does not say it should, so commands will need to check existence themselves.
+
+FILES CHANGED:
+- cli/core.py
+- tests/test_ledger_core.py
+
+SUMMARY:
+- `parse_amount` accepts `-?DIGITS[.D[D]]` using ASCII-only matching, rejects zero, and returns integer cents.
+- `format_amount` always prints two decimals, with a leading minus when negative.
+- `validate_code`, `validate_name`, `validate_memo`, and `validate_text` enforce their length bounds and forbid comma and line breaks.
+- `validate_date` checks the `YYYY-MM-DD` shape and then confirms a real calendar date.
+- `account_balance` sums `db.transactions.list(account=...)`.
+- `balance_guard` computes each account's resulting balance in sorted order and raises `Rejected` on the first negative result.
+- Checks run: `pytest -q` gives 110 passed. `sh bin/test.sh` exits 0.
+
+RESULT: SUCCESS
+
+<blueprint-decisions>
+[{"spec":"FEATURE-LedgerCore.md","severity":"Low","subject":"balance_guard on unknown accounts","decision":"balance_guard does not verify that an account exists; it computes the balance as zero for an unknown code. Existence checks belong to the calling commands. Is that acceptable, or should the guard reject unknown accounts?"}]
+</blueprint-decisions>

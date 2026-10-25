@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-CliEntry.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-CliEntry.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-CliEntry.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Cli Entry</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>The cli package entry point: command registry, dispatch, exit-code mapping, CSV output, diagnostics, and database location.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md</td></tr><tr><td>Provides</td><td>cli.main, cli.testing.cli_runner, cli.registry.register, cli.errors, cli.config.resolve_dsn, cli.context.open_store</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Every command in the ledger plugs into one dispatcher. This story builds the dispatcher and registers no command. Later stories add modules under <code>cli/commands/</code> that call <code>register</code>. <code>main</code> imports every module in the <code>cli.commands</code> package (for example with <code>pkgutil.iter_modules</code>) before dispatching, so adding a command never edits <code>main</code>.</p>
+<h2>Interface</h2>
+<div class="scroll"><table><thead><tr><th>Symbol</th><th>Contract</th></tr></thead><tbody><tr><td><code>cli.main(argv=None) -&gt; int</code></td><td>Runs one command and returns its exit code. <code>None</code> means <code>sys.argv[1:]</code>.</td></tr><tr><td><code>cli.registry.register(words, handler, nargs)</code></td><td><code>words</code> is a tuple such as <code>(&quot;account&quot;, &quot;add&quot;)</code>. <code>handler(args: list[str])</code> returns a list of rows (each a list of strings) or <code>None</code>. <code>nargs</code> is <code>(min, max)</code> for the arguments after the words.</td></tr><tr><td><code>cli.errors.LedgerError(message)</code></td><td>Base class with an integer <code>code</code>. Subclasses: <code>OperationalError</code> 1, <code>UsageError</code> 2, <code>Rejected</code> 3, <code>NotFound</code> 4.</td></tr><tr><td><code>cli.config.resolve_dsn(environ) -&gt; str</code></td><td>Returns <code>DATABASE_URL</code>, else <code>DATABASE_PATH</code>, else the absolute path of <code>data/app.db</code> under the application root. An empty value counts as unset. The value is returned as written; the persistence library selects the engine and strips an optional <code>sqlite://</code> prefix.</td></tr><tr><td><code>cli.context.open_store()</code></td><td>Calls <code>persistence.open_database(resolve_dsn(os.environ))</code>. For a SQLite file it creates a missing parent directory first.</td></tr><tr><td><code>cli.testing.cli_runner(*args)</code></td><td>Returns <code>(exit_code, stdout, stderr)</code> by calling <code>main</code> in process.</td></tr></tbody></table></div>
+<h2>Dispatch Rules</h2>
+<ul><li>The longest registered word prefix of <code>argv</code> selects the handler. No match, or no arguments at all, is a usage error (exit 2).</li><li>An argument count outside <code>nargs</code> is a usage error (exit 2) and the handler is not called.</li><li>The handler runs to completion before anything is written to standard output. Rows are then written with <code>csv.writer</code> semantics but unquoted fields, <code>\n</code> line endings, and <code>sys.stdout</code> looked up at call time.</li><li>A <code>LedgerError</code> becomes its <code>code</code>, one diagnostic line on standard error, and nothing on standard output.</li><li>A <code>persistence.PersistenceError</code> and any other unexpected exception become exit 1 with one diagnostic line.</li><li>Diagnostics are never part of any contract; only the exit code and standard output are.</li></ul>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC cli-unknown-command ===<br>Intent: An unknown command exits 2 with nothing on standard output and one diagnostic line.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;zz-no-such-command&quot;) print(out, err) assert code == 2 assert out == &quot;&quot; assert len(err.strip().splitlines()) == 1 === END AC cli-unknown-command ===</p>
+<p>=== AC cli-no-arguments ===<br>Intent: Running with no arguments is a usage error.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner() assert code == 2 assert out == &quot;&quot; === END AC cli-no-arguments ===</p>
+<p>=== AC cli-success-csv ===<br>Intent: A registered handler&#x27;s rows are written as unquoted CSV with LF endings and exit 0.</p>
+<p>import csv import io</p>
+<p>from cli.registry import register from cli.testing import cli_runner</p>
+<p>rows = [[&quot;h1&quot;, &quot;h2&quot;], [&quot;v1&quot;, &quot;v2&quot;]] register((&quot;zz-accept-ok&quot;,), lambda args: rows, (0, 0)) code, out, err = cli_runner(&quot;zz-accept-ok&quot;) assert code == 0 assert list(csv.reader(io.StringIO(out, newline=&quot;&quot;))) == rows assert &quot;\r&quot; not in out assert out.endswith(&quot;\n&quot;) === END AC cli-success-csv ===</p>
+<p>=== AC cli-no-output-handler ===<br>Intent: A handler returning None exits 0 and writes nothing to standard output.</p>
+<p>from cli.registry import register from cli.testing import cli_runner</p>
+<p>register((&quot;zz-accept-quiet&quot;,), lambda args: None, (0, 0)) code, out, err = cli_runner(&quot;zz-accept-quiet&quot;) assert code == 0 assert out == &quot;&quot; === END AC cli-no-output-handler ===</p>
+<p>=== AC cli-error-codes ===<br>Intent: Each LedgerError subclass maps to its exit code and an unexpected exception maps to 1, with empty standard output.</p>
+<p>from cli.errors import NotFound, OperationalError, Rejected, UsageError from cli.registry import register from cli.testing import cli_runner</p>
+<p>cases = { &quot;zz-rej&quot;: (Rejected, 3), &quot;zz-nf&quot;: (NotFound, 4), &quot;zz-op&quot;: (OperationalError, 1), &quot;zz-us&quot;: (UsageError, 2), } for name, (exc, want) in cases.items(): def handler(args, exc=exc): raise exc(&quot;diagnostic&quot;) register((name,), handler, (0, 0)) code, out, err = cli_runner(name) print(name, code, err) assert code == want assert out == &quot;&quot; assert len(err.strip().splitlines()) == 1</p>
+<p>def boom(args): raise RuntimeError(&quot;unexpected&quot;)</p>
+<p>register((&quot;zz-boom&quot;,), boom, (0, 0)) code, out, err = cli_runner(&quot;zz-boom&quot;) assert code == 1 assert out == &quot;&quot; === END AC cli-error-codes ===</p>
+<p>=== AC cli-argument-count ===<br>Intent: Too few or too many arguments is exit 2 and the handler runs only for a count within range.</p>
+<p>from cli.registry import register from cli.testing import cli_runner</p>
+<p>calls = []</p>
+<p>def handler(args): calls.append(list(args)) return [[&quot;x&quot;]]</p>
+<p>register((&quot;zz-one&quot;,), handler, (1, 1)) code, out, err = cli_runner(&quot;zz-one&quot;) assert code == 2 assert calls == [] code, out, err = cli_runner(&quot;zz-one&quot;, &quot;a&quot;, &quot;b&quot;) assert code == 2 assert calls == [] code, out, err = cli_runner(&quot;zz-one&quot;, &quot;a&quot;) assert code == 0 assert calls == [[&quot;a&quot;]] === END AC cli-argument-count ===</p>
+<p>=== AC cli-multiword-command ===<br>Intent: A two-word command dispatches on both words; the first word alone or an unknown second word is exit 2.</p>
+<p>from cli.registry import register from cli.testing import cli_runner</p>
+<p>register((&quot;zz-grp&quot;, &quot;sub&quot;), lambda args: [[&quot;ok&quot;]], (0, 0)) code, out, err = cli_runner(&quot;zz-grp&quot;, &quot;sub&quot;) assert code == 0 code, out, err = cli_runner(&quot;zz-grp&quot;) assert code == 2 code, out, err = cli_runner(&quot;zz-grp&quot;, &quot;nosuch&quot;) assert code == 2 assert out == &quot;&quot; === END AC cli-multiword-command ===</p>
+<p>=== AC cli-resolve-dsn ===<br>Intent: The database location resolves from DATABASE_URL, then DATABASE_PATH, then data/app.db.</p>
+<p>from cli.config import resolve_dsn</p>
+<p>url = &quot;postgresql://example.invalid/ledger&quot; path = &quot;custom/ledger.db&quot; assert resolve_dsn({&quot;DATABASE_URL&quot;: url, &quot;DATABASE_PATH&quot;: path}) == url assert resolve_dsn({&quot;DATABASE_PATH&quot;: path}) == path assert resolve_dsn({&quot;DATABASE_URL&quot;: &quot;&quot;, &quot;DATABASE_PATH&quot;: path}) == path default = resolve_dsn({}) assert default.endswith(&quot;app.db&quot;) === END AC cli-resolve-dsn ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Nothing is written to standard output until the handler has returned successfully.</li><li>Diagnostics go to standard error and are never compared.</li><li>This story registers no command.</li><li>Application code never imports a database driver; it uses <code>persistence.open_database</code>.</li></ul></article>
+</main>
+</body>
+</html>

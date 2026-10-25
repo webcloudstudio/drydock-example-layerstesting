@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_usage_errors.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_usage_errors.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_usage_errors.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Usage errors: unknown commands, unknown targets, and wrong argument counts exit 2.
+
+A usage error is decided from the argument vector alone. Each test checks the exit status, that
+standard output is empty, that standard error holds exactly one line, and that the store and any
+named file were never touched.
+&quot;&quot;&quot;
+
+import pytest
+
+from cli.testing import cli_runner
+
+
+@pytest.fixture
+def store(tmp_path, monkeypatch):
+    monkeypatch.delenv(&quot;DATABASE_URL&quot;, raising=False)
+    monkeypatch.setenv(&quot;DATABASE_PATH&quot;, str(tmp_path / &quot;ledger.db&quot;))
+    return tmp_path / &quot;ledger.db&quot;
+
+
+def assert_usage_error(args: tuple[str, ...]) -&gt; None:
+    code, out, err = cli_runner(*args)
+    assert code == 2, args
+    assert out == &quot;&quot;, args
+    assert len(err.strip().splitlines()) == 1, args
+
+
+@pytest.mark.parametrize(
+    &quot;args&quot;,
+    [
+        (&quot;frobnicate&quot;,),
+        (&quot;frobnicate&quot;, &quot;extra&quot;),
+        (&quot;INIT&quot;,),
+        (&quot;account&quot;,),
+        (&quot;txn&quot;,),
+    ],
+)
+def test_unknown_or_incomplete_command_is_a_usage_error(store, args):
+    assert_usage_error(args)
+    assert not store.exists()
+
+
+def test_no_arguments_is_a_usage_error(store):
+    assert_usage_error(())
+    assert not store.exists()
+
+
+@pytest.mark.parametrize(&quot;table&quot;, [&quot;nosuch&quot;, &quot;Accounts&quot;, &quot;transaction&quot;, &quot;&quot;])
+def test_unknown_load_table_is_a_usage_error_even_when_the_file_is_missing(store, table, tmp_path):
+    missing = str(tmp_path / &quot;absent.csv&quot;)
+    code, out, err = cli_runner(&quot;load&quot;, table, missing)
+    assert code == 2
+    assert out == &quot;&quot;
+    assert len(err.strip().splitlines()) == 1
+    assert not store.exists()
+
+
+@pytest.mark.parametrize(&quot;report&quot;, [&quot;nosuch&quot;, &quot;Balances&quot;, &quot;monthlies&quot;])
+def test_unknown_report_is_a_usage_error(store, report):
+    assert_usage_error((&quot;report&quot;, report))
+    assert not store.exists()
+
+
+@pytest.mark.parametrize(&quot;subcommand&quot;, [&quot;frobnicate&quot;, &quot;Add&quot;, &quot;remove&quot;])
+def test_unknown_account_subcommand_is_a_usage_error(store, subcommand):
+    assert_usage_error((&quot;account&quot;, subcommand))
+
+
+@pytest.mark.parametrize(&quot;subcommand&quot;, [&quot;frobnicate&quot;, &quot;Post&quot;, &quot;update&quot;])
+def test_unknown_txn_subcommand_is_a_usage_error(store, subcommand):
+    assert_usage_error((&quot;txn&quot;, subcommand))
+
+
+@pytest.mark.parametrize(
+    &quot;args&quot;,
+    [
+        (&quot;init&quot;, &quot;extra&quot;),
+        (&quot;count&quot;, &quot;extra&quot;),
+        (&quot;load&quot;,),
+        (&quot;load&quot;, &quot;accounts&quot;),
+        (&quot;load&quot;, &quot;accounts&quot;, &quot;a.csv&quot;, &quot;b.csv&quot;),
+        (&quot;load&quot;, &quot;categories&quot;),
+        (&quot;load&quot;, &quot;transactions&quot;, &quot;a.csv&quot;, &quot;b.csv&quot;),
+        (&quot;account&quot;, &quot;add&quot;),
+        (&quot;account&quot;, &quot;add&quot;, &quot;ONLYCODE&quot;),
+        (&quot;account&quot;, &quot;add&quot;, &quot;CODE&quot;, &quot;Name&quot;, &quot;extra&quot;),
+        (&quot;account&quot;, &quot;get&quot;),
+        (&quot;account&quot;, &quot;get&quot;, &quot;A&quot;, &quot;B&quot;),
+        (&quot;account&quot;, &quot;rename&quot;, &quot;CODE&quot;),
+        (&quot;account&quot;, &quot;rename&quot;, &quot;CODE&quot;, &quot;Name&quot;, &quot;extra&quot;),
+        (&quot;account&quot;, &quot;delete&quot;),
+        (&quot;account&quot;, &quot;delete&quot;, &quot;A&quot;, &quot;B&quot;),
+        (&quot;txn&quot;, &quot;post&quot;, &quot;ACCT&quot;, &quot;CAT&quot;, &quot;1.00&quot;),
+        (&quot;txn&quot;, &quot;post&quot;, &quot;ACCT&quot;, &quot;CAT&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;, &quot;memo&quot;, &quot;extra&quot;),
+        (&quot;txn&quot;, &quot;get&quot;),
+        (&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;, &quot;2&quot;),
+        (&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;),
+        (&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;, &quot;2.00&quot;, &quot;extra&quot;),
+        (&quot;txn&quot;, &quot;delete&quot;),
+        (&quot;txn&quot;, &quot;delete&quot;, &quot;1&quot;, &quot;2&quot;),
+        (&quot;transfer&quot;, &quot;FROM&quot;, &quot;TO&quot;, &quot;1.00&quot;),
+        (&quot;transfer&quot;, &quot;FROM&quot;, &quot;TO&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;, &quot;extra&quot;),
+        (&quot;report&quot;,),
+        (&quot;report&quot;, &quot;balances&quot;, &quot;extra&quot;),
+        (&quot;report&quot;, &quot;monthly&quot;, &quot;extra&quot;),
+        (&quot;report&quot;, &quot;categories&quot;, &quot;extra&quot;),
+    ],
+)
+def test_wrong_argument_count_is_a_usage_error_and_touches_nothing(store, args):
+    assert_usage_error(args)
+    assert not store.exists()
+
+
+def test_wrong_argument_count_never_reads_a_named_file(store, tmp_path):
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;accounts&quot;, str(tmp_path), &quot;extra&quot;)
+    assert code == 2
+    assert out == &quot;&quot;
+    assert not store.exists()
+
+
+def test_correct_argument_count_is_not_a_usage_error(store):
+    assert cli_runner(&quot;init&quot;)[0] == 0
+    code, out, _ = cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;NOPE01&quot;)
+    assert code == 4
+    assert out == &quot;&quot;
+</pre></article>
+</main>
+</body>
+</html>

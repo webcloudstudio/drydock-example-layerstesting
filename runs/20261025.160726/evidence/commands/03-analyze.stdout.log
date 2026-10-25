@@ -1,0 +1,14 @@
+Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Analyzing Blueprint: LayersTesting
+Running analysis...
+2026-10-25 12:07:34 EDT  Calling CLAUDE/claude-haiku-5-5 (analyze)...
+  Completed CLAUDE/claude-haiku-5-5 (analyze)  rc=0
+
+  ANALYSIS.md   →  ANALYSIS.md
+  SEA_TRIALS.md →  SEA_TRIALS.md
+  commanders_chair  →  QuarterDeck/commanders_chair.html  (lifecycle: analyzed)
+
+Quality: ✓  Ready  (7 features · 26 stories · 0 questionnaires · 0 blockers)
+
+Next step: drydock plan LayersTesting
+Target - committed project workspace git store

@@ -1,0 +1,830 @@
+=== BEGIN ARTIFACT FEATURE-TransferOverdraw.md ===
+# FEATURE: Transfer Overdraw Rejection
+
+| Field | Value |
+|-------|-------|
+| Version | 20261025 V1 |
+| Description | A transfer larger than the source account balance is rejected with exit 3 and writes neither row. |
+| Depends On | FEATURE-Transfer.md, FEATURE-LoadTransactions.md, FEATURE-LedgerCore.md, DATABASE.md |
+| Provides | transfer overdraw rejection |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger transfer <from> <to> <amount> <date>` must never leave the source account below zero. This
+story proves that the projected balance of the source, computed from its stored transactions minus
+the transfer amount, is checked before the first write. A rejected transfer exits `3`, writes nothing
+to standard output, and leaves the transactions table exactly as it was. A transfer that brings the
+source to exactly zero is allowed.
+
+## Behavior
+
+- The source balance is the sum, in integer cents, of the source account's transactions, read from
+  the database at command time.
+- If the balance minus the transfer amount is below zero, the command exits `3` before writing either
+  the outgoing or the incoming row.
+- If the source has no transactions its balance is zero and any positive transfer is rejected.
+- A transfer equal to the whole balance succeeds and leaves the source at zero.
+- No floating point is used at any step.
+
+## Database Interface
+
+- `FEATURE-TXN-002` — read: list the source account's transactions to compute its balance - supplies: `account` - returns: `account`, `amount`
+
+## Programmatic Acceptance
+
+=== AC transfer-overdraw-rejected ===
+Intent: A transfer exceeding the source balance exits 3, prints nothing, and writes no rows.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    src = "ACPTOD1"
+    dst = "ACPTOD2"
+    cat = "ACPTODC"
+    db.accounts.create(account=src, name="Overdraw Source")
+    db.accounts.create(account=dst, name="Overdraw Target")
+    db.categories.create(category=cat, description="Overdraw Funding")
+    if db.categories.get(category="TRANSFER") is None:
+        db.categories.create(category="TRANSFER", description="Internal transfer")
+    tid = max([t.txn_id for t in db.transactions.list()], default=0) + 1
+    db.transactions.create(txn_id=tid, date="2026-06-01", account=src, category=cat, amount=10000, memo="")
+    before = len(db.transactions.list())
+    code, out, err = cli_runner("transfer", src, dst, "100.01", "2026-06-02")
+    print(out)
+    print(err)
+    assert code == 3
+    assert out == ""
+    after = len(db.transactions.list())
+    assert after == before
+    assert db.transactions.list(account=dst) == []
+    assert sum(t.amount for t in db.transactions.list(account=src)) == 10000
+=== END AC transfer-overdraw-rejected ===
+
+=== AC transfer-overdraw-exact-balance ===
+Intent: A transfer equal to the whole source balance succeeds and leaves the source at zero.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    src = "ACPTOE1"
+    dst = "ACPTOE2"
+    cat = "ACPTOEC"
+    db.accounts.create(account=src, name="Exact Source")
+    db.accounts.create(account=dst, name="Exact Target")
+    db.categories.create(category=cat, description="Exact Funding")
+    if db.categories.get(category="TRANSFER") is None:
+        db.categories.create(category="TRANSFER", description="Internal transfer")
+    tid = max([t.txn_id for t in db.transactions.list()], default=0) + 1
+    db.transactions.create(txn_id=tid, date="2026-06-01", account=src, category=cat, amount=10000, memo="")
+    before = len(db.transactions.list())
+    code, out, err = cli_runner("transfer", src, dst, "100.00", "2026-06-02")
+    print(out)
+    print(err)
+    assert code == 0
+    assert len(db.transactions.list()) == before + 2
+    assert sum(t.amount for t in db.transactions.list(account=src)) == 0
+    assert sum(t.amount for t in db.transactions.list(account=dst)) == 10000
+=== END AC transfer-overdraw-exact-balance ===
+
+=== AC transfer-overdraw-empty-source ===
+Intent: A source account with no transactions cannot be the source of any positive transfer.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    src = "ACPTOM1"
+    dst = "ACPTOM2"
+    db.accounts.create(account=src, name="Empty Source")
+    db.accounts.create(account=dst, name="Empty Target")
+    if db.categories.get(category="TRANSFER") is None:
+        db.categories.create(category="TRANSFER", description="Internal transfer")
+    before = len(db.transactions.list())
+    code, out, err = cli_runner("transfer", src, dst, "0.01", "2026-06-02")
+    print(out)
+    print(err)
+    assert code == 3
+    assert out == ""
+    assert len(db.transactions.list()) == before
+    assert db.transactions.list(account=src) == []
+    assert db.transactions.list(account=dst) == []
+=== END AC transfer-overdraw-empty-source ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A rejected transfer writes neither the outgoing nor the incoming row.
+- The balance check runs before the first write and uses integer cents only.
+- A rejected command writes nothing to standard output and one diagnostic line to standard error.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-BalanceRule.md ===
+# FEATURE: Balance Rule
+
+| Field | Value |
+|-------|-------|
+| Version | 20261025 V1 |
+| Description | Assembles and verifies that post, amend, delete, transfer, and load each reject any change that would leave an account balance below zero. |
+| Depends On | FEATURE-TxnPost.md, FEATURE-TxnAmend.md, FEATURE-TxnDelete.md, FEATURE-TransferOverdraw.md, FEATURE-LoadRejection.md, FEATURE-LedgerCore.md, DATABASE.md |
+| Provides | non-negative balance rule |
+
+## Questions
+
+- None.
+
+## Purpose
+
+An account's balance is the sum of its transaction amounts in integer cents. No command may leave
+any account balance below zero. This assembly story confirms that every mutating command applies the
+shared projected-balance guard from the ledger core before its first write, and wires the guard into
+any command that lacks it. A rejection exits `3`, prints nothing to standard output, and leaves every
+table unchanged.
+
+## Behavior
+
+- `txn post` rejects a withdrawal larger than the account balance.
+- `txn amend` rejects an amount that makes the resulting balance negative.
+- `txn delete` rejects deleting a deposit that the remaining transactions depend on.
+- `transfer` rejects an amount larger than the source balance.
+- `load transactions` rejects a file whose rows, taken together, leave any balance negative, and
+  stores none of its rows.
+- Each command also allows a change that brings a balance to exactly zero.
+
+## Database Interface
+
+- `FEATURE-TXN-002` — read: list an account's transactions to compute balances - supplies: `account` - returns: `account`, `amount`
+
+## Programmatic Acceptance
+
+=== AC balance-rule-post ===
+Intent: txn post rejects a withdrawal exceeding the balance and accepts one that brings it to zero.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    acct = "ACPTBP1"
+    cat = "ACPTBPC"
+    db.accounts.create(account=acct, name="Post Rule")
+    db.categories.create(category=cat, description="Post Rule Category")
+    tid = max([t.txn_id for t in db.transactions.list()], default=0) + 1
+    db.transactions.create(txn_id=tid, date="2026-06-01", account=acct, category=cat, amount=5000, memo="")
+    before = len(db.transactions.list())
+    code, out, err = cli_runner("txn", "post", acct, cat, "-50.01", "2026-06-02")
+    print(out)
+    print(err)
+    assert code == 3
+    assert out == ""
+    assert len(db.transactions.list()) == before
+    assert sum(t.amount for t in db.transactions.list(account=acct)) == 5000
+    code, out, err = cli_runner("txn", "post", acct, cat, "-50.00", "2026-06-02")
+    print(out)
+    print(err)
+    assert code == 0
+    assert len(db.transactions.list()) == before + 1
+    assert sum(t.amount for t in db.transactions.list(account=acct)) == 0
+=== END AC balance-rule-post ===
+
+=== AC balance-rule-amend ===
+Intent: txn amend rejects an amount that would leave the balance negative and leaves the row unchanged.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    acct = "ACPTBA1"
+    cat = "ACPTBAC"
+    db.accounts.create(account=acct, name="Amend Rule")
+    db.categories.create(category=cat, description="Amend Rule Category")
+    base = max([t.txn_id for t in db.transactions.list()], default=0)
+    deposit_id = base + 1
+    withdraw_id = base + 2
+    db.transactions.create(txn_id=deposit_id, date="2026-06-01", account=acct, category=cat, amount=5000, memo="")
+    db.transactions.create(txn_id=withdraw_id, date="2026-06-02", account=acct, category=cat, amount=-3000, memo="")
+    code, out, err = cli_runner("txn", "amend", str(deposit_id), "29.99")
+    print(out)
+    print(err)
+    assert code == 3
+    assert out == ""
+    row = db.transactions.get(txn_id=deposit_id)
+    assert row is not None
+    assert row.amount == 5000
+    assert sum(t.amount for t in db.transactions.list(account=acct)) == 2000
+    code, out, err = cli_runner("txn", "amend", str(deposit_id), "30.00")
+    print(out)
+    print(err)
+    assert code == 0
+    row = db.transactions.get(txn_id=deposit_id)
+    assert row is not None
+    assert row.amount == 3000
+    assert sum(t.amount for t in db.transactions.list(account=acct)) == 0
+=== END AC balance-rule-amend ===
+
+=== AC balance-rule-delete ===
+Intent: txn delete rejects removing a deposit that later withdrawals depend on and keeps the row.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    acct = "ACPTBD1"
+    cat = "ACPTBDC"
+    db.accounts.create(account=acct, name="Delete Rule")
+    db.categories.create(category=cat, description="Delete Rule Category")
+    base = max([t.txn_id for t in db.transactions.list()], default=0)
+    deposit_id = base + 1
+    withdraw_id = base + 2
+    db.transactions.create(txn_id=deposit_id, date="2026-06-01", account=acct, category=cat, amount=5000, memo="")
+    db.transactions.create(txn_id=withdraw_id, date="2026-06-02", account=acct, category=cat, amount=-3000, memo="")
+    before = len(db.transactions.list())
+    code, out, err = cli_runner("txn", "delete", str(deposit_id))
+    print(out)
+    print(err)
+    assert code == 3
+    assert out == ""
+    assert db.transactions.get(txn_id=deposit_id) is not None
+    assert len(db.transactions.list()) == before
+    code, out, err = cli_runner("txn", "delete", str(withdraw_id))
+    print(out)
+    print(err)
+    assert code == 0
+    assert db.transactions.get(txn_id=withdraw_id) is None
+=== END AC balance-rule-delete ===
+
+=== AC balance-rule-transfer ===
+Intent: transfer rejects an amount above the source balance and writes neither row.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    src = "ACPTBT1"
+    dst = "ACPTBT2"
+    cat = "ACPTBTC"
+    db.accounts.create(account=src, name="Transfer Rule Source")
+    db.accounts.create(account=dst, name="Transfer Rule Target")
+    db.categories.create(category=cat, description="Transfer Rule Category")
+    if db.categories.get(category="TRANSFER") is None:
+        db.categories.create(category="TRANSFER", description="Internal transfer")
+    tid = max([t.txn_id for t in db.transactions.list()], default=0) + 1
+    db.transactions.create(txn_id=tid, date="2026-06-01", account=src, category=cat, amount=2500, memo="")
+    before = len(db.transactions.list())
+    code, out, err = cli_runner("transfer", src, dst, "25.01", "2026-06-02")
+    print(out)
+    print(err)
+    assert code == 3
+    assert out == ""
+    assert len(db.transactions.list()) == before
+    assert db.transactions.list(account=dst) == []
+=== END AC balance-rule-transfer ===
+
+=== AC balance-rule-load ===
+Intent: load transactions rejects a file whose rows leave a balance negative and stores none of its rows.
+
+import csv
+import os
+import tempfile
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    acct = "ACPTBL1"
+    cat = "ACPTBLC"
+    db.accounts.create(account=acct, name="Load Rule")
+    db.categories.create(category=cat, description="Load Rule Category")
+    base = max([t.txn_id for t in db.transactions.list()], default=0)
+    first_id = base + 1
+    second_id = base + 2
+    before = len(db.transactions.list())
+    with tempfile.TemporaryDirectory() as folder:
+        path = os.path.join(folder, "rows.csv")
+        with open(path, "w", newline="") as handle:
+            writer = csv.writer(handle, lineterminator="\n")
+            writer.writerow(["txn_id", "date", "account", "category", "amount", "memo"])
+            writer.writerow([first_id, "2026-06-01", acct, cat, "10.00", "deposit"])
+            writer.writerow([second_id, "2026-06-02", acct, cat, "-10.01", "overdraw"])
+        code, out, err = cli_runner("load", "transactions", path)
+    print(out)
+    print(err)
+    assert code == 3
+    assert out == ""
+    assert len(db.transactions.list()) == before
+    assert db.transactions.get(txn_id=first_id) is None
+    assert db.transactions.get(txn_id=second_id) is None
+=== END AC balance-rule-load ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Every check happens before the command's first write; a rejected command changes no table.
+- Balances are computed from stored transactions in integer cents; no floating point is used.
+- A rejected command writes nothing to standard output and one diagnostic line to standard error.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-ReportBalances.md ===
+# FEATURE: Report Balances
+
+| Field | Value |
+|-------|-------|
+| Version | 20261025 V1 |
+| Description | Implements `ledger report balances`, listing each account's transaction count and balance plus a TOTAL row. |
+| Depends On | FEATURE-LoadTransactions.md, FEATURE-CliEntry.md, FEATURE-LedgerCore.md, DATABASE.md |
+| Provides | ledger report balances |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger report balances` prints one row per account with its transaction count and balance, ordered
+by account code, followed by a TOTAL row. Every value is computed from the database at run time;
+nothing is stored or hard-coded.
+
+## Behavior
+
+- Header row: `account,name,transactions,balance`.
+- One data row per account, ordered by account code, including accounts with no transactions
+  (count `0`, balance `0.00`).
+- Final row: `TOTAL,,<count>,<sum>` where count is the total number of transactions and sum is the
+  total of all balances.
+- Balances are sums of integer cents, written with exactly two decimal places, a leading `-` when
+  negative, and no thousands separator.
+- Output is unquoted CSV with `\n` line endings; exit `0`.
+
+## Database Interface
+
+- `FEATURE-ACCOUNT-002` — read: list every account in code order - supplies: `account` - returns: `account`, `name`
+- `FEATURE-TXN-002` — read: list an account's transactions to count and sum them - supplies: `account` - returns: `account`, `amount`
+
+## Programmatic Acceptance
+
+=== AC report-balances-rows ===
+Intent: The report has one row per stored account in code order with counts and balances computed from stored transactions, then a consistent TOTAL row.
+
+import csv
+import io
+import re
+from decimal import Decimal
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+def cents(text):
+    assert re.fullmatch(r"-?\d+\.\d{2}", text), text
+    return int(Decimal(text) * 100)
+
+with db_session() as db:
+    cat = "ACPTRBC"
+    db.accounts.create(account="ACPTRB1", name="Report One")
+    db.accounts.create(account="ACPTRB2", name="Report Two")
+    db.categories.create(category=cat, description="Report Category")
+    base = max([t.txn_id for t in db.transactions.list()], default=0)
+    db.transactions.create(txn_id=base + 1, date="2026-06-01", account="ACPTRB1", category=cat, amount=10000, memo="")
+    db.transactions.create(txn_id=base + 2, date="2026-06-02", account="ACPTRB1", category=cat, amount=-1250, memo="")
+    db.transactions.create(txn_id=base + 3, date="2026-06-03", account="ACPTRB2", category=cat, amount=500000, memo="")
+    code, out, err = cli_runner("report", "balances")
+    print(out)
+    print(err)
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[0] == ["account", "name", "transactions", "balance"]
+    data = rows[1:-1]
+    total = rows[-1]
+    accounts = db.accounts.list()
+    assert [r[0] for r in data] == [a.account for a in accounts]
+    assert [r[0] for r in data] == sorted(r[0] for r in data)
+    count_sum = 0
+    cents_sum = 0
+    for row, acct in zip(data, accounts):
+        assert len(row) == 4
+        txns = db.transactions.list(account=acct.account)
+        assert row[1] == acct.name
+        assert int(row[2]) == len(txns)
+        assert cents(row[3]) == sum(t.amount for t in txns)
+        count_sum += len(txns)
+        cents_sum += sum(t.amount for t in txns)
+    assert total[0] == "TOTAL"
+    assert total[1] == ""
+    assert len(total) == 4
+    assert int(total[2]) == count_sum
+    assert cents(total[3]) == cents_sum
+=== END AC report-balances-rows ===
+
+=== AC report-balances-empty-account ===
+Intent: An account with no transactions appears with a zero count and a zero balance.
+
+import csv
+import io
+import re
+from decimal import Decimal
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    acct = "ACPTRE1"
+    db.accounts.create(account=acct, name="Empty Report")
+    code, out, err = cli_runner("report", "balances")
+    print(out)
+    print(err)
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    mine = [r for r in rows[1:-1] if r[0] == acct]
+    assert len(mine) == 1
+    assert int(mine[0][2]) == 0
+    assert re.fullmatch(r"-?\d+\.\d{2}", mine[0][3])
+    assert int(Decimal(mine[0][3]) * 100) == 0
+=== END AC report-balances-empty-account ===
+
+=== AC report-balances-reflects-changes ===
+Intent: The report is computed from the database, so a new transaction changes the reported balance by its amount.
+
+import csv
+import io
+import re
+from decimal import Decimal
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+def balance_of(out, acct):
+    rows = list(csv.reader(io.StringIO(out)))
+    mine = [r for r in rows[1:-1] if r[0] == acct]
+    assert len(mine) == 1
+    assert re.fullmatch(r"-?\d+\.\d{2}", mine[0][3])
+    return int(Decimal(mine[0][3]) * 100), int(mine[0][2])
+
+with db_session() as db:
+    acct = "ACPTRC1"
+    cat = "ACPTRCC"
+    db.accounts.create(account=acct, name="Changing Report")
+    db.categories.create(category=cat, description="Changing Category")
+    code, out, err = cli_runner("report", "balances")
+    print(out)
+    print(err)
+    assert code == 0
+    first_balance, first_count = balance_of(out, acct)
+    delta = 123456
+    tid = max([t.txn_id for t in db.transactions.list()], default=0) + 1
+    db.transactions.create(txn_id=tid, date="2026-06-04", account=acct, category=cat, amount=delta, memo="")
+    code, out, err = cli_runner("report", "balances")
+    print(out)
+    print(err)
+    assert code == 0
+    second_balance, second_count = balance_of(out, acct)
+    assert second_balance == first_balance + delta
+    assert second_count == first_count + 1
+=== END AC report-balances-reflects-changes ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- No balance, count, or total is hard-coded; every value comes from a query at run time.
+- Amounts are integer cents internally and never floating point.
+- The report writes nothing to the database.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-ReportCategories.md ===
+# FEATURE: Report Categories
+
+| Field | Value |
+|-------|-------|
+| Version | 20261025 V1 |
+| Description | Implements `ledger report categories`, listing transaction count, inflow, outflow, and net per category plus a TOTAL row. |
+| Depends On | FEATURE-LoadTransactions.md, FEATURE-CliEntry.md, FEATURE-LedgerCore.md, DATABASE.md |
+| Provides | ledger report categories |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger report categories` prints, for every category ordered by code, how many transactions it has
+and its inflow, outflow, and net, followed by a TOTAL row. Categories without transactions are
+included. Every value is computed from the database at run time.
+
+## Behavior
+
+- Header row: `category,description,transactions,inflow,outflow,net`.
+- One data row per category, ordered by category code, including categories with no transactions.
+- `inflow` is the sum of positive amounts. `outflow` is the sum of the absolute values of negative
+  amounts, written as a positive number. `net` is `inflow - outflow`.
+- Final row: `TOTAL,,<count>,<inflow>,<outflow>,<net>`.
+- Amounts are written with exactly two decimal places, a leading `-` when negative, and no
+  thousands separator. Output is unquoted CSV with `\n` line endings; exit `0`.
+
+## Database Interface
+
+- `FEATURE-CATEGORY-002` — read: list every category in code order - supplies: `category` - returns: `category`, `description`
+- `FEATURE-TXN-002` — read: list a category's transactions to total them - supplies: `category` - returns: `category`, `amount`
+
+## Programmatic Acceptance
+
+=== AC report-categories-rows ===
+Intent: Each category row's count, inflow, outflow, and net match the stored transactions, in code order, followed by a consistent TOTAL row.
+
+import csv
+import io
+import re
+from decimal import Decimal
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+def cents(text):
+    assert re.fullmatch(r"-?\d+\.\d{2}", text), text
+    return int(Decimal(text) * 100)
+
+with db_session() as db:
+    acct = "ACPTCR9"
+    db.accounts.create(account=acct, name="Category Report")
+    db.categories.create(category="ACPTCRA", description="Category A")
+    db.categories.create(category="ACPTCRB", description="Category B")
+    base = max([t.txn_id for t in db.transactions.list()], default=0)
+    db.transactions.create(txn_id=base + 1, date="2026-06-01", account=acct, category="ACPTCRA", amount=20000, memo="")
+    db.transactions.create(txn_id=base + 2, date="2026-06-02", account=acct, category="ACPTCRB", amount=-1550, memo="")
+    db.transactions.create(txn_id=base + 3, date="2026-06-03", account=acct, category="ACPTCRB", amount=-450, memo="")
+    code, out, err = cli_runner("report", "categories")
+    print(out)
+    print(err)
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[0] == ["category", "description", "transactions", "inflow", "outflow", "net"]
+    data = rows[1:-1]
+    total = rows[-1]
+    categories = db.categories.list()
+    assert [r[0] for r in data] == [c.category for c in categories]
+    sums = [0, 0, 0, 0]
+    for row, cat in zip(data, categories):
+        assert len(row) == 6
+        txns = db.transactions.list(category=cat.category)
+        inflow = sum(t.amount for t in txns if t.amount > 0)
+        outflow = sum(-t.amount for t in txns if t.amount < 0)
+        assert row[1] == cat.description
+        assert int(row[2]) == len(txns)
+        assert cents(row[3]) == inflow
+        assert cents(row[4]) == outflow
+        assert cents(row[5]) == inflow - outflow
+        sums[0] += len(txns)
+        sums[1] += inflow
+        sums[2] += outflow
+        sums[3] += inflow - outflow
+    assert total[0] == "TOTAL"
+    assert total[1] == ""
+    assert len(total) == 6
+    assert int(total[2]) == sums[0]
+    assert cents(total[3]) == sums[1]
+    assert cents(total[4]) == sums[2]
+    assert cents(total[5]) == sums[3]
+=== END AC report-categories-rows ===
+
+=== AC report-categories-unused-category ===
+Intent: A category with no transactions is listed with a zero count and zero amounts.
+
+import csv
+import io
+import re
+from decimal import Decimal
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    cat = "ACPTCRU"
+    db.categories.create(category=cat, description="Unused Category")
+    code, out, err = cli_runner("report", "categories")
+    print(out)
+    print(err)
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    mine = [r for r in rows[1:-1] if r[0] == cat]
+    assert len(mine) == 1
+    assert int(mine[0][2]) == 0
+    for cell in mine[0][3:6]:
+        assert re.fullmatch(r"-?\d+\.\d{2}", cell)
+        assert int(Decimal(cell) * 100) == 0
+=== END AC report-categories-unused-category ===
+
+=== AC report-categories-outflow-positive ===
+Intent: A category with only withdrawals reports outflow as a positive number and a negative net with a leading minus.
+
+import csv
+import io
+import re
+from decimal import Decimal
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    acct = "ACPTCO1"
+    funding = "ACPTCOF"
+    spending = "ACPTCOS"
+    db.accounts.create(account=acct, name="Outflow Report")
+    db.categories.create(category=funding, description="Outflow Funding")
+    db.categories.create(category=spending, description="Outflow Spending")
+    base = max([t.txn_id for t in db.transactions.list()], default=0)
+    db.transactions.create(txn_id=base + 1, date="2026-06-01", account=acct, category=funding, amount=9000, memo="")
+    db.transactions.create(txn_id=base + 2, date="2026-06-02", account=acct, category=spending, amount=-1234, memo="")
+    code, out, err = cli_runner("report", "categories")
+    print(out)
+    print(err)
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    mine = [r for r in rows[1:-1] if r[0] == spending]
+    assert len(mine) == 1
+    row = mine[0]
+    for cell in row[3:6]:
+        assert re.fullmatch(r"-?\d+\.\d{2}", cell)
+    assert int(Decimal(row[3]) * 100) == 0
+    assert int(Decimal(row[4]) * 100) == 1234
+    assert not row[4].startswith("-")
+    assert int(Decimal(row[5]) * 100) == -1234
+    assert row[5].startswith("-")
+=== END AC report-categories-outflow-positive ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- No count or amount is hard-coded; every value comes from a query at run time.
+- Amounts are integer cents internally and never floating point.
+- Categories with no transactions are never omitted.
+- The report writes nothing to the database.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-ReportMonthly.md ===
+# FEATURE: Report Monthly
+
+| Field | Value |
+|-------|-------|
+| Version | 20261025 V1 |
+| Description | Implements `ledger report monthly`, listing transaction count, inflow, outflow, and net per calendar month plus a TOTAL row. |
+| Depends On | FEATURE-LoadTransactions.md, FEATURE-CliEntry.md, FEATURE-LedgerCore.md, DATABASE.md |
+| Provides | ledger report monthly |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger report monthly` prints one row per `YYYY-MM` that has at least one transaction, in ascending
+order, with that month's transaction count, inflow, outflow, and net, followed by a TOTAL row. Every
+value is computed from the database at run time.
+
+## Behavior
+
+- Header row: `month,transactions,inflow,outflow,net`.
+- The month of a transaction is the first seven characters of its `YYYY-MM-DD` date.
+- Only months with transactions appear, ascending.
+- `inflow` is the sum of positive amounts. `outflow` is the sum of the absolute values of negative
+  amounts, written as a positive number. `net` is `inflow - outflow`.
+- Final row: `TOTAL,<count>,<inflow>,<outflow>,<net>`.
+- Amounts are written with exactly two decimal places, a leading `-` when negative, and no
+  thousands separator. Output is unquoted CSV with `\n` line endings; exit `0`.
+
+## Database Interface
+
+- `FEATURE-TXN-002` — read: list every transaction to group by month - supplies: `account`, `category` - returns: `date`, `amount`
+
+## Programmatic Acceptance
+
+=== AC report-monthly-rows ===
+Intent: Each month row's count, inflow, outflow, and net match the stored transactions grouped by date, ascending, followed by a consistent TOTAL row.
+
+import csv
+import io
+import re
+from decimal import Decimal
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+def cents(text):
+    assert re.fullmatch(r"-?\d+\.\d{2}", text), text
+    return int(Decimal(text) * 100)
+
+with db_session() as db:
+    acct = "ACPTMR1"
+    cat = "ACPTMRC"
+    db.accounts.create(account=acct, name="Monthly Report")
+    db.categories.create(category=cat, description="Monthly Category")
+    base = max([t.txn_id for t in db.transactions.list()], default=0)
+    db.transactions.create(txn_id=base + 1, date="2031-07-01", account=acct, category=cat, amount=50000, memo="")
+    db.transactions.create(txn_id=base + 2, date="2031-07-15", account=acct, category=cat, amount=-1999, memo="")
+    db.transactions.create(txn_id=base + 3, date="2031-09-02", account=acct, category=cat, amount=-2001, memo="")
+    code, out, err = cli_runner("report", "monthly")
+    print(out)
+    print(err)
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[0] == ["month", "transactions", "inflow", "outflow", "net"]
+    data = rows[1:-1]
+    total = rows[-1]
+    txns = db.transactions.list()
+    months = sorted({t.date[:7] for t in txns})
+    assert [r[0] for r in data] == months
+    sums = [0, 0, 0, 0]
+    for row, month in zip(data, months):
+        assert len(row) == 5
+        group = [t for t in txns if t.date[:7] == month]
+        inflow = sum(t.amount for t in group if t.amount > 0)
+        outflow = sum(-t.amount for t in group if t.amount < 0)
+        assert int(row[1]) == len(group)
+        assert cents(row[2]) == inflow
+        assert cents(row[3]) == outflow
+        assert cents(row[4]) == inflow - outflow
+        sums[0] += len(group)
+        sums[1] += inflow
+        sums[2] += outflow
+        sums[3] += inflow - outflow
+    assert total[0] == "TOTAL"
+    assert len(total) == 5
+    assert int(total[1]) == sums[0]
+    assert cents(total[2]) == sums[1]
+    assert cents(total[3]) == sums[2]
+    assert cents(total[4]) == sums[3]
+=== END AC report-monthly-rows ===
+
+=== AC report-monthly-skips-empty-months ===
+Intent: A month between two months with transactions but with none of its own does not appear.
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    acct = "ACPTMS1"
+    cat = "ACPTMSC"
+    db.accounts.create(account=acct, name="Gap Report")
+    db.categories.create(category=cat, description="Gap Category")
+    base = max([t.txn_id for t in db.transactions.list()], default=0)
+    db.transactions.create(txn_id=base + 1, date="2032-01-10", account=acct, category=cat, amount=1000, memo="")
+    db.transactions.create(txn_id=base + 2, date="2032-03-10", account=acct, category=cat, amount=1000, memo="")
+    code, out, err = cli_runner("report", "monthly")
+    print(out)
+    print(err)
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    months = [r[0] for r in rows[1:-1]]
+    stored = sorted({t.date[:7] for t in db.transactions.list()})
+    assert months == stored
+    assert "2032-01" in months
+    assert "2032-03" in months
+    assert "2032-02" not in months
+=== END AC report-monthly-skips-empty-months ===
+
+=== AC report-monthly-reflects-changes ===
+Intent: The report is computed from the database, so a new transaction in a month raises that month's count by one.
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+def count_for(out, month):
+    rows = list(csv.reader(io.StringIO(out)))
+    mine = [r for r in rows[1:-1] if r[0] == month]
+    return int(mine[0][1]) if mine else 0
+
+with db_session() as db:
+    acct = "ACPTMC1"
+    cat = "ACPTMCC"
+    month = "2033-05"
+    db.accounts.create(account=acct, name="Changing Monthly")
+    db.categories.create(category=cat, description="Changing Monthly Category")
+    code, out, err = cli_runner("report", "monthly")
+    print(out)
+    print(err)
+    assert code == 0
+    first = count_for(out, month)
+    tid = max([t.txn_id for t in db.transactions.list()], default=0) + 1
+    db.transactions.create(txn_id=tid, date="2033-05-20", account=acct, category=cat, amount=700, memo="")
+    code, out, err = cli_runner("report", "monthly")
+    print(out)
+    print(err)
+    assert code == 0
+    assert count_for(out, month) == first + 1
+=== END AC report-monthly-reflects-changes ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- No month, count, or amount is hard-coded; every value comes from a query at run time.
+- Amounts are integer cents internally and never floating point.
+- Months without transactions are never listed.
+- The report writes nothing to the database.
+=== END ARTIFACT ===

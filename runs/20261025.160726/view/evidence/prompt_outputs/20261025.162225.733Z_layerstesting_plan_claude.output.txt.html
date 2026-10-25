@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261025.162225.733Z_layerstesting_plan_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261025.162225.733Z_layerstesting_plan_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261025.162225.733Z_layerstesting_plan_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT FEATURE-TxnValidate.md ===
+# FEATURE: Txn Validate
+
+| Field | Value |
+|-------|-------|
+| Version | 20261025 V1 |
+| Description | Specifies the input validation `ledger txn post` applies to category, amount, and date before it writes anything. |
+| Depends On | FEATURE-TxnPost.md, FEATURE-LedgerCore.md, DATABASE.md |
+| Provides | txn post validation |
+| Consumes | ledger txn post, parse_amount, validate_date |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Guarantee that an invalid category, amount, or date given to `ledger txn post` is rejected with exit 3 before the first write, and that valid boundary inputs are accepted. Wiring lives in the post command; this specification owns the rules and their proof.
+
+## Rules
+
+| Input | Valid | Rejected with exit 3 |
+|-------|-------|----------------------|
+| Category | A code present in `categories` | An unknown category |
+| Amount | `-?DIGITS[.D[D]]`, never zero, so `12`, `12.5`, `-12.50` | More than two decimals (`1.234`), `12.`, a leading `+`, non-numeric text, empty text, `0`, `0.00`, `-0.00` |
+| Date | A real calendar date written `YYYY-MM-DD`, including a leap day in a leap year | `2026-02-30`, `2026-02-29`, `2026-2-3`, non-date text |
+
+A rejected post writes no row, prints nothing to standard output, writes one diagnostic line to standard error, and consumes no transaction id: the next successful post receives one more than the largest id present.
+
+## Database Interface
+
+- `FEATURE-CATEGORY-001` — read: look up the category named on input - supplies: `category` - returns: `category`, `description`
+- `FEATURE-ACCOUNT-002` — read: confirm the account exists - supplies: `account` - returns: `account`, `name`
+
+## Programmatic Acceptance
+
+=== AC txnvalidate-unknown-category ===
+Intent: An unknown category exits 3 and writes no row.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    acct = &quot;TVACCT1&quot;
+    db.accounts.create(account=acct, name=&quot;Validate Account&quot;)
+    before = len(db.transactions.list())
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, &quot;NOSUCHCAT&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;)
+    print(out)
+    print(err)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert len(db.transactions.list()) == before
+=== END AC txnvalidate-unknown-category ===
+
+=== AC txnvalidate-bad-amounts ===
+Intent: Over-precise, malformed, and zero amounts exit 3 and write no row.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    acct = &quot;TVACCT2&quot;
+    cat = &quot;TVCAT2&quot;
+    db.accounts.create(account=acct, name=&quot;Validate Amount&quot;)
+    db.categories.create(category=cat, description=&quot;Validate Amount Category&quot;)
+    before = len(db.transactions.list())
+    for bad in (&quot;1.234&quot;, &quot;abc&quot;, &quot;12.&quot;, &quot;+5.00&quot;, &quot;--1&quot;, &quot;&quot;, &quot;0&quot;, &quot;0.00&quot;, &quot;-0.00&quot;):
+        code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, bad, &quot;2026-04-01&quot;)
+        print(repr(bad), code, out, err)
+        assert code == 3
+        assert out == &quot;&quot;
+        assert len(db.transactions.list()) == before
+=== END AC txnvalidate-bad-amounts ===
+
+=== AC txnvalidate-bad-dates ===
+Intent: Impossible and malformed dates exit 3 and write no row.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    acct = &quot;TVACCT3&quot;
+    cat = &quot;TVCAT3&quot;
+    db.accounts.create(account=acct, name=&quot;Validate Date&quot;)
+    db.categories.create(category=cat, description=&quot;Validate Date Category&quot;)
+    before = len(db.transactions.list())
+    for bad in (&quot;2026-02-30&quot;, &quot;2026-02-29&quot;, &quot;2026-13-01&quot;, &quot;2026-2-3&quot;, &quot;notadate&quot;):
+        code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;1.00&quot;, bad)
+        print(repr(bad), code, out, err)
+        assert code == 3
+        assert out == &quot;&quot;
+        assert len(db.transactions.list()) == before
+=== END AC txnvalidate-bad-dates ===
+
+=== AC txnvalidate-valid-boundaries ===
+Intent: A one-decimal amount and a leap-day date are accepted and stored as integer cents.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    acct = &quot;TVACCT4&quot;
+    cat = &quot;TVCAT4&quot;
+    leap_day = &quot;2028-02-29&quot;
+    db.accounts.create(account=acct, name=&quot;Validate Valid&quot;)
+    db.categories.create(category=cat, description=&quot;Validate Valid Category&quot;)
+    base = max([t.txn_id for t in db.transactions.list()], default=0)
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;12.5&quot;, leap_day)
+    print(out)
+    print(err)
+    assert code == 0
+    stored = db.transactions.get(txn_id=base + 1)
+    assert stored is not None
+    assert stored.amount == 1250
+    assert stored.date == leap_day
+=== END AC txnvalidate-valid-boundaries ===
+
+=== AC txnvalidate-no-id-gap ===
+Intent: A rejected post consumes no id, so the next successful post receives the next id.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    acct = &quot;TVACCT5&quot;
+    cat = &quot;TVCAT5&quot;
+    db.accounts.create(account=acct, name=&quot;Validate Gap&quot;)
+    db.categories.create(category=cat, description=&quot;Validate Gap Category&quot;)
+    base = max([t.txn_id for t in db.transactions.list()], default=0)
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;1.234&quot;, &quot;2026-04-01&quot;)
+    assert code == 3
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;1.00&quot;, &quot;2026-04-01&quot;)
+    print(out)
+    print(err)
+    assert code == 0
+    assert db.transactions.get(txn_id=base + 1) is not None
+    assert db.transactions.get(txn_id=base + 2) is None
+=== END AC txnvalidate-no-id-gap ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Every check completes before the first write; a rejected post changes no table.
+- Amounts are parsed to integer cents; no floating point at any layer.
+- Rejections use exit 3, never exit 1 or 2.
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

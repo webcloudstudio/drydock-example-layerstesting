@@ -1,0 +1,13 @@
+{
+  "stories": [
+    {
+      "id": "TEST-001",
+      "provenance": "plan",
+      "gate": [
+        "sh",
+        "bin/test.sh"
+      ],
+      "note": "sources/INSTRUCTIONS.md Tests section: bin/test.sh runs the application's own automated suite and exits zero only when every test passes"
+    }
+  ]
+}

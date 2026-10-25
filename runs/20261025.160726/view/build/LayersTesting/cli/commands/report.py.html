@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/commands/report.py</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/commands/report.py</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../build/LayersTesting/cli/commands/report.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger report``: balances, monthly totals, and category totals, each computed from the store.&quot;&quot;&quot;
+
+from collections import defaultdict
+
+from cli.context import open_store
+from cli.core import format_amount
+from cli.registry import register
+from cli.views import ACCOUNT_HEADER, account_row
+
+MONTHLY_HEADER = [&quot;month&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;]
+CATEGORY_HEADER = [&quot;category&quot;, &quot;description&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;]
+
+
+def balances(args: list[str]) -&gt; list[list[str]]:
+    rows = [ACCOUNT_HEADER]
+    count = 0
+    total = 0
+    with open_store() as db:
+        for account in db.accounts.list():
+            txns = db.transactions.list(account=account.account)
+            rows.append(account_row(account, txns))
+            count += len(txns)
+            total += sum(txn.amount for txn in txns)
+    rows.append([&quot;TOTAL&quot;, &quot;&quot;, str(count), format_amount(total)])
+    return rows
+
+
+def monthly(args: list[str]) -&gt; list[list[str]]:
+    by_month: dict[str, list[int]] = defaultdict(list)
+    with open_store() as db:
+        amounts = []
+        for txn in db.transactions.list():
+            by_month[txn.date[:7]].append(txn.amount)
+            amounts.append(txn.amount)
+    rows = [MONTHLY_HEADER]
+    for month in sorted(by_month):
+        count, inflow, outflow = _flows(by_month[month])
+        rows.append([month, str(count), format_amount(inflow), format_amount(outflow),
+                     format_amount(inflow - outflow)])
+    count, inflow, outflow = _flows(amounts)
+    rows.append([&quot;TOTAL&quot;, str(count), format_amount(inflow), format_amount(outflow),
+                 format_amount(inflow - outflow)])
+    return rows
+
+
+def categories(args: list[str]) -&gt; list[list[str]]:
+    rows = [CATEGORY_HEADER]
+    everything: list[int] = []
+    with open_store() as db:
+        for category in db.categories.list():
+            amounts = [txn.amount for txn in db.transactions.list(category=category.category)]
+            everything.extend(amounts)
+            count, inflow, outflow = _flows(amounts)
+            rows.append([category.category, category.description, str(count),
+                         format_amount(inflow), format_amount(outflow),
+                         format_amount(inflow - outflow)])
+    count, inflow, outflow = _flows(everything)
+    rows.append([&quot;TOTAL&quot;, &quot;&quot;, str(count), format_amount(inflow), format_amount(outflow),
+                 format_amount(inflow - outflow)])
+    return rows
+
+
+def _flows(amounts: list[int]) -&gt; tuple[int, int, int]:
+    &quot;&quot;&quot;Return (count, inflow, outflow) in cents; outflow is the magnitude of the debits.&quot;&quot;&quot;
+    inflow = sum(amount for amount in amounts if amount &gt; 0)
+    outflow = -sum(amount for amount in amounts if amount &lt; 0)
+    return len(amounts), inflow, outflow
+
+
+register((&quot;report&quot;, &quot;balances&quot;), balances, (0, 0))
+register((&quot;report&quot;, &quot;monthly&quot;), monthly, (0, 0))
+register((&quot;report&quot;, &quot;categories&quot;), categories, (0, 0))
+</pre></article>
+</main>
+</body>
+</html>

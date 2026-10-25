@@ -1,0 +1,530 @@
+=== BEGIN ARTIFACT TOPOLOGY.md ===
+## Declarations
+
+## story foundation
+summary:      Stand up the Python project tree, environment, pytest runner, and the `ledger` launcher at the application root.
+type:         foundational
+kind:         capability
+phase:        1
+implements:   ARCHITECTURE.md
+stack:        common.md, python.md
+provides:     ledger executable, bin/test.sh launcher contract
+acceptance:   yes
+instructions: |
+  Create pyproject.toml, the committed uv.lock, the .venv-activating launchers in bin/, and an
+  executable `ledger` at the application root that calls cli.main and exits with its return value.
+  Record module ownership: persistence is reached only through the shipped persistence package.
+  Money is integer cents at every layer; no floating point.
+
+## story database
+summary:      Declare accounts, categories, and transactions and every repository operation the ledger needs.
+type:         foundational
+kind:         capability
+phase:        1
+implements:   DATABASE.md
+stack:        python.md, persistence.md, sqlite.md
+provides:     accounts table, categories table, transactions table
+depends:      foundation
+acceptance:   yes
+instructions: |
+  Author the declaration only; Drydock generates the persistence package. Declare the three tables
+  with integer-cent amounts, keys, and foreign keys from the source, and one access pattern per
+  operation any story needs (get, list, create, update, delete, counts, sums, drop and recreate
+  support as the library allows). Write no persistence code.
+
+## story cli-entry
+summary:      Build the cli package entry point: dispatch, exit-code mapping, and diagnostic channel.
+type:         foundational
+kind:         capability
+phase:        1
+implements:   FEATURE-CliEntry.md
+stack:        python.md, cli.md
+provides:     cli.main, cli.testing.cli_runner
+depends:      foundation, database
+acceptance:   yes
+instructions: |
+  Implement main(argv) -> int with a command table, exit codes 0 to 4, CSV writing to stdout with
+  LF endings, and one diagnostic line to stderr on failure. Commands register into the table; this
+  story registers none.
+
+## story ledger-core
+summary:      Provide shared amount parsing and formatting, field validators, date validation, and the projected-balance guard.
+type:         service
+kind:         capability
+phase:        1
+implements:   FEATURE-LedgerCore.md
+stack:        python.md, persistence.md
+provides:     parse_amount, format_amount, validate_code, validate_text, validate_date, balance_guard
+depends:      foundation, database
+acceptance:   yes
+instructions: |
+  Implement integer-cent parsing of -?DIGITS[.D[D]] (never zero), two-decimal output with leading
+  minus and no separators, code/name/memo validators, real calendar date check, and a guard that
+  computes the resulting per-account balances for a proposed change set before any write.
+
+## story init
+summary:      Implement `ledger init` to drop and recreate the three tables.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Init.md
+covers:       SCHEMA-001
+accepts:      st-003
+stack:        python.md, cli.md, persistence.md
+provides:     ledger init
+depends:      cli-entry, ledger-core
+acceptance:   yes
+instructions: |
+  Drop all three tables if present and create them empty, writing nothing to stdout.
+
+## story count
+summary:      Implement `ledger count` reporting row counts per table.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Count.md
+covers:       SCHEMA-002
+accepts:      st-003
+stack:        python.md, cli.md, persistence.md
+provides:     ledger count
+depends:      init
+acceptance:   yes
+instructions: |
+  Print table,rows then accounts, categories, transactions. Extra arguments are a usage error.
+
+## story load-accounts
+summary:      Implement `ledger load accounts <csv>`.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-LoadAccounts.md
+covers:       SCHEMA-003
+accepts:      st-004
+stack:        python.md, cli.md, persistence.md
+provides:     ledger load accounts
+depends:      init, count
+acceptance:   yes
+instructions: |
+  Require the header to match the table columns, validate every row before writing, write all rows
+  in one transaction, and print table,loaded then accounts,<n>.
+
+## story load-categories
+summary:      Implement `ledger load categories <csv>`.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-LoadCategories.md
+covers:       SCHEMA-004
+accepts:      st-004
+stack:        python.md, cli.md, persistence.md
+provides:     ledger load categories
+depends:      init, count
+acceptance:   yes
+instructions: |
+  Same contract as load accounts for the categories table; print table,loaded then categories,<n>.
+
+## story load-transactions
+summary:      Implement `ledger load transactions <csv>` keeping file txn_ids.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-LoadTransactions.md
+covers:       SCHEMA-005
+accepts:      st-004
+stack:        python.md, cli.md, persistence.md
+provides:     ledger load transactions
+depends:      load-accounts, load-categories
+acceptance:   yes
+instructions: |
+  Validate every row (account and category exist, amount, date, memo, no duplicate txn_id in the
+  file or table) and the resulting non-negative balances before the first write. Print
+  table,loaded then transactions,<n>.
+
+## story load-rejection
+summary:      Prove an invalid load is rejected atomically with exit 3.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-LoadRejection.md
+covers:       SCHEMA-006
+accepts:      st-007
+stack:        python.md, cli.md, persistence.md
+provides:     atomic load rejection
+depends:      load-transactions
+acceptance:   yes
+instructions: |
+  Ensure a file with an invalid row (unknown account, duplicate key, bad amount) stores none of its
+  rows and exits 3, and that reloading existing keys is rejected with tables unchanged.
+
+## story account-add
+summary:      Implement `ledger account add`.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-AccountAdd.md
+covers:       ACCT-001
+accepts:      st-006
+stack:        python.md, cli.md, persistence.md
+provides:     ledger account add
+depends:      init, count, ledger-core
+acceptance:   yes
+instructions: |
+  Validate code and name, create the account, print the account row with 0 transactions and 0.00.
+  Code over 12 chars or outside A-Z0-9, and names over 40 chars or with comma or newline, exit 3.
+
+## story account-get
+summary:      Implement `ledger account get`.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-AccountGet.md
+covers:       ACCT-002
+accepts:      st-006
+stack:        python.md, cli.md, persistence.md
+provides:     ledger account get
+depends:      account-add
+acceptance:   yes
+instructions: |
+  Print the account row with its transaction count and balance computed from the database; exit 4
+  when absent.
+
+## story account-rename
+summary:      Implement `ledger account rename`.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-AccountRename.md
+covers:       ACCT-003
+accepts:      st-006
+stack:        python.md, cli.md, persistence.md
+provides:     ledger account rename
+depends:      account-get
+acceptance:   yes
+instructions: |
+  Change only the name, validate it, print the updated row; exit 4 when absent.
+
+## story account-delete
+summary:      Implement `ledger account delete`.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-AccountDelete.md
+covers:       ACCT-004
+accepts:      st-006
+stack:        python.md, cli.md, persistence.md
+provides:     ledger account delete
+depends:      account-get, load-transactions
+acceptance:   yes
+instructions: |
+  Print deleted and the code; exit 3 while the account has transactions; exit 4 when absent.
+
+## story account-duplicate
+summary:      Reject a duplicate account code.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-AccountDuplicate.md
+covers:       ACCT-005
+accepts:      st-007
+stack:        python.md, cli.md, persistence.md
+provides:     duplicate account rejection
+depends:      account-add
+acceptance:   yes
+instructions: |
+  Adding an existing code exits 3 and leaves the accounts table unchanged.
+
+## story txn-post
+summary:      Implement `ledger txn post`.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-TxnPost.md
+covers:       TXN-001
+accepts:      st-006
+stack:        python.md, cli.md, persistence.md
+provides:     ledger txn post
+depends:      account-add, load-categories
+acceptance:   yes
+instructions: |
+  Assign max(txn_id)+1 or 1, store integer cents, print the transaction row. Memo is optional, up
+  to 60 chars, no comma or newline. Unknown account, zero amount, or bad memo exits 3.
+
+## story txn-get
+summary:      Implement `ledger txn get`.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-TxnGet.md
+covers:       TXN-002
+accepts:      st-006
+stack:        python.md, cli.md, persistence.md
+provides:     ledger txn get
+depends:      txn-post
+acceptance:   yes
+instructions: |
+  Print the transaction row; exit 4 when absent.
+
+## story txn-amend
+summary:      Implement `ledger txn amend`.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-TxnAmend.md
+covers:       TXN-003
+accepts:      st-006
+stack:        python.md, cli.md, persistence.md
+provides:     ledger txn amend
+depends:      txn-get
+acceptance:   yes
+instructions: |
+  Change only the amount, check the resulting balance before writing, print the updated row. A
+  negative-balance result exits 3 and changes nothing; exit 4 when absent.
+
+## story txn-delete
+summary:      Implement `ledger txn delete`.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-TxnDelete.md
+covers:       TXN-004
+accepts:      st-006
+stack:        python.md, cli.md, persistence.md
+provides:     ledger txn delete
+depends:      txn-get
+acceptance:   yes
+instructions: |
+  Print deleted and the id; exit 4 when absent. Check the resulting balance before deleting.
+
+## story txn-validate
+summary:      Validate transaction post inputs.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-TxnValidate.md
+covers:       TXN-005
+accepts:      st-007
+stack:        python.md, cli.md, persistence.md
+provides:     txn post validation
+depends:      txn-post
+acceptance:   yes
+instructions: |
+  Unknown category, an amount such as 1.234, and a date such as 2026-02-30 each exit 3 before any
+  write.
+
+## story transfer
+summary:      Implement `ledger transfer`.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-Transfer.md
+covers:       XFER-001
+accepts:      st-006
+stack:        python.md, cli.md, persistence.md
+provides:     ledger transfer
+depends:      txn-post
+acceptance:   yes
+instructions: |
+  Write two TRANSFER rows atomically: -amount on from with memo "transfer to <to>" taking the next
+  id, then +amount on to with memo "transfer from <from>". Non-positive amount, identical accounts,
+  or unknown account exits 3 and writes neither row.
+
+## story transfer-overdraw
+summary:      Reject a transfer that would overdraw the source.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-TransferOverdraw.md
+covers:       XFER-002
+accepts:      st-008
+stack:        python.md, cli.md, persistence.md
+provides:     transfer overdraw rejection
+depends:      transfer, load-transactions
+acceptance:   yes
+instructions: |
+  A transfer exceeding the source balance exits 3 with no rows written.
+
+## story balance-rule
+summary:      Assemble and verify the non-negative balance rule across every mutating command.
+type:         feature
+kind:         integration
+phase:        3
+implements:   FEATURE-BalanceRule.md
+covers:       BAL-001
+accepts:      st-007, st-008
+stack:        python.md, cli.md, persistence.md
+provides:     non-negative balance rule
+depends:      txn-post, txn-amend, txn-delete, transfer-overdraw, load-rejection
+acceptance:   yes
+instructions: |
+  Confirm post, amend, delete, transfer, and load each reject a change leaving any balance below
+  zero with exit 3 before any write; wire the shared guard into any command that lacks it.
+
+## story report-balances
+summary:      Implement `ledger report balances`.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-ReportBalances.md
+covers:       RPT-001
+accepts:      st-005
+stack:        python.md, cli.md, persistence.md
+provides:     ledger report balances
+depends:      load-transactions
+acceptance:   yes
+instructions: |
+  Compute per-account transaction count and balance from the database, ordered by code, then a
+  TOTAL row. Two-decimal formatting from integer cents.
+
+## story report-categories
+summary:      Implement `ledger report categories`.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-ReportCategories.md
+covers:       RPT-002
+accepts:      st-005
+stack:        python.md, cli.md, persistence.md
+provides:     ledger report categories
+depends:      load-transactions
+acceptance:   yes
+instructions: |
+  Per category including those with no transactions: count, inflow, outflow (positive), net, then a
+  TOTAL row.
+
+## story report-monthly
+summary:      Implement `ledger report monthly`.
+type:         service
+kind:         capability
+phase:        2
+implements:   FEATURE-ReportMonthly.md
+covers:       RPT-003
+accepts:      st-005
+stack:        python.md, cli.md, persistence.md
+provides:     ledger report monthly
+depends:      load-transactions
+acceptance:   yes
+instructions: |
+  Per YYYY-MM with transactions, ascending, with count, inflow, outflow, net, then a TOTAL row.
+
+## story cli-usage
+summary:      Return exit 2 for usage errors.
+type:         service
+kind:         capability
+phase:        3
+implements:   FEATURE-UsageErrors.md
+covers:       CLI-001
+stack:        python.md, cli.md
+provides:     usage error contract
+depends:      load-accounts, report-balances, account-add, txn-post, transfer, count
+acceptance:   yes
+instructions: |
+  Unknown command, unknown load table, unknown report, and wrong argument counts for every command
+  exit 2, with nothing on stdout and one stderr line.
+
+## story cli-output
+summary:      Enforce the stdout and stderr output contract.
+type:         service
+kind:         capability
+phase:        3
+implements:   FEATURE-OutputContract.md
+covers:       CLI-002
+stack:        python.md, cli.md
+provides:     output contract
+depends:      account-add, txn-post, report-balances
+acceptance:   yes
+instructions: |
+  Success writes unquoted CSV with a header and LF endings; init writes nothing; failures write
+  nothing to stdout and one diagnostic line to stderr.
+
+## story cli-database
+summary:      Resolve the database from DATABASE_URL, DATABASE_PATH, or data/app.db.
+type:         service
+kind:         capability
+phase:        3
+implements:   FEATURE-DatabaseResolution.md
+covers:       CLI-003
+accepts:      st-009
+stack:        python.md, cli.md, persistence.md
+provides:     database resolution
+depends:      init, count
+acceptance:   yes
+instructions: |
+  Resolve in order DATABASE_URL, DATABASE_PATH, data/app.db. postgres:// and postgresql:// select
+  PostgreSQL; anything else is a SQLite path, optionally with sqlite:// prefix. No driver is opened
+  outside the shipped persistence library; amounts stay integer cents.
+
+## story test-suite
+summary:      Provide bin/test.sh running the application's own pytest suite.
+type:         service
+kind:         test harness
+phase:        3
+implements:   FEATURE-TestSuite.md
+covers:       TEST-001
+accepts:      st-002
+stack:        common.md, python.md
+provides:     bin/test.sh
+depends:      load-rejection, account-delete, account-rename, account-duplicate, txn-validate, txn-delete, txn-amend, transfer-overdraw, report-categories, report-monthly, cli-usage, cli-output, cli-database, balance-rule
+acceptance:   yes
+instructions: |
+  Write a POSIX sh bin/test.sh that activates the environment and runs pytest from the application
+  root, exiting zero only when all pass. Write tests covering each command, each exit code, and
+  each rule against a temporary database.
+
+## story verification
+summary:      Run the supplied grader as the terminal release check.
+type:         feature
+kind:         integration
+phase:        3
+implements:   VERIFICATION.md
+accepts:      st-001, st-005
+stack:        common.md, python.md
+provides:     release verification
+depends:      test-suite, balance-rule, init, count, load-accounts, load-categories, load-transactions, account-add, account-get, txn-post, txn-get, transfer, report-balances, report-categories, report-monthly, cli-usage, cli-output, cli-database
+acceptance:   yes
+instructions: |
+  Assemble the finished ledger and run `sh sources/run.sh` unfiltered, declared Suite: full, asserting
+  exit zero. Do not edit anything under sources/.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT DECISIONS.json ===
+[
+  {
+    "id": "Q-001",
+    "type": "choice",
+    "severity": "low",
+    "blueprint": "FEATURE-BalanceRule.md",
+    "story": "balance-rule",
+    "title": "Where the balance guard lives",
+    "description": "BAL-001 spans every mutating command. Weighed: guard built first in a dedicated story, or guard added last. Chose a shared guard in ledger-core used by each mutator, with BAL-001 as a late integration story that verifies the cross-command behavior.",
+    "options": [
+      {"value": "core-guard", "label": "Shared guard in ledger-core, integration story last"},
+      {"value": "late-guard", "label": "Add the guard only in the balance story"}
+    ],
+    "system_choice": "core-guard"
+  },
+  {
+    "id": "Q-002",
+    "type": "choice",
+    "severity": "low",
+    "blueprint": "FEATURE-DatabaseResolution.md",
+    "story": "cli-database",
+    "title": "How to test database resolution under the shared acceptance store",
+    "description": "Criteria may not replace DATABASE_URL or create temporary databases. Chose to unit-test the resolution function directly with explicit environment mappings and leave end-to-end resolution to the grader and the project's own suite.",
+    "options": [
+      {"value": "pure-function", "label": "Test resolver with injected environment mapping"},
+      {"value": "env-mutation", "label": "Mutate process environment in criteria"}
+    ],
+    "system_choice": "pure-function"
+  },
+  {
+    "id": "Q-003",
+    "type": "text",
+    "severity": "low",
+    "blueprint": "FEATURE-LedgerCore.md",
+    "story": "ledger-core",
+    "title": "Unstated response contracts",
+    "description": "Malformed or empty arguments exit 2; duplicate keys inside a load file exit 3 with nothing written; a missing-tables database exits 1.",
+    "options": [],
+    "system_choice": "Empty or malformed arguments exit 2, duplicate keys in a load exit 3, unreachable database or missing tables exit 1."
+  }
+]
+=== END ARTIFACT ===

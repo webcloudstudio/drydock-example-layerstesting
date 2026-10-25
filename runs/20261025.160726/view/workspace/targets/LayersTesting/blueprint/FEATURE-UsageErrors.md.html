@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-UsageErrors.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-UsageErrors.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-UsageErrors.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Usage Errors</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>Every unknown command, unknown table or report, and wrong argument count exits 2 with nothing on standard output.</td></tr><tr><td>Depends On</td><td>FEATURE-CliEntry.md, FEATURE-Count.md, FEATURE-LoadAccounts.md, FEATURE-AccountAdd.md, FEATURE-TxnPost.md, FEATURE-Transfer.md, FEATURE-ReportBalances.md</td></tr><tr><td>Provides</td><td>usage error contract</td></tr><tr><td>Consumes</td><td>cli.main, ledger count, ledger load accounts, ledger account add, ledger txn post, ledger transfer, ledger report balances</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger</code> distinguishes a malformed invocation (exit <code>2</code>) from a rejected one (exit <code>3</code>). A usage error is detected from the argument vector alone, before the database is opened and before any file is read, so it can never touch the store.</p>
+<h2>Behavior</h2>
+<div class="scroll"><table><thead><tr><th>Invocation</th><th>Exit</th></tr></thead><tbody><tr><td>no arguments</td><td><code>2</code></td></tr><tr><td>unknown top-level command</td><td><code>2</code></td></tr><tr><td><code>load</code> with a table other than <code>accounts</code>, <code>categories</code>, <code>transactions</code></td><td><code>2</code></td></tr><tr><td><code>report</code> with a report other than <code>balances</code>, <code>categories</code>, <code>monthly</code></td><td><code>2</code></td></tr><tr><td><code>account</code> or <code>txn</code> with an unknown subcommand</td><td><code>2</code></td></tr><tr><td>any command with too few or too many arguments</td><td><code>2</code></td></tr></tbody></table></div>
+<p>Argument counts: <code>init</code> 0, <code>count</code> 0, <code>load</code> 2, <code>account add</code> 2, <code>account get</code> 1, <code>account rename</code> 2, <code>account delete</code> 1, <code>txn post</code> 4 or 5, <code>txn get</code> 1, <code>txn amend</code> 2, <code>txn delete</code> 1, <code>transfer</code> 4, <code>report</code> 1.</p>
+<p>A usage error writes nothing to standard output and one diagnostic line to standard error.</p>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by FEATURE-Count.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC usage-unknown-command ===<br>Intent: An unknown command exits 2 with empty standard output and a single diagnostic line.<br>Requires: executable=python3; scope=test</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;frobnicate&quot;) print(out) print(err) assert code == 2 assert out == &quot;&quot; assert len(err.strip().splitlines()) == 1 === END AC usage-unknown-command ===</p>
+<p>=== AC usage-no-arguments ===<br>Intent: Invoking the ledger with no arguments is a usage error.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner() print(out) print(err) assert code == 2 assert out == &quot;&quot; === END AC usage-no-arguments ===</p>
+<p>=== AC usage-unknown-targets ===<br>Intent: An unknown load table, report, account subcommand, or txn subcommand each exits 2.</p>
+<p>from cli.testing import cli_runner</p>
+<p>cases = [ (&quot;load&quot;, &quot;nosuch&quot;, &quot;ignored.csv&quot;), (&quot;report&quot;, &quot;nosuch&quot;), (&quot;account&quot;, &quot;frobnicate&quot;), (&quot;txn&quot;, &quot;frobnicate&quot;), ] for args in cases: code, out, err = cli_runner(*args) print(args, code) assert code == 2, args assert out == &quot;&quot;, args === END AC usage-unknown-targets ===</p>
+<p>=== AC usage-wrong-argument-count ===<br>Intent: Too few or too many arguments for each command exits 2 before any work is done.</p>
+<p>from cli.testing import cli_runner</p>
+<p>cases = [ (&quot;init&quot;, &quot;extra&quot;), (&quot;count&quot;, &quot;extra&quot;), (&quot;load&quot;,), (&quot;load&quot;, &quot;accounts&quot;), (&quot;load&quot;, &quot;accounts&quot;, &quot;a.csv&quot;, &quot;b.csv&quot;), (&quot;account&quot;, &quot;add&quot;), (&quot;account&quot;, &quot;add&quot;, &quot;ONLYCODE&quot;), (&quot;account&quot;, &quot;add&quot;, &quot;CODE&quot;, &quot;Name&quot;, &quot;extra&quot;), (&quot;account&quot;, &quot;get&quot;), (&quot;account&quot;, &quot;rename&quot;, &quot;CODE&quot;), (&quot;account&quot;, &quot;delete&quot;), (&quot;txn&quot;, &quot;post&quot;, &quot;ACCT&quot;, &quot;CAT&quot;, &quot;1.00&quot;), (&quot;txn&quot;, &quot;post&quot;, &quot;ACCT&quot;, &quot;CAT&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;, &quot;memo&quot;, &quot;extra&quot;), (&quot;txn&quot;, &quot;get&quot;), (&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;), (&quot;txn&quot;, &quot;delete&quot;), (&quot;transfer&quot;, &quot;FROM&quot;, &quot;TO&quot;, &quot;1.00&quot;), (&quot;transfer&quot;, &quot;FROM&quot;, &quot;TO&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;, &quot;extra&quot;), (&quot;report&quot;,), (&quot;report&quot;, &quot;balances&quot;, &quot;extra&quot;), ] for args in cases: code, out, err = cli_runner(*args) print(args, code) assert code == 2, args assert out == &quot;&quot;, args === END AC usage-wrong-argument-count ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A usage error never opens the database and never reads a file.</li><li>A usage error never writes to standard output.</li><li>Exit <code>2</code> is reserved for usage errors; rejected input is exit <code>3</code>.</li></ul></article>
+</main>
+</body>
+</html>

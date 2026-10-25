@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/commands/init.py</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/commands/init.py</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../build/LayersTesting/cli/commands/init.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger init``: return the three ledger tables to an empty state.&quot;&quot;&quot;
+
+from persistence import PersistenceError
+
+from cli.config import APP_ROOT
+from cli.context import open_store
+from cli.registry import register
+
+SCHEMA_FILE = APP_ROOT / &quot;schema.sql&quot;
+
+
+def init(args: list[str]) -&gt; None:
+    &quot;&quot;&quot;Make sure the tables exist, then empty them in foreign-key order. Writes nothing to stdout.&quot;&quot;&quot;
+    with open_store() as db:
+        _ensure_tables(db)
+        db.transactions.clear(min_id=0)
+        db.accounts.clear(first_code=&quot;&quot;)
+        db.categories.clear(first_code=&quot;&quot;)
+
+
+def _ensure_tables(db) -&gt; None:
+    &quot;&quot;&quot;Apply the generated, idempotent schema only when a table is missing.&quot;&quot;&quot;
+    try:
+        db.accounts.list()
+        db.categories.list()
+        db.transactions.list()
+    except PersistenceError:
+        db.execute_script(SCHEMA_FILE.read_text(encoding=&quot;utf-8&quot;))
+
+
+register((&quot;init&quot;,), init, (0, 0))
+</pre></article>
+</main>
+</body>
+</html>

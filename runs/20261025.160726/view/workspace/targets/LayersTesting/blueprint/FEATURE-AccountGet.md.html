@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-AccountGet.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-AccountGet.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-AccountGet.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Account Get</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger account get &lt;code&gt;</code>, printing one account row with its transaction count and balance.</td></tr><tr><td>Depends On</td><td>FEATURE-AccountAdd.md, FEATURE-CliEntry.md, FEATURE-LedgerCore.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger account get</td></tr><tr><td>Consumes</td><td>accounts.get, transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Read one account by code and print it as CSV. The transaction count and balance are computed from the database on every call and are never stored.</p>
+<h2>Command Contract</h2>
+<div class="scroll"><table><thead><tr><th>Aspect</th><th>Rule</th></tr></thead><tbody><tr><td>Invocation</td><td><code>ledger account get &lt;code&gt;</code> with exactly one argument.</td></tr><tr><td>Success stdout</td><td>Header <code>account,name,transactions,balance</code>, then one row: code, name, count of the account&#x27;s transactions, balance as two-decimal text.</td></tr><tr><td>Balance</td><td>Sum of the account&#x27;s integer-cent amounts, formatted with exactly two decimals, a leading <code>-</code> when negative, no thousands separator. No floating point.</td></tr><tr><td>Absent account</td><td>Exit 4, nothing on stdout, one diagnostic line on stderr.</td></tr><tr><td>Wrong argument count</td><td>Exit 2, nothing on stdout.</td></tr><tr><td>Writes</td><td>None.</td></tr></tbody></table></div>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNT-001</code> — read: retrieve an account by code - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-TXN-002</code> — read: list the account&#x27;s transactions to count and sum them - supplies: <code>account</code> - returns: <code>amount</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC account-get-empty ===<br>Intent: Getting an account with no transactions prints its row with a zero count and a zero balance.</p>
+<p>import csv import io from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: code = &quot;AGETE1&quot; name = &quot;Get Empty&quot; db.accounts.create(account=code, name=name) rc, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, code) print(out) print(err) assert rc == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;] assert len(rows) == 2 assert rows[1][0] == code assert rows[1][1] == name assert int(rows[1][2]) == 0 assert int(rows[1][3].replace(&quot;.&quot;, &quot;&quot;)) == 0 assert len(rows[1][3].split(&quot;.&quot;)[1]) == 2 === END AC account-get-empty ===</p>
+<p>=== AC account-get-balance ===<br>Intent: Getting an account computes its transaction count and balance from stored integer cents.</p>
+<p>import csv import io from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: code = &quot;AGETB1&quot; cat = &quot;AGETBC1&quot; name = &quot;Get Balance&quot; db.accounts.create(account=code, name=name) db.categories.create(category=cat, description=&quot;Get Balance Cat&quot;) amounts = [5000, -1234] base = max([t.txn_id for t in db.transactions.list()], default=0) + 1 for offset, cents in enumerate(amounts): db.transactions.create( txn_id=base + offset, date=&quot;2026-05-01&quot;, account=code, category=cat, amount=cents, memo=&quot;&quot;, ) rc, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, code) print(out) print(err) assert rc == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[1][0] == code assert rows[1][1] == name assert int(rows[1][2]) == len(amounts) assert int(rows[1][3].replace(&quot;.&quot;, &quot;&quot;)) == sum(amounts) assert len(rows[1][3].split(&quot;.&quot;)[1]) == 2 === END AC account-get-balance ===</p>
+<p>=== AC account-get-negative-format ===<br>Intent: A balance is never printed negative because the ledger forbids it, and a positive one has no thousands separator.</p>
+<p>import csv import io from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: code = &quot;AGETF1&quot; cat = &quot;AGETFC1&quot; db.accounts.create(account=code, name=&quot;Get Format&quot;) db.categories.create(category=cat, description=&quot;Get Format Cat&quot;) cents = 123456789 base = max([t.txn_id for t in db.transactions.list()], default=0) + 1 db.transactions.create( txn_id=base, date=&quot;2026-05-01&quot;, account=code, category=cat, amount=cents, memo=&quot;&quot;, ) rc, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, code) print(out) assert rc == 0 rows = list(csv.reader(io.StringIO(out))) assert &quot;,&quot; not in rows[1][3] assert int(rows[1][3].replace(&quot;.&quot;, &quot;&quot;)) == cents === END AC account-get-negative-format ===</p>
+<p>=== AC account-get-absent ===<br>Intent: Getting an absent account exits 4 and writes nothing to stdout.</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: absent = &quot;AGETNO1&quot; assert db.accounts.get(account=absent) is None rc, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, absent) print(err) assert rc == 4 assert out == &quot;&quot; === END AC account-get-absent ===</p>
+<p>=== AC account-get-usage ===<br>Intent: Getting an account with a wrong argument count exits 2 and writes nothing to stdout.</p>
+<p>from cli.testing import cli_runner</p>
+<p>rc, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;) assert rc == 2 assert out == &quot;&quot; rc, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;ONE&quot;, &quot;TWO&quot;) assert rc == 2 assert out == &quot;&quot; === END AC account-get-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The count and balance are computed from the database on every call; no value is hard-coded or stored.</li><li>Amounts are integer cents internally and never pass through floating point.</li><li>The command performs no write.</li><li>Nothing is written to stdout on failure.</li></ul></article>
+</main>
+</body>
+</html>

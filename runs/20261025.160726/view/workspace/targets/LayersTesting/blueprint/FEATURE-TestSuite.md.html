@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-TestSuite.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-TestSuite.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-TestSuite.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Test Suite</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>Provide a POSIX bin/test.sh that runs the application&#x27;s own pytest suite and exits zero only when every test passes.</td></tr><tr><td>Depends On</td><td>FEATURE-LoadRejection.md, FEATURE-AccountDelete.md, FEATURE-AccountRename.md, FEATURE-AccountDuplicate.md, FEATURE-TxnValidate.md, FEATURE-TxnDelete.md, FEATURE-TxnAmend.md, FEATURE-TransferOverdraw.md, FEATURE-ReportCategories.md, FEATURE-ReportMonthly.md, FEATURE-UsageErrors.md, FEATURE-OutputContract.md, FEATURE-DatabaseResolution.md, FEATURE-BalanceRule.md</td></tr><tr><td>Provides</td><td>bin/test.sh</td></tr><tr><td>Consumes</td><td>cli.main, cli.testing.cli_runner, persistence.testing.db_session</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>bin/test.sh</code> is the project&#x27;s own regression gate. It runs from the application root, activates the <code>.venv</code> environment, and runs <code>pytest -q</code>, propagating pytest&#x27;s exit status.</p>
+<h2>Behavior</h2>
+<ul><li>Written in POSIX <code>sh</code>; no bashisms.</li><li>Changes to the application root regardless of the caller&#x27;s working directory.</li><li>Exits zero only when every test passes; any failure or collection error is non-zero.</li><li>The pytest suite lives under <code>tests/</code> and covers each command, each exit code (<code>0</code> to <code>4</code>), and</li></ul>
+<p>each rule in the instructions: rejected commands change nothing, no negative balances, code, name, memo, amount, and date validation, transaction id assignment, transfer pairing, and the three reports. Each test runs against its own temporary database; none uses <code>sources/run.sh</code>.</p>
+<ul><li>No test invokes <code>bin/test.sh</code> itself.</li></ul>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by FEATURE-Init.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC testsh-exists-and-parses ===<br>Intent: bin/test.sh exists and is valid POSIX sh syntax.<br>Requires: executable=sh; scope=test</p>
+<p>import os import subprocess</p>
+<p>assert os.path.isfile(&quot;bin/test.sh&quot;) result = subprocess.run([&quot;sh&quot;, &quot;-n&quot;, &quot;bin/test.sh&quot;], capture_output=True, text=True) print(result.stdout) print(result.stderr) assert result.returncode == 0 === END AC testsh-exists-and-parses ===</p>
+<p>=== AC testsh-suite-is-collected ===<br>Intent: pytest collects at least one test from the application&#x27;s suite.</p>
+<p>import subprocess import sys</p>
+<p>result = subprocess.run( [sys.executable, &quot;-m&quot;, &quot;pytest&quot;, &quot;--collect-only&quot;, &quot;-q&quot;], capture_output=True, text=True, ) print(result.stdout) print(result.stderr) assert result.returncode == 0 === END AC testsh-suite-is-collected ===</p>
+<p>=== AC testsh-passes ===<br>Intent: Running sh bin/test.sh from the application root exits zero.<br>Requires: executable=sh; scope=test</p>
+<p>import subprocess</p>
+<p>result = subprocess.run( [&quot;sh&quot;, &quot;bin/test.sh&quot;], capture_output=True, text=True, timeout=900, ) print(result.stdout) print(result.stderr) assert result.returncode == 0 === END AC testsh-passes ===</p>
+<p>=== AC testsh-works-from-other-directory ===<br>Intent: bin/test.sh finds the application root when launched from a different working directory.<br>Requires: executable=sh; scope=test</p>
+<p>import os import subprocess import tempfile</p>
+<p>script = os.path.abspath(&quot;bin/test.sh&quot;) with tempfile.TemporaryDirectory() as elsewhere: result = subprocess.run( [&quot;sh&quot;, script], capture_output=True, text=True, cwd=elsewhere, timeout=900, ) print(result.stdout) print(result.stderr) assert result.returncode == 0 === END AC testsh-works-from-other-directory ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li><code>bin/test.sh</code> never reads or runs <code>sources/run.sh</code>.</li><li>Tests never use the configured application store; each creates a temporary database.</li><li>Tests use no network access other than a PostgreSQL server named by <code>DATABASE_URL</code>.</li></ul></article>
+</main>
+</body>
+</html>

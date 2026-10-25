@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-DatabaseResolution.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-DatabaseResolution.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-DatabaseResolution.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Database Resolution</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>Resolve the database from DATABASE_URL, then DATABASE_PATH, then data/app.db, selecting PostgreSQL or SQLite by prefix.</td></tr><tr><td>Depends On</td><td>FEATURE-Init.md, FEATURE-Count.md, FEATURE-CliEntry.md, DATABASE.md</td></tr><tr><td>Provides</td><td>database resolution, cli.database.resolve_database_dsn, cli.database.database_engine</td></tr><tr><td>Consumes</td><td>cli.main, ledger count, ledger txn post</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Every command opens the store through the shipped persistence library using one DSN chosen by a single pure resolver. No driver is opened anywhere else and amounts stay integer cents.</p>
+<h2>Interface</h2>
+<p>Module <code>cli/database.py</code>:</p>
+<ul><li><code>resolve_database_dsn(environ: Mapping[str, str]) -&gt; str</code> returns <code>environ[&quot;DATABASE_URL&quot;]</code> when</li></ul>
+<p>set and non-empty, else <code>environ[&quot;DATABASE_PATH&quot;]</code> when set and non-empty, else <code>data/app.db</code>. The value is returned unchanged and handed to <code>persistence.open_database</code>.</p>
+<ul><li><code>database_engine(dsn: str) -&gt; str</code> returns <code>postgres</code> for a value beginning <code>postgres://</code> or</li></ul>
+<p><code>postgresql://</code>, and <code>sqlite</code> for anything else, including a <code>sqlite://</code> prefixed value.</p>
+<ul><li>The command layer calls <code>resolve_database_dsn(os.environ)</code> once per invocation. A missing</li></ul>
+<p>directory, unreachable server, or missing tables is exit <code>1</code>.</p>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNT-002</code> — read: list accounts to confirm the resolved store is reachable - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC dsn-url-wins ===<br>Intent: DATABASE_URL takes precedence over DATABASE_PATH.</p>
+<p>from cli.database import resolve_database_dsn</p>
+<p>url = &quot;postgres://user@host/ledger&quot; path = &quot;other/place.db&quot; assert resolve_database_dsn({&quot;DATABASE_URL&quot;: url, &quot;DATABASE_PATH&quot;: path}) == url assert resolve_database_dsn({&quot;DATABASE_URL&quot;: url}) == url === END AC dsn-url-wins ===</p>
+<p>=== AC dsn-path-fallback ===<br>Intent: With DATABASE_URL unset, DATABASE_PATH is used.</p>
+<p>from cli.database import resolve_database_dsn</p>
+<p>path = &quot;other/place.db&quot; assert resolve_database_dsn({&quot;DATABASE_PATH&quot;: path}) == path === END AC dsn-path-fallback ===</p>
+<p>=== AC dsn-default ===<br>Intent: With neither variable set, the resolver returns data/app.db.</p>
+<p>from cli.database import resolve_database_dsn</p>
+<p>assert resolve_database_dsn({}) == &quot;data/app.db&quot; === END AC dsn-default ===</p>
+<p>=== AC dsn-engine-selection ===<br>Intent: postgres:// and postgresql:// select PostgreSQL; other values, with or without sqlite://, select SQLite.</p>
+<p>from cli.database import database_engine</p>
+<p>for dsn in (&quot;postgres://u@h/db&quot;, &quot;postgresql://u@h/db&quot;): assert database_engine(dsn) == &quot;postgres&quot;, dsn for dsn in (&quot;data/app.db&quot;, &quot;sqlite:///tmp/x.db&quot;, &quot;/abs/path/ledger.db&quot;): assert database_engine(dsn) == &quot;sqlite&quot;, dsn === END AC dsn-engine-selection ===</p>
+<p>=== AC dsn-configured-store-is-used ===<br>Intent: The count command runs against the configured store and lists the three tables in order.</p>
+<p>import csv import io from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;count&quot;) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;table&quot;, &quot;rows&quot;] assert [r[0] for r in rows[1:]] == [&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;] assert all(r[1].isdigit() for r in rows[1:]) === END AC dsn-configured-store-is-used ===</p>
+<p>=== AC dsn-amounts-stored-as-integer-cents ===<br>Intent: A posted amount is stored as an integer number of cents.</p>
+<p>import csv import io from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;DSNC1&quot; cat = &quot;DSNCC1&quot; cents = 1234 amount_text = f&quot;{cents // 100}.{cents % 100:02d}&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Cents Account&quot;) db.categories.create(category=cat, description=&quot;Cents Category&quot;) code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, amount_text, &quot;2026-06-02&quot;, &quot;cents&quot;) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) stored = db.transactions.get(txn_id=int(rows[1][0])) assert stored is not None assert isinstance(stored.amount, int) assert stored.amount == cents === END AC dsn-amounts-stored-as-integer-cents ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>No database driver is imported outside the shipped persistence library.</li><li>The resolver reads only the environment mapping it is given and never a file.</li><li>No floating-point type holds money at any layer.</li></ul></article>
+</main>
+</body>
+</html>

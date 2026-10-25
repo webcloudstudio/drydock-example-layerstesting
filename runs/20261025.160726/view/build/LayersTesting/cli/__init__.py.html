@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/__init__.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/__init__.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/__init__.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Command-line entry point: dispatch, exit-code mapping, CSV output, and the diagnostic line.&quot;&quot;&quot;
+
+import importlib
+import pkgutil
+import sys
+
+from persistence import PersistenceError
+
+from cli import commands
+from cli.errors import LedgerError
+from cli.registry import lookup
+
+
+def main(argv: list[str] | None = None) -&gt; int:
+    &quot;&quot;&quot;Run one command and return its exit code. ``None`` means ``sys.argv[1:]``.&quot;&quot;&quot;
+    if argv is None:
+        argv = sys.argv[1:]
+    try:
+        _load_commands()
+        handler, args = lookup(list(argv))
+        rows = handler(args)
+        _write_rows(rows or [])
+    except LedgerError as exc:
+        _diagnose(exc.message)
+        return exc.code
+    except PersistenceError as exc:
+        _diagnose(str(exc))
+        return 1
+    except Exception as exc:  # any unexpected failure is operational, never a traceback
+        _diagnose(f&quot;{type(exc).__name__}: {exc}&quot;)
+        return 1
+    return 0
+
+
+def _load_commands() -&gt; None:
+    &quot;&quot;&quot;Import every command module so each one registers its handlers.&quot;&quot;&quot;
+    for module in pkgutil.iter_modules(commands.__path__):
+        importlib.import_module(f&quot;{commands.__name__}.{module.name}&quot;)
+
+
+def _write_rows(rows: list[list[str]]) -&gt; None:
+    &quot;&quot;&quot;Write the completed result as unquoted CSV with LF endings.&quot;&quot;&quot;
+    out = sys.stdout
+    for row in rows:
+        out.write(&quot;,&quot;.join(str(field) for field in row) + &quot;\n&quot;)
+
+
+def _diagnose(message: str) -&gt; None:
+    &quot;&quot;&quot;Write exactly one diagnostic line to standard error.&quot;&quot;&quot;
+    text = &quot; &quot;.join(message.split()) or &quot;failed&quot;
+    print(f&quot;error: {text}&quot;, file=sys.stderr)
+</pre></article>
+</main>
+</body>
+</html>

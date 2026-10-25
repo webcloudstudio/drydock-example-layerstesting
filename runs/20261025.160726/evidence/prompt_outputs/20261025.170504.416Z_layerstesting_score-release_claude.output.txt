@@ -1,0 +1,102 @@
+I'll start by looking at the tree: the layout, the grader script, and whether `bin/test.sh` exists.The grader runs. The file listing was swamped by `.venv`, so I'll exclude it and look for the application source, `bin/test.sh`, and the persistence library.There's a `bin/test.sh`, a `ledger` entry point, and a `persistence/` package. Next I'll read the test script, the entry point, and the persistence layer.The persistence layer is shipped and generic, and `schema.sql` stores `amount` as INTEGER. Next I'll read the rest of the grader to see what it checks beyond the first 150 lines, plus the CLI code that drives it.The grader covers the account and transaction CRUD, the 4 and 3 exit codes, the rejections, and the reports. Next I'll check the CLI code for st-009, meaning whether it reaches the database only through the shipped library and stores integer cents.The CLI reaches the database only through `persistence.open_database`, and `init` clears rows rather than dropping and recreating tables. That conflicts with the wording of st-003, so I'll check it with a probe later. First I need the money handling and the engine selection.Money is integer cents end to end and the CLI never touches a driver directly, so st-009 looks satisfied. Next I'll run the criterion-named test script for st-002, and in the same step check the probe directory the harness created.st-002 is observed green: `bin/test.sh` exited 0 with 348 tests passing. Next is st-003. The criterion says `init` "shall drop and recreate" the three tables, but the source reads as clearing rows and only creating missing tables. A probe can tell these apart: add a marker column, run `init`, and see whether it survives.The probe settles st-003. The marker column survived `init`, so the tables were not dropped and recreated. Rows are cleared instead, and the counts do come out at zero. Next I'll probe st-007 and st-008 directly: for each rejected command, I'll capture the exit code and message, and compare a full snapshot of all three tables before and after.The probe confirms st-007 and st-008. Every rejected load, post, amend, delete, and transfer exited 3 and left all three tables unchanged, and the positive control shows the snapshot does detect a real change. Before grading st-008 as a whole, I'll check that the bulk load path is also guarded against negative balances, and that no other write path bypasses the guard.Every write path (load, post, amend, delete, transfer) calls the balance guard, so st-008 holds. Before I write the verdicts, I'll confirm the line numbers I plan to cite.```json
+{
+  "criteria": [
+    {
+      "id": "st-001",
+      "verdict": "MET",
+      "rationale": "The governed gate `sh sources/run.sh` exited 0, with 43 of 43 checks passing.",
+      "evidence": [
+        "governed_gate full: return_code 0, stdout 'LayersTesting: 43 passed, 0 failed (of 43)'"
+      ]
+    },
+    {
+      "id": "st-002",
+      "verdict": "MET",
+      "rationale": "I ran `sh bin/test.sh` against the current tree and it exited 0 with 348 tests passing.",
+      "evidence": [
+        "bin/test.sh:1-35 is a POSIX sh script (`set -eu`, `$(...)`, `.` to source the venv) that runs `pytest -q` and exits with its status",
+        "observed: `sh bin/test.sh` exit 0; '348 passed in 13.26s'"
+      ]
+    },
+    {
+      "id": "st-003",
+      "verdict": "NOT MET",
+      "rationale": "`ledger init` empties the rows but does not drop and recreate the tables: a column I added to accounts survived init, although counts did read 0/0/0.",
+      "evidence": [
+        "probe: after `ALTER TABLE accounts ADD COLUMN probe_marker`, `ledger init` exited 0 and PRAGMA table_info(accounts) still listed ['account', 'name', 'probe_marker']",
+        "probe: `ledger count` after init returned accounts,0 / categories,0 / transactions,0",
+        "cli/commands/init.py:16-18 calls db.transactions.clear, db.accounts.clear, db.categories.clear; no DROP appears anywhere in the source",
+        "cli/commands/init.py:21-28 runs the schema script only when a list() call raises, so existing tables are kept"
+      ]
+    },
+    {
+      "id": "st-004",
+      "verdict": "MET",
+      "rationale": "Loading the three seed files into an initialized store produced counts of 4 accounts, 7 categories, and 120 transactions.",
+      "evidence": [
+        "governed_gate stdout: 'PASS B1: ledger load accounts …', 'PASS B2: ledger load categories …', 'PASS B3: ledger load transactions …'",
+        "governed_gate stdout: 'PASS B4: ledger count' compared against accounts,4 / categories,7 / transactions,120"
+      ]
+    },
+    {
+      "id": "st-005",
+      "verdict": "MET",
+      "rationale": "Every balance, category, and monthly report matched the known answers in run.sh byte for byte, both before and after the changes.",
+      "evidence": [
+        "governed_gate stdout: PASS C1, C2, C3 (initial reports) and PASS H1, H2, H3 (post-change reports)",
+        "sources/run.sh:check() compares stdout with `cmp -s` against the expected text, so a PASS means byte equality"
+      ]
+    },
+    {
+      "id": "st-006",
+      "verdict": "MET",
+      "rationale": "Account add, get, rename, and delete, and transaction post, get, amend, and delete, all worked, and absent records exited 4.",
+      "evidence": [
+        "governed_gate stdout: PASS E1–E8 (add, duplicate add, get, rename, get NOSUCH, delete with transactions, delete, get after delete)",
+        "governed_gate stdout: PASS F1–F10 (post, get, amend, get 999, post rejections, delete, get after delete, post negative)",
+        "run.sh expects exit 4 for E5, E8, F4, F9, and the gate passed those checks"
+      ]
+    },
+    {
+      "id": "st-007",
+      "verdict": "MET",
+      "rationale": "Every rejected load, post, amend, delete, and transfer I tried exited 3 and left all three tables byte-identical in a full snapshot.",
+      "evidence": [
+        "probe: load transactions (bad file) rc=3 unchanged=True, stderr 'unknown account NOSUCH'",
+        "probe: load accounts (duplicate) rc=3 unchanged=True",
+        "probe: txn post overdraw rc=3 unchanged=True; txn amend overdraw rc=3 unchanged=True; txn delete overdraw rc=3 unchanged=True",
+        "probe: transfer overdraw rc=3 unchanged=True; account add duplicate rc=3 unchanged=True; account delete with transactions rc=3 unchanged=True",
+        "probe control: a valid txn post returned rc=0 and changed the snapshot, so the snapshot does detect change"
+      ]
+    },
+    {
+      "id": "st-008",
+      "verdict": "MET",
+      "rationale": "Every command that would drive an account below zero (post, amend, delete, transfer) was rejected with exit 3 and the message 'balance may not go negative'.",
+      "evidence": [
+        "cli/core.py:84 balance_guard raises Rejected when the resulting balance is below zero",
+        "cli/commands/load.py:74, transfer.py:27, txn.py:23, txn.py:48, txn.py:61 call balance_guard on every write path",
+        "probe: 'account PETTY would be -693.75; balance may not go negative' (post), SAFE -4749.00 (amend), SAFE -4750.00 (delete), SAFE -749.99 (transfer), each rc=3",
+        "governed_gate stdout: PASS G2–G5 (transfer, post, amend, delete all rejected with exit 3)"
+      ]
+    },
+    {
+      "id": "st-009",
+      "verdict": "MET",
+      "rationale": "The CLI reaches the database only through the shipped persistence package, which picks its engine from the DSN, and amounts are integer cents throughout.",
+      "evidence": [
+        "cli/context.py:19 `return open_database(dsn)` is the only place cli opens a store; a grep of cli/ and tests/ finds no sqlite3, psycopg, cursor, or execute calls",
+        "persistence/db.py:580-598 open_driver selects PostgresDriver or SqliteDriver from the DSN scheme",
+        "cli/core.py:21-31 parse_amount returns int cents, and cli/core.py:84 applies the guard in cents",
+        "schema.sql:4 declares \"amount\" INTEGER NOT NULL",
+        "git status is clean, so persistence/ matches the shipped commit"
+      ]
+    }
+  ],
+  "improvements": [
+    "Resolve st-003 one way or the other. Either change `ledger init` to drop and recreate the three tables as the criterion says, or reword st-003 to 'empties the three tables and leaves the schema in place', which matches cli/commands/init.py:16-18 and the observed behavior.",
+    "Have the grader compare the full contents of accounts, categories, and transactions after each rejected command, not just row counts. Today st-007 is supported by the D-section counts and the H-section reports, while a snapshot check would be direct.",
+    "Give st-004 through st-008 a command or a named probe so they are not inferred from a single grader run."
+  ]
+}
+```

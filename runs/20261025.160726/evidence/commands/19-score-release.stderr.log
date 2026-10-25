@@ -1,0 +1,2 @@
+error: release gate FAILED for LayersTesting
+  st-003 is NOT MET: When ledger init runs, the application shall drop and recreate the accounts, categories, and transactions tables so that ledger count reports zero rows in each.

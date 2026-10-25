@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/DECISIONS.json</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/DECISIONS.json</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../workspace/targets/LayersTesting/DECISIONS.json">Raw file</a></div></header>
+<article class="doc"><pre>[
+  {
+    &quot;id&quot;: &quot;Q-001&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-BalanceRule.md&quot;,
+    &quot;story&quot;: &quot;balance-rule&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Where the balance guard lives&quot;,
+    &quot;description&quot;: &quot;BAL-001 spans every mutating command. Weighed: guard built first in a dedicated story, or guard added last. Chose a shared guard in ledger-core used by each mutator, with BAL-001 as a late integration story that verifies the cross-command behavior.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;core-guard&quot;,
+        &quot;label&quot;: &quot;Shared guard in ledger-core, integration story last&quot;
+      },
+      {
+        &quot;value&quot;: &quot;late-guard&quot;,
+        &quot;label&quot;: &quot;Add the guard only in the balance story&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;core-guard&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-002&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-DatabaseResolution.md&quot;,
+    &quot;story&quot;: &quot;cli-database&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;How to test database resolution under the shared acceptance store&quot;,
+    &quot;description&quot;: &quot;Criteria may not replace DATABASE_URL or create temporary databases. Chose to unit-test the resolution function directly with explicit environment mappings and leave end-to-end resolution to the grader and the project&#x27;s own suite.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;pure-function&quot;,
+        &quot;label&quot;: &quot;Test resolver with injected environment mapping&quot;
+      },
+      {
+        &quot;value&quot;: &quot;env-mutation&quot;,
+        &quot;label&quot;: &quot;Mutate process environment in criteria&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;pure-function&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-003&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-LedgerCore.md&quot;,
+    &quot;story&quot;: &quot;ledger-core&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Unstated response contracts&quot;,
+    &quot;description&quot;: &quot;Malformed or empty arguments exit 2; duplicate keys inside a load file exit 3 with nothing written; a missing-tables database exits 1.&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;Empty or malformed arguments exit 2, duplicate keys in a load exit 3, unreachable database or missing tables exit 1.&quot;
+  },
+  {
+    &quot;id&quot;: &quot;build-feature-clientry.md-duplicate-command-registration-and-pytest-import-path&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;build&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-CliEntry.md&quot;,
+    &quot;story&quot;: null,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Duplicate command registration and pytest import path&quot;,
+    &quot;description&quot;: &quot;register() raises ValueError on a duplicate word tuple rather than silently replacing the handler, so two command modules cannot shadow each other. I also added pythonpath = [\&quot;.\&quot;] to pyproject.toml&#x27;s pytest options so tests can import cli. Is that acceptable, or should the import path come from a conftest.py instead?&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;register() raises ValueError on a duplicate word tuple rather than silently replacing the handler, so two command modules cannot shadow each other. I also added pythonpath = [\&quot;.\&quot;] to pyproject.toml&#x27;s pytest options so tests can import cli. Is that acceptable, or should the import path come from a conftest.py instead?&quot;
+  },
+  {
+    &quot;id&quot;: &quot;build-feature-databaseresolution.md-postgresql-driver-dependency&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;build&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-DatabaseResolution.md&quot;,
+    &quot;story&quot;: null,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;PostgreSQL driver dependency&quot;,
+    &quot;description&quot;: &quot;Added psycopg[binary] to pyproject.toml via uv, as the stack contract and the driver&#x27;s own error message require.&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;Added psycopg[binary] to pyproject.toml via uv, as the stack contract and the driver&#x27;s own error message require.&quot;
+  },
+  {
+    &quot;id&quot;: &quot;build-feature-databaseresolution.md-two-resolvers,-one-default-each&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;material&quot;,
+    &quot;origin&quot;: &quot;build&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-DatabaseResolution.md&quot;,
+    &quot;story&quot;: null,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Two resolvers, one default each&quot;,
+    &quot;description&quot;: &quot;cli.database.resolve_database_dsn returns the literal &#x27;data/app.db&#x27; as the spec states. cli.config.resolve_dsn, required by the earlier FEATURE-CliEntry.md check, wraps it and substitutes the absolute application-root path for the default, so commands run from any directory. Is that acceptable, or should the two defaults be unified on replan?&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;cli.database.resolve_database_dsn returns the literal &#x27;data/app.db&#x27; as the spec states. cli.config.resolve_dsn, required by the earlier FEATURE-CliEntry.md check, wraps it and substitutes the absolute application-root path for the default, so commands run from any directory. Is that acceptable, or should the two defaults be unified on replan?&quot;
+  },
+  {
+    &quot;id&quot;: &quot;build-feature-init.md-init-empties-tables-rather-than-dropping-them&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;material&quot;,
+    &quot;origin&quot;: &quot;build&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-Init.md&quot;,
+    &quot;story&quot;: null,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Init empties tables rather than dropping them&quot;,
+    &quot;description&quot;: &quot;The story says drop and recreate, but the FEATURE Behavior says make sure the tables exist, then empty them in foreign-key order. I followed the Behavior. Tables are created from schema.sql only when a probe finds one missing, because execute_script is forbidden inside the acceptance transaction. Should init drop and recreate instead?&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;The story says drop and recreate, but the FEATURE Behavior says make sure the tables exist, then empty them in foreign-key order. I followed the Behavior. Tables are created from schema.sql only when a probe finds one missing, because execute_script is forbidden inside the acceptance transaction. Should init drop and recreate instead?&quot;
+  },
+  {
+    &quot;id&quot;: &quot;build-feature-ledgercore.md-balance_guard-on-unknown-accounts&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;build&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-LedgerCore.md&quot;,
+    &quot;story&quot;: null,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;balance_guard on unknown accounts&quot;,
+    &quot;description&quot;: &quot;balance_guard does not verify that an account exists; it computes the balance as zero for an unknown code. Existence checks belong to the calling commands. Is that acceptable, or should the guard reject unknown accounts?&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;balance_guard does not verify that an account exists; it computes the balance as zero for an unknown code. Existence checks belong to the calling commands. Is that acceptable, or should the guard reject unknown accounts?&quot;
+  },
+  {
+    &quot;id&quot;: &quot;build-feature-loadaccounts.md-all-or-nothing-writes&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;material&quot;,
+    &quot;origin&quot;: &quot;build&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-LoadAccounts.md&quot;,
+    &quot;story&quot;: null,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;All-or-nothing writes&quot;,
+    &quot;description&quot;: &quot;Same limitation as load transactions: validation completes before the first write, but a mid-write database failure can leave partial rows, because there is no transaction facility to wrap the writes. Is that acceptable?&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;Same limitation as load transactions: validation completes before the first write, but a mid-write database failure can leave partial rows, because there is no transaction facility to wrap the writes. Is that acceptable?&quot;
+  },
+  {
+    &quot;id&quot;: &quot;build-feature-loadcategories.md-all-or-nothing-writes&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;material&quot;,
+    &quot;origin&quot;: &quot;build&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-LoadCategories.md&quot;,
+    &quot;story&quot;: null,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;All-or-nothing writes&quot;,
+    &quot;description&quot;: &quot;Same limitation as the other loads. Categories also have no per-row delete declared, so no compensating undo is possible. Is that acceptable?&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;Same limitation as the other loads. Categories also have no per-row delete declared, so no compensating undo is possible. Is that acceptable?&quot;
+  },
+  {
+    &quot;id&quot;: &quot;build-feature-loadtransactions.md-all-or-nothing-writes&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;material&quot;,
+    &quot;origin&quot;: &quot;build&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-LoadTransactions.md&quot;,
+    &quot;story&quot;: null,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;All-or-nothing writes&quot;,
+    &quot;description&quot;: &quot;The spec asks for one transaction, but the persistence package exposes no multi-statement transaction to application code, and the rules forbid driver calls. I validate every row and the balance guard before the first write, so validation failures store nothing. A database error partway through the write phase can still leave earlier rows stored. Is that acceptable, or should the persistence layer add a transaction facility?&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;The spec asks for one transaction, but the persistence package exposes no multi-statement transaction to application code, and the rules forbid driver calls. I validate every row and the balance guard before the first write, so validation failures store nothing. A database error partway through the write phase can still leave earlier rows stored. Is that acceptable, or should the persistence layer add a transaction facility?&quot;
+  },
+  {
+    &quot;id&quot;: &quot;build-feature-loadtransactions.md-file-txn_id-range&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;build&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-LoadTransactions.md&quot;,
+    &quot;story&quot;: null,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;File txn_id range&quot;,
+    &quot;description&quot;: &quot;The spec says a non-integer txn_id is rejected but does not give a range. I accept only positive integers up to 2147483647, the INTEGER column limit, and reject 0 and negatives. Is that acceptable?&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;The spec says a non-integer txn_id is rejected but does not give a range. I accept only positive integers up to 2147483647, the INTEGER column limit, and reject 0 and negatives. Is that acceptable?&quot;
+  },
+  {
+    &quot;id&quot;: &quot;build-feature-transfer.md-missing-transfer-category&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;build&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-Transfer.md&quot;,
+    &quot;story&quot;: null,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Missing TRANSFER category&quot;,
+    &quot;description&quot;: &quot;If the store has no TRANSFER category, transfer exits 1 as an operational failure rather than 3, since it is a store configuration problem rather than bad input. Is that acceptable?&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;If the store has no TRANSFER category, transfer exits 1 as an operational failure rather than 3, since it is a store configuration problem rather than bad input. Is that acceptable?&quot;
+  },
+  {
+    &quot;id&quot;: &quot;build-feature-transfer.md-two-row-atomicity&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;material&quot;,
+    &quot;origin&quot;: &quot;build&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-Transfer.md&quot;,
+    &quot;story&quot;: null,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Two-row atomicity&quot;,
+    &quot;description&quot;: &quot;Both TRANSFER rows are checked before the first write, but the two creates are not wrapped in a transaction. A failure on the second create would leave the first stored. Is that acceptable, or should the persistence layer add a transaction facility?&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;Both TRANSFER rows are checked before the first write, but the two creates are not wrapped in a transaction. A failure on the second create would leave the first stored. Is that acceptable, or should the persistence layer add a transaction facility?&quot;
+  },
+  {
+    &quot;id&quot;: &quot;build-schema-derived-indexes&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;informational&quot;,
+    &quot;origin&quot;: &quot;build&quot;,
+    &quot;blueprint&quot;: &quot;DATABASE.md&quot;,
+    &quot;story&quot;: null,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Indexes derived from the persistence declaration&quot;,
+    &quot;description&quot;: &quot;The rendered schema indexes transactions(account); transactions(category); transactions(account, category). Each is implied by the declaration \u2014 a foreign key is looked up by its child column, and a read pattern&#x27;s Input fields are the predicate it filters on. Declare an `- INDEX (...)` bullet in DATABASE.md for any index this does not cover.&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;transactions(account); transactions(category); transactions(account, category)&quot;
+  }
+]
+</pre></article>
+</main>
+</body>
+</html>

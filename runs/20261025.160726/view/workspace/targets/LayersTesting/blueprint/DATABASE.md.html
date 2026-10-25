@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/DATABASE.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/DATABASE.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/DATABASE.md">Raw file</a></div></header>
+<article class="doc"><h1>DATABASE: LayersTesting</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>Persistence stores and typed interfaces for the LayersTesting cash ledger.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md</td></tr><tr><td>Provides</td><td>accounts table, categories table, transactions table</td></tr></tbody></table></div>
+<h2>Persistence Boundary</h2>
+<div class="scroll"><table><thead><tr><th>Boundary</th><th>Rule</th></tr></thead><tbody><tr><td>Raw storage access</td><td>Only the generated <code>persistence/</code> package reaches the store.</td></tr><tr><td>Caller dependency</td><td>Features depend on declared access patterns and their DTOs, not on schemas.</td></tr><tr><td>Implementation</td><td>Generated from this file at the DATABASE build step; never written by hand.</td></tr><tr><td>Money</td><td>Amounts are integer cents in the <code>amount</code> column; no floating point at any layer.</td></tr><tr><td>Aggregates</td><td>Counts, balances, and report totals are computed by callers from <code>list</code> results; no aggregate operation exists.</td></tr><tr><td>Re-initialization</td><td><code>ledger init</code> empties the three tables through the <code>clear</code> operations (transactions first, then accounts, then categories), because schema is provisioned only at the DATABASE step.</td></tr></tbody></table></div>
+<h2>Access Patterns</h2>
+<h3>FEATURE-ACCOUNT-001 — Get an account</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-AccountGet.md</td></tr><tr><td>Access</td><td>read</td></tr><tr><td>Repository operation</td><td><code>accounts.get</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: AccountsGetInput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>account</td><td>str</td></tr></tbody></table></div>
+<p>Output: AccountsGetOutput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>account</td><td>str</td></tr><tr><td>name</td><td>str</td></tr></tbody></table></div>
+<h3>FEATURE-ACCOUNT-002 — List accounts</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>DATABASE.md</td></tr><tr><td>Access</td><td>read</td></tr><tr><td>Repository operation</td><td><code>accounts.list</code></td></tr><tr><td>Order</td><td><code>account</code> asc</td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: AccountsListInput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>account</td><td>str</td></tr></tbody></table></div>
+<p>Output: AccountsListOutput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>account</td><td>str</td></tr><tr><td>name</td><td>str</td></tr></tbody></table></div>
+<h3>FEATURE-ACCOUNT-003 — Create an account</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-AccountAdd.md</td></tr><tr><td>Access</td><td>write</td></tr><tr><td>Repository operation</td><td><code>accounts.create</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: AccountsCreateInput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>account</td><td>str</td></tr><tr><td>name</td><td>str</td></tr></tbody></table></div>
+<p>Output: AccountsCreateOutput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>account</td><td>str</td></tr><tr><td>name</td><td>str</td></tr></tbody></table></div>
+<h3>FEATURE-ACCOUNT-004 — Rename an account</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-AccountRename.md</td></tr><tr><td>Access</td><td>write</td></tr><tr><td>Repository operation</td><td><code>accounts.update</code></td></tr><tr><td>Match</td><td><code>account</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: AccountsUpdateInput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>account</td><td>str</td></tr><tr><td>name</td><td>str</td></tr></tbody></table></div>
+<p>Output: AccountsUpdateOutput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>account</td><td>str</td></tr><tr><td>name</td><td>str</td></tr></tbody></table></div>
+<h3>FEATURE-ACCOUNT-005 — Delete an account</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-AccountDelete.md</td></tr><tr><td>Access</td><td>write</td></tr><tr><td>Repository operation</td><td><code>accounts.delete</code></td></tr><tr><td>Match</td><td><code>account</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: AccountsDeleteInput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>account</td><td>str</td></tr></tbody></table></div>
+<p>Output: AccountsDeleteOutput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>account</td><td>str</td></tr></tbody></table></div>
+<h3>FEATURE-ACCOUNT-006 — Remove every account</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-Init.md</td></tr><tr><td>Access</td><td>write</td></tr><tr><td>Repository operation</td><td><code>accounts.clear</code></td></tr><tr><td>Kind</td><td>delete</td></tr><tr><td>Match</td><td><code>account &gt;= first_code</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: AccountsClearInput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>first_code</td><td>str</td></tr></tbody></table></div>
+<p>Output: AccountsClearOutput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody></tbody></table></div>
+<h3>FEATURE-CATEGORY-001 — Get a category</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>DATABASE.md</td></tr><tr><td>Access</td><td>read</td></tr><tr><td>Repository operation</td><td><code>categories.get</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: CategoriesGetInput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>category</td><td>str</td></tr></tbody></table></div>
+<p>Output: CategoriesGetOutput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>category</td><td>str</td></tr><tr><td>description</td><td>str</td></tr></tbody></table></div>
+<h3>FEATURE-CATEGORY-002 — List categories</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>DATABASE.md</td></tr><tr><td>Access</td><td>read</td></tr><tr><td>Repository operation</td><td><code>categories.list</code></td></tr><tr><td>Order</td><td><code>category</code> asc</td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: CategoriesListInput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>category</td><td>str</td></tr></tbody></table></div>
+<p>Output: CategoriesListOutput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>category</td><td>str</td></tr><tr><td>description</td><td>str</td></tr></tbody></table></div>
+<h3>FEATURE-CATEGORY-003 — Create a category</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>DATABASE.md</td></tr><tr><td>Access</td><td>write</td></tr><tr><td>Repository operation</td><td><code>categories.create</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: CategoriesCreateInput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>category</td><td>str</td></tr><tr><td>description</td><td>str</td></tr></tbody></table></div>
+<p>Output: CategoriesCreateOutput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>category</td><td>str</td></tr><tr><td>description</td><td>str</td></tr></tbody></table></div>
+<h3>FEATURE-CATEGORY-004 — Remove every category</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-Init.md</td></tr><tr><td>Access</td><td>write</td></tr><tr><td>Repository operation</td><td><code>categories.clear</code></td></tr><tr><td>Kind</td><td>delete</td></tr><tr><td>Match</td><td><code>category &gt;= first_code</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: CategoriesClearInput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>first_code</td><td>str</td></tr></tbody></table></div>
+<p>Output: CategoriesClearOutput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody></tbody></table></div>
+<h3>FEATURE-TXN-001 — Get a transaction</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-TxnGet.md</td></tr><tr><td>Access</td><td>read</td></tr><tr><td>Repository operation</td><td><code>transactions.get</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: TransactionsGetInput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>txn_id</td><td>int</td></tr></tbody></table></div>
+<p>Output: TransactionsGetOutput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>txn_id</td><td>int</td></tr><tr><td>date</td><td>str</td></tr><tr><td>account</td><td>str</td></tr><tr><td>category</td><td>str</td></tr><tr><td>amount</td><td>int</td></tr><tr><td>memo</td><td>str</td></tr></tbody></table></div>
+<h3>FEATURE-TXN-002 — List transactions</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>DATABASE.md</td></tr><tr><td>Access</td><td>read</td></tr><tr><td>Repository operation</td><td><code>transactions.list</code></td></tr><tr><td>Order</td><td><code>txn_id</code> asc</td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: TransactionsListInput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>account</td><td>str</td></tr><tr><td>category</td><td>str</td></tr></tbody></table></div>
+<p>Output: TransactionsListOutput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>txn_id</td><td>int</td></tr><tr><td>date</td><td>str</td></tr><tr><td>account</td><td>str</td></tr><tr><td>category</td><td>str</td></tr><tr><td>amount</td><td>int</td></tr><tr><td>memo</td><td>str</td></tr></tbody></table></div>
+<h3>FEATURE-TXN-003 — Create a transaction</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-TxnPost.md</td></tr><tr><td>Access</td><td>write</td></tr><tr><td>Repository operation</td><td><code>transactions.create</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: TransactionsCreateInput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>txn_id</td><td>int</td></tr><tr><td>date</td><td>str</td></tr><tr><td>account</td><td>str</td></tr><tr><td>category</td><td>str</td></tr><tr><td>amount</td><td>int</td></tr><tr><td>memo</td><td>str</td></tr></tbody></table></div>
+<p>Output: TransactionsCreateOutput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>txn_id</td><td>int</td></tr><tr><td>date</td><td>str</td></tr><tr><td>account</td><td>str</td></tr><tr><td>category</td><td>str</td></tr><tr><td>amount</td><td>int</td></tr><tr><td>memo</td><td>str</td></tr></tbody></table></div>
+<h3>FEATURE-TXN-004 — Amend a transaction amount</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-TxnAmend.md</td></tr><tr><td>Access</td><td>write</td></tr><tr><td>Repository operation</td><td><code>transactions.update</code></td></tr><tr><td>Match</td><td><code>txn_id</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: TransactionsUpdateInput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>txn_id</td><td>int</td></tr><tr><td>amount</td><td>int</td></tr></tbody></table></div>
+<p>Output: TransactionsUpdateOutput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>txn_id</td><td>int</td></tr><tr><td>date</td><td>str</td></tr><tr><td>account</td><td>str</td></tr><tr><td>category</td><td>str</td></tr><tr><td>amount</td><td>int</td></tr><tr><td>memo</td><td>str</td></tr></tbody></table></div>
+<h3>FEATURE-TXN-005 — Delete a transaction</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-TxnDelete.md</td></tr><tr><td>Access</td><td>write</td></tr><tr><td>Repository operation</td><td><code>transactions.delete</code></td></tr><tr><td>Match</td><td><code>txn_id</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: TransactionsDeleteInput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>txn_id</td><td>int</td></tr></tbody></table></div>
+<p>Output: TransactionsDeleteOutput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>txn_id</td><td>int</td></tr></tbody></table></div>
+<h3>FEATURE-TXN-006 — Remove every transaction</h3>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Owner</td><td>FEATURE-Init.md</td></tr><tr><td>Access</td><td>write</td></tr><tr><td>Repository operation</td><td><code>transactions.clear</code></td></tr><tr><td>Kind</td><td>delete</td></tr><tr><td>Match</td><td><code>txn_id &gt;= min_id</code></td></tr><tr><td>Compatibility</td><td>unchanged</td></tr></tbody></table></div>
+<p>Input: TransactionsClearInput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody><tr><td>min_id</td><td>int</td></tr></tbody></table></div>
+<p>Output: TransactionsClearOutput</p>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th></tr></thead><tbody></tbody></table></div>
+<h2>Schemas</h2>
+<h2><code>accounts</code></h2>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>account</td><td>VARCHAR(12) PK</td><td>Account code, 1 to 12 characters of A-Z and 0-9.</td></tr><tr><td>name</td><td>VARCHAR(40) NOT NULL</td><td>1 to 40 characters, no comma or newline.</td></tr></tbody></table></div>
+<h2><code>categories</code></h2>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>category</td><td>VARCHAR(12) PK</td><td>Category code, 1 to 12 characters of A-Z and 0-9.</td></tr><tr><td>description</td><td>VARCHAR(40) NOT NULL</td><td>1 to 40 characters, no comma or newline.</td></tr></tbody></table></div>
+<h2><code>transactions</code></h2>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td>txn_id</td><td>INTEGER PK</td><td>Kept from the load file, or max plus one when posted.</td></tr><tr><td>date</td><td>VARCHAR(10) NOT NULL</td><td>Real calendar date written YYYY-MM-DD.</td></tr><tr><td>account</td><td>VARCHAR(12) NOT NULL REFERENCES accounts(account)</td><td>Owning account.</td></tr><tr><td>category</td><td>VARCHAR(12) NOT NULL REFERENCES categories(category)</td><td>Category.</td></tr><tr><td>amount</td><td>INTEGER NOT NULL</td><td>Signed integer cents, never zero.</td></tr><tr><td>memo</td><td>VARCHAR(60) NOT NULL DEFAULT &#x27;&#x27;</td><td>0 to 60 characters, no comma or newline.</td></tr></tbody></table></div>
+<h2>Migrations</h2>
+<p>Each relational change has one staged record in <code>migrations/MIGRATION-&lt;AccessPatternId&gt;.md</code>. The record carries Alembic <code>upgrade</code>/<code>downgrade</code> snippets and progresses from <code>planned</code> to <code>built</code> only when its DATABASE build story completes. Alembic records deployment application separately.</p>
+<div class="scroll"><table><thead><tr><th>Access Pattern</th><th>Revision</th><th>State</th></tr></thead><tbody></tbody></table></div>
+<h2>Config (.env)</h2>
+<div class="scroll"><table><thead><tr><th>Key</th><th>Type</th><th>Required</th><th>Notes</th></tr></thead><tbody><tr><td>DATABASE_URL</td><td>str</td><td>No</td><td>PostgreSQL DSN, or a SQLite path optionally prefixed <code>sqlite://</code>.</td></tr><tr><td>DATABASE_PATH</td><td>str</td><td>No</td><td>Used when DATABASE_URL is unset; falls back to <code>data/app.db</code>.</td></tr></tbody></table></div>
+<h2>File Stores</h2>
+<ul><li>None.</li></ul>
+<h2>External Services</h2>
+<ul><li>None.</li></ul>
+<h2>External Libraries</h2>
+<ul><li>None.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC accounts-create ===<br>Intent: accounts.create stores an account that accounts.get reads back with the supplied name.</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: code = &quot;ACPTCR1&quot; name = &quot;Acceptance Create&quot; created = db.accounts.create(account=code, name=name) assert created.account == code assert created.name == name got = db.accounts.get(account=code) assert got is not None assert got.account == code assert got.name == name === END AC accounts-create ===</p>
+<p>=== AC accounts-get ===<br>Intent: accounts.get returns the row for a present account and None for an absent one.</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: code = &quot;ACPTGT1&quot; absent = &quot;ACPTGT2&quot; name = &quot;Acceptance Get&quot; db.accounts.create(account=code, name=name) got = db.accounts.get(account=code) assert got is not None assert got.name == name assert db.accounts.get(account=absent) is None === END AC accounts-get ===</p>
+<p>=== AC accounts-list ===<br>Intent: accounts.list returns created accounts in ascending code order.</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: first = &quot;ACPTLA1&quot; second = &quot;ACPTLB1&quot; db.accounts.create(account=second, name=&quot;Second&quot;) db.accounts.create(account=first, name=&quot;First&quot;) codes = [row.account for row in db.accounts.list()] assert first in codes assert second in codes assert codes.index(first) &lt; codes.index(second) assert codes == sorted(codes) === END AC accounts-list ===</p>
+<p>=== AC accounts-update ===<br>Intent: accounts.update changes only the name and returns None for an absent account.</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: code = &quot;ACPTUP1&quot; absent = &quot;ACPTUP2&quot; before = &quot;Before Name&quot; after = &quot;After Name&quot; db.accounts.create(account=code, name=before) updated = db.accounts.update(account=code, name=after) assert updated is not None assert updated.account == code assert updated.name == after got = db.accounts.get(account=code) assert got is not None assert got.name == after assert db.accounts.update(account=absent, name=after) is None === END AC accounts-update ===</p>
+<p>=== AC accounts-delete ===<br>Intent: accounts.delete removes the account so a later get finds nothing.</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: code = &quot;ACPTDL1&quot; db.accounts.create(account=code, name=&quot;Delete Me&quot;) assert db.accounts.get(account=code) is not None removed = db.accounts.delete(account=code) assert removed is not None assert removed.account == code assert db.accounts.get(account=code) is None === END AC accounts-delete ===</p>
+<p>=== AC accounts-clear ===<br>Intent: accounts.clear removes every account once dependent transactions are cleared.</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: db.transactions.clear(min_id=-2147483647) db.accounts.create(account=&quot;ACPTCL1&quot;, name=&quot;Clear One&quot;) db.accounts.create(account=&quot;ACPTCL2&quot;, name=&quot;Clear Two&quot;) assert len(db.accounts.list()) &gt;= 2 db.accounts.clear(first_code=&quot;&quot;) assert db.accounts.list() == [] === END AC accounts-clear ===</p>
+<p>=== AC categories-create ===<br>Intent: categories.create stores a category that categories.get reads back with the supplied description.</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: code = &quot;ACPTCAT1&quot; description = &quot;Acceptance Category&quot; created = db.categories.create(category=code, description=description) assert created.category == code assert created.description == description got = db.categories.get(category=code) assert got is not None assert got.description == description === END AC categories-create ===</p>
+<p>=== AC categories-get ===<br>Intent: categories.get returns a present category and None for an absent one.</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: code = &quot;ACPTCG1&quot; absent = &quot;ACPTCG2&quot; description = &quot;Get Category&quot; db.categories.create(category=code, description=description) got = db.categories.get(category=code) assert got is not None assert got.category == code assert got.description == description assert db.categories.get(category=absent) is None === END AC categories-get ===</p>
+<p>=== AC categories-list ===<br>Intent: categories.list returns created categories in ascending code order.</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: first = &quot;ACPTCLA&quot; second = &quot;ACPTCLB&quot; db.categories.create(category=second, description=&quot;Second&quot;) db.categories.create(category=first, description=&quot;First&quot;) codes = [row.category for row in db.categories.list()] assert first in codes assert second in codes assert codes.index(first) &lt; codes.index(second) assert codes == sorted(codes) === END AC categories-list ===</p>
+<p>=== AC categories-clear ===<br>Intent: categories.clear removes every category once dependent transactions are cleared.</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: db.transactions.clear(min_id=-2147483647) db.categories.create(category=&quot;ACPTCC1&quot;, description=&quot;Clear One&quot;) db.categories.create(category=&quot;ACPTCC2&quot;, description=&quot;Clear Two&quot;) assert len(db.categories.list()) &gt;= 2 db.categories.clear(first_code=&quot;&quot;) assert db.categories.list() == [] === END AC categories-clear ===</p>
+<p>=== AC transactions-create ===<br>Intent: transactions.create stores a row that transactions.get reads back with every supplied value.</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: acct = &quot;ACPTTC1&quot; cat = &quot;ACPTTCC1&quot; db.accounts.create(account=acct, name=&quot;Txn Account&quot;) db.categories.create(category=cat, description=&quot;Txn Category&quot;) new_id = max([t.txn_id for t in db.transactions.list()], default=0) + 1 day = &quot;2026-05-01&quot; cents = 4550 memo = &quot;created row&quot; created = db.transactions.create( txn_id=new_id, date=day, account=acct, category=cat, amount=cents, memo=memo ) assert created.txn_id == new_id got = db.transactions.get(txn_id=new_id) assert got is not None assert got.date == day assert got.account == acct assert got.category == cat assert got.amount == cents assert got.memo == memo === END AC transactions-create ===</p>
+<p>=== AC transactions-get ===<br>Intent: transactions.get returns a present row and None for an absent id.</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: acct = &quot;ACPTTG1&quot; cat = &quot;ACPTTGC1&quot; db.accounts.create(account=acct, name=&quot;Txn Account&quot;) db.categories.create(category=cat, description=&quot;Txn Category&quot;) new_id = max([t.txn_id for t in db.transactions.list()], default=0) + 1 absent_id = new_id + 1 db.transactions.create( txn_id=new_id, date=&quot;2026-05-02&quot;, account=acct, category=cat, amount=100, memo=&quot;&quot; ) got = db.transactions.get(txn_id=new_id) assert got is not None assert got.txn_id == new_id assert db.transactions.get(txn_id=absent_id) is None === END AC transactions-get ===</p>
+<p>=== AC transactions-list ===<br>Intent: transactions.list returns rows in ascending txn_id order and filters by account.</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: acct_a = &quot;ACPTTLA&quot; acct_b = &quot;ACPTTLB&quot; cat = &quot;ACPTTLC&quot; db.accounts.create(account=acct_a, name=&quot;List A&quot;) db.accounts.create(account=acct_b, name=&quot;List B&quot;) db.categories.create(category=cat, description=&quot;List Category&quot;) base = max([t.txn_id for t in db.transactions.list()], default=0) id_a = base + 1 id_b = base + 2 db.transactions.create(txn_id=id_b, date=&quot;2026-05-03&quot;, account=acct_b, category=cat, amount=200, memo=&quot;&quot;) db.transactions.create(txn_id=id_a, date=&quot;2026-05-03&quot;, account=acct_a, category=cat, amount=100, memo=&quot;&quot;) ids = [t.txn_id for t in db.transactions.list()] assert ids == sorted(ids) assert id_a in ids and id_b in ids only_a = db.transactions.list(account=acct_a) assert [t.txn_id for t in only_a] == [id_a] assert all(t.account == acct_a for t in only_a) === END AC transactions-list ===</p>
+<p>=== AC transactions-update ===<br>Intent: transactions.update changes only the amount and returns None for an absent id.</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: acct = &quot;ACPTTU1&quot; cat = &quot;ACPTTUC1&quot; db.accounts.create(account=acct, name=&quot;Txn Account&quot;) db.categories.create(category=cat, description=&quot;Txn Category&quot;) new_id = max([t.txn_id for t in db.transactions.list()], default=0) + 1 absent_id = new_id + 1 day = &quot;2026-05-04&quot; memo = &quot;amend me&quot; before = 1000 after = 2500 db.transactions.create(txn_id=new_id, date=day, account=acct, category=cat, amount=before, memo=memo) updated = db.transactions.update(txn_id=new_id, amount=after) assert updated is not None assert updated.amount == after got = db.transactions.get(txn_id=new_id) assert got is not None assert got.amount == after assert got.date == day assert got.account == acct assert got.category == cat assert got.memo == memo assert db.transactions.update(txn_id=absent_id, amount=after) is None === END AC transactions-update ===</p>
+<p>=== AC transactions-delete ===<br>Intent: transactions.delete removes the row so a later get finds nothing.</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: acct = &quot;ACPTTD1&quot; cat = &quot;ACPTTDC1&quot; db.accounts.create(account=acct, name=&quot;Txn Account&quot;) db.categories.create(category=cat, description=&quot;Txn Category&quot;) new_id = max([t.txn_id for t in db.transactions.list()], default=0) + 1 db.transactions.create(txn_id=new_id, date=&quot;2026-05-05&quot;, account=acct, category=cat, amount=300, memo=&quot;&quot;) assert db.transactions.get(txn_id=new_id) is not None removed = db.transactions.delete(txn_id=new_id) assert removed is not None assert removed.txn_id == new_id assert db.transactions.get(txn_id=new_id) is None === END AC transactions-delete ===</p>
+<p>=== AC transactions-clear ===<br>Intent: transactions.clear removes every transaction row.</p>
+<p>from persistence.testing import db_session</p>
+<p>with db_session() as db: acct = &quot;ACPTTX1&quot; cat = &quot;ACPTTXC1&quot; db.accounts.create(account=acct, name=&quot;Txn Account&quot;) db.categories.create(category=cat, description=&quot;Txn Category&quot;) base = max([t.txn_id for t in db.transactions.list()], default=0) db.transactions.create(txn_id=base + 1, date=&quot;2026-05-06&quot;, account=acct, category=cat, amount=100, memo=&quot;&quot;) db.transactions.create(txn_id=base + 2, date=&quot;2026-05-06&quot;, account=acct, category=cat, amount=200, memo=&quot;&quot;) assert len(db.transactions.list()) &gt;= 2 db.transactions.clear(min_id=-2147483647) assert db.transactions.list() == [] === END AC transactions-clear ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Amounts are stored as integer cents; no column or caller uses floating point for money.</li><li>Application code never opens a database driver; it calls the generated persistence package only.</li><li>No aggregate, report, or balance value is stored; every one is computed from <code>list</code> results.</li></ul></article>
+</main>
+</body>
+</html>

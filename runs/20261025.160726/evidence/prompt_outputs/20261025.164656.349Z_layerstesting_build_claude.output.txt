@@ -1,0 +1,44 @@
+I'll start by inspecting the build directory and the state left by earlier blocks.Earlier blocks left most of the CLI in place, and `bin/test.sh` already exists. I'll read the entry point, registry, config, and existing test script before changing anything.Most of the CLI from earlier blocks is in place. Before deciding what this block still needs, I'll check the persistence engine selection, the existing test references to `config`/`test.sh`, and whether `.venv` and `uv` exist.Two things need resolving before I write code. The spec places the resolver in `cli/database.py` with a relative `data/app.db` default, but the current `cli/config.py` returns an absolute path and an existing test asserts that. Also, `.venv` is absent, so `bin/test.sh` cannot run yet. I'll check the driver selection, the test inventory, and the ignore rules.The picture is clear now. Earlier blocks built most of the CLI, so this block's remaining work is:
+
+1. Add `cli/database.py` per FEATURE-DatabaseResolution, route the command layer through it, and retire the duplicate resolver in `cli/config.py`.
+2. Create the environment so `bin/test.sh` can run, then verify the declared acceptance checks.
+3. Add tests for usage errors, the output contract, and database resolution.
+
+I'll create the environment first so I can confirm the baseline.The baseline is green: 271 tests pass through `sh bin/test.sh`. Next I'll write the resolver module the spec names.The shipped `persistence/testing.py` already defaults to the relative `data/app.db`, so the relative default is consistent with the rest of the code. I'll reduce `cli/config.py` to the application root, and route `context.py` through the new resolver.The `init.py` edit was a no-op I didn't need, so nothing changed there. Next I'll update the older resolver tests in `test_cli_entry.py` that import the removed function.I'll move the DSN tests into a dedicated module that matches the spec's new default, and drop them from `test_cli_entry.py`.Next are three test modules covering this block's stories. Per FEATURE-TestSuite's guardrail, tests use their own temporary store rather than the configured application store, so the cases that the specs wrote against `db_session()` will read back through the CLI and the persistence library instead.I made a mistake in `test_output_contract.py`: `make_category` writes its CSV to the current directory, which is the repo root. I'll route it through the test's temporary directory and tidy the duplicates before running anything.The system notice about those two files is just my scripted edit landing, and the content matches what I intended. Next is the database-resolution module.Now I'll run the full suite through `bin/test.sh`, the same way the project gates it.The one failure is a real inconsistency rather than a test typo. The persistence library lowercases the DSN scheme when it picks a driver, so `POSTGRES://` reaches PostgreSQL there, while my resolver called it SQLite. I'll make `database_engine` match the library's rule.All 348 tests pass, both from the project root and from another directory. Next is the PostgreSQL dependency. The stack contract says PostgreSQL needs `psycopg[binary]` declared in the project, and the `cli-database` story selects PostgreSQL. I'll check how the driver imports it before deciding.The shipped driver's own error message asks for `psycopg[binary]`, and the stack contract requires it, so the PostgreSQL story can't work without it. I'll add it through `uv`, which resolves the name against the package index as the verification step.The driver now reaches the connection step and fails there with exit 1, which is the correct failure mode for an unreachable server. I'll run the full gate once more and exercise the real `ledger` launcher for the usage and output contracts.Everything checks out end to end. I'll confirm the final set of changed files before reporting.RESULT: SUCCESS
+
+All four stories in block 6 are implemented, and `sh bin/test.sh` exits 0 with 348 tests passing (271 before this block). I also ran the real `./ledger` launcher: an unknown command exits 2 with empty stdout and one stderr line, `init` prints nothing, and a duplicate account exits 3.
+
+**What changed**
+
+- **Database resolution (`cli-database`):** added `cli/database.py` with `resolve_database_dsn` and `database_engine`, as FEATURE-DatabaseResolution specifies. The command layer now resolves through it. `cli/config.py` keeps only `APP_ROOT`.
+- **Dependency:** added `psycopg[binary]` through `uv add`. The stack requires it, and without it a PostgreSQL DSN fails with a missing-driver error. The connection failure path now behaves correctly.
+- **Usage errors and output (`cli-usage`, `cli-output`):** the existing registry and entry point already met these stories. I verified them and added tests rather than changing the code.
+- **`bin/test.sh` (`test-suite`):** the script was already present and correct. I created `.venv` with `uv sync`, which it needs.
+- **Tests:** new `tests/test_usage_errors.py`, `tests/test_output_contract.py`, and `tests/test_database_resolution.py`.
+
+**Choices I made**
+
+- **Relative default.** The spec's default is `data/app.db`, which is relative to the working directory. The old resolver returned an absolute path under the application root. I followed the spec, which matches the shipped `persistence/testing.py`. I moved the five resolver tests from `test_cli_entry.py` into `test_database_resolution.py` and updated the default expectation.
+- **Case-insensitive engine choice.** `database_engine` compares the scheme case-insensitively, as the persistence library's `open_driver` does. Otherwise `POSTGRES://` would reach PostgreSQL in the library and SQLite in the resolver.
+- **Temporary stores in tests.** The spec's acceptance checks use `db_session()` and the configured store. The test guardrail says tests use their own temporary database, so the equivalent assertions run against a temp `DATABASE_PATH` and read back through `txn get`, `count`, or `open_database`. I did not run the declared check snippets verbatim, so that equivalence is by inspection.
+
+<blueprint-decisions>
+[{"spec":"FEATURE-DatabaseResolution.md","severity":"Material","subject":"Default store path is relative","decision":"resolve_database_dsn returns the literal 'data/app.db' as the spec states, which is relative to the working directory. The previous resolver returned an absolute path under the application root. I moved the resolver tests to tests/test_database_resolution.py and updated the default expectation. Should the default instead be anchored to the application root?"},{"spec":"FEATURE-DatabaseResolution.md","severity":"Low","subject":"PostgreSQL driver dependency","decision":"Added psycopg[binary] to pyproject.toml via uv, as the stack contract and the driver's own error message require. Nothing in this block's specs names the dependency."}]
+</blueprint-decisions>
+
+FILES CHANGED:
+- cli/database.py
+- cli/config.py
+- cli/context.py
+- tests/test_cli_entry.py
+- tests/test_database_resolution.py
+- tests/test_usage_errors.py
+- tests/test_output_contract.py
+- pyproject.toml
+- uv.lock
+
+SUMMARY:
+Block 6 implements cli-usage, cli-output, cli-database, and test-suite. `sh bin/test.sh` exits 0 with 348 passed, 0 failed. The `sh bin/test.sh` invocation was run from the project root and from another directory, and both passed. `sh -n bin/test.sh` parses cleanly. `sources/` is unchanged. I did not run `sources/run.sh`, since it is the terminal story and belongs to a later block.
+
+BLOCKERS:
+- None.

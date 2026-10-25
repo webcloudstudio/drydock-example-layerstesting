@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-ReportBalances.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-ReportBalances.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-ReportBalances.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Report Balances</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger report balances</code>, listing each account&#x27;s transaction count and balance plus a TOTAL row.</td></tr><tr><td>Depends On</td><td>FEATURE-LoadTransactions.md, FEATURE-CliEntry.md, FEATURE-LedgerCore.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger report balances</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger report balances</code> prints one row per account with its transaction count and balance, ordered by account code, followed by a TOTAL row. Every value is computed from the database at run time; nothing is stored or hard-coded.</p>
+<h2>Behavior</h2>
+<ul><li>Header row: <code>account,name,transactions,balance</code>.</li><li>One data row per account, ordered by account code, including accounts with no transactions</li></ul>
+<p>(count <code>0</code>, balance <code>0.00</code>).</p>
+<ul><li>Final row: <code>TOTAL,,&lt;count&gt;,&lt;sum&gt;</code> where count is the total number of transactions and sum is the</li></ul>
+<p>total of all balances.</p>
+<ul><li>Balances are sums of integer cents, written with exactly two decimal places, a leading <code>-</code> when</li></ul>
+<p>negative, and no thousands separator.</p>
+<ul><li>Output is unquoted CSV with <code>\n</code> line endings; exit <code>0</code>.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNT-002</code> — read: list every account in code order - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-TXN-002</code> — read: list an account&#x27;s transactions to count and sum them - supplies: <code>account</code> - returns: <code>account</code>, <code>amount</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC report-balances-rows ===<br>Intent: The report has one row per stored account in code order with counts and balances computed from stored transactions, then a consistent TOTAL row.</p>
+<p>import csv import io import re from decimal import Decimal from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>def cents(text): assert re.fullmatch(r&quot;-?\d+\.\d{2}&quot;, text), text return int(Decimal(text) * 100)</p>
+<p>with db_session() as db: cat = &quot;ACPTRBC&quot; db.accounts.create(account=&quot;ACPTRB1&quot;, name=&quot;Report One&quot;) db.accounts.create(account=&quot;ACPTRB2&quot;, name=&quot;Report Two&quot;) db.categories.create(category=cat, description=&quot;Report Category&quot;) base = max([t.txn_id for t in db.transactions.list()], default=0) db.transactions.create(txn_id=base + 1, date=&quot;2026-06-01&quot;, account=&quot;ACPTRB1&quot;, category=cat, amount=10000, memo=&quot;&quot;) db.transactions.create(txn_id=base + 2, date=&quot;2026-06-02&quot;, account=&quot;ACPTRB1&quot;, category=cat, amount=-1250, memo=&quot;&quot;) db.transactions.create(txn_id=base + 3, date=&quot;2026-06-03&quot;, account=&quot;ACPTRB2&quot;, category=cat, amount=500000, memo=&quot;&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;] data = rows[1:-1] total = rows[-1] accounts = db.accounts.list() assert [r[0] for r in data] == [a.account for a in accounts] assert [r[0] for r in data] == sorted(r[0] for r in data) count_sum = 0 cents_sum = 0 for row, acct in zip(data, accounts): assert len(row) == 4 txns = db.transactions.list(account=acct.account) assert row[1] == acct.name assert int(row[2]) == len(txns) assert cents(row[3]) == sum(t.amount for t in txns) count_sum += len(txns) cents_sum += sum(t.amount for t in txns) assert total[0] == &quot;TOTAL&quot; assert total[1] == &quot;&quot; assert len(total) == 4 assert int(total[2]) == count_sum assert cents(total[3]) == cents_sum === END AC report-balances-rows ===</p>
+<p>=== AC report-balances-empty-account ===<br>Intent: An account with no transactions appears with a zero count and a zero balance.</p>
+<p>import csv import io import re from decimal import Decimal from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: acct = &quot;ACPTRE1&quot; db.accounts.create(account=acct, name=&quot;Empty Report&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) mine = [r for r in rows[1:-1] if r[0] == acct] assert len(mine) == 1 assert int(mine[0][2]) == 0 assert re.fullmatch(r&quot;-?\d+\.\d{2}&quot;, mine[0][3]) assert int(Decimal(mine[0][3]) * 100) == 0 === END AC report-balances-empty-account ===</p>
+<p>=== AC report-balances-reflects-changes ===<br>Intent: The report is computed from the database, so a new transaction changes the reported balance by its amount.</p>
+<p>import csv import io import re from decimal import Decimal from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>def balance_of(out, acct): rows = list(csv.reader(io.StringIO(out))) mine = [r for r in rows[1:-1] if r[0] == acct] assert len(mine) == 1 assert re.fullmatch(r&quot;-?\d+\.\d{2}&quot;, mine[0][3]) return int(Decimal(mine[0][3]) * 100), int(mine[0][2])</p>
+<p>with db_session() as db: acct = &quot;ACPTRC1&quot; cat = &quot;ACPTRCC&quot; db.accounts.create(account=acct, name=&quot;Changing Report&quot;) db.categories.create(category=cat, description=&quot;Changing Category&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;) print(out) print(err) assert code == 0 first_balance, first_count = balance_of(out, acct) delta = 123456 tid = max([t.txn_id for t in db.transactions.list()], default=0) + 1 db.transactions.create(txn_id=tid, date=&quot;2026-06-04&quot;, account=acct, category=cat, amount=delta, memo=&quot;&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;) print(out) print(err) assert code == 0 second_balance, second_count = balance_of(out, acct) assert second_balance == first_balance + delta assert second_count == first_count + 1 === END AC report-balances-reflects-changes ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>No balance, count, or total is hard-coded; every value comes from a query at run time.</li><li>Amounts are integer cents internally and never floating point.</li><li>The report writes nothing to the database.</li></ul></article>
+</main>
+</body>
+</html>

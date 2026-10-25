@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/commands/load.py</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/commands/load.py</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../build/LayersTesting/cli/commands/load.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger load``: read one CSV file whole, validate every row, then store every row or none.
+
+Every check runs before the first write. The persistence package offers no multi-statement
+transaction to application code, so the all-or-nothing guarantee rests on that ordering.
+&quot;&quot;&quot;
+
+import csv
+
+from cli.context import open_store
+from cli.core import (
+    balance_guard,
+    parse_amount,
+    validate_code,
+    validate_date,
+    validate_memo,
+    validate_name,
+)
+from cli.errors import OperationalError, Rejected
+from cli.registry import register
+from cli.views import (
+    ACCOUNT_COLUMNS,
+    CATEGORY_COLUMNS,
+    LOADED_HEADER,
+    TXN_COLUMNS,
+    Txn,
+    load_txn_id,
+)
+
+
+def load_accounts(args: list[str]) -&gt; list[list[str]]:
+    (path,) = args
+    body = _read(path, ACCOUNT_COLUMNS)
+    for code, name in body:
+        validate_code(code)
+        validate_name(name)
+    with open_store() as db:
+        stored = {account.account for account in db.accounts.list()}
+        _reject_repeats([code for code, _ in body], stored)
+        for code, name in body:
+            db.accounts.create(account=code, name=name)
+    return [LOADED_HEADER, [&quot;accounts&quot;, str(len(body))]]
+
+
+def load_categories(args: list[str]) -&gt; list[list[str]]:
+    (path,) = args
+    body = _read(path, CATEGORY_COLUMNS)
+    for code, description in body:
+        validate_code(code)
+        validate_name(description)
+    with open_store() as db:
+        stored = {category.category for category in db.categories.list()}
+        _reject_repeats([code for code, _ in body], stored)
+        for code, description in body:
+            db.categories.create(category=code, description=description)
+    return [LOADED_HEADER, [&quot;categories&quot;, str(len(body))]]
+
+
+def load_transactions(args: list[str]) -&gt; list[list[str]]:
+    (path,) = args
+    txns = [_parse_txn(row) for row in _read(path, TXN_COLUMNS)]
+    with open_store() as db:
+        accounts = {account.account for account in db.accounts.list()}
+        categories = {category.category for category in db.categories.list()}
+        for txn in txns:
+            if txn.account not in accounts:
+                raise Rejected(f&quot;unknown account {txn.account}&quot;)
+            if txn.category not in categories:
+                raise Rejected(f&quot;unknown category {txn.category}&quot;)
+        stored = {txn.txn_id for txn in db.transactions.list()}
+        _reject_repeats([txn.txn_id for txn in txns], stored)
+        deltas: dict[str, int] = {}
+        for txn in txns:
+            deltas[txn.account] = deltas.get(txn.account, 0) + txn.amount
+        balance_guard(db, deltas)
+        for txn in txns:
+            db.transactions.create(**txn._asdict())
+    return [LOADED_HEADER, [&quot;transactions&quot;, str(len(txns))]]
+
+
+def _parse_txn(row: list[str]) -&gt; Txn:
+    txn_id, day, account, category, amount, memo = row
+    return Txn(
+        txn_id=load_txn_id(txn_id),
+        date=validate_date(day),
+        account=validate_code(account),
+        category=validate_code(category),
+        amount=parse_amount(amount),
+        memo=validate_memo(memo),
+    )
+
+
+def _read(path: str, columns: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Return the body rows of ``path`` once its header and field counts check out.&quot;&quot;&quot;
+    try:
+        with open(path, newline=&quot;&quot;, encoding=&quot;utf-8&quot;) as handle:
+            rows = list(csv.reader(handle))
+    except (OSError, UnicodeDecodeError, csv.Error) as exc:
+        raise OperationalError(f&quot;cannot read {path}: {exc}&quot;) from exc
+    if not rows or rows[0] != columns:
+        raise Rejected(f&quot;header must be {&#x27;,&#x27;.join(columns)}&quot;)
+    body = rows[1:]
+    for number, row in enumerate(body, start=2):
+        if len(row) != len(columns):
+            raise Rejected(f&quot;line {number} must have {len(columns)} fields&quot;)
+    return body
+
+
+def _reject_repeats(keys: list, stored: set) -&gt; None:
+    &quot;&quot;&quot;Refuse a key that repeats inside the file or is already stored.&quot;&quot;&quot;
+    seen: set = set()
+    for key in keys:
+        if key in seen:
+            raise Rejected(f&quot;{key} repeats in the file&quot;)
+        if key in stored:
+            raise Rejected(f&quot;{key} is already stored&quot;)
+        seen.add(key)
+
+
+register((&quot;load&quot;, &quot;accounts&quot;), load_accounts, (1, 1))
+register((&quot;load&quot;, &quot;categories&quot;), load_categories, (1, 1))
+register((&quot;load&quot;, &quot;transactions&quot;), load_transactions, (1, 1))
+</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-AccountAdd.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-AccountAdd.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-AccountAdd.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Account Add</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger account add &lt;code&gt; &lt;name&gt;</code>, which creates one validated account.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-CliEntry.md, FEATURE-LedgerCore.md, FEATURE-Init.md, FEATURE-Count.md</td></tr><tr><td>Provides</td><td>ledger account add</td></tr><tr><td>Consumes</td><td>cli.main, format_amount, validate_code, validate_text</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Add a new place where the shop keeps cash. A new account has no transactions and a zero balance.</p>
+<h2>Command Contract</h2>
+<p><code>ledger account add &lt;code&gt; &lt;name&gt;</code> registers under the <code>account</code> command in the cli command table.</p>
+<div class="scroll"><table><thead><tr><th>Condition</th><th>Result</th></tr></thead><tbody><tr><td>Valid code and name, code not in use</td><td>Exit 0. Stdout is <code>account,name,transactions,balance</code> then the new row with <code>0</code> transactions and balance <code>0.00</code>.</td></tr><tr><td>Wrong argument count</td><td>Exit 2, nothing on stdout.</td></tr><tr><td>Code not 1 to 12 characters of <code>A-Z0-9</code></td><td>Exit 3, nothing stored.</td></tr><tr><td>Name empty, longer than 40 characters, or containing a comma or newline</td><td>Exit 3, nothing stored.</td></tr><tr><td>Code already exists</td><td>Exit 3, nothing stored.</td></tr></tbody></table></div>
+<h2>Behavior</h2>
+<ol><li>Validate the code and name with the <code>ledger-core</code> validators.</li><li>Confirm the code is not already stored.</li><li>Create the row, then print the account row. The transaction count and balance are computed from</li></ol>
+<p>the database, never hard-coded, and formatted from integer cents with two decimal places.</p>
+<ol><li>A failing command writes one diagnostic line to standard error and nothing to standard output.</li></ol>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNT-003</code> — write: create an account - supplies: <code>account</code>, <code>name</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-ACCOUNT-002</code> — read: detect an existing code - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-TXN-002</code> — read: count the account&#x27;s transactions and sum its balance - supplies: <code>account</code> - returns: <code>txn_id</code>, <code>amount</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC account-add-valid ===<br>Intent: Adding a valid account prints its zero-balance row and the account reads back with the supplied name.</p>
+<p>import csv import io from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>code = &quot;ADDOK1&quot; name = &quot;Added Account&quot; rc, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, code, name) print(out) print(err) assert rc == 0 rows = list(csv.reader(io.StringIO(out))) assert rows == [[&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;], [code, name, &quot;0&quot;, &quot;0.00&quot;]] with db_session() as db: got = db.accounts.get(account=code) assert got is not None assert got.name == name === END AC account-add-valid ===</p>
+<p>=== AC account-add-boundaries ===<br>Intent: A 12-character code and a 40-character name are accepted.</p>
+<p>import csv import io from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>code = &quot;ADDMAXCODE12&quot; name = &quot;N&quot; * 40 assert len(code) == 12 rc, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, code, name) print(out) print(err) assert rc == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[1][:2] == [code, name] with db_session() as db: got = db.accounts.get(account=code) assert got is not None assert got.name == name === END AC account-add-boundaries ===</p>
+<p>=== AC account-add-invalid-code ===<br>Intent: A code that is too long, lowercase, or contains a forbidden character is rejected with exit 3 and not stored.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>bad_codes = [&quot;ADDBADCODE123X&quot;, &quot;addlower&quot;, &quot;ADD-DASH&quot;, &quot;ADD SPACE&quot;] for code in bad_codes: rc, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, code, &quot;Some Name&quot;) print(code, out, err) assert rc == 3 assert out == &quot;&quot; with db_session() as db: for code in bad_codes: assert db.accounts.get(account=code) is None === END AC account-add-invalid-code ===</p>
+<p>=== AC account-add-invalid-name ===<br>Intent: A name that is empty, longer than 40 characters, or holds a comma or newline is rejected with exit 3 and not stored.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>bad_names = [&quot;&quot;, &quot;N&quot; * 41, &quot;has,comma&quot;, &quot;has\nnewline&quot;] for n, name in enumerate(bad_names, start=1): code = &quot;ADDBN%d&quot; % n rc, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, code, name) print(code, out, err) assert rc == 3 assert out == &quot;&quot; with db_session() as db: for n in range(1, len(bad_names) + 1): assert db.accounts.get(account=&quot;ADDBN%d&quot; % n) is None === END AC account-add-invalid-name ===</p>
+<p>=== AC account-add-usage ===<br>Intent: Missing or extra arguments to account add are a usage error (exit 2) and store nothing.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>code = &quot;ADDUSE1&quot; rc, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, code) print(out, err) assert rc == 2 assert out == &quot;&quot; rc, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, code, &quot;Name&quot;, &quot;extra&quot;) print(out, err) assert rc == 2 assert out == &quot;&quot; rc, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;) print(out, err) assert rc == 2 assert out == &quot;&quot; with db_session() as db: assert db.accounts.get(account=code) is None === END AC account-add-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The transaction count and balance in the printed row are computed from the database.</li><li>Balances are integer cents formatted to two decimal places; no floating point is used.</li><li>A rejected add changes nothing.</li></ul></article>
+</main>
+</body>
+</html>

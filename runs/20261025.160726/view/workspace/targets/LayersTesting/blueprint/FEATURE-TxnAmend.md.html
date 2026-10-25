@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-TxnAmend.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-TxnAmend.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-TxnAmend.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Txn Amend</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger txn amend &lt;id&gt; &lt;amount&gt;</code>, changing only a transaction&#x27;s amount while keeping every balance non-negative.</td></tr><tr><td>Depends On</td><td>FEATURE-TxnGet.md, FEATURE-LedgerCore.md, FEATURE-CliEntry.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger txn amend</td></tr><tr><td>Consumes</td><td>cli.main, parse_amount, format_amount, balance_guard, ledger txn get</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Correct the amount of an existing transaction. Date, account, category, and memo never change. The change is rejected before any write if it would leave the owning account&#x27;s balance below zero.</p>
+<h2>Trigger and Interface</h2>
+<p><code>ledger txn amend &lt;id&gt; &lt;amount&gt;</code> takes exactly two arguments.</p>
+<div class="scroll"><table><thead><tr><th>Condition</th><th>Exit</th><th>Stdout</th></tr></thead><tbody><tr><td>Amended</td><td>0</td><td>Header <code>txn_id,date,account,category,amount,memo</code>, then the updated row</td></tr><tr><td>Amount fails <code>-?DIGITS[.D[D]]</code>, has more than two decimals, or is zero</td><td>3</td><td>Nothing</td></tr><tr><td>Resulting balance of the owning account would be below zero</td><td>3</td><td>Nothing</td></tr><tr><td>No transaction with that id</td><td>4</td><td>Nothing</td></tr><tr><td>Wrong argument count, or an id that is not an integer</td><td>2</td><td>Nothing</td></tr><tr><td>Database unreachable or tables missing</td><td>1</td><td>Nothing</td></tr></tbody></table></div>
+<p>One diagnostic line goes to standard error on every failure.</p>
+<h2>Sequence</h2>
+<ol><li>Check the argument count and parse the id (usage error otherwise).</li><li>Parse the amount with <code>parse_amount</code> into integer cents (rejection otherwise).</li><li>Locate the transaction by listing transactions; if absent, fail with not found.</li><li>List the owning account&#x27;s transactions and ask <code>balance_guard</code> for the balance that results from replacing this row&#x27;s amount; if any resulting balance is below zero, reject.</li><li>Only after every check passes, write the new amount through <code>transactions.update</code>, then print the returned row.</li></ol>
+<h2>Reads</h2>
+<p>All transactions, to locate the row, and the owning account&#x27;s transactions, to compute the projected balance.</p>
+<h2>Writes</h2>
+<p>The <code>amount</code> column of exactly one <code>transactions</code> row.</p>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-TXN-004</code> — write: change a transaction amount - supplies: <code>txn_id</code>, <code>amount</code> - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li><li><code>FEATURE-TXN-002</code> — read: list transactions to locate the row and compute the projected balance - supplies: <code>account</code> - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC txnamend-success ===<br>Intent: txn amend prints the updated row, changes only the amount, and persists it.</p>
+<p>import csv import io from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: acct = &quot;TAACCT1&quot; cat = &quot;TACAT1&quot; day = &quot;2026-04-01&quot; memo = &quot;walk in sale&quot; db.accounts.create(account=acct, name=&quot;Amend Account&quot;) db.categories.create(category=cat, description=&quot;Amend Category&quot;) new_id = max([t.txn_id for t in db.transactions.list()], default=0) + 1 db.transactions.create(txn_id=new_id, date=day, account=acct, category=cat, amount=4550, memo=memo) code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, str(new_id), &quot;54.50&quot;) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;] assert rows[1] == [str(new_id), day, acct, cat, &quot;54.50&quot;, memo] stored = db.transactions.get(txn_id=new_id) assert stored is not None assert stored.amount == 5450 assert stored.date == day assert stored.account == acct assert stored.category == cat assert stored.memo == memo === END AC txnamend-success ===</p>
+<p>=== AC txnamend-absent ===<br>Intent: txn amend of an absent id exits 4 with nothing on standard output.</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: absent_id = max([t.txn_id for t in db.transactions.list()], default=0) + 1000 before = len(db.transactions.list()) code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, str(absent_id), &quot;5.00&quot;) print(out) print(err) assert code == 4 assert out == &quot;&quot; assert len(db.transactions.list()) == before === END AC txnamend-absent ===</p>
+<p>=== AC txnamend-negative-balance ===<br>Intent: An amendment that would leave the account balance below zero exits 3 and changes nothing.</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: acct = &quot;TAACCT2&quot; cat = &quot;TACAT2&quot; db.accounts.create(account=acct, name=&quot;Amend Overdraw&quot;) db.categories.create(category=cat, description=&quot;Amend Overdraw Category&quot;) base = max([t.txn_id for t in db.transactions.list()], default=0) credit_id = base + 1 debit_id = base + 2 db.transactions.create(txn_id=credit_id, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=10000, memo=&quot;credit&quot;) db.transactions.create(txn_id=debit_id, date=&quot;2026-04-02&quot;, account=acct, category=cat, amount=-5000, memo=&quot;debit&quot;) code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, str(debit_id), &quot;-200.00&quot;) print(out) print(err) assert code == 3 assert out == &quot;&quot; stored = db.transactions.get(txn_id=debit_id) assert stored is not None assert stored.amount == -5000 assert db.transactions.get(txn_id=credit_id).amount == 10000 === END AC txnamend-negative-balance ===</p>
+<p>=== AC txnamend-boundary-zero-balance ===<br>Intent: An amendment that leaves the balance exactly zero is accepted.</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: acct = &quot;TAACCT3&quot; cat = &quot;TACAT3&quot; db.accounts.create(account=acct, name=&quot;Amend Boundary&quot;) db.categories.create(category=cat, description=&quot;Amend Boundary Category&quot;) base = max([t.txn_id for t in db.transactions.list()], default=0) credit_id = base + 1 debit_id = base + 2 db.transactions.create(txn_id=credit_id, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=10000, memo=&quot;credit&quot;) db.transactions.create(txn_id=debit_id, date=&quot;2026-04-02&quot;, account=acct, category=cat, amount=-5000, memo=&quot;debit&quot;) code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, str(debit_id), &quot;-100.00&quot;) print(out) print(err) assert code == 0 stored = db.transactions.get(txn_id=debit_id) assert stored is not None assert stored.amount == -10000 === END AC txnamend-boundary-zero-balance ===</p>
+<p>=== AC txnamend-invalid-amount ===<br>Intent: Malformed, over-precise, and zero amounts exit 3 and leave the row unchanged.</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: acct = &quot;TAACCT4&quot; cat = &quot;TACAT4&quot; db.accounts.create(account=acct, name=&quot;Amend Invalid&quot;) db.categories.create(category=cat, description=&quot;Amend Invalid Category&quot;) new_id = max([t.txn_id for t in db.transactions.list()], default=0) + 1 db.transactions.create(txn_id=new_id, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=2000, memo=&quot;keep&quot;) for bad in (&quot;1.234&quot;, &quot;0&quot;, &quot;0.00&quot;, &quot;abc&quot;, &quot;12.&quot;): code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, str(new_id), bad) print(bad, code, out, err) assert code == 3 assert out == &quot;&quot; assert db.transactions.get(txn_id=new_id).amount == 2000 === END AC txnamend-invalid-amount ===</p>
+<p>=== AC txnamend-usage ===<br>Intent: Wrong argument counts and a non-integer id are usage errors with exit 2.</p>
+<p>from cli.testing import cli_runner</p>
+<p>for args in ((&quot;txn&quot;, &quot;amend&quot;), (&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;), (&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;, &quot;2.00&quot;, &quot;3.00&quot;), (&quot;txn&quot;, &quot;amend&quot;, &quot;abc&quot;, &quot;2.00&quot;)): code, out, err = cli_runner(*args) print(args, code, out, err) assert code == 2 assert out == &quot;&quot; === END AC txnamend-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Only the amount changes; date, account, category, and memo are never written.</li><li>The balance check runs before the first write; a rejected amendment leaves every table unchanged.</li><li>Amounts are integer cents at every layer; no floating point.</li><li>Standard output carries only the documented CSV; failures write one diagnostic line to standard error and nothing to standard output.</li><li>Only the generated persistence package reaches the database.</li></ul></article>
+</main>
+</body>
+</html>

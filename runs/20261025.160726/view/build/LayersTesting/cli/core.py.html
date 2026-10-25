@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/core.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/core.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/core.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Shared input rules: integer-cent amounts, field and date validators, and the projected-balance guard.
+
+Every command takes its input through these functions so no command repeats or contradicts them.
+Validators and the guard raise ``Rejected`` and never write to the store.
+&quot;&quot;&quot;
+
+import datetime
+import re
+from collections.abc import Mapping
+
+from persistence import Database
+
+from cli.errors import Rejected
+
+_AMOUNT = re.compile(r&quot;(-?)([0-9]+)(?:\.([0-9]{1,2}))?&quot;)
+_CODE = re.compile(r&quot;[A-Z0-9]{1,12}&quot;)
+_DATE = re.compile(r&quot;([0-9]{4})-([0-9]{2})-([0-9]{2})&quot;)
+_FORBIDDEN_TEXT = (&quot;,&quot;, &quot;\n&quot;, &quot;\r&quot;)
+
+
+def parse_amount(text: str) -&gt; int:
+    &quot;&quot;&quot;Return ``text`` as integer cents. Accepts ``-?DIGITS[.D[D]]`` only; zero is rejected.&quot;&quot;&quot;
+    match = _AMOUNT.fullmatch(text)
+    if match is None:
+        raise Rejected(f&quot;amount must look like 12.50 or -3: {text!r}&quot;)
+    sign, whole, fraction = match.groups()
+    cents = int(whole) * 100 + int((fraction or &quot;&quot;).ljust(2, &quot;0&quot;))
+    if cents == 0:
+        raise Rejected(&quot;amount must not be zero&quot;)
+    return -cents if sign else cents
+
+
+def format_amount(cents: int) -&gt; str:
+    &quot;&quot;&quot;Return ``cents`` with exactly two decimals, a leading minus when negative, and no separators.&quot;&quot;&quot;
+    sign = &quot;-&quot; if cents &lt; 0 else &quot;&quot;
+    magnitude = abs(cents)
+    return f&quot;{sign}{magnitude // 100}.{magnitude % 100:02d}&quot;
+
+
+def validate_code(text: str) -&gt; str:
+    &quot;&quot;&quot;Return ``text`` if it is 1 to 12 characters from ``A-Z`` and ``0-9``.&quot;&quot;&quot;
+    if _CODE.fullmatch(text) is None:
+        raise Rejected(f&quot;code must be 1 to 12 characters of A-Z or 0-9: {text!r}&quot;)
+    return text
+
+
+def validate_text(text: str, min_len: int, max_len: int) -&gt; str:
+    &quot;&quot;&quot;Return ``text`` if its length is within bounds and it holds no comma or line break.&quot;&quot;&quot;
+    if not min_len &lt;= len(text) &lt;= max_len:
+        raise Rejected(f&quot;text must be {min_len} to {max_len} characters: {text!r}&quot;)
+    if any(mark in text for mark in _FORBIDDEN_TEXT):
+        raise Rejected(&quot;text must not contain a comma or line break&quot;)
+    return text
+
+
+def validate_name(text: str) -&gt; str:
+    &quot;&quot;&quot;Return an account name or category description: 1 to 40 characters.&quot;&quot;&quot;
+    return validate_text(text, 1, 40)
+
+
+def validate_memo(text: str) -&gt; str:
+    &quot;&quot;&quot;Return a transaction memo: 0 to 60 characters.&quot;&quot;&quot;
+    return validate_text(text, 0, 60)
+
+
+def validate_date(text: str) -&gt; str:
+    &quot;&quot;&quot;Return ``text`` if it is a real calendar date written as ``YYYY-MM-DD``.&quot;&quot;&quot;
+    match = _DATE.fullmatch(text)
+    if match is None:
+        raise Rejected(f&quot;date must look like 2026-04-01: {text!r}&quot;)
+    year, month, day = (int(part) for part in match.groups())
+    try:
+        datetime.date(year, month, day)
+    except ValueError as exc:
+        raise Rejected(f&quot;not a real calendar date: {text!r}&quot;) from exc
+    return text
+
+
+def account_balance(db: Database, account: str) -&gt; int:
+    &quot;&quot;&quot;Return the sum of an account&#x27;s transaction amounts in cents; zero when it has none.&quot;&quot;&quot;
+    return sum(row.amount for row in db.transactions.list(account=account))
+
+
+def balance_guard(db: Database, deltas: Mapping[str, int]) -&gt; None:
+    &quot;&quot;&quot;Reject the change set if any account&#x27;s balance after its delta would go below zero.
+
+    ``deltas`` maps account code to a net change in cents. Nothing is written.
+    &quot;&quot;&quot;
+    for account in sorted(deltas):
+        resulting = account_balance(db, account) + deltas[account]
+        if resulting &lt; 0:
+            raise Rejected(
+                f&quot;account {account} would be {format_amount(resulting)}; balance may not go negative&quot;
+            )
+</pre></article>
+</main>
+</body>
+</html>

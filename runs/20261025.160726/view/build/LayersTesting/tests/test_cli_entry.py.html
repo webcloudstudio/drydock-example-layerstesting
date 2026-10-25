@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_cli_entry.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_cli_entry.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_cli_entry.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Behavior of the cli entry point: dispatch, argument counts, exit codes, CSV output, and DSN resolution.
+
+Every command here is registered under a ``zzt-`` name so it cannot collide with a real command.
+&quot;&quot;&quot;
+
+import csv
+import io
+from pathlib import Path
+
+import pytest
+
+from cli.context import open_store
+from cli.errors import NotFound, OperationalError, Rejected, UsageError
+from cli.registry import register
+from cli.testing import cli_runner
+from persistence import Database, PersistenceError
+
+
+def test_unknown_command_exits_2_with_empty_stdout_and_one_diagnostic_line():
+    code, out, err = cli_runner(&quot;zzt-no-such-command&quot;)
+    assert code == 2
+    assert out == &quot;&quot;
+    assert len(err.strip().splitlines()) == 1
+
+
+def test_no_arguments_is_a_usage_error():
+    code, out, _ = cli_runner()
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+def test_rows_are_written_as_unquoted_csv_with_lf_endings():
+    rows = [[&quot;h1&quot;, &quot;h2&quot;], [&quot;v1&quot;, &quot;v2&quot;]]
+    register((&quot;zzt-csv&quot;,), lambda args: rows, (0, 0))
+    code, out, _ = cli_runner(&quot;zzt-csv&quot;)
+    assert code == 0
+    assert out == &quot;h1,h2\nv1,v2\n&quot;
+    assert &quot;\r&quot; not in out
+
+
+def test_rows_round_trip_through_csv_reader():
+    rows = [[&quot;a&quot;, &quot;b&quot;, &quot;c&quot;], [&quot;1&quot;, &quot;&quot;, &quot;3&quot;]]
+    register((&quot;zzt-roundtrip&quot;,), lambda args: rows, (0, 0))
+    _, out, _ = cli_runner(&quot;zzt-roundtrip&quot;)
+    assert list(csv.reader(io.StringIO(out, newline=&quot;&quot;))) == rows
+
+
+def test_fields_are_not_quoted_even_when_they_contain_a_comma():
+    register((&quot;zzt-unquoted&quot;,), lambda args: [[&quot;a,b&quot;, &quot;c&quot;]], (0, 0))
+    _, out, _ = cli_runner(&quot;zzt-unquoted&quot;)
+    assert out == &quot;a,b,c\n&quot;
+
+
+def test_handler_returning_none_exits_0_with_no_output():
+    register((&quot;zzt-none&quot;,), lambda args: None, (0, 0))
+    code, out, err = cli_runner(&quot;zzt-none&quot;)
+    assert code == 0
+    assert out == &quot;&quot;
+    assert err == &quot;&quot;
+
+
+def test_handler_returning_no_rows_exits_0_with_no_output():
+    register((&quot;zzt-empty&quot;,), lambda args: [], (0, 0))
+    code, out, _ = cli_runner(&quot;zzt-empty&quot;)
+    assert code == 0
+    assert out == &quot;&quot;
+
+
+def test_handler_receives_the_arguments_after_its_words():
+    seen = []
+
+    def handler(args):
+        seen.append(list(args))
+        return None
+
+    register((&quot;zzt-args&quot;,), handler, (0, 3))
+    assert cli_runner(&quot;zzt-args&quot;)[0] == 0
+    assert cli_runner(&quot;zzt-args&quot;, &quot;x&quot;, &quot;y&quot;)[0] == 0
+    assert seen == [[], [&quot;x&quot;, &quot;y&quot;]]
+
+
+@pytest.mark.parametrize(
+    &quot;exc, code&quot;,
+    [(Rejected, 3), (NotFound, 4), (OperationalError, 1), (UsageError, 2)],
+)
+def test_ledger_error_maps_to_its_exit_code_with_one_diagnostic_line(exc, code):
+    def handler(args):
+        raise exc(&quot;diagnostic&quot;)
+
+    name = f&quot;zzt-err-{code}&quot;
+    register((name,), handler, (0, 0))
+    got, out, err = cli_runner(name)
+    assert got == code
+    assert out == &quot;&quot;
+    assert len(err.strip().splitlines()) == 1
+
+
+def test_unexpected_exception_maps_to_exit_1_with_empty_stdout():
+    def boom(args):
+        raise RuntimeError(&quot;unexpected&quot;)
+
+    register((&quot;zzt-boom&quot;,), boom, (0, 0))
+    code, out, err = cli_runner(&quot;zzt-boom&quot;)
+    assert code == 1
+    assert out == &quot;&quot;
+    assert len(err.strip().splitlines()) == 1
+
+
+def test_persistence_error_maps_to_exit_1_with_empty_stdout():
+    def fail(args):
+        raise PersistenceError(&quot;store unreachable&quot;)
+
+    register((&quot;zzt-persist&quot;,), fail, (0, 0))
+    code, out, err = cli_runner(&quot;zzt-persist&quot;)
+    assert code == 1
+    assert out == &quot;&quot;
+    assert &quot;store unreachable&quot; in err
+
+
+def test_failing_handler_writes_nothing_to_stdout_even_after_partial_work():
+    def partial(args):
+        raise Rejected(&quot;refused before any row was produced&quot;)
+
+    register((&quot;zzt-partial&quot;,), partial, (0, 0))
+    code, out, _ = cli_runner(&quot;zzt-partial&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+
+
+def test_diagnostic_is_one_line_even_when_the_message_spans_lines():
+    def multi(args):
+        raise Rejected(&quot;first line\nsecond line&quot;)
+
+    register((&quot;zzt-multiline&quot;,), multi, (0, 0))
+    _, _, err = cli_runner(&quot;zzt-multiline&quot;)
+    assert len(err.strip().splitlines()) == 1
+
+
+def test_argument_count_below_minimum_is_usage_error_and_handler_not_called():
+    calls = []
+
+    def handler(args):
+        calls.append(list(args))
+        return [[&quot;x&quot;]]
+
+    register((&quot;zzt-one&quot;,), handler, (1, 1))
+    code, out, _ = cli_runner(&quot;zzt-one&quot;)
+    assert code == 2
+    assert out == &quot;&quot;
+    assert calls == []
+
+
+def test_argument_count_above_maximum_is_usage_error_and_handler_not_called():
+    calls = []
+
+    def handler(args):
+        calls.append(list(args))
+        return [[&quot;x&quot;]]
+
+    register((&quot;zzt-one-max&quot;,), handler, (1, 1))
+    code, out, _ = cli_runner(&quot;zzt-one-max&quot;, &quot;a&quot;, &quot;b&quot;)
+    assert code == 2
+    assert calls == []
+
+
+def test_argument_count_within_range_reaches_the_handler():
+    calls = []
+
+    def handler(args):
+        calls.append(list(args))
+        return [[&quot;x&quot;]]
+
+    register((&quot;zzt-one-ok&quot;,), handler, (1, 1))
+    code, out, _ = cli_runner(&quot;zzt-one-ok&quot;, &quot;a&quot;)
+    assert code == 0
+    assert out == &quot;x\n&quot;
+    assert calls == [[&quot;a&quot;]]
+
+
+def test_multiword_command_dispatches_on_both_words():
+    register((&quot;zzt-grp&quot;, &quot;sub&quot;), lambda args: [[&quot;ok&quot;]], (0, 0))
+    code, out, _ = cli_runner(&quot;zzt-grp&quot;, &quot;sub&quot;)
+    assert code == 0
+    assert out == &quot;ok\n&quot;
+
+
+def test_first_word_alone_of_a_multiword_command_is_usage_error():
+    register((&quot;zzt-grp2&quot;, &quot;sub&quot;), lambda args: [[&quot;ok&quot;]], (0, 0))
+    code, out, _ = cli_runner(&quot;zzt-grp2&quot;)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+def test_unknown_second_word_of_a_multiword_command_is_usage_error():
+    register((&quot;zzt-grp3&quot;, &quot;sub&quot;), lambda args: [[&quot;ok&quot;]], (0, 0))
+    code, out, _ = cli_runner(&quot;zzt-grp3&quot;, &quot;nosuch&quot;)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+def test_longest_prefix_wins_over_a_shorter_registered_command():
+    register((&quot;zzt-pre&quot;,), lambda args: [[&quot;short&quot;]], (0, 9))
+    register((&quot;zzt-pre&quot;, &quot;long&quot;), lambda args: [[&quot;long&quot;]], (0, 0))
+    assert cli_runner(&quot;zzt-pre&quot;, &quot;long&quot;)[1] == &quot;long\n&quot;
+    assert cli_runner(&quot;zzt-pre&quot;, &quot;other&quot;)[1] == &quot;short\n&quot;
+
+
+def test_duplicate_registration_is_refused():
+    register((&quot;zzt-dup&quot;,), lambda args: None, (0, 0))
+    with pytest.raises(ValueError):
+        register((&quot;zzt-dup&quot;,), lambda args: None, (0, 0))
+
+
+def test_empty_word_tuple_is_refused():
+    with pytest.raises(ValueError):
+        register((), lambda args: None, (0, 0))
+
+
+def test_inverted_argument_range_is_refused():
+    with pytest.raises(ValueError):
+        register((&quot;zzt-range&quot;,), lambda args: None, (2, 1))
+
+
+def test_open_store_returns_a_database_and_creates_the_sqlite_parent_directory(tmp_path, monkeypatch):
+    target = tmp_path / &quot;nested&quot; / &quot;dir&quot; / &quot;ledger.db&quot;
+    monkeypatch.delenv(&quot;DATABASE_URL&quot;, raising=False)
+    monkeypatch.setenv(&quot;DATABASE_PATH&quot;, str(target))
+    db = open_store()
+    assert isinstance(db, Database)
+    assert target.parent.is_dir()
+
+
+def test_open_store_accepts_a_sqlite_url_prefix(tmp_path, monkeypatch):
+    target = tmp_path / &quot;prefixed&quot; / &quot;ledger.db&quot;
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, f&quot;sqlite://{target}&quot;)
+    db = open_store()
+    assert isinstance(db, Database)
+    assert Path(target).parent.is_dir()
+</pre></article>
+</main>
+</body>
+</html>
