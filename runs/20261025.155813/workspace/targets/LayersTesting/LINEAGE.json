@@ -1,0 +1,99 @@
+{
+  "version": 1,
+  "import": {
+    "root": "/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.155813/sources",
+    "format": "markdown"
+  },
+  "sources": {
+    "INSTRUCTIONS.md": {
+      "state": "current",
+      "versions": [
+        {
+          "commit": "a968b42",
+          "date": "2026-10-25",
+          "hash": "4114dd7bb69adc18a2f2731dc801cf5eb4454e6c743b5d25cdade0dca7ba1683",
+          "release": "",
+          "state": "pending",
+          "via": null,
+          "ticket": null,
+          "requirements": []
+        }
+      ]
+    },
+    "run.sh": {
+      "state": "current",
+      "versions": [
+        {
+          "commit": "a968b42",
+          "date": "2026-10-25",
+          "hash": "744a2165699ea832a9b8679b0dc2792664336184ec88d63045829c969f6d1639",
+          "release": "",
+          "state": "pending",
+          "via": null,
+          "ticket": null,
+          "requirements": []
+        }
+      ]
+    },
+    "seed_accounts.csv": {
+      "state": "current",
+      "versions": [
+        {
+          "commit": "a968b42",
+          "date": "2026-10-25",
+          "hash": "48f83f688324264fd811a0a363418c867454043e30ce02bc8bc81683ed28625b",
+          "release": "",
+          "state": "pending",
+          "via": null,
+          "ticket": null,
+          "requirements": []
+        }
+      ]
+    },
+    "seed_categories.csv": {
+      "state": "current",
+      "versions": [
+        {
+          "commit": "a968b42",
+          "date": "2026-10-25",
+          "hash": "265d594bf154ef991105beec15a61241f46bb2b330aff215f9bffad2a0602b43",
+          "release": "",
+          "state": "pending",
+          "via": null,
+          "ticket": null,
+          "requirements": []
+        }
+      ]
+    },
+    "seed_transactions.csv": {
+      "state": "current",
+      "versions": [
+        {
+          "commit": "a968b42",
+          "date": "2026-10-25",
+          "hash": "c208c69039e28ebe36c868726a0ed8e3ce5e11d54bb52d636a952631446038da",
+          "release": "",
+          "state": "pending",
+          "via": null,
+          "ticket": null,
+          "requirements": []
+        }
+      ]
+    },
+    "seed_transactions_bad.csv": {
+      "state": "current",
+      "versions": [
+        {
+          "commit": "a968b42",
+          "date": "2026-10-25",
+          "hash": "a7cffd87094d0bec741438e34dd8992f893d2e93ec0d32dad8395502d4b5af46",
+          "release": "",
+          "state": "pending",
+          "via": null,
+          "ticket": null,
+          "requirements": []
+        }
+      ]
+    }
+  }
+}

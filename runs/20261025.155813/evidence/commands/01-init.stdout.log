@@ -1,0 +1,10 @@
+Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Target - setup project workspace git store
+Target: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.155813/workspace/targets/LayersTesting
+  CREATED  METADATA.md
+  CREATED  QuarterDeck/console.yaml
+Skills: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.155813/workspace/.claude/skills
+  INSTALLED  ddk-refit
+Skills: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.155813/workspace/.agents/skills
+  INSTALLED  ddk-refit
+Target - committed project workspace git store

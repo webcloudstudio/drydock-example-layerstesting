@@ -1,0 +1,29 @@
+******************************************************************************
+* FATAL ERROR - LLM AUTHENTICATION REQUIRED
+*
+* Drydock could not run 'plan' with the claude provider.
+*
+* Details:
+*   provider error: Failed to authenticate: OAuth session expired and could not be refreshed
+*
+* Required action:
+*   Refresh the CLI login, then rerun the Drydock command:
+*   claude
+*
+* execution_id: 20261025.160037.802Z-c543153b
+******************************************************************************
+╭─ BLOCKED: LayersTesting  ·  2026-10-25T12:00:40-04:00 ───────────────────────────────────────────╮
+│ Login Required                                                                                   │
+│                                                                                                  │
+│ Provider login expired                                                                           │
+│                                                                                                  │
+│ Error                                                                                            │
+│   provider error: Failed to authenticate: OAuth session expired and could not be refreshed       │
+│                                                                                                  │
+│ Recovery                                                                                         │
+│   Log in again: claude                                                                           │
+│                                                                                                  │
+│ Rerun after resolving the error: drydock plan LayersTesting --override --plan-override-model     │
+│ sonnet                                                                                           │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+Error: LayersTesting: provider authentication required: provider error: Failed to authenticate: OAuth session expired and could not be refreshed
