@@ -93,7 +93,7 @@ transactions. The transaction row is `txn_id,date,account,category,amount,memo`.
 
 | Command | Output on success |
 |---|---|
-| `ledger init` | Drops all three tables if present and creates them empty. Nothing written. |
+| `ledger init` | Prepares an empty ledger for loading and use; removes existing ledger records when rerun. Nothing written. |
 | `ledger count` | `table,rows`, then `accounts`, `categories`, `transactions` rows in that order. |
 | `ledger load <table> <csv>` | Loads `accounts`, `categories`, or `transactions` from a file whose header matches the table's columns in the order above. Writes `table,loaded` and `<table>,<rows>`. |
 | `ledger account add <code> <name>` | The new account row. |

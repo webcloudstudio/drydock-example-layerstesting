@@ -26,7 +26,7 @@ and makes 43 checks of exit code and standard output:
 | G | atomic transfer; transfer, post, amend, delete refused on a negative balance |
 | H | the three reports after the changes |
 | U | usage errors |
-| Z | re-`init` drops every row |
+| Z | re-`init` clears ledger records |
 
 Exit `0` only when all 43 pass. The database is a temporary SQLite file unless `DATABASE_URL` is
 set, so `DATABASE_URL=postgresql://... bin/run.sh APP` grades the same build against PostgreSQL.
@@ -52,3 +52,15 @@ row because `cli.md` requires `python.md`.
 
 Analyze sees the brief, COMPASS, and METADATA's description but not `TECHNOLOGY_STACK.md` or
 `uat.json`. Those three files never name a kit file the model cannot read.
+
+## Project acceptance boundary
+
+Sea Trials gate observable ledger workflows: loading and retaining records, reports before and
+after changes, account and transaction operations, atomic rejection, non-negative balances,
+transfers, and CLI results. The supplied grader remains a required end-to-end check alongside
+these criteria. Initialization and reset are grader prerequisites, not standalone release gates;
+no criterion requires schema replacement or tests the database engine. Build instructions retain
+stack constraints and the application test-runner requirement.
+
+Contract revisions apply to future runs. Existing runs and their checksummed evidence retain
+the inputs and verdicts captured when they ran.
