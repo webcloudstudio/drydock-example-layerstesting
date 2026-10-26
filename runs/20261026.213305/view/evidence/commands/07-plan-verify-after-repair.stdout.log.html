@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/commands/07-plan-verify-after-repair.stdout.log</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/commands/07-plan-verify-after-repair.stdout.log</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/commands/07-plan-verify-after-repair.stdout.log">Raw file</a></div></header>
+<article class="doc"><pre>Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+plan verify: LayersTesting
+  2 criteria cannot run as written
+  ✗  ARCHITECTURE.md [foundation-project-tree]: imports `persistence`, which Drydock generates from DATABASE.md at block 2 (story `database`), after story `foundation` builds at block 1; assert only what that story delivers and leave persistence to DATABASE.md&#x27;s criteria
+  ✗  ARCHITECTURE.md [foundation-persistence-opens]: imports `persistence`, which Drydock generates from DATABASE.md at block 2 (story `database`), after story `foundation` builds at block 1; assert only what that story delivers and leave persistence to DATABASE.md&#x27;s criteria
+  ⚠  FEATURE-CsvOutput.md [csv-format-cents-values]: decimal expectation &#x27;0.00&#x27;: provenance unknown to static analysis; review against the source contract if needed; this is not a defect and does not authorize changing the value, precision or rounding
+  ⚠  FEATURE-CsvOutput.md [csv-format-cents-values]: decimal expectation &#x27;0.05&#x27;: provenance unknown to static analysis; review against the source contract if needed; this is not a defect and does not authorize changing the value, precision or rounding
+  ⚠  FEATURE-CsvOutput.md [csv-format-cents-values]: decimal expectation &#x27;-0.05&#x27;: provenance unknown to static analysis; review against the source contract if needed; this is not a defect and does not authorize changing the value, precision or rounding
+  ⚠  FEATURE-CsvOutput.md [csv-format-cents-values]: decimal expectation &#x27;-12.50&#x27;: provenance unknown to static analysis; review against the source contract if needed; this is not a defect and does not authorize changing the value, precision or rounding
+  ⚠  FEATURE-CsvOutput.md [csv-format-cents-values]: decimal expectation &#x27;12.50&#x27;: provenance unknown to static analysis; review against the source contract if needed; this is not a defect and does not authorize changing the value, precision or rounding
+  ⚠  FEATURE-CsvOutput.md [csv-format-cents-values]: decimal expectation &#x27;5000.00&#x27;: provenance unknown to static analysis; review against the source contract if needed; this is not a defect and does not authorize changing the value, precision or rounding
+  ⚠  FEATURE-CsvOutput.md [csv-format-cents-values]: decimal expectation &#x27;1234567.89&#x27;: provenance unknown to static analysis; review against the source contract if needed; this is not a defect and does not authorize changing the value, precision or rounding
+  Run: drydock plan LayersTesting
+Target - committed project workspace git store
+</pre></article>
+</main>
+</body>
+</html>

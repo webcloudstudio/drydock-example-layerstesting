@@ -1,0 +1,6 @@
+{"label": "INITIALIZED", "result": "pass", "at": "2026-10-26T21:33:08.943+00:00", "detail": "", "command": "drydock init LayersTesting", "attempts": 1}
+{"label": "IMPORTED", "result": "pass", "at": "2026-10-26T21:33:16.650+00:00", "detail": "", "command": "drydock import LayersTesting", "attempts": 1}
+{"label": "ANALYZED", "result": "pass", "at": "2026-10-26T21:36:20.527+00:00", "detail": "", "command": "drydock analyze LayersTesting", "attempts": 1}
+{"label": "PLAN CREATED", "result": "fail", "at": "2026-10-26T21:54:23.542+00:00", "detail": "2 criteria cannot run", "command": "drydock plan verify LayersTesting", "attempts": 2}
+{"label": "PLAN REPAIRED", "result": "fail", "at": "2026-10-26T22:00:03.629+00:00", "detail": "2 criteria cannot run", "command": "drydock plan verify LayersTesting", "attempts": 2}
+{"state": "PLAN CREATED", "result": "fail", "at": "2026-10-26T21:54:23.542+00:00", "attempts": 2}

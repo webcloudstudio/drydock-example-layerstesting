@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-ReportBalances.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-ReportBalances.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-ReportBalances.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Report Balances</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261026 V1</td></tr><tr><td>Description</td><td>The <code>ledger report balances</code> command that reports each account&#x27;s transaction count and balance computed from stored data.</td></tr><tr><td>Depends On</td><td>FEATURE-LoadTransactions.md, FEATURE-Transfer.md, FEATURE-CsvOutput.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger report balances</td></tr><tr><td>Consumes</td><td>ledger.register_command, persistence.open_database, csv_output.write_rows, csv_output.format_cents</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger report balances</code> writes one row per account with its transaction count and balance, then a total row. Every value is computed from stored transactions in integer cents.</p>
+<h2>Behavior</h2>
+<ul><li>Header: <code>account,name,transactions,balance</code>.</li><li>One row per account ordered by code in byte order (digits before letters), including accounts with no transactions (count 0, balance 0.00).</li><li><code>balance</code> is the sum of the account&#x27;s transaction amounts in integer cents, formatted with exactly two decimals and a leading <code>-</code> when negative.</li><li>Final row: <code>TOTAL,,&lt;count&gt;,&lt;sum&gt;</code> where <code>&lt;count&gt;</code> is the total number of transactions and <code>&lt;sum&gt;</code> the sum of all balances. A zero total is <code>0.00</code>, never <code>-0.00</code>.</li><li>On an empty ledger the output is the header and <code>TOTAL,,0,0.00</code>.</li><li>No value is embedded; everything is derived from <code>accounts.list</code> and <code>transactions.list</code>.</li></ul>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC report-balances-seeded ===<br>Intent: Balances over the loaded seed data match values derived from the seed files, including an unused account sorted first.</p>
+<p>import csv import io import re from decimal import Decimal from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with open(&quot;sources/seed_accounts.csv&quot;, newline=&quot;&quot;) as fh: accounts = {r[&quot;account&quot;]: r[&quot;name&quot;] for r in csv.DictReader(fh)} with open(&quot;sources/seed_transactions.csv&quot;, newline=&quot;&quot;) as fh: txns = list(csv.DictReader(fh))</p>
+<p>extra_code, extra_name = &quot;0EMPTY&quot;, &quot;Unused Account&quot;</p>
+<p>for args in ( (&quot;init&quot;,), (&quot;load&quot;, &quot;accounts&quot;, &quot;sources/seed_accounts.csv&quot;), (&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;), (&quot;load&quot;, &quot;transactions&quot;, &quot;sources/seed_transactions.csv&quot;), ): code, out, err = cli_runner(*args) print(out, err) assert code == 0</p>
+<p>with db_session() as db: db.accounts.create(account=extra_code, name=extra_name) accounts[extra_code] = extra_name</p>
+<p>counts = {c: 0 for c in accounts} sums = {c: 0 for c in accounts} for t in txns: counts[t[&quot;account&quot;]] += 1 sums[t[&quot;account&quot;]] += int(Decimal(t[&quot;amount&quot;]) * 100)</p>
+<p>code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;) print(out, err) assert code == 0 assert &quot;\r&quot; not in out and out.endswith(&quot;\n&quot;) rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;] codes = sorted(accounts) assert [r[0] for r in rows[1:-1]] == codes assert codes[0] == extra_code for r in rows[1:-1]: assert r[1] == accounts[r[0]] assert int(r[2]) == counts[r[0]] assert re.fullmatch(r&quot;-?\d+\.\d\d&quot;, r[3]) assert Decimal(r[3]) * 100 == sums[r[0]] total = rows[-1] assert total[0] == &quot;TOTAL&quot; and total[1] == &quot;&quot; assert int(total[2]) == len(txns) assert re.fullmatch(r&quot;-?\d+\.\d\d&quot;, total[3]) assert Decimal(total[3]) * 100 == sum(sums.values()) === END AC report-balances-seeded ===</p>
+<p>=== AC report-balances-empty ===<br>Intent: On an empty ledger the report writes its header and a zero total row.</p>
+<p>import csv import io import re from decimal import Decimal from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;init&quot;) assert code == 0 code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;) print(out, err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;] assert len(rows) == 2 assert rows[1][0] == &quot;TOTAL&quot; and rows[1][1] == &quot;&quot; assert int(rows[1][2]) == 0 assert re.fullmatch(r&quot;0\.00&quot;, rows[1][3]) assert Decimal(rows[1][3]) == 0 === END AC report-balances-empty ===</p>
+<p>=== AC report-balances-after-transfer ===<br>Intent: Balances are recomputed from stored rows after a transfer, moving cash between two accounts and keeping the total.</p>
+<p>import csv import io from decimal import Decimal from cli.testing import cli_runner</p>
+<p>src, dst = &quot;DRAWER1&quot;, &quot;SAFE&quot; amount = &quot;500.00&quot;</p>
+<p>for args in ( (&quot;init&quot;,), (&quot;load&quot;, &quot;accounts&quot;, &quot;sources/seed_accounts.csv&quot;), (&quot;load&quot;, &quot;categories&quot;, &quot;sources/seed_categories.csv&quot;), (&quot;load&quot;, &quot;transactions&quot;, &quot;sources/seed_transactions.csv&quot;), ): code, out, err = cli_runner(*args) assert code == 0</p>
+<p>def balances(): code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;) print(out, err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) return {r[0]: (int(r[2]), Decimal(r[3])) for r in rows[1:]}</p>
+<p>before = balances() code, out, err = cli_runner(&quot;transfer&quot;, src, dst, amount, &quot;2026-04-03&quot;) print(out, err) assert code == 0 after = balances() assert after[src][0] == before[src][0] + 1 assert after[dst][0] == before[dst][0] + 1 assert after[src][1] == before[src][1] - Decimal(amount) assert after[dst][1] == before[dst][1] + Decimal(amount) assert after[&quot;TOTAL&quot;][1] == before[&quot;TOTAL&quot;][1] assert after[&quot;TOTAL&quot;][0] == before[&quot;TOTAL&quot;][0] + 2 === END AC report-balances-after-transfer ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Every value is computed from stored data; no count, balance or total is embedded.</li><li>Money is integer cents; no floating point at any layer.</li><li>A zero total is written <code>0.00</code>, never <code>-0.00</code>.</li></ul></article>
+</main>
+</body>
+</html>

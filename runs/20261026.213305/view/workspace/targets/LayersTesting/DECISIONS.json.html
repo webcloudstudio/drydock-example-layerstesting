@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/DECISIONS.json</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/DECISIONS.json</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../workspace/targets/LayersTesting/DECISIONS.json">Raw file</a></div></header>
+<article class="doc"><pre>[
+  {
+    &quot;id&quot;: &quot;Q-001&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;material&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-BalanceRules.md&quot;,
+    &quot;story&quot;: &quot;balance-rules&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;When the negative-balance rule is judged&quot;,
+    &quot;description&quot;: &quot;Rule 2 does not say whether intermediate states within one command count. Options: judge every row in sequence, or judge only the final state after the whole command.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;final&quot;,
+        &quot;label&quot;: &quot;Final state after the whole command&quot;
+      },
+      {
+        &quot;value&quot;: &quot;sequential&quot;,
+        &quot;label&quot;: &quot;After each row&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;final&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-002&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-LoadAccounts.md&quot;,
+    &quot;story&quot;: &quot;load-accounts&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Exit code for a load header mismatch&quot;,
+    &quot;description&quot;: &quot;The sources list invalid file row as exit 3 and unreadable file as exit 1 but do not place a wrong header. Treating it as a rejected file is the narrowest reading.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;3&quot;,
+        &quot;label&quot;: &quot;Exit 3 (rejected)&quot;
+      },
+      {
+        &quot;value&quot;: &quot;2&quot;,
+        &quot;label&quot;: &quot;Exit 2 (usage)&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;3&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-003&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-TxnGet.md&quot;,
+    &quot;story&quot;: &quot;txn-get&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Non-integer transaction id&quot;,
+    &quot;description&quot;: &quot;A transaction id argument that is not an integer is unspecified. Options: exit 3 as an invalid input, or exit 4 as absent.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;3&quot;,
+        &quot;label&quot;: &quot;Exit 3 (rejected)&quot;
+      },
+      {
+        &quot;value&quot;: &quot;4&quot;,
+        &quot;label&quot;: &quot;Exit 4 (not found)&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;3&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-004&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;ARCHITECTURE.md&quot;,
+    &quot;story&quot;: &quot;foundation&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Authentication and diagnostics&quot;,
+    &quot;description&quot;: &quot;No user model is stated. The ledger is a single-operator local tool with no application-level auth; diagnostics never echo a DSN or credential.&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;No application-level authentication; diagnostics omit DSN and credentials.&quot;
+  }
+]
+</pre></article>
+</main>
+</body>
+</html>

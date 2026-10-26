@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-ErrorContract.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-ErrorContract.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-ErrorContract.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Error Contract</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261026 V1</td></tr><tr><td>Description</td><td>Error types, exit codes and the one-line standard error diagnostic for failed commands.</td></tr><tr><td>Depends On</td><td>FEATURE-CliFoundation.md</td></tr><tr><td>Provides</td><td>ledger_errors.Rejected, ledger_errors.NotFound, ledger_errors.OperationalFailure, ledger_errors.UsageError</td></tr><tr><td>Consumes</td><td>ledger.register_command</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Failures map to a fixed exit code and exactly one diagnostic line on standard error; standard output stays empty.</p>
+<h2>Interface</h2>
+<ul><li><code>ledger_errors.LedgerError(Exception)</code> is the base, with class attribute <code>exit_code</code>.</li><li><code>Rejected</code> has <code>exit_code</code> 3, <code>NotFound</code> 4, <code>OperationalFailure</code> 1, <code>UsageError</code> 2.</li><li><code>ledger_errors.handle(exc: BaseException) -&gt; int</code> writes one line to standard error and returns the exit code: the <code>exit_code</code> of a <code>LedgerError</code>, otherwise <code>1</code> (unexpected errors, including database errors). The message has newlines collapsed to spaces and every <code>scheme://...</code> token replaced by <code>&lt;redacted&gt;</code>, so a DSN or password never reaches a diagnostic.</li><li><code>cli.main</code> calls <code>handle</code> for any exception raised by a handler. An unknown command or empty argument list is a <code>UsageError</code> and exits 2.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC errors-exit-codes ===<br>Intent: Each error type carries the exit code from the contract and derives from the common base.</p>
+<p>import ledger_errors</p>
+<p>assert ledger_errors.OperationalFailure.exit_code == 1 assert ledger_errors.UsageError.exit_code == 2 assert ledger_errors.Rejected.exit_code == 3 assert ledger_errors.NotFound.exit_code == 4 for cls in ( ledger_errors.OperationalFailure, ledger_errors.UsageError, ledger_errors.Rejected, ledger_errors.NotFound, ): assert issubclass(cls, ledger_errors.LedgerError) === END AC errors-exit-codes ===</p>
+<p>=== AC errors-through-main ===<br>Intent: A handler raising each error type makes main return its exit code with empty standard output and one stderr line.</p>
+<p>import cli import ledger_errors from cli.testing import cli_runner</p>
+<p>cases = { &quot;zzrej&quot;: (ledger_errors.Rejected, 3), &quot;zznf&quot;: (ledger_errors.NotFound, 4), &quot;zzop&quot;: (ledger_errors.OperationalFailure, 1), &quot;zzuse&quot;: (ledger_errors.UsageError, 2), } for name, (cls, expected_code) in cases.items(): def handler(args, cls=cls): raise cls(&quot;diagnostic text&quot;) cli.register_command(name, handler) code, out, err = cli_runner(name) assert code == expected_code assert out == &quot;&quot; assert len(err.splitlines()) == 1 === END AC errors-through-main ===</p>
+<p>=== AC errors-unexpected-exception ===<br>Intent: An unexpected exception from a handler exits 1 with empty standard output.</p>
+<p>import cli from cli.testing import cli_runner</p>
+<p>name = &quot;zzboom&quot; def handler(args): raise RuntimeError(&quot;unexpected&quot;) cli.register_command(name, handler) code, out, err = cli_runner(name) assert code == 1 assert out == &quot;&quot; assert len(err.splitlines()) == 1 === END AC errors-unexpected-exception ===</p>
+<p>=== AC errors-unknown-command-usage ===<br>Intent: An unknown command is a usage error: exit 2, empty standard output, one diagnostic line.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;zzdoesnotexist&quot;) assert code == 2 assert out == &quot;&quot; assert len(err.splitlines()) == 1 === END AC errors-unknown-command-usage ===</p>
+<p>=== AC errors-multiline-message-single-line ===<br>Intent: A multi-line error message is still written as exactly one diagnostic line.</p>
+<p>import cli import ledger_errors from cli.testing import cli_runner</p>
+<p>name = &quot;zzmulti&quot; message = &quot;first line\nsecond line&quot; def handler(args): raise ledger_errors.Rejected(message) cli.register_command(name, handler) code, out, err = cli_runner(name) assert code == 3 assert len(err.splitlines()) == 1 === END AC errors-multiline-message-single-line ===</p>
+<p>=== AC errors-dsn-never-echoed ===<br>Intent: A password inside a DSN in an error message never appears on standard error or standard output.</p>
+<p>import cli import ledger_errors from cli.testing import cli_runner</p>
+<p>name = &quot;zzsecret&quot; password = &quot;s3cretpw&quot; message = &quot;cannot open postgres://user:&quot; + password + &quot;@host/db&quot; def handler(args): raise ledger_errors.OperationalFailure(message) cli.register_command(name, handler) code, out, err = cli_runner(name) assert code == 1 assert password not in err assert password not in out === END AC errors-dsn-never-echoed ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A failing command writes nothing to standard output.</li><li>A diagnostic never contains a database URL, path credential or DSN password.</li><li>Diagnostic text is never part of the contract; only the exit code is.</li></ul></article>
+</main>
+</body>
+</html>

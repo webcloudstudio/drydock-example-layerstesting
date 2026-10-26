@@ -1,0 +1,83 @@
+--- llm 1/15 · plan · claude claude-sonnet-5-5 · 20261026.213627.577Z-1bc89e79 ---
+2026-10-26 17:36:27 EDT  Calling CLAUDE/sonnet (plan · topology)...
+  Claude session: start id=82eac4b9-86e7-4d1c-b467-261041fb78e6
+  Completed CLAUDE/claude-sonnet-5-5 (plan · topology)  rc=0
+    elapsed=1m 22.8s   provider=1m 20.5s   turns=1   cached=649 (100% hit)   uncached=2   write 78,163   out=12,989   cost=$0.4426   tps=156.9
+
+--- llm 2/15 · plan · claude claude-sonnet-5-5 · 20261026.213750.493Z-fb3d42fd ---
+2026-10-26 17:37:50 EDT  Calling CLAUDE/sonnet (plan · declaration repair)...
+  Claude session: start id=7efcead8-37ac-47ec-98e9-93de5bc971e5
+  Completed CLAUDE/claude-sonnet-5-5 (plan · declaration repair)  rc=0
+    elapsed=44.6s   provider=42.8s   turns=1   cached=1,568 (100% hit)   uncached=2   write 9,248   out=8,161   cost=$0.1188   tps=182.8
+
+--- llm 3/15 · plan · claude claude-sonnet-5-5 · 20261026.213835.326Z-fc006d75 ---
+2026-10-26 17:38:35 EDT  Calling CLAUDE/sonnet (plan · blueprint batch 1)...
+  Claude session: start id=d870213f-d395-460e-a0b8-2859febf66e4
+  Completed CLAUDE/claude-sonnet-5-5 (plan · blueprint batch 1)  rc=0
+    elapsed=1m 8.3s   provider=1m 6.3s   turns=1   cached=1,568 (100% hit)   uncached=2   write 92,013   out=11,565   cost=$0.4839   tps=169.4
+
+--- llm 4/15 · plan · claude claude-sonnet-5-5 · 20261026.213943.697Z-d498d01f ---
+2026-10-26 17:39:43 EDT  Calling CLAUDE/sonnet (plan · blueprint batch 2)...
+  Claude session: start id=a046a58e-2e4c-468d-819b-8dd2903abd17
+  Completed CLAUDE/claude-sonnet-5-5 (plan · blueprint batch 2)  rc=0
+    elapsed=1m 56.3s   provider=1m 54.2s   turns=1   cached=1,568 (100% hit)   uncached=2   write 102,506   out=16,659   cost=$0.5768   tps=143.3
+
+--- llm 5/15 · plan · claude claude-sonnet-5-5 · 20261026.214140.033Z-bc054a01 ---
+2026-10-26 17:41:40 EDT  Calling CLAUDE/sonnet (plan · blueprint batch 3)...
+  Claude session: start id=34a1177c-e547-49de-8986-3d1e1eaefed1
+  Completed CLAUDE/claude-sonnet-5-5 (plan · blueprint batch 3)  rc=0
+    elapsed=1m 34.6s   provider=1m 32.4s   turns=1   cached=1,568 (100% hit)   uncached=2   write 102,592   out=14,753   cost=$0.5581   tps=156.0
+
+--- llm 6/15 · plan · claude claude-sonnet-5-5 · 20261026.214314.700Z-3e6edfed ---
+2026-10-26 17:43:14 EDT  Calling CLAUDE/sonnet (plan · blueprint batch 4)...
+  Claude session: start id=69d6b04b-59f9-4352-b7dc-17b1bfb2fbd9
+  Completed CLAUDE/claude-sonnet-5-5 (plan · blueprint batch 4)  rc=0
+    elapsed=1m 42.0s   provider=1m 40.1s   turns=1   cached=1,568 (100% hit)   uncached=2   write 102,665   out=17,461   cost=$0.5854   tps=171.1
+
+--- llm 7/15 · plan · claude claude-sonnet-5-5 · 20261026.214456.833Z-bcf8459b ---
+2026-10-26 17:44:56 EDT  Calling CLAUDE/sonnet (plan · blueprint batch 5)...
+  Claude session: start id=5a75162a-4c31-40d8-9c68-42c4f7be9953
+  Completed CLAUDE/claude-sonnet-5-5 (plan · blueprint batch 5)  rc=0
+    elapsed=1m 44.2s   provider=1m 42.2s   turns=1   cached=1,568 (100% hit)   uncached=2   write 102,746   out=17,961   cost=$0.5908   tps=172.4
+
+--- llm 8/15 · plan · claude claude-sonnet-5-5 · 20261026.214641.090Z-421d56cd ---
+2026-10-26 17:46:41 EDT  Calling CLAUDE/sonnet (plan · blueprint batch 6)...
+  Claude session: start id=8189e6d2-b3fa-4b3b-aba4-0d46be4ecd1b
+  Completed CLAUDE/claude-sonnet-5-5 (plan · blueprint batch 6)  rc=0
+    elapsed=1m 46.7s   provider=1m 44.5s   turns=1   cached=1,568 (100% hit)   uncached=2   write 102,822   out=17,339   cost=$0.5848   tps=162.5
+
+--- llm 9/15 · plan · claude claude-sonnet-5-5 · 20261026.214827.952Z-cdff3026 ---
+2026-10-26 17:48:27 EDT  Calling CLAUDE/sonnet (plan · blueprint batch 7)...
+  Claude session: start id=152d17e8-5dfc-48bf-9cb5-1f1fa2bf90b6
+  Completed CLAUDE/claude-sonnet-5-5 (plan · blueprint batch 7)  rc=0
+    elapsed=19.7s   provider=16.4s   turns=1   cached=1,568 (100% hit)   uncached=2   write 102,807   out=2,408   cost=$0.4355   tps=122.2
+
+--- llm 10/15 · lineage_attribute · claude claude-sonnet-5-5 · 20261026.214921.682Z-033867e1 ---
+2026-10-26 17:49:21 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+    elapsed=22.4s   provider=19.1s   turns=1   cached=1,568 (100% hit)   uncached=2   write 6,259   out=3,274   cost=$0.0579   tps=146.4
+
+--- llm 11/15 · lineage_attribute · claude claude-sonnet-5-5 · 20261026.214944.246Z-33b53a69 ---
+2026-10-26 17:49:44 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+    elapsed=16.6s   provider=13.5s   turns=1   cached=1,568 (100% hit)   uncached=2   write 7,379   out=2,296   cost=$0.0526   tps=138.3
+
+--- llm 12/15 · lineage_attribute · claude claude-sonnet-5-5 · 20261026.215001.037Z-bb654d51 ---
+2026-10-26 17:50:01 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+    elapsed=9.1s   provider=5.1s   turns=1   cached=1,568 (100% hit)   uncached=2   write 3,587   out=795   cost=$0.0225   tps=87.6
+
+--- llm 13/15 · lineage_attribute · claude claude-sonnet-5-5 · 20261026.215010.327Z-9c7e7f94 ---
+2026-10-26 17:50:10 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+    elapsed=7.2s   provider=3.5s   turns=1   cached=1,568 (100% hit)   uncached=2   write 3,615   out=460   cost=$0.0192   tps=63.5
+
+--- llm 14/15 · lineage_attribute · claude claude-sonnet-5-5 · 20261026.215017.781Z-b8402c8b ---
+2026-10-26 17:50:17 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+    elapsed=11.1s   provider=7.3s   turns=1   cached=1,568 (100% hit)   uncached=2   write 7,239   out=969   cost=$0.0388   tps=87.2
+
+--- llm 15/15 · lineage_attribute · claude claude-sonnet-5-5 · 20261026.215029.090Z-22ee96de ---
+2026-10-26 17:50:29 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+    elapsed=12.1s   provider=8.4s   turns=1   cached=1,568 (100% hit)   uncached=2   write 3,891   out=1,218   cost=$0.0279   tps=100.8

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-LedgerInit.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-LedgerInit.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-LedgerInit.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Ledger Init</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261026 V1</td></tr><tr><td>Description</td><td>Implement <code>ledger init</code> to prepare an empty ledger and remove all rows when rerun.</td></tr><tr><td>Depends On</td><td>FEATURE-CliFoundation.md, FEATURE-ErrorContract.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger init</td></tr><tr><td>Consumes</td><td>ledger.register_command, ledger_config.database_dsn, persistence.open_database, ledger_errors.OperationalFailure</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger init</code> leaves the ledger empty and ready for loading. The tables are created by the DATABASE step; <code>init</code> only removes rows and never issues DDL.</p>
+<h2>Rules</h2>
+<ul><li>Register <code>init</code> through <code>ledger.register_command</code>; it takes no arguments.</li><li>In one database transaction delete every transaction, then every category, then every account (<code>db.transactions.delete_all()</code>, <code>db.categories.delete_all()</code>, <code>db.accounts.delete_all()</code>), so foreign keys hold at each step.</li><li>Write nothing to standard output. Exit 0.</li><li>Rerunning on an empty or populated ledger always succeeds and leaves zero rows in all three tables.</li><li>The database is resolved by <code>DATABASE_URL</code> (an empty value counts as unset), then <code>DATABASE_PATH</code> (used only when <code>DATABASE_URL</code> is unset), then <code>data/app.db</code>.</li><li>An unreachable database or missing tables raises <code>OperationalFailure</code> (exit 1). The diagnostic never contains the DSN, a path credential or a password.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-TXN-006</code> — write: delete every transaction - supplies: none - returns: none</li><li><code>FEATURE-CATEGORY-006</code> — write: delete every category - supplies: none - returns: none</li><li><code>FEATURE-ACCOUNT-006</code> — write: delete every account - supplies: none - returns: none</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC init-removes-all-rows ===<br>Intent: init exits 0, writes nothing to stdout, and removes every row from all three tables.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZQINIT1&quot; cat = &quot;ZQINITC1&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Init Account&quot;) db.categories.create(category=cat, description=&quot;Init Category&quot;) db.transactions.create( txn_id=920001, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=100, memo=&quot;&quot; ) code, out, err = cli_runner(&quot;init&quot;) print(err) assert code == 0 assert out == &quot;&quot; assert db.transactions.list() == [] assert db.categories.list() == [] assert db.accounts.list() == [] === END AC init-removes-all-rows ===</p>
+<p>=== AC init-rerun ===<br>Intent: Rerunning init on an already empty ledger succeeds and stays empty.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: for _ in range(2): code, out, err = cli_runner(&quot;init&quot;) print(err) assert code == 0 assert out == &quot;&quot; assert db.accounts.list() == [] assert db.categories.list() == [] assert db.transactions.list() == [] === END AC init-rerun ===</p>
+<p>=== AC init-wrong-argument-count ===<br>Intent: init with an extra argument is a usage error that removes nothing.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZQINIT2&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Init Keep&quot;) code, out, err = cli_runner(&quot;init&quot;, &quot;extra&quot;) assert code == 2 assert db.accounts.get(account=acct) is not None === END AC init-wrong-argument-count ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li><code>init</code> never issues DDL and never drops tables.</li><li>A failure never writes the database URL, path credential or DSN password to standard output or standard error.</li></ul></article>
+</main>
+</body>
+</html>

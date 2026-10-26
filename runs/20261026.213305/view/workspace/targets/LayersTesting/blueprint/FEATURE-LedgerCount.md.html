@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-LedgerCount.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-LedgerCount.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-LedgerCount.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Ledger Count</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261026 V1</td></tr><tr><td>Description</td><td>Implement <code>ledger count</code> reporting stored row counts for the three tables.</td></tr><tr><td>Depends On</td><td>FEATURE-LedgerInit.md, FEATURE-CsvOutput.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger count</td></tr><tr><td>Consumes</td><td>ledger.register_command, persistence.open_database, csv_output.write_rows</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger count</code> reports how many rows each table holds, computed from the database each time.</p>
+<h2>Rules</h2>
+<ul><li>Register <code>count</code> through <code>ledger.register_command</code>; it takes no arguments.</li><li>Output is the header <code>table,rows</code> followed by <code>accounts</code>, <code>categories</code>, <code>transactions</code> rows in that order, each with its stored row count, written through <code>csv_output.write_rows</code>.</li><li>Each count is the length of the matching repository <code>list</code>; nothing is cached or embedded.</li><li>Exit 0 on success. Database failures follow the error contract (exit 1).</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNT-003</code> — read: list all accounts - supplies: none - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-CATEGORY-003</code> — read: list all categories - supplies: none - returns: <code>category</code>, <code>description</code></li><li><code>FEATURE-TXN-003</code> — read: list all transactions - supplies: none - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC count-matches-stored-rows ===<br>Intent: count reports the header and the three table row counts in fixed order, matching the store.</p>
+<p>import csv import io from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;ZQCNT1&quot;, name=&quot;Count One&quot;) db.accounts.create(account=&quot;ZQCNT2&quot;, name=&quot;Count Two&quot;) db.categories.create(category=&quot;ZQCNTC1&quot;, description=&quot;Count Cat&quot;) db.transactions.create( txn_id=930001, date=&quot;2026-04-01&quot;, account=&quot;ZQCNT1&quot;, category=&quot;ZQCNTC1&quot;, amount=250, memo=&quot;&quot; ) code, out, err = cli_runner(&quot;count&quot;) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) expected = [ [&quot;table&quot;, &quot;rows&quot;], [&quot;accounts&quot;, str(len(db.accounts.list()))], [&quot;categories&quot;, str(len(db.categories.list()))], [&quot;transactions&quot;, str(len(db.transactions.list()))], ] assert rows == expected === END AC count-matches-stored-rows ===</p>
+<p>=== AC count-after-init ===<br>Intent: After init every count is zero.</p>
+<p>import csv import io from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;ZQCNT3&quot;, name=&quot;Count Three&quot;) code, out, err = cli_runner(&quot;init&quot;) assert code == 0 code, out, err = cli_runner(&quot;count&quot;) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;table&quot;, &quot;rows&quot;] assert [r[0] for r in rows[1:]] == [&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;] assert [r[1] for r in rows[1:]] == [&quot;0&quot;, &quot;0&quot;, &quot;0&quot;] === END AC count-after-init ===</p>
+<p>=== AC count-uses-lf-line-endings ===<br>Intent: count output has four newline-terminated lines with no carriage returns.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session(): code, out, err = cli_runner(&quot;count&quot;) assert code == 0 assert &quot;\r&quot; not in out assert out.endswith(&quot;\n&quot;) assert len(out.splitlines()) == 4 === END AC count-uses-lf-line-endings ===</p>
+<p>=== AC count-wrong-argument-count ===<br>Intent: count with an extra argument is a usage error with empty stdout.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;count&quot;, &quot;extra&quot;) assert code == 2 assert out == &quot;&quot; === END AC count-wrong-argument-count ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Counts come from database queries, never from embedded values.</li><li>A failing command writes nothing to standard output.</li></ul></article>
+</main>
+</body>
+</html>

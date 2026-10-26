@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Validation.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Validation.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Validation.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Validation</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261026 V1</td></tr><tr><td>Description</td><td>Validation of codes, names, memos, amounts and dates, with amounts converted to integer cents.</td></tr><tr><td>Depends On</td><td>FEATURE-ErrorContract.md</td></tr><tr><td>Provides</td><td>validation.parse_amount, validation.parse_date, validation.check_code, validation.check_text</td></tr><tr><td>Consumes</td><td>ledger_errors.Rejected</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Every command validates its inputs through this module before it writes. Every violation raises <code>ledger_errors.Rejected</code> (exit 3).</p>
+<h2>Interface</h2>
+<ul><li><code>check_code(value: str) -&gt; str</code>: 1 to 12 characters, each in <code>A-Z</code> or <code>0-9</code> (ASCII only). Returns the value.</li><li><code>check_text(value: str, max_len: int = 40, min_len: int = 1) -&gt; str</code>: length within <code>min_len..max_len</code>, no comma, no newline or carriage return. Names and descriptions use the defaults; memos use <code>max_len=60, min_len=0</code>. Returns the value.</li><li><code>parse_amount(text: str) -&gt; int</code>: the whole string matches <code>-?[0-9]+(\.[0-9]{1,2})?</code> (ASCII digits). No leading dot, plus sign, spaces, thousands separator, trailing dot or more than two decimals. The result is integer cents computed with integer arithmetic only, and a zero amount in any form (<code>0</code>, <code>0.00</code>, <code>-0</code>) is rejected.</li><li><code>parse_date(text: str) -&gt; str</code>: matches <code>YYYY-MM-DD</code> with ASCII digits and is a real calendar date, with leap years honored (<code>2028-02-29</code> valid, <code>2026-02-29</code> invalid). Returns the text unchanged.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC validation-amount-valid ===<br>Intent: parse_amount converts valid amounts to integer cents.</p>
+<p>from validation import parse_amount</p>
+<p>assert parse_amount(&quot;12.50&quot;) == 1250 assert parse_amount(&quot;-12.5&quot;) == -1250 assert parse_amount(&quot;5&quot;) == 500 assert parse_amount(&quot;-0.01&quot;) == -1 assert parse_amount(&quot;0.10&quot;) == 10 assert parse_amount(&quot;5000.00&quot;) == 500000 assert isinstance(parse_amount(&quot;1.00&quot;), int) === END AC validation-amount-valid ===</p>
+<p>=== AC validation-amount-rejected ===<br>Intent: parse_amount rejects zero in every form and every malformed amount.</p>
+<p>from ledger_errors import Rejected from validation import parse_amount</p>
+<p>bad = [&quot;0&quot;, &quot;0.00&quot;, &quot;-0&quot;, &quot;-0.00&quot;, &quot;.50&quot;, &quot;+1&quot;, &quot; 1&quot;, &quot;1 &quot;, &quot;1,000&quot;, &quot;1.234&quot;, &quot;1.&quot;, &quot;&quot;, &quot;-&quot;, &quot;abc&quot;, &quot;1e3&quot;] for text in bad: try: parse_amount(text) except Rejected: continue raise AssertionError(&quot;amount accepted: &quot; + repr(text)) === END AC validation-amount-rejected ===</p>
+<p>=== AC validation-date-valid ===<br>Intent: parse_date accepts real calendar dates including a leap day in a leap year.</p>
+<p>from validation import parse_date</p>
+<p>for text in (&quot;2026-01-01&quot;, &quot;2026-04-30&quot;, &quot;2028-02-29&quot;, &quot;2026-12-31&quot;): assert parse_date(text) == text === END AC validation-date-valid ===</p>
+<p>=== AC validation-date-rejected ===<br>Intent: parse_date rejects impossible dates and malformed spellings.</p>
+<p>from ledger_errors import Rejected from validation import parse_date</p>
+<p>bad = [&quot;2026-02-29&quot;, &quot;2026-02-30&quot;, &quot;2026-04-31&quot;, &quot;2026-13-01&quot;, &quot;2026-00-10&quot;, &quot;2026-1-01&quot;, &quot;20260101&quot;, &quot;2026/01/01&quot;, &quot;&quot;, &quot;2026-01-1x&quot;] for text in bad: try: parse_date(text) except Rejected: continue raise AssertionError(&quot;date accepted: &quot; + repr(text)) === END AC validation-date-rejected ===</p>
+<p>=== AC validation-code ===<br>Intent: check_code accepts 1 to 12 characters of A-Z and 0-9 and rejects everything else.</p>
+<p>from ledger_errors import Rejected from validation import check_code</p>
+<p>good = [&quot;A&quot;, &quot;DRAWER1&quot;, &quot;A&quot; * 12, &quot;0123456789AB&quot;] for value in good: assert check_code(value) == value bad = [&quot;&quot;, &quot;A&quot; * 13, &quot;abc&quot;, &quot;A-B&quot;, &quot;A B&quot;, &quot;A,B&quot;, &quot;SAFE\n&quot;] for value in bad: try: check_code(value) except Rejected: continue raise AssertionError(&quot;code accepted: &quot; + repr(value)) === END AC validation-code ===</p>
+<p>=== AC validation-text-name ===<br>Intent: check_text enforces 1 to 40 characters with no comma or newline by default.</p>
+<p>from ledger_errors import Rejected from validation import check_text</p>
+<p>good = [&quot;Front Drawer&quot;, &quot;x&quot;, &quot;n&quot; * 40] for value in good: assert check_text(value) == value bad = [&quot;&quot;, &quot;n&quot; * 41, &quot;a,b&quot;, &quot;line1\nline2&quot;, &quot;line1\rline2&quot;] for value in bad: try: check_text(value) except Rejected: continue raise AssertionError(&quot;text accepted: &quot; + repr(value)) === END AC validation-text-name ===</p>
+<p>=== AC validation-text-memo ===<br>Intent: check_text with memo limits allows an empty memo up to 60 characters and rejects longer or comma-bearing memos.</p>
+<p>from ledger_errors import Rejected from validation import check_text</p>
+<p>empty = &quot;&quot; assert check_text(empty, max_len=60, min_len=0) == empty full = &quot;m&quot; * 60 assert check_text(full, max_len=60, min_len=0) == full for value in (&quot;m&quot; * 61, &quot;a,b&quot;, &quot;a\nb&quot;): try: check_text(value, max_len=60, min_len=0) except Rejected: continue raise AssertionError(&quot;memo accepted: &quot; + repr(value)) === END AC validation-text-memo ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Amounts are parsed with integer arithmetic only; no floating point is used.</li><li>Validation raises <code>ledger_errors.Rejected</code>; it never writes to the database or to standard output.</li><li>Only ASCII digits and letters are accepted in codes, amounts and dates.</li></ul></article>
+</main>
+</body>
+</html>

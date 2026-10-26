@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-CliUsage.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-CliUsage.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-CliUsage.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: CLI Usage</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261026 V1</td></tr><tr><td>Description</td><td>Reject unknown commands, tables, reports and wrong argument counts with exit 2 and usage text on standard error only.</td></tr><tr><td>Depends On</td><td>FEATURE-CliFoundation.md, FEATURE-ErrorContract.md</td></tr><tr><td>Provides</td><td>ledger usage</td></tr><tr><td>Consumes</td><td>ledger.register_command, ledger_errors.UsageError</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Any invocation that is not a valid command shape exits 2 before any database access. The usage text is derived from the command table and names every command and sub-verb.</p>
+<h2>Rules</h2>
+<ul><li>No arguments, an unknown command, an unknown <code>load</code> table, an unknown <code>report</code>, an unknown sub-verb of <code>account</code> or <code>txn</code>, or the wrong number of arguments for a known command all raise <code>UsageError</code>, which the top-level handler maps to exit 2.</li><li>Argument counts follow the command table: <code>init</code> 0, <code>count</code> 0, <code>load</code> 2, <code>account add</code> 2, <code>account get</code> 1, <code>account rename</code> 2, <code>account delete</code> 1, <code>txn post</code> 4 or 5, <code>txn get</code> 1, <code>txn amend</code> 2, <code>txn delete</code> 1, <code>transfer</code> 4, <code>report &lt;name&gt;</code> 0.</li><li>Usage text goes to standard error only. It lists <code>init</code>, <code>count</code>, <code>load</code>, <code>account add|get|rename|delete</code>, <code>txn post|get|amend|delete</code>, <code>transfer</code>, and <code>report balances|categories|monthly</code>.</li><li>Standard output stays empty and the database is neither opened nor changed.</li><li>Argument-count validation happens before any value validation, so a command with a wrong count never exits 3.</li></ul>
+<h2>Database Interface</h2>
+<ul><li>None — this Blueprint reaches no repository.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC usage-no-arguments ===<br>Intent: Running with no arguments exits 2 with nothing on standard output.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner() print(err) assert code == 2 assert out == &quot;&quot; === END AC usage-no-arguments ===</p>
+<p>=== AC usage-unknown-command ===<br>Intent: An unknown command exits 2 with nothing on standard output.</p>
+<p>from cli.testing import cli_runner</p>
+<p>command = &quot;frobnicate&quot; code, out, err = cli_runner(command) print(err) assert code == 2 assert out == &quot;&quot; === END AC usage-unknown-command ===</p>
+<p>=== AC usage-unknown-report-and-table ===<br>Intent: An unknown report name and an unknown load table each exit 2.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;report&quot;, &quot;nosuch&quot;) print(err) assert code == 2 and out == &quot;&quot; code, out, err = cli_runner(&quot;load&quot;, &quot;nosuch&quot;, &quot;ignored.csv&quot;) print(err) assert code == 2 and out == &quot;&quot; === END AC usage-unknown-report-and-table ===</p>
+<p>=== AC usage-wrong-argument-count ===<br>Intent: Missing and surplus arguments exit 2 for known commands.</p>
+<p>from cli.testing import cli_runner</p>
+<p>cases = [ (&quot;init&quot;, &quot;extra&quot;), (&quot;count&quot;, &quot;extra&quot;), (&quot;account&quot;, &quot;get&quot;), (&quot;account&quot;, &quot;add&quot;, &quot;ONLYCODE&quot;), (&quot;account&quot;, &quot;bogus&quot;, &quot;X&quot;), (&quot;txn&quot;, &quot;get&quot;), (&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;), (&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;B&quot;, &quot;1.00&quot;), (&quot;transfer&quot;, &quot;A&quot;, &quot;B&quot;, &quot;1.00&quot;), (&quot;report&quot;, &quot;balances&quot;, &quot;extra&quot;), (&quot;load&quot;, &quot;accounts&quot;), ] for args in cases: code, out, err = cli_runner(*args) print(args, code, err) assert code == 2, args assert out == &quot;&quot;, args === END AC usage-wrong-argument-count ===</p>
+<p>=== AC usage-changes-nothing ===<br>Intent: A usage error leaves every table unchanged.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: before = ( len(db.accounts.list()), len(db.categories.list()), len(db.transactions.list()), ) code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ONLYCODE&quot;) assert code == 2 after = ( len(db.accounts.list()), len(db.categories.list()), len(db.transactions.list()), ) assert after == before === END AC usage-changes-nothing ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Usage text is written to standard error and never to standard output.</li><li>A usage error never opens or changes the database.</li></ul></article>
+</main>
+</body>
+</html>

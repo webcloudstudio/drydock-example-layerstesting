@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-TxnDelete.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-TxnDelete.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-TxnDelete.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Txn Delete</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261026 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger txn delete &lt;id&gt;</code>, which removes a transaction only when no balance would go negative.</td></tr><tr><td>Depends On</td><td>FEATURE-TxnPost.md, FEATURE-BalanceRules.md, FEATURE-CsvOutput.md, FEATURE-CliFoundation.md, FEATURE-ErrorContract.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger txn delete</td></tr><tr><td>Consumes</td><td>ledger.register_command, persistence.open_database, balance_rules.check_final_balances, csv_output.write_rows, ledger_errors.NotFound, ledger_errors.Rejected</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Remove one transaction by id. Deleting a receipt can push an account negative, so the balance rule is applied to the state after the deletion.</p>
+<h2>Behavior</h2>
+<ul><li>Invocation: <code>ledger txn delete &lt;id&gt;</code> with exactly one argument.</li><li>A non-integer id exits 3. An integer id with no stored row exits 4.</li><li>The account&#x27;s balance without this row is checked with <code>balance_rules.check_final_balances</code>; a negative result exits 3 and changes nothing.</li><li>Success deletes the row and writes two lines: <code>deleted</code>, then the id.</li><li>Read, check and delete run in one database transaction.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-TXN-002</code> — read: get the transaction - supplies: <code>txn_id</code> - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li><li><code>FEATURE-TXN-003</code> — read: list the account&#x27;s transactions for the balance check - supplies: <code>account</code> - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li><li><code>FEATURE-TXN-005</code> — write: delete the transaction - supplies: <code>txn_id</code> - returns: <code>txn_id</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC txn-delete-success ===<br>Intent: Deleting a transaction prints deleted and the id and removes the row.</p>
+<p>import csv import io from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZQDL1&quot; cat = &quot;ZQDLC1&quot; txn_id = 940001 with db_session() as db: db.accounts.create(account=acct, name=&quot;Delete Account&quot;) db.categories.create(category=cat, description=&quot;Delete Category&quot;) db.transactions.create( txn_id=txn_id, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=-1234, memo=&quot;&quot; ) if False else None db.transactions.create(txn_id=txn_id + 1, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=5000, memo=&quot;&quot;) db.transactions.create(txn_id=txn_id, date=&quot;2026-04-02&quot;, account=acct, category=cat, amount=-1234, memo=&quot;tape&quot;) code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, str(txn_id)) print(out) print(err) assert code == 0 assert list(csv.reader(io.StringIO(out))) == [[&quot;deleted&quot;], [str(txn_id)]] assert db.transactions.get(txn_id=txn_id) is None assert db.transactions.get(txn_id=txn_id + 1) is not None === END AC txn-delete-success ===</p>
+<p>=== AC txn-delete-negative-rejected ===<br>Intent: A deletion that would leave the account balance negative exits 3 and keeps every row.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZQDL2&quot; cat = &quot;ZQDLC2&quot; a_id, b_id = 940021, 940022 with db_session() as db: db.accounts.create(account=acct, name=&quot;Delete Account&quot;) db.categories.create(category=cat, description=&quot;Delete Category&quot;) db.transactions.create(txn_id=a_id, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=10000, memo=&quot;&quot;) db.transactions.create(txn_id=b_id, date=&quot;2026-04-02&quot;, account=acct, category=cat, amount=-6000, memo=&quot;&quot;) code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, str(a_id)) print(err) assert code == 3 assert out == &quot;&quot; assert db.transactions.get(txn_id=a_id) is not None assert db.transactions.get(txn_id=b_id) is not None === END AC txn-delete-negative-rejected ===</p>
+<p>=== AC txn-delete-positive-allowed ===<br>Intent: Deleting a receipt succeeds when the remaining balance is still non-negative.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZQDL3&quot; cat = &quot;ZQDLC3&quot; a_id, b_id = 940031, 940032 with db_session() as db: db.accounts.create(account=acct, name=&quot;Delete Account&quot;) db.categories.create(category=cat, description=&quot;Delete Category&quot;) db.transactions.create(txn_id=a_id, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=10000, memo=&quot;&quot;) db.transactions.create(txn_id=b_id, date=&quot;2026-04-02&quot;, account=acct, category=cat, amount=5000, memo=&quot;&quot;) code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, str(b_id)) print(out) print(err) assert code == 0 assert db.transactions.get(txn_id=b_id) is None assert sum(r.amount for r in db.transactions.list(account=acct)) == 10000 === END AC txn-delete-positive-allowed ===</p>
+<p>=== AC txn-delete-absent ===<br>Intent: Deleting an absent id exits 4 with nothing on stdout; a non-integer id exits 3.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: ids = [r.txn_id for r in db.transactions.list()] absent = (max(ids) if ids else 0) + 1000 before = len(ids) code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, str(absent)) print(err) assert code == 4 assert out == &quot;&quot; code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;abc&quot;) assert code == 3 assert out == &quot;&quot; assert len(db.transactions.list()) == before === END AC txn-delete-absent ===</p>
+<p>=== AC txn-delete-then-get ===<br>Intent: After a successful delete, a second delete of the same id reports not found.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZQDL4&quot; cat = &quot;ZQDLC4&quot; txn_id = 940041 with db_session() as db: db.accounts.create(account=acct, name=&quot;Delete Account&quot;) db.categories.create(category=cat, description=&quot;Delete Category&quot;) db.transactions.create(txn_id=txn_id, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=700, memo=&quot;&quot;) code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, str(txn_id)) assert code == 0 code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, str(txn_id)) assert code == 4 assert out == &quot;&quot; === END AC txn-delete-then-get ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A rejected deletion removes nothing; the balance check precedes the delete.</li><li>No floating point is used for money at any layer.</li><li>A failing command writes nothing to stdout and never echoes a DSN or credential.</li></ul></article>
+</main>
+</body>
+</html>

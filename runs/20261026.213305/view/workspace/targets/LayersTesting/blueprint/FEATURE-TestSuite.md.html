@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-TestSuite.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-TestSuite.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-TestSuite.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Test Suite</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261026 V1</td></tr><tr><td>Description</td><td>The POSIX <code>bin/test.sh</code> entry point and the application&#x27;s own pytest suite covering every command, exit code and rule.</td></tr><tr><td>Depends On</td><td>FEATURE-CliUsage.md, FEATURE-LedgerInit.md, FEATURE-LedgerCount.md, FEATURE-LoadTransactions.md, FEATURE-AccountDelete.md, FEATURE-AccountRename.md, FEATURE-TxnGet.md, FEATURE-TxnAmend.md, FEATURE-TxnDelete.md, FEATURE-Transfer.md, FEATURE-ReportBalances.md, FEATURE-ReportCategories.md, FEATURE-ReportMonthly.md</td></tr><tr><td>Provides</td><td>bin/test.sh</td></tr><tr><td>Consumes</td><td>ledger</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>The application ships its own automated tests. <code>sh bin/test.sh</code> runs them from the application root and exits zero only when every test passes.</p>
+<h2>Behavior</h2>
+<ul><li><code>bin/test.sh</code> is POSIX <code>sh</code>. It changes to the application root, activates <code>.venv</code> when present, and runs <code>pytest -q</code>, exiting with pytest&#x27;s exit status.</li><li>Tests live under <code>tests/</code> and cover each command, each exit code (0, 1, 2, 3, 4) and each rule: all-or-nothing loads and transfers, non-negative balances judged on the final state, amount and date validation, id assignment, and report output.</li><li>Every test creates its own temporary SQLite database and removes it afterwards, by setting <code>DATABASE_URL</code> to a path under a temporary directory. No test opens or modifies <code>data/app.db</code>.</li><li>Tests obtain seed data only by invoking <code>ledger load</code> on files under <code>sources/</code>; application code never reads them.</li><li>Tests reach the database only through the persistence package.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC test-suite-script-shape ===<br>Intent: bin/test.sh exists, parses as POSIX sh, and the suite has test modules.</p>
+<p>Requires: executable=sh; scope=test</p>
+<p>import glob import os import subprocess</p>
+<p>assert os.path.isfile(&quot;bin/test.sh&quot;) result = subprocess.run([&quot;sh&quot;, &quot;-n&quot;, &quot;bin/test.sh&quot;], capture_output=True, text=True) print(result.stdout) print(result.stderr) assert result.returncode == 0 modules = glob.glob(&quot;tests/test_*.py&quot;) print(modules) assert len(modules) &gt; 0 === END AC test-suite-script-shape ===</p>
+<p>=== AC test-suite-passes ===<br>Intent: Running the application&#x27;s own suite through bin/test.sh succeeds.</p>
+<p>Requires: executable=sh; scope=test</p>
+<p>import subprocess</p>
+<p>result = subprocess.run([&quot;sh&quot;, &quot;bin/test.sh&quot;], capture_output=True, text=True) print(result.stdout) print(result.stderr) assert result.returncode == 0 === END AC test-suite-passes ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>No test touches <code>data/app.db</code>.</li><li>Each test creates and removes its own temporary database.</li><li>Seed files reach the database only through <code>ledger load</code>, never from application code.</li><li><code>bin/test.sh</code> exits zero only when every test passes.</li></ul></article>
+</main>
+</body>
+</html>

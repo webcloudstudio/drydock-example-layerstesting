@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-TxnGet.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-TxnGet.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-TxnGet.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Txn Get</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261026 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger txn get &lt;id&gt;</code>, which prints one stored transaction row.</td></tr><tr><td>Depends On</td><td>FEATURE-TxnPost.md, FEATURE-CsvOutput.md, FEATURE-CliFoundation.md, FEATURE-ErrorContract.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger txn get</td></tr><tr><td>Consumes</td><td>ledger.register_command, persistence.open_database, csv_output.write_rows, ledger_errors.NotFound</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Read back a single transaction by id from stored data.</p>
+<h2>Behavior</h2>
+<ul><li>Invocation: <code>ledger txn get &lt;id&gt;</code> with exactly one argument.</li><li>A non-integer id exits 3 (narrowest reading of the unspecified case, recorded as decision Q-003).</li><li>An integer id with no stored row exits 4 with nothing on stdout.</li><li>Otherwise the command writes the header <code>txn_id,date,account,category,amount,memo</code> and the stored row, with the amount formatted as exactly two decimals from integer cents.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-TXN-002</code> — read: get the transaction by id - supplies: <code>txn_id</code> - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC txn-get-present ===<br>Intent: Getting a stored transaction prints its current row with a two-decimal amount.</p>
+<p>import csv import io from decimal import Decimal from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZQGET1&quot; cat = &quot;ZQGETC1&quot; txn_id = 920001 date = &quot;2026-04-01&quot; cents = -1234 memo = &quot;read me&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Get Account&quot;) db.categories.create(category=cat, description=&quot;Get Category&quot;) db.transactions.create( txn_id=txn_id, date=date, account=acct, category=cat, amount=cents, memo=memo ) code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, str(txn_id)) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;] shown = f&quot;{Decimal(cents) / 100:.2f}&quot; assert rows[1] == [str(txn_id), date, acct, cat, shown, memo] === END AC txn-get-present ===</p>
+<p>=== AC txn-get-empty-memo ===<br>Intent: A transaction with an empty memo prints an empty final field.</p>
+<p>import csv import io from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZQGET2&quot; cat = &quot;ZQGETC2&quot; txn_id = 920002 with db_session() as db: db.accounts.create(account=acct, name=&quot;Get Account&quot;) db.categories.create(category=cat, description=&quot;Get Category&quot;) db.transactions.create( txn_id=txn_id, date=&quot;2026-04-02&quot;, account=acct, category=cat, amount=500, memo=&quot;&quot; ) code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, str(txn_id)) print(out) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert len(rows[1]) == 6 assert rows[1][5] == &quot;&quot; === END AC txn-get-empty-memo ===</p>
+<p>=== AC txn-get-absent ===<br>Intent: An absent id exits 4 with nothing on stdout.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: ids = [r.txn_id for r in db.transactions.list()] absent = (max(ids) if ids else 0) + 1000 code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, str(absent)) print(err) assert code == 4 assert out == &quot;&quot; === END AC txn-get-absent ===</p>
+<p>=== AC txn-get-non-integer ===<br>Intent: A non-integer id exits 3 with nothing on stdout.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: for bad in (&quot;abc&quot;, &quot;1.5&quot;, &quot;-&quot;): code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, bad) assert code == 3, bad assert out == &quot;&quot;, bad === END AC txn-get-non-integer ===</p>
+<p>=== AC txn-get-after-delete ===<br>Intent: After the row is removed the same id is reported absent.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZQGET3&quot; cat = &quot;ZQGETC3&quot; txn_id = 920003 with db_session() as db: db.accounts.create(account=acct, name=&quot;Get Account&quot;) db.categories.create(category=cat, description=&quot;Get Category&quot;) db.transactions.create( txn_id=txn_id, date=&quot;2026-04-03&quot;, account=acct, category=cat, amount=100, memo=&quot;x&quot; ) code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, str(txn_id)) assert code == 0 db.transactions.delete(txn_id=txn_id) code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, str(txn_id)) assert code == 4 assert out == &quot;&quot; === END AC txn-get-after-delete ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The command is read-only and never writes to the database.</li><li>A failing command writes nothing to stdout and never echoes a DSN or credential.</li></ul></article>
+</main>
+</body>
+</html>

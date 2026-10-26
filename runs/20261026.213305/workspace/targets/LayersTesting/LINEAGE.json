@@ -1,0 +1,671 @@
+{
+  "version": 1,
+  "import": {
+    "root": "/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261026.213305/sources",
+    "format": "markdown"
+  },
+  "sources": {
+    "INSTRUCTIONS.md": {
+      "state": "current",
+      "versions": [
+        {
+          "commit": "3ab14fc",
+          "date": "2026-10-26",
+          "hash": "31e5bfa58bfbc07b69f8195e3cdd1554591fd2f1efff773b8b4b64aba700b926",
+          "release": "",
+          "state": "consumed",
+          "via": "plan",
+          "ticket": null,
+          "requirements": [
+            {
+              "name": "cash-ledger-cli",
+              "text": "Build a command-line cash ledger for a small shop.",
+              "stories": [
+                "foundation",
+                "cli-foundation"
+              ]
+            },
+            {
+              "name": "python-sqlite-stack",
+              "text": "Implement in Python 3.11 or newer over SQLite, through the shipped Python persistence library. Tests run under pytest.",
+              "stories": [
+                "foundation",
+                "database",
+                "cli-foundation",
+                "test-suite"
+              ]
+            },
+            {
+              "name": "database-location",
+              "text": "`DATABASE_URL` names the database. A value beginning `postgres://` or `postgresql://` is a\nPostgreSQL DSN. Any other value is a SQLite file path, optionally prefixed `sqlite://`. When\n`DATABASE_URL` is unset, `DATABASE_PATH` is used, then `data/app.db`.",
+              "stories": [
+                "cli-foundation",
+                "database"
+              ]
+            },
+            {
+              "name": "three-tables-integer-cents",
+              "text": "Three tables. Amounts are stored as integer cents and never as floating point.",
+              "stories": [
+                "database"
+              ]
+            },
+            {
+              "name": "persistence-library-access",
+              "text": "All database access goes through the shipped persistence library and the relational layer\ngenerated from `DATABASE.md`. Application code never opens a database driver directly.",
+              "stories": [
+                "database",
+                "foundation"
+              ]
+            },
+            {
+              "name": "reports-computed-from-database",
+              "text": "Application code never reads `sources/run.sh` and never embeds a report answer. Every report is\ncomputed from the database.",
+              "stories": [
+                "report-balances",
+                "report-categories",
+                "report-monthly"
+              ]
+            },
+            {
+              "name": "rejected-command-changes-nothing",
+              "text": "**A rejected command changes nothing.** A command checks every input and rule before its\nfirst write. A load that rejects row 11 stores none of rows 1 to 10. A transfer stores both of\nits rows or neither.",
+              "stories": [
+                "load-accounts",
+                "load-categories",
+                "load-transactions",
+                "transfer",
+                "txn-post",
+                "txn-amend",
+                "txn-delete",
+                "account-delete",
+                "balance-rules",
+                "database"
+              ]
+            },
+            {
+              "name": "no-negative-balance",
+              "text": "**No command leaves an account balance below zero.** An account's balance is the sum of its\ntransaction amounts. Posting, amending, deleting, transferring, and loading are all subject to\nthis rule, checked before the command writes anything.",
+              "stories": [
+                "balance-rules",
+                "txn-post",
+                "txn-amend",
+                "txn-delete",
+                "transfer",
+                "load-transactions"
+              ]
+            },
+            {
+              "name": "code-format",
+              "text": "**Codes** (`account`, `category`) are 1 to 12 characters from `A-Z` and `0-9`.",
+              "stories": [
+                "validation"
+              ]
+            },
+            {
+              "name": "name-memo-format",
+              "text": "**Names and descriptions** are 1 to 40 characters. **Memos** are 0 to 60 characters. None of\nthem contains a comma or a newline.",
+              "stories": [
+                "validation"
+              ]
+            },
+            {
+              "name": "amount-format",
+              "text": "**Amounts** on input match `-?DIGITS[.D[D]]`: at most two decimal places, never zero. On output\nan amount is written with exactly two decimal places, a leading `-` when negative, and no\nthousands separator: `-12.50`, `0.00`, `5000.00`.",
+              "stories": [
+                "validation",
+                "csv-output"
+              ]
+            },
+            {
+              "name": "date-format",
+              "text": "**Dates** are real calendar dates written `YYYY-MM-DD`. `2026-02-30` is rejected.",
+              "stories": [
+                "validation"
+              ]
+            },
+            {
+              "name": "transaction-ids",
+              "text": "**Transaction ids.** A loaded transaction keeps the `txn_id` from its file. A posted\ntransaction receives one more than the largest `txn_id` present, or `1` in an empty table. A\ntransfer's outgoing row takes that id and its incoming row the next.",
+              "stories": [
+                "load-transactions",
+                "txn-post",
+                "transfer",
+                "database"
+              ]
+            },
+            {
+              "name": "csv-output-format",
+              "text": "Every successful command except `init` writes CSV to standard output: one header row, then data\nrows, comma-separated, no quoting, no trailing spaces, `\\n` line endings. `init` writes nothing.\nA failing command writes nothing to standard output and one diagnostic line to standard error.",
+              "stories": [
+                "csv-output",
+                "error-contract"
+              ]
+            },
+            {
+              "name": "row-shapes",
+              "text": "The account row is `account,name,transactions,balance`, where `transactions` counts the account's\ntransactions. The transaction row is `txn_id,date,account,category,amount,memo`.",
+              "stories": [
+                "csv-output",
+                "account-add",
+                "account-get",
+                "account-rename",
+                "txn-post",
+                "txn-get",
+                "txn-amend"
+              ]
+            },
+            {
+              "name": "ledger-init",
+              "text": "`ledger init` | Prepares an empty ledger for loading and use; removes existing ledger records when rerun. Nothing written.",
+              "stories": [
+                "ledger-init"
+              ]
+            },
+            {
+              "name": "ledger-count",
+              "text": "`ledger count` | `table,rows`, then `accounts`, `categories`, `transactions` rows in that order.",
+              "stories": [
+                "ledger-count"
+              ]
+            },
+            {
+              "name": "ledger-load",
+              "text": "`ledger load <table> <csv>` | Loads `accounts`, `categories`, or `transactions` from a file whose header matches the table's columns in the order above. Writes `table,loaded` and `<table>,<rows>`.",
+              "stories": [
+                "load-accounts",
+                "load-categories",
+                "load-transactions"
+              ]
+            },
+            {
+              "name": "account-add",
+              "text": "`ledger account add <code> <name>` | The new account row.",
+              "stories": [
+                "account-add"
+              ]
+            },
+            {
+              "name": "account-get",
+              "text": "`ledger account get <code>` | The account row.",
+              "stories": [
+                "account-get"
+              ]
+            },
+            {
+              "name": "account-rename",
+              "text": "`ledger account rename <code> <name>` | The updated account row.",
+              "stories": [
+                "account-rename"
+              ]
+            },
+            {
+              "name": "account-delete",
+              "text": "`ledger account delete <code>` | `deleted` and the code. Refused while the account has transactions.",
+              "stories": [
+                "account-delete"
+              ]
+            },
+            {
+              "name": "txn-post",
+              "text": "`ledger txn post <account> <category> <amount> <date> [<memo>]` | The new transaction row.",
+              "stories": [
+                "txn-post"
+              ]
+            },
+            {
+              "name": "txn-get",
+              "text": "`ledger txn get <id>` | The transaction row.",
+              "stories": [
+                "txn-get"
+              ]
+            },
+            {
+              "name": "txn-amend",
+              "text": "`ledger txn amend <id> <amount>` | The updated transaction row. Only the amount changes.",
+              "stories": [
+                "txn-amend"
+              ]
+            },
+            {
+              "name": "txn-delete",
+              "text": "`ledger txn delete <id>` | `deleted` and the id.",
+              "stories": [
+                "txn-delete"
+              ]
+            },
+            {
+              "name": "transfer",
+              "text": "`ledger transfer <from> <to> <amount> <date>` | Two transaction rows in category `TRANSFER`: `-amount` on `<from>` with memo `transfer to <to>`, then `+amount` on `<to>` with memo `transfer from <from>`. The amount is positive and the accounts differ.",
+              "stories": [
+                "transfer"
+              ]
+            },
+            {
+              "name": "report-balances",
+              "text": "`ledger report balances` | `account,name,transactions,balance` per account ordered by code, then `TOTAL,,<count>,<sum>`.",
+              "stories": [
+                "report-balances"
+              ]
+            },
+            {
+              "name": "report-categories",
+              "text": "`ledger report categories` | `category,description,transactions,inflow,outflow,net` per category ordered by code, including categories with no transactions, then `TOTAL,,<count>,<inflow>,<outflow>,<net>`.",
+              "stories": [
+                "report-categories"
+              ]
+            },
+            {
+              "name": "report-monthly",
+              "text": "`ledger report monthly` | `month,transactions,inflow,outflow,net` per `YYYY-MM` that has transactions, ascending, then `TOTAL,<count>,<inflow>,<outflow>,<net>`.",
+              "stories": [
+                "report-monthly"
+              ]
+            },
+            {
+              "name": "inflow-outflow-net-definitions",
+              "text": "`inflow` is the sum of positive amounts. `outflow` is the sum of the absolute values of negative\namounts, written as a positive number. `net` is `inflow - outflow`.",
+              "stories": [
+                "report-categories",
+                "report-monthly"
+              ]
+            },
+            {
+              "name": "exit-code-success",
+              "text": "| `0` | Success. |",
+              "stories": [
+                "error-contract"
+              ]
+            },
+            {
+              "name": "exit-code-operational",
+              "text": "| `1` | Operational failure: database unreachable, tables missing, file unreadable. |",
+              "stories": [
+                "error-contract",
+                "cli-foundation"
+              ]
+            },
+            {
+              "name": "exit-code-usage",
+              "text": "| `2` | Usage error: unknown command, unknown table or report, wrong argument count. |",
+              "stories": [
+                "cli-usage",
+                "error-contract"
+              ]
+            },
+            {
+              "name": "exit-code-rejected",
+              "text": "| `3` | Rejected: invalid code, name, amount, date, or file row; duplicate key; unknown account or category; account in use; any change that would leave a negative balance. |",
+              "stories": [
+                "error-contract",
+                "validation",
+                "balance-rules",
+                "account-delete",
+                "account-add",
+                "load-accounts",
+                "load-categories",
+                "load-transactions",
+                "txn-post",
+                "transfer"
+              ]
+            },
+            {
+              "name": "exit-code-not-found",
+              "text": "| `4` | Not found: `account get/rename/delete` of an absent account, `txn get/amend/delete` of an absent id. |",
+              "stories": [
+                "error-contract",
+                "account-get",
+                "account-rename",
+                "account-delete",
+                "txn-get",
+                "txn-amend",
+                "txn-delete"
+              ]
+            },
+            {
+              "name": "bin-test-script",
+              "text": "The completed application provides a POSIX-compatible `bin/test.sh` that runs its own automated\ntest suite from the application root and exits zero only when every test passes. The suite\ncovers each command, each exit code, and each rule above against a real temporary database.",
+              "stories": [
+                "test-suite"
+              ]
+            },
+            {
+              "name": "run-harness-scoring",
+              "text": "`sources/run.sh` is the scoring entry point. It is supplied, not authored, and is staged verbatim\ninto the application root with the seed files. `drydock uat` runs `sh sources/run.sh` from the\ncompleted application root and takes its exit code and output as the score.",
+              "stories": [
+                "verification"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "run.sh": {
+      "state": "current",
+      "versions": [
+        {
+          "commit": "3ab14fc",
+          "date": "2026-10-26",
+          "hash": "744a2165699ea832a9b8679b0dc2792664336184ec88d63045829c969f6d1639",
+          "release": "",
+          "state": "consumed",
+          "via": "plan",
+          "ticket": null,
+          "requirements": [
+            {
+              "name": "grade-unfiltered",
+              "text": "# run.sh \u2014 LayersTesting grader. Do not filter, skip, or reinterpret.",
+              "stories": [
+                "verification"
+              ]
+            },
+            {
+              "name": "init-ledger",
+              "text": "check A1 0 init < /dev/null",
+              "stories": [
+                "ledger-init",
+                "database",
+                "cli-foundation"
+              ]
+            },
+            {
+              "name": "count-rows",
+              "text": "check A2 0 count <<'EOF'",
+              "stories": [
+                "ledger-count",
+                "csv-output",
+                "database"
+              ]
+            },
+            {
+              "name": "load-accounts",
+              "text": "check B1 0 load accounts \"$SEED/seed_accounts.csv\" <<'EOF'",
+              "stories": [
+                "load-accounts",
+                "validation",
+                "csv-output"
+              ]
+            },
+            {
+              "name": "load-categories",
+              "text": "check B2 0 load categories \"$SEED/seed_categories.csv\" <<'EOF'",
+              "stories": [
+                "load-categories",
+                "validation",
+                "csv-output"
+              ]
+            },
+            {
+              "name": "load-transactions",
+              "text": "check B3 0 load transactions \"$SEED/seed_transactions.csv\" <<'EOF'",
+              "stories": [
+                "load-transactions",
+                "validation",
+                "balance-rules",
+                "csv-output"
+              ]
+            },
+            {
+              "name": "report-balances",
+              "text": "check C1 0 report balances <<'EOF'",
+              "stories": [
+                "report-balances",
+                "csv-output"
+              ]
+            },
+            {
+              "name": "report-categories",
+              "text": "check C2 0 report categories <<'EOF'",
+              "stories": [
+                "report-categories",
+                "csv-output"
+              ]
+            },
+            {
+              "name": "report-monthly",
+              "text": "check C3 0 report monthly <<'EOF'",
+              "stories": [
+                "report-monthly",
+                "csv-output"
+              ]
+            },
+            {
+              "name": "rejected-load-changes-nothing",
+              "text": "# \u2500\u2500 D. A rejected load changes nothing",
+              "stories": [
+                "load-transactions",
+                "load-accounts",
+                "load-categories",
+                "error-contract",
+                "database"
+              ]
+            },
+            {
+              "name": "account-add",
+              "text": "check E1 0 account add CASH9 \"Event Float\" <<'EOF'",
+              "stories": [
+                "account-add",
+                "validation",
+                "error-contract",
+                "csv-output"
+              ]
+            },
+            {
+              "name": "account-get",
+              "text": "check E3 0 account get CASH9 <<'EOF'",
+              "stories": [
+                "account-get",
+                "error-contract",
+                "csv-output"
+              ]
+            },
+            {
+              "name": "account-rename",
+              "text": "check E4 0 account rename CASH9 \"Event Cash Box\" <<'EOF'",
+              "stories": [
+                "account-rename",
+                "validation",
+                "csv-output"
+              ]
+            },
+            {
+              "name": "account-delete",
+              "text": "check E7 0 account delete CASH9 <<'EOF'",
+              "stories": [
+                "account-delete",
+                "error-contract"
+              ]
+            },
+            {
+              "name": "txn-post",
+              "text": "check F1 0 txn post DRAWER1 SALES 45.50 2026-04-01 \"walk in sale\" <<'EOF'",
+              "stories": [
+                "txn-post",
+                "validation",
+                "balance-rules",
+                "error-contract",
+                "csv-output"
+              ]
+            },
+            {
+              "name": "txn-get",
+              "text": "check F2 0 txn get 121 <<'EOF'",
+              "stories": [
+                "txn-get",
+                "error-contract",
+                "csv-output"
+              ]
+            },
+            {
+              "name": "txn-amend",
+              "text": "check F3 0 txn amend 121 54.50 <<'EOF'",
+              "stories": [
+                "txn-amend",
+                "validation",
+                "balance-rules",
+                "csv-output"
+              ]
+            },
+            {
+              "name": "txn-delete",
+              "text": "check F8 0 txn delete 121 <<'EOF'",
+              "stories": [
+                "txn-delete",
+                "balance-rules",
+                "error-contract"
+              ]
+            },
+            {
+              "name": "transfer-atomic",
+              "text": "# \u2500\u2500 G. Transfers are atomic; no command leaves a negative balance",
+              "stories": [
+                "transfer",
+                "balance-rules",
+                "database",
+                "csv-output"
+              ]
+            },
+            {
+              "name": "no-negative-balance",
+              "text": "check G3 3 txn post PETTY SUPPLY -1000.00 2026-04-04 < /dev/null",
+              "stories": [
+                "balance-rules",
+                "txn-post",
+                "txn-amend",
+                "txn-delete",
+                "transfer",
+                "error-contract"
+              ]
+            },
+            {
+              "name": "usage-errors",
+              "text": "# \u2500\u2500 U. Usage errors",
+              "stories": [
+                "cli-usage",
+                "error-contract",
+                "cli-foundation"
+              ]
+            },
+            {
+              "name": "reinit-drops-rows",
+              "text": "# \u2500\u2500 Z. Re-initialization drops every row",
+              "stories": [
+                "ledger-init",
+                "database"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "seed_accounts.csv": {
+      "state": "current",
+      "versions": [
+        {
+          "commit": "3ab14fc",
+          "date": "2026-10-26",
+          "hash": "48f83f688324264fd811a0a363418c867454043e30ce02bc8bc81683ed28625b",
+          "release": "",
+          "state": "consumed",
+          "via": "plan",
+          "ticket": null,
+          "requirements": [
+            {
+              "name": "seed-accounts",
+              "text": "account,name\nDRAWER1,Front Drawer\nDRAWER2,Back Drawer\nPETTY,Petty Cash\nSAFE,Store Safe",
+              "stories": [
+                "load-accounts",
+                "database",
+                "validation"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "seed_categories.csv": {
+      "state": "current",
+      "versions": [
+        {
+          "commit": "3ab14fc",
+          "date": "2026-10-26",
+          "hash": "265d594bf154ef991105beec15a61241f46bb2b330aff215f9bffad2a0602b43",
+          "release": "",
+          "state": "consumed",
+          "via": "plan",
+          "ticket": null,
+          "requirements": [
+            {
+              "name": "seed-categories-data",
+              "text": "category,description\nOPENING,Opening balance\nPAYROLL,Payroll\nREFUND,Customer refunds\nRENT,Rent\nSALES,Sales receipts\nSUPPLY,Supplies\nTRANSFER,Internal transfer",
+              "stories": [
+                "load-categories",
+                "database",
+                "validation"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "seed_transactions.csv": {
+      "state": "current",
+      "versions": [
+        {
+          "commit": "3ab14fc",
+          "date": "2026-10-26",
+          "hash": "c208c69039e28ebe36c868726a0ed8e3ce5e11d54bb52d636a952631446038da",
+          "release": "",
+          "state": "consumed",
+          "via": "plan",
+          "ticket": null,
+          "requirements": [
+            {
+              "name": "load-transactions-csv",
+              "text": "txn_id,date,account,category,amount,memo",
+              "stories": [
+                "load-transactions",
+                "validation",
+                "database",
+                "balance-rules"
+              ]
+            },
+            {
+              "name": "paired-transfer-rows",
+              "text": "27,2026-01-14,DRAWER1,TRANSFER,-1000.00,transfer to SAFE\n28,2026-01-14,SAFE,TRANSFER,1000.00,transfer from DRAWER1",
+              "stories": [
+                "transfer"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "seed_transactions_bad.csv": {
+      "state": "current",
+      "versions": [
+        {
+          "commit": "3ab14fc",
+          "date": "2026-10-26",
+          "hash": "a7cffd87094d0bec741438e34dd8992f893d2e93ec0d32dad8395502d4b5af46",
+          "release": "",
+          "state": "consumed",
+          "via": "plan",
+          "ticket": null,
+          "requirements": [
+            {
+              "name": "reject-bad-transaction-batch",
+              "text": "201,2026-04-01,DRAWER1,SALES,10.00,bad batch 1\n202,2026-04-01,DRAWER1,SALES,10.00,bad batch 2\n203,2026-04-01,DRAWER1,SALES,10.00,bad batch 3\n204,2026-04-01,DRAWER1,SALES,10.00,bad batch 4\n205,2026-04-01,DRAWER1,SALES,10.00,bad batch 5\n206,2026-04-01,DRAWER1,SALES,10.00,bad batch 6\n207,2026-04-01,DRAWER1,SALES,10.00,bad batch 7\n208,2026-04-01,DRAWER1,SALES,10.00,bad batch 8\n209,2026-04-01,DRAWER1,SALES,10.00,bad batch 9\n210,2026-04-01,DRAWER1,SALES,10.00,bad batch 10\n211,2026-04-01,NOSUCH,SALES,10.00,unknown account",
+              "stories": [
+                "load-transactions",
+                "validation",
+                "error-contract",
+                "database"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

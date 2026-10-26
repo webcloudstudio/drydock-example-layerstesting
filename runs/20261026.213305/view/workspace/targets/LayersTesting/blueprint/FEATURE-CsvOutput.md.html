@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-CsvOutput.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-CsvOutput.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-CsvOutput.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Csv Output</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261026 V1</td></tr><tr><td>Description</td><td>Integer-only cents formatting and CSV row writing to standard output.</td></tr><tr><td>Depends On</td><td>FEATURE-CliFoundation.md</td></tr><tr><td>Provides</td><td>csv_output.format_cents, csv_output.write_rows</td></tr><tr><td>Consumes</td><td>ledger.register_command</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Every successful command writes its result through this module so that formatting is identical everywhere.</p>
+<h2>Interface</h2>
+<ul><li><code>csv_output.format_cents(cents: int) -&gt; str</code> returns the amount with exactly two decimals, a leading <code>-</code> when negative, no thousands separator, and <code>0.00</code> for zero (never <code>-0.00</code>). Computed with integer arithmetic (<code>divmod</code> on the absolute value). A non-<code>int</code> argument (including <code>float</code> and <code>bool</code>) raises <code>TypeError</code>.</li><li><code>csv_output.write_rows(rows) -&gt; None</code> writes each row to the current <code>sys.stdout</code> (looked up at call time) as its cells joined by <code>,</code>, with no quoting, no trailing spaces and a <code>\n</code> line ending. Cells that are <code>int</code> are rendered with <code>str</code>; a <code>float</code> cell raises <code>TypeError</code>. Nothing is written when a row is invalid.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC csv-format-cents-values ===<br>Intent: format_cents renders zero, positive, negative and large amounts with two decimals and no separator.</p>
+<p>from csv_output import format_cents</p>
+<p>assert format_cents(0) == &quot;0.00&quot; assert format_cents(5) == &quot;0.05&quot; assert format_cents(-5) == &quot;-0.05&quot; assert format_cents(-1250) == &quot;-12.50&quot; assert format_cents(1250) == &quot;12.50&quot; assert format_cents(500000) == &quot;5000.00&quot; assert format_cents(123456789) == &quot;1234567.89&quot; === END AC csv-format-cents-values ===</p>
+<p>=== AC csv-format-cents-rejects-float ===<br>Intent: format_cents refuses non-integer input so money never passes through floating point.</p>
+<p>from csv_output import format_cents</p>
+<p>for bad in (1.5, 2.0, &quot;100&quot;, None): try: format_cents(bad) except TypeError: continue raise AssertionError(&quot;format_cents accepted a non-int value&quot;) === END AC csv-format-cents-rejects-float ===</p>
+<p>=== AC csv-write-rows-layout ===<br>Intent: write_rows emits comma-joined unquoted rows, each ending in a newline, with no carriage returns.</p>
+<p>import contextlib import io from csv_output import write_rows</p>
+<p>rows = [[&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;], [&quot;CASH9&quot;, &quot;Event Cash Box&quot;, 0, &quot;0.00&quot;]] buffer = io.StringIO() with contextlib.redirect_stdout(buffer): write_rows(rows) text = buffer.getvalue() assert text.endswith(&quot;\n&quot;) assert &quot;\r&quot; not in text assert text.splitlines() == [&quot;,&quot;.join(str(c) for c in row) for row in rows] === END AC csv-write-rows-layout ===</p>
+<p>=== AC csv-write-rows-rejects-float ===<br>Intent: write_rows refuses a float cell and writes nothing.</p>
+<p>import contextlib import io from csv_output import write_rows</p>
+<p>buffer = io.StringIO() raised = False with contextlib.redirect_stdout(buffer): try: write_rows([[&quot;a&quot;, 1.5]]) except TypeError: raised = True assert raised assert buffer.getvalue() == &quot;&quot; === END AC csv-write-rows-rejects-float ===</p>
+<p>=== AC csv-through-cli ===<br>Intent: A registered command writing rows through write_rows produces CSV that parses back to the same rows.</p>
+<p>import csv import io import cli from cli.testing import cli_runner from csv_output import write_rows</p>
+<p>rows = [[&quot;table&quot;, &quot;rows&quot;], [&quot;accounts&quot;, &quot;0&quot;], [&quot;categories&quot;, &quot;0&quot;]] name = &quot;zzrows&quot; cli.register_command(name, lambda args: write_rows(rows)) code, out, err = cli_runner(name) assert code == 0 assert &quot;\r&quot; not in out assert list(csv.reader(io.StringIO(out))) == rows === END AC csv-through-cli ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>No floating point is used for money at any layer; <code>format_cents</code> uses integer arithmetic only.</li><li>No thousands separator, no quoting and no trailing spaces appear in any output.</li><li>Zero is always written <code>0.00</code>, never <code>-0.00</code>.</li></ul></article>
+</main>
+</body>
+</html>

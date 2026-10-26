@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-AccountGet.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-AccountGet.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-AccountGet.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Account Get</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261026 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger account get &lt;code&gt;</code> printing an account with its transaction count and balance.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-AccountAdd.md, FEATURE-CsvOutput.md, FEATURE-ErrorContract.md</td></tr><tr><td>Provides</td><td>ledger account get</td></tr><tr><td>Consumes</td><td>ledger.register_command, persistence.open_database, csv_output.write_rows, ledger_errors.NotFound</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger account get &lt;code&gt;</code> prints the current account row, with the transaction count and balance computed from stored transactions at the time of the call.</p>
+<h2>Behavior</h2>
+<ul><li>Argument: exactly one code; any other count is a usage error (exit 2).</li><li>Writes <code>account,name,transactions,balance</code> then the row. <code>transactions</code> is the number of the account&#x27;s transactions; <code>balance</code> is the sum of their amounts in integer cents, written with exactly two decimals, a leading <code>-</code> when negative, and <code>0.00</code> for zero.</li><li>An absent code exits 4 with nothing on standard output.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNT-002</code> — read: get an account by code - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-TXN-003</code> — read: list the account&#x27;s transactions to count and sum them - supplies: <code>account</code> - returns: <code>txn_id</code>, <code>account</code>, <code>amount</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC account-get-with-activity ===<br>Intent: The printed transaction count and balance are computed from the stored transactions.</p>
+<p>import csv import io from decimal import Decimal from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct, cat = &quot;ZAG1A&quot;, &quot;ZAG1C&quot; name = &quot;Get Account&quot; amounts = [50000, -12550, 325] with db_session() as db: db.accounts.create(account=acct, name=name) db.categories.create(category=cat, description=&quot;Get test&quot;) for i, cents in enumerate(amounts): db.transactions.create( txn_id=920001 + i, date=&quot;2026-05-01&quot;, account=acct, category=cat, amount=cents, memo=&quot;&quot; ) code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, acct) print(out, err) assert code == 0 balance = f&quot;{Decimal(sum(amounts)).scaleb(-2):.2f}&quot; assert list(csv.reader(io.StringIO(out))) == [ [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;], [acct, name, str(len(amounts)), balance], ] === END AC account-get-with-activity ===</p>
+<p>=== AC account-get-no-activity ===<br>Intent: An account without transactions prints a zero count and balance 0.00.</p>
+<p>import csv import io from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZAG2A&quot; name = &quot;Quiet Account&quot; with db_session() as db: db.accounts.create(account=acct, name=name) code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, acct) print(out, err) assert code == 0 assert list(csv.reader(io.StringIO(out))) == [ [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;], [acct, name, &quot;0&quot;, &quot;0.00&quot;], ] === END AC account-get-no-activity ===</p>
+<p>=== AC account-get-reflects-changes ===<br>Intent: A later get reflects a new transaction, so the values are read from storage rather than remembered.</p>
+<p>import csv import io from decimal import Decimal from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct, cat = &quot;ZAG3A&quot;, &quot;ZAG3C&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Changing&quot;) db.categories.create(category=cat, description=&quot;Get test&quot;) code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, acct) assert code == 0 first = list(csv.reader(io.StringIO(out)))[1] assert first[2] == &quot;0&quot; cents = 4242 db.transactions.create(txn_id=920011, date=&quot;2026-05-02&quot;, account=acct, category=cat, amount=cents, memo=&quot;&quot;) code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, acct) print(out, err) assert code == 0 second = list(csv.reader(io.StringIO(out)))[1] assert second[2] == &quot;1&quot; assert second[3] == f&quot;{Decimal(cents).scaleb(-2):.2f}&quot; === END AC account-get-reflects-changes ===</p>
+<p>=== AC account-get-absent ===<br>Intent: An absent account exits 4 with nothing on standard output.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>absent = &quot;ZAG4NONE&quot; with db_session() as db: assert db.accounts.get(account=absent) is None code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, absent) print(code, out, err) assert code == 4 assert out == &quot;&quot; === END AC account-get-absent ===</p>
+<p>=== AC account-get-wrong-argument-count ===<br>Intent: A wrong argument count is a usage error with exit 2.</p>
+<p>from cli.testing import cli_runner</p>
+<p>for args in ((&quot;account&quot;, &quot;get&quot;), (&quot;account&quot;, &quot;get&quot;, &quot;ZAG5A&quot;, &quot;extra&quot;)): code, out, err = cli_runner(*args) print(args, code, out, err) assert code == 2 assert out == &quot;&quot; === END AC account-get-wrong-argument-count ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The command is read-only and never writes to the database.</li><li>Count and balance come from stored transactions, never from embedded values.</li><li>Balances are integer cents internally; no floating point at any layer.</li></ul></article>
+</main>
+</body>
+</html>

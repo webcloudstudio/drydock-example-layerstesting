@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261026.214944.246Z_layerstesting_lineage_attribute_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261026.214944.246Z_layerstesting_lineage_attribute_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261026.214944.246Z_layerstesting_lineage_attribute_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>&lt;requirement name=&quot;grade-unfiltered&quot; stories=&quot;verification&quot;&gt;
+# run.sh — LayersTesting grader. Do not filter, skip, or reinterpret.
+&lt;/requirement&gt;
+&lt;requirement name=&quot;init-ledger&quot; stories=&quot;ledger-init,database,cli-foundation&quot;&gt;
+check A1 0 init &lt; /dev/null
+&lt;/requirement&gt;
+&lt;requirement name=&quot;count-rows&quot; stories=&quot;ledger-count,csv-output,database&quot;&gt;
+check A2 0 count &lt;&lt;&#x27;EOF&#x27;
+&lt;/requirement&gt;
+&lt;requirement name=&quot;load-accounts&quot; stories=&quot;load-accounts,validation,csv-output&quot;&gt;
+check B1 0 load accounts &quot;$SEED/seed_accounts.csv&quot; &lt;&lt;&#x27;EOF&#x27;
+&lt;/requirement&gt;
+&lt;requirement name=&quot;load-categories&quot; stories=&quot;load-categories,validation,csv-output&quot;&gt;
+check B2 0 load categories &quot;$SEED/seed_categories.csv&quot; &lt;&lt;&#x27;EOF&#x27;
+&lt;/requirement&gt;
+&lt;requirement name=&quot;load-transactions&quot; stories=&quot;load-transactions,validation,balance-rules,csv-output&quot;&gt;
+check B3 0 load transactions &quot;$SEED/seed_transactions.csv&quot; &lt;&lt;&#x27;EOF&#x27;
+&lt;/requirement&gt;
+&lt;requirement name=&quot;report-balances&quot; stories=&quot;report-balances,csv-output&quot;&gt;
+check C1 0 report balances &lt;&lt;&#x27;EOF&#x27;
+&lt;/requirement&gt;
+&lt;requirement name=&quot;report-categories&quot; stories=&quot;report-categories,csv-output&quot;&gt;
+check C2 0 report categories &lt;&lt;&#x27;EOF&#x27;
+&lt;/requirement&gt;
+&lt;requirement name=&quot;report-monthly&quot; stories=&quot;report-monthly,csv-output&quot;&gt;
+check C3 0 report monthly &lt;&lt;&#x27;EOF&#x27;
+&lt;/requirement&gt;
+&lt;requirement name=&quot;rejected-load-changes-nothing&quot; stories=&quot;load-transactions,load-accounts,load-categories,error-contract,database&quot;&gt;
+# ── D. A rejected load changes nothing
+&lt;/requirement&gt;
+&lt;requirement name=&quot;account-add&quot; stories=&quot;account-add,validation,error-contract,csv-output&quot;&gt;
+check E1 0 account add CASH9 &quot;Event Float&quot; &lt;&lt;&#x27;EOF&#x27;
+&lt;/requirement&gt;
+&lt;requirement name=&quot;account-get&quot; stories=&quot;account-get,error-contract,csv-output&quot;&gt;
+check E3 0 account get CASH9 &lt;&lt;&#x27;EOF&#x27;
+&lt;/requirement&gt;
+&lt;requirement name=&quot;account-rename&quot; stories=&quot;account-rename,validation,csv-output&quot;&gt;
+check E4 0 account rename CASH9 &quot;Event Cash Box&quot; &lt;&lt;&#x27;EOF&#x27;
+&lt;/requirement&gt;
+&lt;requirement name=&quot;account-delete&quot; stories=&quot;account-delete,error-contract&quot;&gt;
+check E7 0 account delete CASH9 &lt;&lt;&#x27;EOF&#x27;
+&lt;/requirement&gt;
+&lt;requirement name=&quot;txn-post&quot; stories=&quot;txn-post,validation,balance-rules,error-contract,csv-output&quot;&gt;
+check F1 0 txn post DRAWER1 SALES 45.50 2026-04-01 &quot;walk in sale&quot; &lt;&lt;&#x27;EOF&#x27;
+&lt;/requirement&gt;
+&lt;requirement name=&quot;txn-get&quot; stories=&quot;txn-get,error-contract,csv-output&quot;&gt;
+check F2 0 txn get 121 &lt;&lt;&#x27;EOF&#x27;
+&lt;/requirement&gt;
+&lt;requirement name=&quot;txn-amend&quot; stories=&quot;txn-amend,validation,balance-rules,csv-output&quot;&gt;
+check F3 0 txn amend 121 54.50 &lt;&lt;&#x27;EOF&#x27;
+&lt;/requirement&gt;
+&lt;requirement name=&quot;txn-delete&quot; stories=&quot;txn-delete,balance-rules,error-contract&quot;&gt;
+check F8 0 txn delete 121 &lt;&lt;&#x27;EOF&#x27;
+&lt;/requirement&gt;
+&lt;requirement name=&quot;transfer-atomic&quot; stories=&quot;transfer,balance-rules,database,csv-output&quot;&gt;
+# ── G. Transfers are atomic; no command leaves a negative balance
+&lt;/requirement&gt;
+&lt;requirement name=&quot;no-negative-balance&quot; stories=&quot;balance-rules,txn-post,txn-amend,txn-delete,transfer,error-contract&quot;&gt;
+check G3 3 txn post PETTY SUPPLY -1000.00 2026-04-04 &lt; /dev/null
+&lt;/requirement&gt;
+&lt;requirement name=&quot;usage-errors&quot; stories=&quot;cli-usage,error-contract,cli-foundation&quot;&gt;
+# ── U. Usage errors
+&lt;/requirement&gt;
+&lt;requirement name=&quot;reinit-drops-rows&quot; stories=&quot;ledger-init,database&quot;&gt;
+# ── Z. Re-initialization drops every row
+&lt;/requirement&gt;
+&lt;unattached story=&quot;foundation&quot;/&gt;
+&lt;unattached story=&quot;test-suite&quot;/&gt;</pre></article>
+</main>
+</body>
+</html>
