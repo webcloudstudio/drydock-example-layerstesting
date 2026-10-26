@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_txn_commands.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_txn_commands.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_txn_commands.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger txn get|post|amend|delete``: each command&#x27;s effect is read back from the store.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import csv
+import io
+
+import pytest
+
+from cli.testing import cli_runner
+
+HEADER = [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;]
+
+
+def _rows(out: str) -&gt; list[list[str]]:
+    return list(csv.reader(io.StringIO(out)))
+
+
+@pytest.fixture
+def ledger(scratch_db):
+    &quot;&quot;&quot;One account and one category, both criterion-owned, in the scratch store.&quot;&quot;&quot;
+    scratch_db.accounts.create(account=&quot;TXA&quot;, name=&quot;Txn Account&quot;)
+    scratch_db.categories.create(category=&quot;TXC&quot;, description=&quot;Txn Category&quot;)
+    return scratch_db
+
+
+def _store(db, txn_id: int, cents: int, account: str = &quot;TXA&quot;, memo: str = &quot;m&quot;) -&gt; None:
+    db.transactions.create(
+        txn_id=txn_id, date=&quot;2026-04-01&quot;, account=account, category=&quot;TXC&quot;, amount=cents, memo=memo
+    )
+
+
+# txn get
+
+
+def test_get_prints_header_and_the_stored_row(ledger):
+    _store(ledger, 3001, 1234, memo=&quot;get probe&quot;)
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;3001&quot;)
+    assert code == 0
+    assert _rows(out) == [HEADER, [&quot;3001&quot;, &quot;2026-04-01&quot;, &quot;TXA&quot;, &quot;TXC&quot;, &quot;12.34&quot;, &quot;get probe&quot;]]
+
+
+def test_get_formats_negative_amount_with_two_decimals(ledger):
+    _store(ledger, 3002, -1250)
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;3002&quot;)
+    assert code == 0
+    assert _rows(out)[1][4] == &quot;-12.50&quot;
+
+
+def test_get_formats_amount_under_one_unit_with_two_decimals(ledger):
+    _store(ledger, 3003, 5)
+    assert _rows(cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;3003&quot;)[1])[1][4] == &quot;0.05&quot;
+
+
+def test_get_absent_id_exits_4_with_no_stdout(ledger):
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;3999&quot;)
+    assert code == 4
+    assert out == &quot;&quot;
+
+
+@pytest.mark.parametrize(&quot;argv&quot;, [[&quot;txn&quot;, &quot;get&quot;, &quot;abc&quot;], [&quot;txn&quot;, &quot;get&quot;, &quot;1.5&quot;]])
+def test_get_non_integer_id_exits_3(ledger, argv):
+    code, out, _ = cli_runner(*argv)
+    assert code == 3
+    assert out == &quot;&quot;
+
+
+@pytest.mark.parametrize(&quot;argv&quot;, [[&quot;txn&quot;, &quot;get&quot;], [&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;, &quot;2&quot;]])
+def test_get_wrong_argument_count_is_a_usage_error(ledger, argv):
+    code, out, _ = cli_runner(*argv)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+# txn post
+
+
+def test_post_stores_row_with_next_id_and_prints_it(ledger):
+    _store(ledger, 4000, 100)
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;TXA&quot;, &quot;TXC&quot;, &quot;45.50&quot;, &quot;2026-04-02&quot;, &quot;walk in&quot;)
+    assert code == 0
+    assert _rows(out) == [HEADER, [&quot;4001&quot;, &quot;2026-04-02&quot;, &quot;TXA&quot;, &quot;TXC&quot;, &quot;45.50&quot;, &quot;walk in&quot;]]
+    stored = ledger.transactions.get(txn_id=4001)
+    assert stored.amount == 4550
+    assert isinstance(stored.amount, int)
+
+
+def test_post_into_empty_store_assigns_id_one(ledger):
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;TXA&quot;, &quot;TXC&quot;, &quot;1.00&quot;, &quot;2026-04-02&quot;)
+    assert code == 0
+    assert _rows(out)[1][0] == &quot;1&quot;
+
+
+def test_post_without_memo_stores_empty_memo(ledger):
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;TXA&quot;, &quot;TXC&quot;, &quot;10.00&quot;, &quot;2026-04-02&quot;)
+    assert code == 0
+    row = _rows(out)[1]
+    assert len(row) == 6
+    assert ledger.transactions.get(txn_id=int(row[0])).memo == &quot;&quot;
+
+
+@pytest.mark.parametrize(
+    &quot;args&quot;,
+    [
+        (&quot;TXNONE&quot;, &quot;TXC&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;),
+        (&quot;TXA&quot;, &quot;TXNONE&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;),
+        (&quot;TXA&quot;, &quot;TXC&quot;, &quot;1.234&quot;, &quot;2026-04-01&quot;),
+        (&quot;TXA&quot;, &quot;TXC&quot;, &quot;0&quot;, &quot;2026-04-01&quot;),
+        (&quot;TXA&quot;, &quot;TXC&quot;, &quot;1.00&quot;, &quot;2026-02-30&quot;),
+        (&quot;TXA&quot;, &quot;TXC&quot;, &quot;1.00&quot;, &quot;not-a-date&quot;),
+        (&quot;lower&quot;, &quot;TXC&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;),
+        (&quot;TXA&quot;, &quot;TXC&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;, &quot;bad,memo&quot;),
+    ],
+)
+def test_post_invalid_input_exits_3_and_stores_nothing(ledger, args):
+    before = len(ledger.transactions.list())
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, *args)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert len(ledger.transactions.list()) == before
+
+
+def test_post_payment_beyond_balance_exits_3_and_within_balance_succeeds(ledger):
+    _store(ledger, 4100, 1000)
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;TXA&quot;, &quot;TXC&quot;, &quot;-10.01&quot;, &quot;2026-04-02&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert len(ledger.transactions.list(account=&quot;TXA&quot;)) == 1
+    code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;TXA&quot;, &quot;TXC&quot;, &quot;-5.00&quot;, &quot;2026-04-02&quot;)
+    assert code == 0
+    assert sum(row.amount for row in ledger.transactions.list(account=&quot;TXA&quot;)) == 500
+
+
+def test_post_exact_balance_is_allowed(ledger):
+    _store(ledger, 4200, 1000)
+    code, _, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;TXA&quot;, &quot;TXC&quot;, &quot;-10.00&quot;, &quot;2026-04-02&quot;)
+    assert code == 0
+    assert sum(row.amount for row in ledger.transactions.list(account=&quot;TXA&quot;)) == 0
+
+
+@pytest.mark.parametrize(&quot;argv&quot;, [[&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;B&quot;, &quot;1.00&quot;], [&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;B&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;, &quot;m&quot;, &quot;x&quot;]])
+def test_post_wrong_argument_count_is_a_usage_error(ledger, argv):
+    before = len(ledger.transactions.list())
+    code, out, _ = cli_runner(*argv)
+    assert code == 2
+    assert out == &quot;&quot;
+    assert len(ledger.transactions.list()) == before
+
+
+# txn amend
+
+
+def test_amend_changes_only_the_amount(ledger):
+    _store(ledger, 5001, 5000, memo=&quot;keep me&quot;)
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;5001&quot;, &quot;60.00&quot;)
+    assert code == 0
+    assert _rows(out)[1] == [&quot;5001&quot;, &quot;2026-04-01&quot;, &quot;TXA&quot;, &quot;TXC&quot;, &quot;60.00&quot;, &quot;keep me&quot;]
+    stored = ledger.transactions.get(txn_id=5001)
+    assert stored.amount == 6000
+    assert stored.date == &quot;2026-04-01&quot;
+    assert stored.memo == &quot;keep me&quot;
+
+
+def test_amend_absent_id_exits_4(ledger):
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;5999&quot;, &quot;1.00&quot;)
+    assert code == 4
+    assert out == &quot;&quot;
+
+
+@pytest.mark.parametrize(&quot;amount_text&quot;, [&quot;0&quot;, &quot;1.234&quot;, &quot;abc&quot;])
+def test_amend_invalid_amount_exits_3_and_keeps_the_amount(ledger, amount_text):
+    _store(ledger, 5002, 2500)
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;5002&quot;, amount_text)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert ledger.transactions.get(txn_id=5002).amount == 2500
+
+
+def test_amend_that_overdraws_exits_3_and_keeps_the_amount(ledger):
+    _store(ledger, 5003, 1000)
+    _store(ledger, 5004, -500)
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;5003&quot;, &quot;0.10&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert ledger.transactions.get(txn_id=5003).amount == 1000
+    assert ledger.transactions.get(txn_id=5004).amount == -500
+
+
+def test_amend_within_balance_is_allowed_when_deposit_is_reduced(ledger):
+    _store(ledger, 5005, 1000)
+    _store(ledger, 5006, -500)
+    code, _, _ = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;5005&quot;, &quot;5.00&quot;)
+    assert code == 0
+    assert ledger.transactions.get(txn_id=5005).amount == 500
+
+
+@pytest.mark.parametrize(&quot;argv&quot;, [[&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;], [&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;, &quot;2.00&quot;, &quot;extra&quot;]])
+def test_amend_wrong_argument_count_is_a_usage_error(ledger, argv):
+    code, out, _ = cli_runner(*argv)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+# txn delete
+
+
+def test_delete_removes_row_and_prints_deleted_and_id(ledger):
+    _store(ledger, 6001, 4550)
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;6001&quot;)
+    assert code == 0
+    assert _rows(out) == [[&quot;deleted&quot;], [&quot;6001&quot;]]
+    assert ledger.transactions.get(txn_id=6001) is None
+
+
+def test_delete_deposit_that_later_payment_depends_on_exits_3(ledger):
+    _store(ledger, 6002, 1000)
+    _store(ledger, 6003, -500)
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;6002&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert ledger.transactions.get(txn_id=6002) is not None
+    assert ledger.transactions.get(txn_id=6003) is not None
+    assert cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;6003&quot;)[0] == 0
+
+
+def test_delete_absent_id_exits_4_and_removes_nothing(ledger):
+    _store(ledger, 6004, 100)
+    before = len(ledger.transactions.list())
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;6999&quot;)
+    assert code == 4
+    assert out == &quot;&quot;
+    assert len(ledger.transactions.list()) == before
+
+
+def test_delete_non_integer_id_exits_3(ledger):
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;abc&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+
+
+@pytest.mark.parametrize(&quot;argv&quot;, [[&quot;txn&quot;, &quot;delete&quot;], [&quot;txn&quot;, &quot;delete&quot;, &quot;1&quot;, &quot;2&quot;]])
+def test_delete_wrong_argument_count_is_a_usage_error(ledger, argv):
+    code, out, _ = cli_runner(*argv)
+    assert code == 2
+    assert out == &quot;&quot;
+</pre></article>
+</main>
+</body>
+</html>

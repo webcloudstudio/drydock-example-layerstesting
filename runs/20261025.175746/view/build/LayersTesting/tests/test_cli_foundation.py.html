@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_cli_foundation.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_cli_foundation.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_cli_foundation.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;CLI foundation: executable, dispatch, exit codes, CSV output, validators, and money.
+
+Each declared acceptance assertion of FEATURE-CliFoundation has a test here, read back through the
+public interface. Finer tests cover the boundaries and the dispatch and output rules.
+&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import os
+import subprocess
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+
+from cli import errors
+from cli.database import database_location, open_ledger
+from cli.errors import LedgerError, Rejected
+from cli.money import format_amount, parse_amount
+from cli.output import TRANSACTION_HEADER, format_transaction, write_rows
+from cli.registry import COMMANDS, Command, register, resolve
+from cli.testing import cli_runner
+from cli.validate import validate_code, validate_date, validate_memo, validate_name
+from persistence import Database, PersistenceError
+
+APP_ROOT = Path(__file__).resolve().parent.parent
+
+
+@pytest.fixture
+def scratch_command(monkeypatch):
+    &quot;&quot;&quot;Register one throwaway command for a test and remove it afterwards.&quot;&quot;&quot;
+
+    def add(path, min_args, max_args, handler):
+        monkeypatch.setitem(COMMANDS, tuple(path), Command(tuple(path), min_args, max_args, handler))
+
+    return add
+
+
+# ── Executable and process-level behavior ───────────────────────────────────────────────────
+
+
+def test_ledger_executable_exists_at_application_root():
+    assert (APP_ROOT / &quot;ledger&quot;).is_file()
+    assert os.access(APP_ROOT / &quot;ledger&quot;, os.X_OK)
+
+
+def test_ledger_with_unknown_command_exits_2_and_writes_no_stdout():
+    result = subprocess.run(
+        [str(APP_ROOT / &quot;ledger&quot;), &quot;frobnicate&quot;],
+        capture_output=True,
+        text=True,
+        env={**os.environ},
+        cwd=APP_ROOT,
+    )
+    assert result.returncode == 2
+    assert result.stdout == &quot;&quot;
+
+
+# ── Usage errors ────────────────────────────────────────────────────────────────────────────
+
+
+def test_unknown_report_exits_2_with_no_stdout():
+    code, out, _ = cli_runner(&quot;report&quot;, &quot;nosuchreport&quot;)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+def test_unknown_table_load_exits_2_with_no_stdout():
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;nosuchtable&quot;, &quot;missing.csv&quot;)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+def test_wrong_argument_count_exits_2_with_no_stdout(scratch_command):
+    scratch_command((&quot;account&quot;, &quot;get&quot;), 1, 1, lambda db, args: [[&quot;x&quot;]])
+    scratch_command((&quot;count&quot;,), 0, 0, lambda db, args: [[&quot;x&quot;]])
+    code, out, _ = cli_runner(&quot;account&quot;, &quot;get&quot;)
+    assert (code, out) == (2, &quot;&quot;)
+    code, out, _ = cli_runner(&quot;count&quot;, &quot;extra&quot;)
+    assert (code, out) == (2, &quot;&quot;)
+
+
+def test_no_command_exits_2_with_no_stdout():
+    code, out, _ = cli_runner()
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+def test_usage_error_writes_one_line_to_stderr_only():
+    code, out, err = cli_runner(&quot;frobnicate&quot;)
+    assert code == 2
+    assert out == &quot;&quot;
+    assert err.count(&quot;\n&quot;) == 1
+
+
+# ── Dispatch ────────────────────────────────────────────────────────────────────────────────
+
+
+def test_resolve_matches_the_longest_registered_path(scratch_command):
+    scratch_command((&quot;account&quot;,), 0, 9, lambda db, args: [])
+    scratch_command((&quot;account&quot;, &quot;get&quot;), 1, 1, lambda db, args: [])
+    command, args = resolve([&quot;account&quot;, &quot;get&quot;, &quot;DRAWER1&quot;])
+    assert command.path == (&quot;account&quot;, &quot;get&quot;)
+    assert args == [&quot;DRAWER1&quot;]
+
+
+def test_register_rejects_a_duplicate_path(scratch_command):
+    scratch_command((&quot;dup&quot;,), 0, 0, lambda db, args: [])
+    with pytest.raises(ValueError):
+        register((&quot;dup&quot;,), 0, 0, lambda db, args: [])
+
+
+def test_register_rejects_an_empty_path():
+    with pytest.raises(ValueError):
+        register((), 0, 0, lambda db, args: [])
+
+
+def test_handler_receives_the_open_database_and_its_arguments(scratch_command, monkeypatch, tmp_path):
+    seen = {}
+
+    def handler(db, args):
+        seen[&quot;db&quot;] = db
+        seen[&quot;args&quot;] = args
+        return [[&quot;h&quot;]]
+
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, str(tmp_path / &quot;ledger.db&quot;))
+    scratch_command((&quot;probe&quot;,), 1, 2, handler)
+    code, out, _ = cli_runner(&quot;probe&quot;, &quot;A&quot;, &quot;B&quot;)
+    assert code == 0
+    assert isinstance(seen[&quot;db&quot;], Database)
+    assert seen[&quot;args&quot;] == [&quot;A&quot;, &quot;B&quot;]
+
+
+def test_handler_rows_are_written_as_csv_on_success(scratch_command, monkeypatch, tmp_path):
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, str(tmp_path / &quot;ledger.db&quot;))
+    scratch_command((&quot;rows&quot;,), 0, 0, lambda db, args: [[&quot;a&quot;, &quot;b&quot;], [&quot;1&quot;, &quot;2&quot;]])
+    code, out, err = cli_runner(&quot;rows&quot;)
+    assert code == 0
+    assert out == &quot;a,b\n1,2\n&quot;
+    assert err == &quot;&quot;
+
+
+def test_handler_error_exits_with_its_code_and_writes_nothing(scratch_command, monkeypatch, tmp_path):
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, str(tmp_path / &quot;ledger.db&quot;))
+
+    def handler(db, args):
+        raise errors.NotFound(&quot;no such account&quot;)
+
+    scratch_command((&quot;fail&quot;,), 0, 0, handler)
+    code, out, _ = cli_runner(&quot;fail&quot;)
+    assert code == 4
+    assert out == &quot;&quot;
+
+
+def test_persistence_failure_exits_1_and_writes_nothing(scratch_command, monkeypatch, tmp_path):
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, str(tmp_path / &quot;ledger.db&quot;))
+
+    def handler(db, args):
+        raise PersistenceError(&quot;store unavailable&quot;)
+
+    scratch_command((&quot;broken&quot;,), 0, 0, handler)
+    code, out, _ = cli_runner(&quot;broken&quot;)
+    assert code == 1
+    assert out == &quot;&quot;
+
+
+# ── Exit codes ──────────────────────────────────────────────────────────────────────────────
+
+
+def test_error_classes_carry_exit_codes_1_2_3_and_4():
+    assert issubclass(errors.Operational, errors.LedgerError)
+    assert issubclass(errors.Usage, errors.LedgerError)
+    assert issubclass(errors.Rejected, errors.LedgerError)
+    assert issubclass(errors.NotFound, errors.LedgerError)
+    assert errors.Operational(&quot;x&quot;).exit_code == 1
+    assert errors.Usage(&quot;x&quot;).exit_code == 2
+    assert errors.Rejected(&quot;x&quot;).exit_code == 3
+    assert errors.NotFound(&quot;x&quot;).exit_code == 4
+
+
+def test_ledger_error_base_is_an_exception_with_default_exit_code_1():
+    assert LedgerError.exit_code == 1
+    assert issubclass(LedgerError, Exception)
+
+
+# ── Money ───────────────────────────────────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(&quot;text&quot;, [&quot;5000.00&quot;, &quot;-12.50&quot;, &quot;45.07&quot;])
+def test_amount_round_trips_through_integer_cents(text):
+    cents = parse_amount(text)
+    assert isinstance(cents, int)
+    assert format_amount(cents) == text
+
+
+def test_amount_parses_to_exact_cents():
+    assert parse_amount(&quot;5000.00&quot;) == 500000
+    assert parse_amount(&quot;-12.50&quot;) == -1250
+    assert parse_amount(&quot;45.07&quot;) == 4507
+
+
+@pytest.mark.parametrize(
+    (&quot;short&quot;, &quot;padded&quot;), [(&quot;12.5&quot;, &quot;12.50&quot;), (&quot;7&quot;, &quot;7.00&quot;), (&quot;-3.1&quot;, &quot;-3.10&quot;)]
+)
+def test_amount_short_forms_equal_their_padded_form(short, padded):
+    assert parse_amount(short) == parse_amount(padded)
+
+
+@pytest.mark.parametrize(&quot;text&quot;, [&quot;0&quot;, &quot;0.00&quot;, &quot;-0&quot;, &quot;1.234&quot;, &quot;abc&quot;, &quot;&quot;, &quot;1,00&quot;, &quot;+5.00&quot;, &quot;.5&quot;])
+def test_amount_rejections_exit_with_code_3(text):
+    with pytest.raises(Rejected) as caught:
+        parse_amount(text)
+    assert caught.value.exit_code == 3
+
+
+def test_format_amount_has_two_decimals_and_no_separator():
+    assert format_amount(0) == &quot;0.00&quot;
+    assert format_amount(5) == &quot;0.05&quot;
+    assert format_amount(-5) == &quot;-0.05&quot;
+    assert format_amount(123456789) == &quot;1234567.89&quot;
+
+
+# ── Validators ──────────────────────────────────────────────────────────────────────────────
+
+
+def test_valid_date_is_returned_unchanged():
+    assert validate_date(&quot;2026-02-28&quot;) == &quot;2026-02-28&quot;
+
+
+@pytest.mark.parametrize(&quot;bad&quot;, [&quot;2026-02-30&quot;, &quot;2026-13-01&quot;, &quot;26-01-01&quot;, &quot;2026/01/01&quot;, &quot;&quot;, &quot;20260101&quot;])
+def test_invalid_dates_are_rejected(bad):
+    with pytest.raises(Rejected):
+        validate_date(bad)
+
+
+@pytest.mark.parametrize(&quot;good&quot;, [&quot;A&quot;, &quot;DRAWER1&quot;, &quot;ABCDEFGHIJKL&quot;])
+def test_codes_of_one_to_twelve_characters_are_accepted(good):
+    assert validate_code(good) == good
+
+
+@pytest.mark.parametrize(&quot;bad&quot;, [&quot;&quot;, &quot;lower&quot;, &quot;ABCDEFGHIJKLM&quot;, &quot;A-B&quot;, &quot;A B&quot;, &quot;A\n&quot;])
+def test_invalid_codes_are_rejected(bad):
+    with pytest.raises(Rejected):
+        validate_code(bad)
+
+
+def test_name_boundaries_are_accepted():
+    assert validate_name(&quot;Front Drawer&quot;) == &quot;Front Drawer&quot;
+    assert validate_name(&quot;n&quot; * 40) == &quot;n&quot; * 40
+
+
+@pytest.mark.parametrize(&quot;bad&quot;, [&quot;&quot;, &quot;n&quot; * 41, &quot;a,b&quot;, &quot;a\nb&quot;, &quot;a\rb&quot;])
+def test_invalid_names_are_rejected(bad):
+    with pytest.raises(Rejected):
+        validate_name(bad)
+
+
+def test_memo_boundaries_are_accepted():
+    assert validate_memo(&quot;&quot;) == &quot;&quot;
+    assert validate_memo(&quot;m&quot; * 60) == &quot;m&quot; * 60
+
+
+@pytest.mark.parametrize(&quot;bad&quot;, [&quot;m&quot; * 61, &quot;a,b&quot;, &quot;a\nb&quot;])
+def test_invalid_memos_are_rejected(bad):
+    with pytest.raises(Rejected):
+        validate_memo(bad)
+
+
+# ── CSV output and transaction rows ─────────────────────────────────────────────────────────
+
+
+def test_transaction_row_formats_to_six_csv_fields():
+    row = SimpleNamespace(
+        txn_id=77, date=&quot;2026-04-01&quot;, account=&quot;DRAWER1&quot;, category=&quot;SALES&quot;, amount=4550, memo=&quot;walk in&quot;
+    )
+    assert list(TRANSACTION_HEADER) == [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;]
+    assert format_transaction(row) == [&quot;77&quot;, &quot;2026-04-01&quot;, &quot;DRAWER1&quot;, &quot;SALES&quot;, &quot;45.50&quot;, &quot;walk in&quot;]
+
+
+def test_empty_memo_leaves_a_trailing_empty_field():
+    row = SimpleNamespace(txn_id=1, date=&quot;2026-04-01&quot;, account=&quot;A&quot;, category=&quot;B&quot;, amount=-100, memo=&quot;&quot;)
+    assert format_transaction(row)[-1] == &quot;&quot;
+
+
+def test_write_rows_joins_fields_with_commas_and_newlines(capsys):
+    write_rows([[&quot;a&quot;, &quot;b&quot;], [&quot;c&quot;, &quot;&quot;]])
+    assert capsys.readouterr().out == &quot;a,b\nc,\n&quot;
+
+
+def test_write_rows_writes_nothing_for_no_rows(capsys):
+    write_rows([])
+    assert capsys.readouterr().out == &quot;&quot;
+
+
+# ── Store location ──────────────────────────────────────────────────────────────────────────
+
+
+def test_database_url_takes_precedence(monkeypatch):
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, &quot;/tmp/url.db&quot;)
+    monkeypatch.setenv(&quot;DATABASE_PATH&quot;, &quot;/tmp/path.db&quot;)
+    assert database_location() == &quot;/tmp/url.db&quot;
+
+
+def test_database_path_is_used_when_url_is_unset(monkeypatch):
+    monkeypatch.delenv(&quot;DATABASE_URL&quot;, raising=False)
+    monkeypatch.setenv(&quot;DATABASE_PATH&quot;, &quot;/tmp/path.db&quot;)
+    assert database_location() == &quot;/tmp/path.db&quot;
+
+
+def test_default_database_path_is_data_app_db(monkeypatch):
+    monkeypatch.delenv(&quot;DATABASE_URL&quot;, raising=False)
+    monkeypatch.delenv(&quot;DATABASE_PATH&quot;, raising=False)
+    assert database_location() == &quot;data/app.db&quot;
+
+
+def test_open_ledger_returns_the_shipped_database(monkeypatch, tmp_path):
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, str(tmp_path / &quot;ledger.db&quot;))
+    with open_ledger() as db:
+        assert isinstance(db, Database)
+</pre></article>
+</main>
+</body>
+</html>

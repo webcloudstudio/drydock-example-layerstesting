@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/persistence/testing.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/persistence/testing.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/persistence/testing.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Generated fixtures over the configured, already provisioned application store.&quot;&quot;&quot;
+
+from contextlib import contextmanager
+import os
+from pathlib import Path
+
+from .schema import open_database
+
+
+@contextmanager
+def committed_session():
+    &quot;&quot;&quot;Use normal autocommit for project tests; under the acceptance harness, its transaction.&quot;&quot;&quot;
+    configured = os.environ.get(&quot;DATABASE_URL&quot;) or os.environ.get(&quot;DATABASE_PATH&quot;) or &quot;data/app.db&quot;
+    if not configured.startswith((&quot;postgres://&quot;, &quot;postgresql://&quot;)):
+        if not Path(configured.split(&quot;://&quot;, 1)[-1]).is_file():
+            raise RuntimeError(&quot;persistence store missing; rebuild the DATABASE step&quot;)
+    database = open_database(configured)
+    try:
+        yield database
+    finally:
+        database.close()
+
+
+@contextmanager
+def db_session():
+    &quot;&quot;&quot;Share this connection with the feature; always roll back, never provision schema.
+
+    Under the acceptance harness the rollback is the harness&#x27;s, at the end of the criterion, so
+    a request made after this block still sees the setup.
+    &quot;&quot;&quot;
+    with committed_session() as database:
+        with database.rollback_session():
+            yield database
+</pre></article>
+</main>
+</body>
+</html>

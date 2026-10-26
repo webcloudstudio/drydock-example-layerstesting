@@ -1,0 +1,59 @@
+# FEATURE: Release Verification
+
+| Field | Value |
+|-------|-------|
+| Version | 20261025 V1 |
+| Description | Terminal gate that runs the complete supplied grader against the finished ledger. |
+| Depends On | FEATURE-LoadTransactions.md, FEATURE-ReportBalances.md, FEATURE-ReportCategories.md, FEATURE-ReportMonthly.md, FEATURE-AccountAdd.md, FEATURE-AccountGet.md, FEATURE-AccountRename.md, FEATURE-AccountDelete.md, FEATURE-TxnPost.md, FEATURE-TxnGet.md, FEATURE-TxnAmend.md, FEATURE-TxnDelete.md, FEATURE-Transfer.md, FEATURE-Init.md, FEATURE-Count.md |
+| Provides | release verification of `sh sources/run.sh` |
+| Consumes | ledger init, ledger count, ledger load, ledger account, ledger txn, ledger transfer, ledger report |
+
+## Purpose
+
+This is the assembly story that runs last. Every command story has closed, so the supplied
+end-to-end grader `sources/run.sh` can exercise the whole ledger. The grader creates a fresh
+database, runs `./ledger init`, loads the seed files, and runs 43 checks comparing each command's
+exit code and standard output with a known answer. Standard error is never compared. The grader
+exits zero only when every check passes.
+
+The grader is a read-only scoring asset staged verbatim at `sources/run.sh` in the build
+directory, along with the four seed files. This story does not modify, regenerate, or filter any of
+them. The ledger it grades reads no grader or seed file; seed data reaches the database only
+through `ledger load`.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md and exercised only through the `ledger` executable.
+
+## Programmatic Acceptance
+
+=== AC release-full-grader ===
+Intent: The completed ledger passes every check of the supplied end-to-end grader, which exits zero only when all 43 checks pass.
+Suite: full
+Requires: executable=sh; scope=test
+
+import os
+import subprocess
+import sys
+
+result = subprocess.run(
+    ["sh", "sources/run.sh"],
+    capture_output=True,
+    text=True,
+    env={**os.environ},
+)
+print(result.stdout)
+print(result.stderr, file=sys.stderr)
+assert result.returncode == 0
+=== END AC release-full-grader ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Do not modify, rewrite, regenerate, filter, or substitute `sources/run.sh` or any seed file under `sources/`.
+- Only this terminal story runs the whole grader; no other story runs it unscoped.
+- Application code never reads `sources/run.sh` or a seed file and never embeds a report answer; every report value comes from a database query.
+- The grader's exit status is the verdict; its printed tally is not asserted.

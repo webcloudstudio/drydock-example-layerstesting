@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-TxnGet.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-TxnGet.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-TxnGet.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Txn Get</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>The <code>ledger txn get</code> command prints one stored transaction row by id.</td></tr><tr><td>Depends On</td><td>FEATURE-CliFoundation.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger txn get</td></tr><tr><td>Consumes</td><td>transactions.get</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger txn get &lt;id&gt;</code> shows one stored transaction so an operator can confirm what was recorded.</p>
+<h2>Trigger</h2>
+<p>An operator runs <code>./ledger txn get &lt;id&gt;</code>.</p>
+<h2>Sequence</h2>
+<ol><li>Reject a wrong argument count with exit 2.</li><li>Reject an id that is not an integer with exit 3.</li><li>Read the row with <code>transactions.get</code>. An absent id exits 4.</li><li>Print the header row and the row, with the amount written with exactly two decimals. Exit 0.</li></ol>
+<h2>Output</h2>
+<pre><code>txn_id,date,account,category,amount,memo
+&lt;id&gt;,&lt;date&gt;,&lt;account&gt;,&lt;category&gt;,&lt;amount with two decimals&gt;,&lt;memo&gt;</code></pre>
+<h2>Reads</h2>
+<ul><li><code>transactions.get</code></li></ul>
+<h2>Writes</h2>
+<ul><li>None.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-TRANSACTIONS-002</code> — read: retrieve a transaction by id - supplies: <code>txn_id</code> - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC txn-get-present ===<br>Intent: Getting a stored transaction prints its header and a row carrying the stored values with a two-decimal amount.</p>
+<p>import csv import io from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;TGET1&quot; cat = &quot;TGCAT1&quot; when = &quot;2026-04-01&quot; memo = &quot;get probe&quot; deposit_cents = 1234 deposit_text = &quot;12.34&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Get Account&quot;) if db.categories.get(category=cat) is None: db.categories.create(category=cat, description=&quot;Get Category&quot;) txn_id = max([r.txn_id for r in db.transactions.list()] or [0]) + 1 db.transactions.create( txn_id=txn_id, date=when, account=acct, category=cat, amount=deposit_cents, memo=memo ) code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, str(txn_id)) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;] assert rows[1] == [str(txn_id), when, acct, cat, deposit_text, memo] assert len(rows) == 2 === END AC txn-get-present ===</p>
+<p>=== AC txn-get-negative-amount ===<br>Intent: A negative stored amount prints with a leading minus sign and two decimals.</p>
+<p>import csv import io from decimal import Decimal from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;TGET2&quot; cat = &quot;TGCAT2&quot; cents = -1250 with db_session() as db: db.accounts.create(account=acct, name=&quot;Get Account&quot;) if db.categories.get(category=cat) is None: db.categories.create(category=cat, description=&quot;Get Category&quot;) txn_id = max([r.txn_id for r in db.transactions.list()] or [0]) + 1 db.transactions.create( txn_id=txn_id, date=&quot;2026-04-02&quot;, account=acct, category=cat, amount=cents, memo=&quot;&quot; ) code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, str(txn_id)) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) shown = rows[1][4] assert shown.startswith(&quot;-&quot;) assert len(shown.split(&quot;.&quot;)[1]) == 2 assert Decimal(shown) * 100 == cents === END AC txn-get-negative-amount ===</p>
+<p>=== AC txn-get-absent ===<br>Intent: Getting an id that is not stored exits 4 with nothing on standard output.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: absent = max([r.txn_id for r in db.transactions.list()] or [0]) + 1000 code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, str(absent)) print(err) assert code == 4 assert out == &quot;&quot; === END AC txn-get-absent ===</p>
+<p>=== AC txn-get-bad-arguments ===<br>Intent: A non-integer id exits 3 and a wrong argument count exits 2.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;abc&quot;) assert code == 3 assert out == &quot;&quot; code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;) assert code == 2 assert out == &quot;&quot; code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;, &quot;2&quot;) assert code == 2 assert out == &quot;&quot; === END AC txn-get-bad-arguments ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The command is read-only and never writes.</li><li>The amount is formatted from integer cents without floating point.</li><li>Diagnostics go to standard error only.</li></ul></article>
+</main>
+</body>
+</html>

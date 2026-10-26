@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/validate.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/validate.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/validate.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Input validators shared by every command. Each returns its value or raises ``Rejected``.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import re
+from datetime import date
+
+from cli.errors import Rejected
+
+CODE_PATTERN = re.compile(r&quot;[A-Z0-9]{1,12}&quot;)
+DATE_PATTERN = re.compile(r&quot;[0-9]{4}-[0-9]{2}-[0-9]{2}&quot;)
+TXN_ID_PATTERN = re.compile(r&quot;-?[0-9]+&quot;)
+# Commas would split a CSV field and line breaks would split a row, so neither may appear in text.
+FORBIDDEN_TEXT = (&quot;,&quot;, &quot;\n&quot;, &quot;\r&quot;)
+
+
+def validate_code(text: str) -&gt; str:
+    &quot;&quot;&quot;An account or category code: 1 to 12 characters from ``A-Z`` and ``0-9``.&quot;&quot;&quot;
+    if not CODE_PATTERN.fullmatch(text):
+        raise Rejected(f&quot;code must be 1 to 12 characters from A-Z and 0-9: {text!r}&quot;)
+    return text
+
+
+def validate_name(text: str) -&gt; str:
+    &quot;&quot;&quot;A name: 1 to 40 characters, with no comma or line break.&quot;&quot;&quot;
+    return _validate_text(&quot;name&quot;, text, 1, 40)
+
+
+def validate_description(text: str) -&gt; str:
+    &quot;&quot;&quot;A category description: 1 to 40 characters, with no comma or line break.&quot;&quot;&quot;
+    return _validate_text(&quot;description&quot;, text, 1, 40)
+
+
+def validate_memo(text: str) -&gt; str:
+    &quot;&quot;&quot;A memo: 0 to 60 characters, with no comma or line break.&quot;&quot;&quot;
+    return _validate_text(&quot;memo&quot;, text, 0, 60)
+
+
+def validate_txn_id(text: str) -&gt; int:
+    &quot;&quot;&quot;A transaction id: an optionally signed run of digits, returned as an ``int``.&quot;&quot;&quot;
+    if not TXN_ID_PATTERN.fullmatch(text):
+        raise Rejected(f&quot;txn_id must be an integer: {text!r}&quot;)
+    return int(text)
+
+
+def validate_date(text: str) -&gt; str:
+    &quot;&quot;&quot;A real calendar date written ``YYYY-MM-DD``.&quot;&quot;&quot;
+    if DATE_PATTERN.fullmatch(text):
+        try:
+            date.fromisoformat(text)
+            return text
+        except ValueError:
+            pass
+    raise Rejected(f&quot;date must be a real calendar date as YYYY-MM-DD: {text!r}&quot;)
+
+
+def _validate_text(label: str, text: str, minimum: int, maximum: int) -&gt; str:
+    if not minimum &lt;= len(text) &lt;= maximum:
+        raise Rejected(f&quot;{label} must be {minimum} to {maximum} characters&quot;)
+    if any(mark in text for mark in FORBIDDEN_TEXT):
+        raise Rejected(f&quot;{label} must not contain a comma or line break&quot;)
+    return text
+</pre></article>
+</main>
+</body>
+</html>

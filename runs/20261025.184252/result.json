@@ -1,0 +1,126 @@
+{
+  "acceptance_status": "NOT_RUN",
+  "assertions": {
+    "failed": 0,
+    "harness_defects": 0,
+    "passed": 0,
+    "product_defects": 0,
+    "unverified": 0
+  },
+  "attestations": [],
+  "build_passes": 0,
+  "commands": [
+    {
+      "argv": [
+        "/mnt/c/Users/barlo/projects/drydock/.venv/bin/python",
+        "-m",
+        "drydock",
+        "init",
+        "LayersTesting"
+      ],
+      "cwd": "workspace",
+      "elapsed_ms": 3162,
+      "label": "01-init",
+      "llm_executions": [],
+      "returncode": 0,
+      "stderr_path": "evidence/commands/01-init.stderr.log",
+      "stdout_path": "evidence/commands/01-init.stdout.log"
+    },
+    {
+      "argv": [
+        "/mnt/c/Users/barlo/projects/drydock/.venv/bin/python",
+        "-m",
+        "drydock",
+        "import",
+        "LayersTesting",
+        "sources",
+        "--format",
+        "markdown"
+      ],
+      "cwd": "workspace",
+      "elapsed_ms": 5422,
+      "label": "02-import-sources",
+      "llm_executions": [],
+      "returncode": 0,
+      "stderr_path": "evidence/commands/02-import-sources.stderr.log",
+      "stdout_path": "evidence/commands/02-import-sources.stdout.log"
+    },
+    {
+      "argv": [
+        "/mnt/c/Users/barlo/projects/drydock/.venv/bin/python",
+        "-m",
+        "drydock",
+        "analyze",
+        "LayersTesting"
+      ],
+      "cwd": "workspace",
+      "elapsed_ms": 135360,
+      "label": "03-analyze",
+      "llm_executions": [
+        "20261025.184303.755Z-e928d1bd"
+      ],
+      "returncode": 0,
+      "stderr_path": "evidence/commands/03-analyze.stderr.log",
+      "stdout_path": "evidence/commands/03-analyze.stdout.log"
+    },
+    {
+      "argv": [
+        "/mnt/c/Users/barlo/projects/drydock/.venv/bin/python",
+        "-m",
+        "drydock",
+        "plan",
+        "LayersTesting",
+        "--override",
+        "--plan-override-model",
+        "sonnet"
+      ],
+      "cwd": "workspace",
+      "elapsed_ms": 98161,
+      "label": "04-plan",
+      "llm_executions": [
+        "20261025.184521.205Z-027e677b",
+        "20261025.184651.898Z-cde29637"
+      ],
+      "returncode": 1,
+      "stderr_path": "evidence/commands/04-plan.stderr.log",
+      "stdout_path": "evidence/commands/04-plan.stdout.log"
+    }
+  ],
+  "degraded": [],
+  "elapsed_ms": 244153,
+  "environment": {
+    "drydock_version": "0.8.0",
+    "effort": "",
+    "finished_at": "2026-10-25T18:46:57.202972Z",
+    "git_commit": "753584d09f325eaa545e93d390bfbf56a8e0f254",
+    "model": "claude-haiku-5-5, claude-sonnet-5-5",
+    "plan_model": "sonnet",
+    "platform": "Linux-6.6.87.2-microsoft-standard-WSL2-x86_64-with-glibc2.35",
+    "provider": "claude",
+    "python_version": "3.12.13",
+    "requested_model": "claude-haiku-5-5",
+    "started_at": "2026-10-25T18:42:52.893394Z"
+  },
+  "error": "LayersTesting: stopped at plan: provider rate limit: provider rate limit 429: You've hit your session limit \u00b7 resets 4:50pm (America/New_York) (execution 20261025.184651.898Z-cde29637)",
+  "evidence_dir": "evidence",
+  "execution_status": "ERROR",
+  "expected_verdict": "PASSED",
+  "fixture": "LayersTesting",
+  "observed_verdict": "ERROR",
+  "output_dir": ".",
+  "release_verdict": "",
+  "resumed_from": "",
+  "run_id": "20261025.184252",
+  "score_exit_codes": {},
+  "status": "failed",
+  "target": "LayersTesting",
+  "usage": {
+    "cached_input_tokens": 3916,
+    "calls": 3,
+    "fresh_input_tokens": 4,
+    "input_tokens": 3920,
+    "invalid_records": 0,
+    "llm_elapsed_ms": 224534,
+    "output_tokens": 45194
+  }
+}

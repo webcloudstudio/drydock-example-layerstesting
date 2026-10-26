@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/commands/transfer.py</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/commands/transfer.py</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../build/LayersTesting/cli/commands/transfer.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger transfer &lt;from&gt; &lt;to&gt; &lt;amount&gt; &lt;date&gt;``: move cash between two accounts, both rows or neither.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+from cli.balance import check_balances, next_txn_id
+from cli.errors import Rejected
+from cli.money import parse_amount
+from cli.output import TRANSACTION_HEADER, format_transaction
+from cli.registry import register
+from cli.validate import validate_code, validate_date
+from cli.writes import store_transactions
+
+TRANSFER_CATEGORY = &quot;TRANSFER&quot;
+
+
+def transfer(db, args: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Every check completes before the first write; the two rows are stored as one group.&quot;&quot;&quot;
+    source = validate_code(args[0])
+    destination = validate_code(args[1])
+    cents = parse_amount(args[2])
+    when = validate_date(args[3])
+    if cents &lt; 0:
+        raise Rejected(&quot;transfer amount must be positive&quot;)
+    if source == destination:
+        raise Rejected(&quot;transfer needs two different accounts&quot;)
+    for code in (source, destination):
+        if db.accounts.get(account=code) is None:
+            raise Rejected(f&quot;no account {code}&quot;)
+    if db.categories.get(category=TRANSFER_CATEGORY) is None:
+        raise Rejected(f&quot;no category {TRANSFER_CATEGORY}&quot;)
+    check_balances(db, {source: -cents, destination: cents})
+    first = next_txn_id(db)
+    stored = store_transactions(
+        db,
+        [
+            {
+                &quot;txn_id&quot;: first, &quot;date&quot;: when, &quot;account&quot;: source, &quot;category&quot;: TRANSFER_CATEGORY,
+                &quot;amount&quot;: -cents, &quot;memo&quot;: f&quot;transfer to {destination}&quot;,
+            },
+            {
+                &quot;txn_id&quot;: first + 1, &quot;date&quot;: when, &quot;account&quot;: destination, &quot;category&quot;: TRANSFER_CATEGORY,
+                &quot;amount&quot;: cents, &quot;memo&quot;: f&quot;transfer from {source}&quot;,
+            },
+        ],
+    )
+    return [list(TRANSACTION_HEADER)] + [format_transaction(row) for row in stored]
+
+
+register((&quot;transfer&quot;,), 4, 4, transfer)
+</pre></article>
+</main>
+</body>
+</html>

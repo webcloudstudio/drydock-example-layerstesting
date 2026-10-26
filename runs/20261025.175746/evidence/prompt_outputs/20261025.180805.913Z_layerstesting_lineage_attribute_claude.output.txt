@@ -1,0 +1,30 @@
+<requirement name="seed-categories" stories="database,load-categories">
+category,description
+OPENING,Opening balance
+PAYROLL,Payroll
+REFUND,Customer refunds
+RENT,Rent
+SALES,Sales receipts
+SUPPLY,Supplies
+TRANSFER,Internal transfer
+</requirement>
+<unattached story="python-foundation"/>
+<unattached story="cli-foundation"/>
+<unattached story="balance-rules"/>
+<unattached story="init-command"/>
+<unattached story="count-command"/>
+<unattached story="load-accounts"/>
+<unattached story="load-transactions"/>
+<unattached story="account-get"/>
+<unattached story="txn-get"/>
+<unattached story="account-rename"/>
+<unattached story="account-delete"/>
+<unattached story="account-add"/>
+<unattached story="txn-delete"/>
+<unattached story="report-monthly"/>
+<unattached story="txn-amend"/>
+<unattached story="report-balances"/>
+<unattached story="report-categories"/>
+<unattached story="txn-post"/>
+<unattached story="transfer-command"/>
+<unattached story="release-verification"/>

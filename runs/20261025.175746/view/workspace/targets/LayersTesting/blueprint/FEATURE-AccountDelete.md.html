@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-AccountDelete.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-AccountDelete.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-AccountDelete.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Account Delete</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger account delete</code>, which removes an account that has no transactions.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-CliFoundation.md, FEATURE-BalanceRules.md</td></tr><tr><td>Provides</td><td>ledger account delete</td></tr><tr><td>Consumes</td><td>accounts.get, accounts.delete, transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Remove an unused account. An account that still has transactions is protected.</p>
+<h2>Trigger</h2>
+<p><code>./ledger account delete &lt;code&gt;</code></p>
+<h2>Behavior</h2>
+<ol><li>Require exactly one argument after <code>account delete</code>; otherwise exit 2.</li><li>Look up the account with <code>accounts.get</code>. An absent code exits 4.</li><li>List the account&#x27;s transactions with <code>transactions.list</code>. If any exist, exit 3 and remove nothing.</li><li>Delete the account with <code>accounts.delete</code>.</li><li>Print <code>deleted</code> and then the code, one per line.</li></ol>
+<h2>Exit Codes</h2>
+<div class="scroll"><table><thead><tr><th>Code</th><th>Condition</th></tr></thead><tbody><tr><td>0</td><td>Account deleted</td></tr><tr><td>1</td><td>Database unreachable</td></tr><tr><td>2</td><td>Wrong argument count</td></tr><tr><td>3</td><td>Account has transactions</td></tr><tr><td>4</td><td>Account absent</td></tr></tbody></table></div>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNTS-002</code> — read: get an account by code - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-ACCOUNTS-005</code> — write: delete an account - supplies: <code>account</code> - returns: <code>account</code></li><li><code>FEATURE-TRANSACTIONS-003</code> — read: list transactions for an account - supplies: <code>account</code> - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC account-delete-unused ===<br>Intent: Deleting an account with no transactions exits 0, prints deleted and the code, and removes it.</p>
+<p>import csv import io</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;UTDEL1&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Delete Probe&quot;) code, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, acct) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows == [[&quot;deleted&quot;], [acct]] assert db.accounts.get(account=acct) is None === END AC account-delete-unused ===</p>
+<p>=== AC account-delete-in-use ===<br>Intent: Deleting an account that has transactions exits 3, prints nothing, and keeps the account and its transaction.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;UTDEL2&quot; cat = &quot;UTDELC2&quot; txn_id = 950001 with db_session() as db: db.accounts.create(account=acct, name=&quot;In Use&quot;) db.categories.create(category=cat, description=&quot;Delete Probe&quot;) db.transactions.create( txn_id=txn_id, date=&quot;2098-01-01&quot;, account=acct, category=cat, amount=900, memo=&quot;d&quot; ) code, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, acct) assert code == 3 assert out == &quot;&quot; assert db.accounts.get(account=acct) is not None assert db.transactions.get(txn_id=txn_id) is not None === END AC account-delete-in-use ===</p>
+<p>=== AC account-delete-absent ===<br>Intent: Deleting an absent account exits 4 with nothing on standard output.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>absent = &quot;UTDELNONE&quot; with db_session() as db: assert db.accounts.get(account=absent) is None code, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, absent) assert code == 4 assert out == &quot;&quot; === END AC account-delete-absent ===</p>
+<p>=== AC account-delete-then-get ===<br>Intent: After a successful delete, account get for the same code exits 4.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;UTDEL3&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Gone Soon&quot;) code, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, acct) assert code == 0 code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, acct) assert code == 4 === END AC account-delete-then-get ===</p>
+<p>=== AC account-delete-usage ===<br>Intent: A wrong argument count exits 2 and removes nothing.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;UTDEL4&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Usage Probe&quot;) code, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;) assert code == 2 code, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, acct, &quot;extra&quot;) assert code == 2 assert db.accounts.get(account=acct) is not None === END AC account-delete-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>An account with transactions is never removed.</li><li>A refused or failed command removes nothing and writes nothing to standard output.</li></ul></article>
+</main>
+</body>
+</html>

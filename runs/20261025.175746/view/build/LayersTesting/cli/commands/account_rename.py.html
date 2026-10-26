@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/commands/account_rename.py</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/commands/account_rename.py</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../build/LayersTesting/cli/commands/account_rename.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger account rename &lt;code&gt; &lt;name&gt;``: change an account&#x27;s name and print the updated row.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+from cli.balance import account_summary
+from cli.errors import NotFound
+from cli.output import ACCOUNT_HEADER, format_account
+from cli.registry import register
+from cli.validate import validate_name
+
+
+def account_rename(db, args: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Validate the name and the account before the single write; only the name changes.&quot;&quot;&quot;
+    code = args[0]
+    name = validate_name(args[1])
+    if db.accounts.get(account=code) is None:
+        raise NotFound(f&quot;no account {code}&quot;)
+    updated = db.accounts.update(account=code, name=name)
+    count, balance = account_summary(db, code)
+    return [list(ACCOUNT_HEADER), format_account(updated.account, updated.name, count, balance)]
+
+
+register((&quot;account&quot;, &quot;rename&quot;), 2, 2, account_rename)
+</pre></article>
+</main>
+</body>
+</html>

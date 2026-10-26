@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/VERIFICATION.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/VERIFICATION.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/VERIFICATION.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Release Verification</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>Terminal gate that runs the complete supplied grader against the finished ledger.</td></tr><tr><td>Depends On</td><td>FEATURE-LoadTransactions.md, FEATURE-ReportBalances.md, FEATURE-ReportCategories.md, FEATURE-ReportMonthly.md, FEATURE-AccountAdd.md, FEATURE-AccountGet.md, FEATURE-AccountRename.md, FEATURE-AccountDelete.md, FEATURE-TxnPost.md, FEATURE-TxnGet.md, FEATURE-TxnAmend.md, FEATURE-TxnDelete.md, FEATURE-Transfer.md, FEATURE-Init.md, FEATURE-Count.md</td></tr><tr><td>Provides</td><td>release verification of <code>sh sources/run.sh</code></td></tr><tr><td>Consumes</td><td>ledger init, ledger count, ledger load, ledger account, ledger txn, ledger transfer, ledger report</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>This is the assembly story that runs last. Every command story has closed, so the supplied end-to-end grader <code>sources/run.sh</code> can exercise the whole ledger. The grader creates a fresh database, runs <code>./ledger init</code>, loads the seed files, and runs 43 checks comparing each command&#x27;s exit code and standard output with a known answer. Standard error is never compared. The grader exits zero only when every check passes.</p>
+<p>The grader is a read-only scoring asset staged verbatim at <code>sources/run.sh</code> in the build directory, along with the four seed files. This story does not modify, regenerate, or filter any of them. The ledger it grades reads no grader or seed file; seed data reaches the database only through <code>ledger load</code>.</p>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md and exercised only through the <code>ledger</code> executable.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC release-full-grader ===<br>Intent: The completed ledger passes every check of the supplied end-to-end grader, which exits zero only when all 43 checks pass.<br>Suite: full<br>Requires: executable=sh; scope=test</p>
+<p>import os import subprocess import sys</p>
+<p>result = subprocess.run( [&quot;sh&quot;, &quot;sources/run.sh&quot;], capture_output=True, text=True, env={**os.environ}, ) print(result.stdout) print(result.stderr, file=sys.stderr) assert result.returncode == 0 === END AC release-full-grader ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Do not modify, rewrite, regenerate, filter, or substitute <code>sources/run.sh</code> or any seed file under <code>sources/</code>.</li><li>Only this terminal story runs the whole grader; no other story runs it unscoped.</li><li>Application code never reads <code>sources/run.sh</code> or a seed file and never embeds a report answer; every report value comes from a database query.</li><li>The grader&#x27;s exit status is the verdict; its printed tally is not asserted.</li></ul></article>
+</main>
+</body>
+</html>

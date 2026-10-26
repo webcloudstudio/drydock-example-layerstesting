@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_init.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_init.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_init.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger init``: reset the ledger to empty, silently, with no DDL.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+from cli.testing import cli_runner
+
+
+def _seed(db) -&gt; None:
+    db.accounts.create(account=&quot;UTINI1&quot;, name=&quot;Init Probe&quot;)
+    db.categories.create(category=&quot;UTINIC1&quot;, description=&quot;Init Category&quot;)
+    db.transactions.create(
+        txn_id=970001, date=&quot;2026-04-01&quot;, account=&quot;UTINI1&quot;, category=&quot;UTINIC1&quot;, amount=500, memo=&quot;x&quot;
+    )
+
+
+def test_init_removes_every_account_category_and_transaction(scratch_db):
+    _seed(scratch_db)
+    code, out, _ = cli_runner(&quot;init&quot;)
+    assert code == 0
+    assert out == &quot;&quot;
+    assert scratch_db.transactions.list() == []
+    assert scratch_db.categories.list() == []
+    assert scratch_db.accounts.list() == []
+
+
+def test_init_on_an_empty_ledger_still_exits_zero_and_stays_empty(scratch_db):
+    first = cli_runner(&quot;init&quot;)
+    second = cli_runner(&quot;init&quot;)
+    assert first[0] == 0
+    assert second[0] == 0
+    assert second[1] == &quot;&quot;
+    assert scratch_db.accounts.list() == []
+    assert scratch_db.categories.list() == []
+    assert scratch_db.transactions.list() == []
+
+
+def test_init_twice_leaves_the_same_empty_ledger(scratch_db):
+    _seed(scratch_db)
+    cli_runner(&quot;init&quot;)
+    cli_runner(&quot;init&quot;)
+    assert scratch_db.accounts.list() == []
+
+
+def test_init_writes_nothing_to_standard_error_on_success(scratch_db):
+    _seed(scratch_db)
+    code, _, err = cli_runner(&quot;init&quot;)
+    assert code == 0
+    assert err == &quot;&quot;
+
+
+def test_init_with_an_extra_argument_is_a_usage_error_that_changes_nothing(scratch_db):
+    scratch_db.accounts.create(account=&quot;UTINI2&quot;, name=&quot;Kept&quot;)
+    code, out, _ = cli_runner(&quot;init&quot;, &quot;extra&quot;)
+    assert code == 2
+    assert out == &quot;&quot;
+    assert scratch_db.accounts.get(account=&quot;UTINI2&quot;) is not None
+
+
+def test_init_keeps_the_schema_so_rows_can_be_added_again(scratch_db):
+    _seed(scratch_db)
+    cli_runner(&quot;init&quot;)
+    scratch_db.accounts.create(account=&quot;UTINI3&quot;, name=&quot;Again&quot;)
+    assert scratch_db.accounts.get(account=&quot;UTINI3&quot;).name == &quot;Again&quot;
+</pre></article>
+</main>
+</body>
+</html>

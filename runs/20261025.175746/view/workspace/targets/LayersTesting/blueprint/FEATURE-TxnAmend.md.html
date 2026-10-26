@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-TxnAmend.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-TxnAmend.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-TxnAmend.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Txn Amend</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>The <code>ledger txn amend</code> command changes only the amount of one stored transaction, refusing any change that leaves a negative balance.</td></tr><tr><td>Depends On</td><td>FEATURE-BalanceRules.md, FEATURE-CliFoundation.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger txn amend</td></tr><tr><td>Consumes</td><td>transactions.get, transactions.update, transactions.list, check_balances</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger txn amend &lt;id&gt; &lt;amount&gt;</code> corrects the amount of a recorded transaction. Date, account, category, and memo never change.</p>
+<h2>Trigger</h2>
+<p>An operator runs <code>./ledger txn amend &lt;id&gt; &lt;amount&gt;</code>.</p>
+<h2>Sequence</h2>
+<ol><li>Reject a wrong argument count with exit 2.</li><li>Reject a non-integer id or an invalid amount (zero, more than two decimals, malformed) with exit 3.</li><li>Read the row with <code>transactions.get</code>. An absent id exits 4.</li><li>List the account&#x27;s transactions and run <code>check_balances</code> with the proposed changed amount. A balance below zero exits 3 before any write.</li><li>Store the new amount with <code>transactions.update</code> and print the header row and updated row. Exit 0.</li></ol>
+<h2>Output</h2>
+<pre><code>txn_id,date,account,category,amount,memo
+&lt;id&gt;,&lt;date&gt;,&lt;account&gt;,&lt;category&gt;,&lt;new amount with two decimals&gt;,&lt;memo&gt;</code></pre>
+<h2>Reads</h2>
+<ul><li><code>transactions.get</code>, <code>transactions.list</code></li></ul>
+<h2>Writes</h2>
+<ul><li><code>transactions.update</code> setting only <code>amount</code>, after every check has passed</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-TRANSACTIONS-002</code> — read: retrieve the transaction to amend - supplies: <code>txn_id</code> - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li><li><code>FEATURE-TRANSACTIONS-003</code> — read: list the account&#x27;s transactions for the balance check - supplies: <code>account</code> - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li><li><code>FEATURE-TRANSACTIONS-004</code> — write: change the amount - supplies: <code>txn_id</code>, <code>amount</code> - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC txn-amend-roundtrip ===<br>Intent: Amending a deposit prints the updated row and persists only the new amount in integer cents.</p>
+<p>import csv import io from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;TAMD1&quot; cat = &quot;TACAT1&quot; when = &quot;2026-04-01&quot; memo = &quot;amend probe&quot; new_text = &quot;60.00&quot; new_cents = 6000 with db_session() as db: db.accounts.create(account=acct, name=&quot;Amend Account&quot;) if db.categories.get(category=cat) is None: db.categories.create(category=cat, description=&quot;Amend Category&quot;) txn_id = max([r.txn_id for r in db.transactions.list()] or [0]) + 1 db.transactions.create( txn_id=txn_id, date=when, account=acct, category=cat, amount=5000, memo=memo ) code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, str(txn_id), new_text) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;] assert rows[1] == [str(txn_id), when, acct, cat, new_text, memo] stored = db.transactions.get(txn_id=txn_id) assert stored.amount == new_cents assert stored.date == when assert stored.account == acct assert stored.category == cat assert stored.memo == memo === END AC txn-amend-roundtrip ===</p>
+<p>=== AC txn-amend-absent ===<br>Intent: Amending an id that is not stored exits 4 and stores nothing.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: absent = max([r.txn_id for r in db.transactions.list()] or [0]) + 1000 before = len(db.transactions.list()) code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, str(absent), &quot;1.00&quot;) print(err) assert code == 4 assert out == &quot;&quot; assert len(db.transactions.list()) == before === END AC txn-amend-absent ===</p>
+<p>=== AC txn-amend-negative-balance ===<br>Intent: An amendment that would leave the account balance below zero exits 3 and leaves the amount unchanged.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;TAMD2&quot; cat = &quot;TACAT2&quot; original = 1000 with db_session() as db: db.accounts.create(account=acct, name=&quot;Amend Account&quot;) if db.categories.get(category=cat) is None: db.categories.create(category=cat, description=&quot;Amend Category&quot;) base = max([r.txn_id for r in db.transactions.list()] or [0]) + 1 deposit = base payment = base + 1 db.transactions.create( txn_id=deposit, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=original, memo=&quot;in&quot; ) db.transactions.create( txn_id=payment, date=&quot;2026-04-02&quot;, account=acct, category=cat, amount=-500, memo=&quot;out&quot; ) code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, str(deposit), &quot;0.10&quot;) print(out) print(err) assert code == 3 assert out == &quot;&quot; assert db.transactions.get(txn_id=deposit).amount == original assert db.transactions.get(txn_id=payment).amount == -500 === END AC txn-amend-negative-balance ===</p>
+<p>=== AC txn-amend-invalid-amount ===<br>Intent: A zero or over-precise amount exits 3 and leaves the stored amount unchanged.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;TAMD3&quot; cat = &quot;TACAT3&quot; original = 2500 with db_session() as db: db.accounts.create(account=acct, name=&quot;Amend Account&quot;) if db.categories.get(category=cat) is None: db.categories.create(category=cat, description=&quot;Amend Category&quot;) txn_id = max([r.txn_id for r in db.transactions.list()] or [0]) + 1 db.transactions.create( txn_id=txn_id, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=original, memo=&quot;&quot; ) for bad in [&quot;0&quot;, &quot;1.234&quot;, &quot;abc&quot;]: code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, str(txn_id), bad) print(bad, code, err) assert code == 3 assert out == &quot;&quot; assert db.transactions.get(txn_id=txn_id).amount == original === END AC txn-amend-invalid-amount ===</p>
+<p>=== AC txn-amend-usage ===<br>Intent: A wrong argument count exits 2.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;) assert code == 2 assert out == &quot;&quot; code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;, &quot;2.00&quot;, &quot;extra&quot;) assert code == 2 assert out == &quot;&quot; === END AC txn-amend-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Only the amount changes; date, account, category, and memo are never written.</li><li>The balance check completes before the first write; a rejected amendment changes nothing.</li><li>Amounts are integer cents; floating point is never used for money.</li><li>Diagnostics go to standard error only.</li></ul></article>
+</main>
+</body>
+</html>

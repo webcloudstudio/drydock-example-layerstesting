@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_transfer.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_transfer.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_transfer.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger transfer``: two matching TRANSFER rows, stored together or not at all.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import csv
+import io
+
+import pytest
+
+from cli.testing import cli_runner
+from cli.writes import store_transactions
+from persistence import PersistenceError
+
+HEADER = [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;]
+
+
+def _rows(out: str) -&gt; list[list[str]]:
+    return list(csv.reader(io.StringIO(out)))
+
+
+@pytest.fixture
+def accounts(scratch_db):
+    scratch_db.accounts.create(account=&quot;TRS&quot;, name=&quot;Source&quot;)
+    scratch_db.accounts.create(account=&quot;TRD&quot;, name=&quot;Destination&quot;)
+    scratch_db.categories.create(category=&quot;TRANSFER&quot;, description=&quot;Internal transfer&quot;)
+    scratch_db.categories.create(category=&quot;TROPEN&quot;, description=&quot;Opening&quot;)
+    return scratch_db
+
+
+def _fund(db, txn_id: int, account: str, cents: int) -&gt; None:
+    db.transactions.create(
+        txn_id=txn_id, date=&quot;2026-04-01&quot;, account=account, category=&quot;TROPEN&quot;, amount=cents, memo=&quot;fund&quot;
+    )
+
+
+def test_valid_transfer_prints_two_rows_with_consecutive_ids_and_opposite_amounts(accounts):
+    _fund(accounts, 7001, &quot;TRS&quot;, 100000)
+    code, out, _ = cli_runner(&quot;transfer&quot;, &quot;TRS&quot;, &quot;TRD&quot;, &quot;250.00&quot;, &quot;2026-04-03&quot;)
+    assert code == 0
+    rows = _rows(out)
+    assert rows[0] == HEADER
+    assert rows[1] == [&quot;7002&quot;, &quot;2026-04-03&quot;, &quot;TRS&quot;, &quot;TRANSFER&quot;, &quot;-250.00&quot;, &quot;transfer to TRD&quot;]
+    assert rows[2] == [&quot;7003&quot;, &quot;2026-04-03&quot;, &quot;TRD&quot;, &quot;TRANSFER&quot;, &quot;250.00&quot;, &quot;transfer from TRS&quot;]
+    assert accounts.transactions.get(txn_id=7002).amount == -25000
+    assert accounts.transactions.get(txn_id=7003).amount == 25000
+
+
+def test_transfer_conserves_cash_across_the_two_accounts(accounts):
+    _fund(accounts, 7101, &quot;TRS&quot;, 50000)
+    _fund(accounts, 7102, &quot;TRD&quot;, 1000)
+
+    def total(code: str) -&gt; int:
+        return sum(row.amount for row in accounts.transactions.list(account=code))
+
+    before = total(&quot;TRS&quot;) + total(&quot;TRD&quot;)
+    assert cli_runner(&quot;transfer&quot;, &quot;TRS&quot;, &quot;TRD&quot;, &quot;100.00&quot;, &quot;2026-04-03&quot;)[0] == 0
+    assert total(&quot;TRS&quot;) == 40000
+    assert total(&quot;TRD&quot;) == 11000
+    assert total(&quot;TRS&quot;) + total(&quot;TRD&quot;) == before
+
+
+def test_transfer_of_exact_balance_is_allowed(accounts):
+    _fund(accounts, 7201, &quot;TRS&quot;, 1000)
+    assert cli_runner(&quot;transfer&quot;, &quot;TRS&quot;, &quot;TRD&quot;, &quot;10.00&quot;, &quot;2026-04-03&quot;)[0] == 0
+    assert sum(row.amount for row in accounts.transactions.list(account=&quot;TRS&quot;)) == 0
+
+
+@pytest.mark.parametrize(
+    &quot;args&quot;,
+    [
+        (&quot;TRS&quot;, &quot;TRS&quot;, &quot;10.00&quot;, &quot;2026-04-03&quot;),
+        (&quot;TRS&quot;, &quot;TRD&quot;, &quot;0&quot;, &quot;2026-04-03&quot;),
+        (&quot;TRS&quot;, &quot;TRD&quot;, &quot;0.00&quot;, &quot;2026-04-03&quot;),
+        (&quot;TRS&quot;, &quot;TRD&quot;, &quot;-5.00&quot;, &quot;2026-04-03&quot;),
+        (&quot;TRS&quot;, &quot;TRNONE&quot;, &quot;10.00&quot;, &quot;2026-04-03&quot;),
+        (&quot;TRNONE&quot;, &quot;TRD&quot;, &quot;10.00&quot;, &quot;2026-04-03&quot;),
+        (&quot;TRS&quot;, &quot;TRD&quot;, &quot;1.234&quot;, &quot;2026-04-03&quot;),
+        (&quot;TRS&quot;, &quot;TRD&quot;, &quot;10.00&quot;, &quot;2026-02-30&quot;),
+    ],
+    ids=[&quot;same-account&quot;, &quot;zero&quot;, &quot;zero-cents&quot;, &quot;negative&quot;, &quot;unknown-destination&quot;, &quot;unknown-source&quot;,
+         &quot;three-decimals&quot;, &quot;impossible-date&quot;],
+)
+def test_invalid_transfer_exits_3_and_stores_no_rows(accounts, args):
+    _fund(accounts, 7301, &quot;TRS&quot;, 50000)
+    before = len(accounts.transactions.list())
+    code, out, _ = cli_runner(&quot;transfer&quot;, *args)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert len(accounts.transactions.list()) == before
+
+
+def test_transfer_larger_than_source_balance_stores_neither_row(accounts):
+    _fund(accounts, 7401, &quot;TRS&quot;, 10000)
+    before_all = len(accounts.transactions.list())
+    before_dst = len(accounts.transactions.list(account=&quot;TRD&quot;))
+    code, out, _ = cli_runner(&quot;transfer&quot;, &quot;TRS&quot;, &quot;TRD&quot;, &quot;100.01&quot;, &quot;2026-04-03&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert len(accounts.transactions.list()) == before_all
+    assert len(accounts.transactions.list(account=&quot;TRD&quot;)) == before_dst
+
+
+def test_transfer_without_transfer_category_exits_3_and_stores_nothing(accounts):
+    accounts.categories.delete(category=&quot;TRANSFER&quot;)
+    code, out, _ = cli_runner(&quot;transfer&quot;, &quot;TRS&quot;, &quot;TRD&quot;, &quot;1.00&quot;, &quot;2026-04-03&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert accounts.transactions.get(txn_id=7502) is None
+
+
+class _FailSecondCreate:
+    &quot;&quot;&quot;Proxies the real transactions table and fails its second create, as a store fault would.&quot;&quot;&quot;
+
+    def __init__(self, real):
+        self._real = real
+        self._creates = 0
+
+    def create(self, **kwargs):
+        self._creates += 1
+        if self._creates == 2:
+            raise PersistenceError(&quot;simulated second write failure&quot;)
+        return self._real.create(**kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._real, name)
+
+
+class _FlakyDb:
+    def __init__(self, real):
+        self.transactions = _FailSecondCreate(real.transactions)
+
+
+def test_failure_on_second_row_removes_the_first_row(accounts):
+    _fund(accounts, 7601, &quot;TRS&quot;, 5000)
+    rows = [
+        {&quot;txn_id&quot;: 7602, &quot;date&quot;: &quot;2026-04-03&quot;, &quot;account&quot;: &quot;TRS&quot;, &quot;category&quot;: &quot;TRANSFER&quot;,
+         &quot;amount&quot;: -1000, &quot;memo&quot;: &quot;transfer to TRD&quot;},
+        {&quot;txn_id&quot;: 7603, &quot;date&quot;: &quot;2026-04-03&quot;, &quot;account&quot;: &quot;TRD&quot;, &quot;category&quot;: &quot;TRANSFER&quot;,
+         &quot;amount&quot;: 1000, &quot;memo&quot;: &quot;transfer from TRS&quot;},
+    ]
+    with pytest.raises(PersistenceError):
+        store_transactions(_FlakyDb(accounts), rows)
+    assert accounts.transactions.get(txn_id=7602) is None
+    assert accounts.transactions.get(txn_id=7603) is None
+    assert accounts.transactions.get(txn_id=7601).amount == 5000
+
+
+@pytest.mark.parametrize(&quot;argv&quot;, [[&quot;transfer&quot;, &quot;A&quot;, &quot;B&quot;, &quot;1.00&quot;], [&quot;transfer&quot;, &quot;A&quot;, &quot;B&quot;, &quot;1.00&quot;, &quot;2026-04-03&quot;, &quot;x&quot;]])
+def test_wrong_argument_count_is_a_usage_error(accounts, argv):
+    before = len(accounts.transactions.list())
+    code, out, _ = cli_runner(*argv)
+    assert code == 2
+    assert out == &quot;&quot;
+    assert len(accounts.transactions.list()) == before
+</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<requirement name="load-seed-transactions" stories="load-transactions,database,balance-rules,cli-foundation">
+txn_id,date,account,category,amount,memo
+1,2026-01-01,SAFE,OPENING,5000.00,opening float
+2,2026-01-01,PETTY,OPENING,200.00,opening float
+</requirement>
+<requirement name="transfer-paired-entries" stories="transfer-command">
+27,2026-01-14,DRAWER1,TRANSFER,-1000.00,transfer to SAFE
+28,2026-01-14,SAFE,TRANSFER,1000.00,transfer from DRAWER1
+</requirement>
+<unattached story="python-foundation"/>
+<unattached story="init-command"/>
+<unattached story="count-command"/>
+<unattached story="load-categories"/>
+<unattached story="load-accounts"/>
+<unattached story="account-get"/>
+<unattached story="txn-get"/>
+<unattached story="account-rename"/>
+<unattached story="account-delete"/>
+<unattached story="account-add"/>
+<unattached story="txn-delete"/>
+<unattached story="report-monthly"/>
+<unattached story="txn-amend"/>
+<unattached story="report-balances"/>
+<unattached story="report-categories"/>
+<unattached story="txn-post"/>
+<unattached story="release-verification"/>

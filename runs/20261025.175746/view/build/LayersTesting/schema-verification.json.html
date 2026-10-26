@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/schema-verification.json</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/schema-verification.json</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../build/LayersTesting/schema-verification.json">Raw file</a></div></header>
+<article class="doc"><pre>{
+  &quot;sqlite&quot;: [
+    {
+      &quot;name&quot;: &quot;foreign-key-enforcement&quot;,
+      &quot;sql&quot;: &quot;SELECT foreign_keys FROM pragma_foreign_keys&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;accounts:table&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM sqlite_master WHERE name=&#x27;accounts&#x27; AND type=&#x27;table&#x27;&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;accounts:rows&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM \&quot;accounts\&quot;&quot;,
+      &quot;expected&quot;: -1
+    },
+    {
+      &quot;name&quot;: &quot;accounts.account:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pragma_table_info(&#x27;accounts&#x27;) WHERE name=&#x27;account&#x27; AND upper(type)=&#x27;TEXT&#x27; AND \&quot;notnull\&quot;=0 AND pk=1 AND dflt_value IS NULL&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;accounts.name:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pragma_table_info(&#x27;accounts&#x27;) WHERE name=&#x27;name&#x27; AND upper(type)=&#x27;TEXT&#x27; AND \&quot;notnull\&quot;=1 AND pk=0 AND dflt_value IS NULL&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;categories:table&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM sqlite_master WHERE name=&#x27;categories&#x27; AND type=&#x27;table&#x27;&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;categories:rows&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM \&quot;categories\&quot;&quot;,
+      &quot;expected&quot;: -1
+    },
+    {
+      &quot;name&quot;: &quot;categories.category:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pragma_table_info(&#x27;categories&#x27;) WHERE name=&#x27;category&#x27; AND upper(type)=&#x27;TEXT&#x27; AND \&quot;notnull\&quot;=0 AND pk=1 AND dflt_value IS NULL&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;categories.description:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pragma_table_info(&#x27;categories&#x27;) WHERE name=&#x27;description&#x27; AND upper(type)=&#x27;TEXT&#x27; AND \&quot;notnull\&quot;=1 AND pk=0 AND dflt_value IS NULL&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions:table&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM sqlite_master WHERE name=&#x27;transactions&#x27; AND type=&#x27;table&#x27;&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions:rows&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM \&quot;transactions\&quot;&quot;,
+      &quot;expected&quot;: -1
+    },
+    {
+      &quot;name&quot;: &quot;transactions.txn_id:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pragma_table_info(&#x27;transactions&#x27;) WHERE name=&#x27;txn_id&#x27; AND upper(type)=&#x27;INTEGER&#x27; AND \&quot;notnull\&quot;=0 AND pk=1 AND dflt_value IS NULL&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions.date:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pragma_table_info(&#x27;transactions&#x27;) WHERE name=&#x27;date&#x27; AND upper(type)=&#x27;TEXT&#x27; AND \&quot;notnull\&quot;=1 AND pk=0 AND dflt_value IS NULL&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions.account:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pragma_table_info(&#x27;transactions&#x27;) WHERE name=&#x27;account&#x27; AND upper(type)=&#x27;TEXT&#x27; AND \&quot;notnull\&quot;=1 AND pk=0 AND dflt_value IS NULL&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions.account:foreign-key&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pragma_foreign_key_list(&#x27;transactions&#x27;) WHERE \&quot;from\&quot;=&#x27;account&#x27; AND \&quot;table\&quot;=&#x27;accounts&#x27; AND \&quot;to\&quot;=&#x27;account&#x27;&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions.category:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pragma_table_info(&#x27;transactions&#x27;) WHERE name=&#x27;category&#x27; AND upper(type)=&#x27;TEXT&#x27; AND \&quot;notnull\&quot;=1 AND pk=0 AND dflt_value IS NULL&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions.category:foreign-key&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pragma_foreign_key_list(&#x27;transactions&#x27;) WHERE \&quot;from\&quot;=&#x27;category&#x27; AND \&quot;table\&quot;=&#x27;categories&#x27; AND \&quot;to\&quot;=&#x27;category&#x27;&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions.amount:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pragma_table_info(&#x27;transactions&#x27;) WHERE name=&#x27;amount&#x27; AND upper(type)=&#x27;INTEGER&#x27; AND \&quot;notnull\&quot;=1 AND pk=0 AND dflt_value IS NULL&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions.memo:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pragma_table_info(&#x27;transactions&#x27;) WHERE name=&#x27;memo&#x27; AND upper(type)=&#x27;TEXT&#x27; AND \&quot;notnull\&quot;=1 AND pk=0 AND dflt_value IS &#x27;&#x27;&#x27;&#x27;&#x27;&#x27;&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions:transactions_category_idx&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pragma_index_list(&#x27;transactions&#x27;) AS i WHERE i.\&quot;unique\&quot;=0 AND (SELECT group_concat(name, &#x27;,&#x27;) FROM (SELECT name FROM pragma_index_info(i.name) ORDER BY seqno))=&#x27;category&#x27; AND i.name=&#x27;transactions_category_idx&#x27;&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions:transactions_account_idx&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pragma_index_list(&#x27;transactions&#x27;) AS i WHERE i.\&quot;unique\&quot;=0 AND (SELECT group_concat(name, &#x27;,&#x27;) FROM (SELECT name FROM pragma_index_info(i.name) ORDER BY seqno))=&#x27;account&#x27; AND i.name=&#x27;transactions_account_idx&#x27;&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions:transactions_account_date_idx&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pragma_index_list(&#x27;transactions&#x27;) AS i WHERE i.\&quot;unique\&quot;=0 AND (SELECT group_concat(name, &#x27;,&#x27;) FROM (SELECT name FROM pragma_index_info(i.name) ORDER BY seqno))=&#x27;account,date&#x27; AND i.name=&#x27;transactions_account_date_idx&#x27;&quot;,
+      &quot;expected&quot;: 1
+    }
+  ],
+  &quot;postgres&quot;: [
+    {
+      &quot;name&quot;: &quot;accounts:table&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pg_class WHERE oid=&#x27;accounts&#x27;::regclass AND relkind IN (&#x27;r&#x27;,&#x27;p&#x27;)&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;accounts:rows&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM \&quot;accounts\&quot;&quot;,
+      &quot;expected&quot;: -1
+    },
+    {
+      &quot;name&quot;: &quot;accounts.account:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=&#x27;accounts&#x27; AND column_name=&#x27;account&#x27; AND data_type=&#x27;text&#x27; AND is_nullable=&#x27;NO&#x27; AND column_default IS NULL&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;accounts.account:primary-key&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pg_constraint c WHERE c.conrelid=&#x27;accounts&#x27;::regclass AND c.contype=&#x27;p&#x27; AND c.convalidated AND (SELECT string_agg(a.attname, &#x27;,&#x27; ORDER BY k.n) FROM unnest(c.conkey) WITH ORDINALITY k(attnum,n) JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=k.attnum)=&#x27;account&#x27;&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;accounts.name:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=&#x27;accounts&#x27; AND column_name=&#x27;name&#x27; AND data_type=&#x27;text&#x27; AND is_nullable=&#x27;NO&#x27; AND column_default IS NULL&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;categories:table&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pg_class WHERE oid=&#x27;categories&#x27;::regclass AND relkind IN (&#x27;r&#x27;,&#x27;p&#x27;)&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;categories:rows&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM \&quot;categories\&quot;&quot;,
+      &quot;expected&quot;: -1
+    },
+    {
+      &quot;name&quot;: &quot;categories.category:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=&#x27;categories&#x27; AND column_name=&#x27;category&#x27; AND data_type=&#x27;text&#x27; AND is_nullable=&#x27;NO&#x27; AND column_default IS NULL&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;categories.category:primary-key&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pg_constraint c WHERE c.conrelid=&#x27;categories&#x27;::regclass AND c.contype=&#x27;p&#x27; AND c.convalidated AND (SELECT string_agg(a.attname, &#x27;,&#x27; ORDER BY k.n) FROM unnest(c.conkey) WITH ORDINALITY k(attnum,n) JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=k.attnum)=&#x27;category&#x27;&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;categories.description:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=&#x27;categories&#x27; AND column_name=&#x27;description&#x27; AND data_type=&#x27;text&#x27; AND is_nullable=&#x27;NO&#x27; AND column_default IS NULL&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions:table&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pg_class WHERE oid=&#x27;transactions&#x27;::regclass AND relkind IN (&#x27;r&#x27;,&#x27;p&#x27;)&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions:rows&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM \&quot;transactions\&quot;&quot;,
+      &quot;expected&quot;: -1
+    },
+    {
+      &quot;name&quot;: &quot;transactions.txn_id:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=&#x27;transactions&#x27; AND column_name=&#x27;txn_id&#x27; AND data_type=&#x27;integer&#x27; AND is_nullable=&#x27;NO&#x27; AND is_identity=&#x27;YES&#x27;&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions.txn_id:primary-key&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pg_constraint c WHERE c.conrelid=&#x27;transactions&#x27;::regclass AND c.contype=&#x27;p&#x27; AND c.convalidated AND (SELECT string_agg(a.attname, &#x27;,&#x27; ORDER BY k.n) FROM unnest(c.conkey) WITH ORDINALITY k(attnum,n) JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=k.attnum)=&#x27;txn_id&#x27;&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions.date:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=&#x27;transactions&#x27; AND column_name=&#x27;date&#x27; AND data_type=&#x27;text&#x27; AND is_nullable=&#x27;NO&#x27; AND column_default IS NULL&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions.account:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=&#x27;transactions&#x27; AND column_name=&#x27;account&#x27; AND data_type=&#x27;text&#x27; AND is_nullable=&#x27;NO&#x27; AND column_default IS NULL&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions.account:foreign-key&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pg_constraint c WHERE c.conrelid=&#x27;transactions&#x27;::regclass AND c.contype=&#x27;f&#x27; AND c.convalidated AND (SELECT string_agg(a.attname, &#x27;,&#x27; ORDER BY k.n) FROM unnest(c.conkey) WITH ORDINALITY k(attnum,n) JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=k.attnum)=&#x27;account&#x27; AND c.confrelid=&#x27;accounts&#x27;::regclass AND (SELECT a.attname FROM pg_attribute a WHERE a.attrelid=c.confrelid AND a.attnum=c.confkey[1])=&#x27;account&#x27;&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions.category:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=&#x27;transactions&#x27; AND column_name=&#x27;category&#x27; AND data_type=&#x27;text&#x27; AND is_nullable=&#x27;NO&#x27; AND column_default IS NULL&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions.category:foreign-key&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pg_constraint c WHERE c.conrelid=&#x27;transactions&#x27;::regclass AND c.contype=&#x27;f&#x27; AND c.convalidated AND (SELECT string_agg(a.attname, &#x27;,&#x27; ORDER BY k.n) FROM unnest(c.conkey) WITH ORDINALITY k(attnum,n) JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=k.attnum)=&#x27;category&#x27; AND c.confrelid=&#x27;categories&#x27;::regclass AND (SELECT a.attname FROM pg_attribute a WHERE a.attrelid=c.confrelid AND a.attnum=c.confkey[1])=&#x27;category&#x27;&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions.amount:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=&#x27;transactions&#x27; AND column_name=&#x27;amount&#x27; AND data_type=&#x27;integer&#x27; AND is_nullable=&#x27;NO&#x27; AND column_default IS NULL&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions.memo:column&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=&#x27;transactions&#x27; AND column_name=&#x27;memo&#x27; AND data_type=&#x27;text&#x27; AND is_nullable=&#x27;NO&#x27; AND (column_default IN (&#x27;&#x27;&#x27;&#x27;&#x27;&#x27;,&#x27;&#x27;&#x27;&#x27;&#x27;::text&#x27;,&#x27;(&#x27;&#x27;&#x27;&#x27;)&#x27;,&#x27;(&#x27;&#x27;&#x27;&#x27;)::text&#x27;))&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions:transactions_category_idx&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid WHERE i.indrelid=&#x27;transactions&#x27;::regclass AND c.relname=&#x27;transactions_category_idx&#x27; AND i.indisvalid AND (SELECT string_agg(a.attname, &#x27;,&#x27; ORDER BY k.n) FROM unnest(i.indkey) WITH ORDINALITY k(attnum,n) JOIN pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=k.attnum)=&#x27;category&#x27;&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions:transactions_account_idx&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid WHERE i.indrelid=&#x27;transactions&#x27;::regclass AND c.relname=&#x27;transactions_account_idx&#x27; AND i.indisvalid AND (SELECT string_agg(a.attname, &#x27;,&#x27; ORDER BY k.n) FROM unnest(i.indkey) WITH ORDINALITY k(attnum,n) JOIN pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=k.attnum)=&#x27;account&#x27;&quot;,
+      &quot;expected&quot;: 1
+    },
+    {
+      &quot;name&quot;: &quot;transactions:transactions_account_date_idx&quot;,
+      &quot;sql&quot;: &quot;SELECT count(*) FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid WHERE i.indrelid=&#x27;transactions&#x27;::regclass AND c.relname=&#x27;transactions_account_date_idx&#x27; AND i.indisvalid AND (SELECT string_agg(a.attname, &#x27;,&#x27; ORDER BY k.n) FROM unnest(i.indkey) WITH ORDINALITY k(attnum,n) JOIN pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=k.attnum)=&#x27;account,date&#x27;&quot;,
+      &quot;expected&quot;: 1
+    }
+  ]
+}
+</pre></article>
+</main>
+</body>
+</html>

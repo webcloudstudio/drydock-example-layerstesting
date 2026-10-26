@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/commands/load_categories.py</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/commands/load_categories.py</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../build/LayersTesting/cli/commands/load_categories.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger load categories &lt;csv&gt;``: all-or-nothing load of a categories file.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+from cli.errors import Rejected
+from cli.loader import read_csv_rows
+from cli.registry import register
+from cli.validate import validate_code, validate_description
+
+
+def load_categories(db, args: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Validate every row and rule first; write only once the whole file has passed.&quot;&quot;&quot;
+    checked: list[tuple[str, str]] = []
+    seen: set[str] = set()
+    for code_text, description_text in read_csv_rows(args[0], (&quot;category&quot;, &quot;description&quot;)):
+        code = validate_code(code_text)
+        description = validate_description(description_text)
+        if code in seen:
+            raise Rejected(f&quot;category {code} appears more than once in the file&quot;)
+        if db.categories.get(category=code) is not None:
+            raise Rejected(f&quot;category {code} already exists&quot;)
+        seen.add(code)
+        checked.append((code, description))
+    for code, description in checked:
+        db.categories.create(category=code, description=description)
+    return [[&quot;table&quot;, &quot;loaded&quot;], [&quot;categories&quot;, str(len(checked))]]
+
+
+register((&quot;load&quot;, &quot;categories&quot;), 1, 1, load_categories)
+</pre></article>
+</main>
+</body>
+</html>

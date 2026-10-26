@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/__init__.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/__init__.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/__init__.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;The ledger command line: parse, dispatch, and map the outcome to an exit code.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import sys
+
+from persistence import PersistenceError
+
+from cli import commands  # noqa: F401  (importing registers every command module)
+from cli.database import open_ledger
+from cli.errors import LedgerError
+from cli.output import write_rows
+from cli.registry import resolve
+
+
+def main(argv: list[str] | None = None) -&gt; int:
+    &quot;&quot;&quot;Run one ledger command and return its exit code. Standard output carries only the rows.
+
+    The handler runs to completion before anything is written, so a failing command writes nothing
+    to standard output. Diagnostics go to standard error as one line.
+    &quot;&quot;&quot;
+    words = list(sys.argv[1:] if argv is None else argv)
+    try:
+        command, args = resolve(words)
+        with open_ledger() as db:
+            rows = command.handler(db, args)
+    except LedgerError as exc:
+        print(f&quot;error: {exc}&quot;, file=sys.stderr)
+        return exc.exit_code
+    except PersistenceError as exc:
+        print(f&quot;error: {exc}&quot;, file=sys.stderr)
+        return 1
+    write_rows(rows)
+    return 0
+</pre></article>
+</main>
+</body>
+</html>

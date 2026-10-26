@@ -1,0 +1,30 @@
+******************************************************************************
+* FATAL ERROR - PROVIDER RATE LIMIT
+*
+* Drydock could not run 'plan' with the claude provider.
+*
+* Details:
+*   provider rate limit 429: You've hit your session limit · resets 4:50pm (America/New_York)
+*
+* Required action:
+*   Wait for the provider quota or session limit to reset,
+*   or switch the configured LLM provider/model, then rerun the Drydock command.
+*
+* execution_id: 20261025.184651.898Z-cde29637
+******************************************************************************
+╭─ BLOCKED: LayersTesting  ·  2026-10-25T14:46:55-04:00 ───────────────────────────────────────────╮
+│ Rate Limit Hit                                                                                   │
+│                                                                                                  │
+│ Provider usage limit                                                                             │
+│                                                                                                  │
+│ Error                                                                                            │
+│   provider rate limit 429: You've hit your session limit · resets 4:50pm (America/New_York)      │
+│                                                                                                  │
+│ Recovery                                                                                         │
+│   Wait for the provider limit to reset (the error above names when), or switch                   │
+│   provider or model with --llm-provider / --model.                                               │
+│                                                                                                  │
+│ Rerun after resolving the error: drydock plan LayersTesting --override --plan-override-model     │
+│ sonnet                                                                                           │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────╯
+Error: LayersTesting: provider rate limit: provider rate limit 429: You've hit your session limit · resets 4:50pm (America/New_York)

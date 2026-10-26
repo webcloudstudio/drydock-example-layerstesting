@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-BalanceRules.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-BalanceRules.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-BalanceRules.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Balance Rules</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>Account summaries and the non-negative balance check used by every mutating command.</td></tr><tr><td>Depends On</td><td>FEATURE-CliFoundation.md, DATABASE.md</td></tr><tr><td>Provides</td><td>cli.balance.account_summary, cli.balance.balances, cli.balance.check_balances, cli.balance.next_txn_id</td></tr><tr><td>Consumes</td><td>transactions.list, accounts.get</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>An account&#x27;s balance is the sum of its transaction amounts. No command may leave a balance below zero. This module computes balances from stored rows in integer cents and applies the rule before a command writes, so a violation changes nothing.</p>
+<h2>Interface</h2>
+<div class="scroll"><table><thead><tr><th>Function</th><th>Contract</th></tr></thead><tbody><tr><td><code>account_summary(db, code) -&gt; tuple[int, int]</code></td><td>Transaction count and balance in cents for the account, computed from its stored transactions; <code>(0, 0)</code> when it has none.</td></tr><tr><td><code>balances(db) -&gt; dict[str, int]</code></td><td>Balance in cents per account that has transactions.</td></tr><tr><td><code>check_balances(db, deltas)</code></td><td><code>deltas</code> maps account code to the net change in cents the command would make. Raises <code>Rejected</code> (exit 3) when any stored balance plus its delta is below zero; returns <code>None</code> otherwise. Writes nothing.</td></tr><tr><td><code>next_txn_id(db) -&gt; int</code></td><td>One more than the largest stored <code>txn_id</code>, or <code>1</code> when the table is empty.</td></tr></tbody></table></div>
+<p>Commands express a post as <code>{account: amount}</code>, an amend as <code>{account: new - old}</code>, a delete as <code>{account: -amount}</code>, a transfer as both sides, and a load as the per-account sum of the file. A balance of exactly zero is allowed. Computation is service-side from listed rows (decision Q-002).</p>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-TRANSACTIONS-003</code> — read: list transactions for balances and the largest id - supplies: <code>account</code> - returns: <code>txn_id</code>, <code>account</code>, <code>amount</code></li><li><code>FEATURE-ACCOUNTS-002</code> — read: confirm an account exists - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC balancerules-summary ===<br>Intent: account_summary returns the stored transaction count and the integer-cent sum of its amounts.</p>
+<p>from persistence.testing import db_session from cli.balance import account_summary</p>
+<p>acct = &quot;UTBAL1&quot; cat = &quot;UTBALC1&quot; amounts = [1000, -300, 250] with db_session() as db: db.accounts.create(account=acct, name=&quot;Balance Probe&quot;) db.categories.create(category=cat, description=&quot;Balance Category&quot;) for offset, cents in enumerate(amounts): db.transactions.create( txn_id=980001 + offset, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=cents, memo=&quot;&quot;, ) count, balance = account_summary(db, acct) assert count == len(amounts) assert balance == sum(amounts) assert isinstance(balance, int) === END AC balancerules-summary ===</p>
+<p>=== AC balancerules-summary-empty ===<br>Intent: An account with no transactions has a zero count and zero balance.</p>
+<p>from persistence.testing import db_session from cli.balance import account_summary</p>
+<p>acct = &quot;UTBAL2&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Empty Probe&quot;) count, balance = account_summary(db, acct) assert count == 0 assert balance == 0 === END AC balancerules-summary-empty ===</p>
+<p>=== AC balancerules-balances ===<br>Intent: balances returns the per-account sums computed from stored rows.</p>
+<p>from persistence.testing import db_session from cli.balance import balances</p>
+<p>acct_a = &quot;UTBAL3A&quot; acct_b = &quot;UTBAL3B&quot; cat = &quot;UTBALC3&quot; with db_session() as db: db.accounts.create(account=acct_a, name=&quot;A&quot;) db.accounts.create(account=acct_b, name=&quot;B&quot;) db.categories.create(category=cat, description=&quot;Cat&quot;) plan = [(980011, acct_a, 500), (980012, acct_a, -200), (980013, acct_b, 75)] for txn_id, acct, cents in plan: db.transactions.create( txn_id=txn_id, date=&quot;2026-04-02&quot;, account=acct, category=cat, amount=cents, memo=&quot;&quot; ) result = balances(db) assert result[acct_a] == sum(c for _, a, c in plan if a == acct_a) assert result[acct_b] == sum(c for _, a, c in plan if a == acct_b) === END AC balancerules-balances ===</p>
+<p>=== AC balancerules-check-boundary ===<br>Intent: check_balances accepts a change that lands exactly on zero and rejects one cent below.</p>
+<p>from persistence.testing import db_session from cli.balance import check_balances from cli.errors import Rejected</p>
+<p>acct = &quot;UTBAL4&quot; cat = &quot;UTBALC4&quot; cents = 700 with db_session() as db: db.accounts.create(account=acct, name=&quot;Boundary&quot;) db.categories.create(category=cat, description=&quot;Cat&quot;) db.transactions.create( txn_id=980021, date=&quot;2026-04-03&quot;, account=acct, category=cat, amount=cents, memo=&quot;&quot; ) assert check_balances(db, {acct: -cents}) is None try: check_balances(db, {acct: -cents - 1}) except Rejected as exc: assert exc.exit_code == 3 else: raise AssertionError(&quot;negative balance accepted&quot;) === END AC balancerules-check-boundary ===</p>
+<p>=== AC balancerules-check-any-account ===<br>Intent: check_balances rejects when any one of several accounts would go negative.</p>
+<p>from persistence.testing import db_session from cli.balance import check_balances from cli.errors import Rejected</p>
+<p>rich = &quot;UTBAL5R&quot; poor = &quot;UTBAL5P&quot; cat = &quot;UTBALC5&quot; with db_session() as db: db.accounts.create(account=rich, name=&quot;Rich&quot;) db.accounts.create(account=poor, name=&quot;Poor&quot;) db.categories.create(category=cat, description=&quot;Cat&quot;) db.transactions.create( txn_id=980031, date=&quot;2026-04-04&quot;, account=rich, category=cat, amount=10000, memo=&quot;&quot; ) db.transactions.create( txn_id=980032, date=&quot;2026-04-04&quot;, account=poor, category=cat, amount=100, memo=&quot;&quot; ) assert check_balances(db, {rich: -500, poor: 500}) is None try: check_balances(db, {rich: 500, poor: -101}) except Rejected: pass else: raise AssertionError(&quot;negative balance accepted&quot;) === END AC balancerules-check-any-account ===</p>
+<p>=== AC balancerules-check-writes-nothing ===<br>Intent: A rejected balance check leaves the stored transactions unchanged.</p>
+<p>from persistence.testing import db_session from cli.balance import check_balances from cli.errors import Rejected</p>
+<p>acct = &quot;UTBAL6&quot; cat = &quot;UTBALC6&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Stable&quot;) db.categories.create(category=cat, description=&quot;Cat&quot;) db.transactions.create( txn_id=980041, date=&quot;2026-04-05&quot;, account=acct, category=cat, amount=100, memo=&quot;&quot; ) before = db.transactions.list(account=acct) try: check_balances(db, {acct: -1000}) except Rejected: pass after = db.transactions.list(account=acct) assert after == before === END AC balancerules-check-writes-nothing ===</p>
+<p>=== AC balancerules-next-id ===<br>Intent: next_txn_id is one more than the largest stored id, or 1 when the table is empty.</p>
+<p>from persistence.testing import db_session from cli.balance import next_txn_id</p>
+<p>acct = &quot;UTBAL7&quot; cat = &quot;UTBALC7&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Ids&quot;) db.categories.create(category=cat, description=&quot;Cat&quot;) stored = [r.txn_id for r in db.transactions.list()] assert next_txn_id(db) == (max(stored) + 1 if stored else 1) big = max(stored + [0]) + 5 db.transactions.create( txn_id=big, date=&quot;2026-04-06&quot;, account=acct, category=cat, amount=10, memo=&quot;&quot; ) assert next_txn_id(db) == big + 1 === END AC balancerules-next-id ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Balances are computed from stored rows in integer cents; no balance, count, or id is hardcoded.</li><li>The check never writes.</li><li>No floating point is used for money.</li></ul></article>
+</main>
+</body>
+</html>

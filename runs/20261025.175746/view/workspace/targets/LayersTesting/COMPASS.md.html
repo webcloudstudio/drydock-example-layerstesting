@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/COMPASS.md</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/COMPASS.md</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../workspace/targets/LayersTesting/COMPASS.md">Raw file</a></div></header>
+<article class="doc"><h1>COMPASS: LayersTesting</h1>
+<h2>Compass</h2>
+<p>Build a command-line cash ledger, an executable named <code>ledger</code> at the application root, as described in <code>sources/INSTRUCTIONS.md</code>. It keeps accounts, categories, and cash transactions in a relational database reached only through the shipped persistence library, rejects a failing command before it writes, enforces non-negative balances, and reports balances, category totals, and monthly totals.</p>
+<p>Correctness is measured by <code>sources/run.sh</code>: 43 checks of exit code and standard output against known answers computed from the seed files. The goal is every check passing.</p>
+<h2>Constraints</h2>
+<ul><li>Implement in the language and database named under <code>## Stack</code> in <code>sources/INSTRUCTIONS.md</code>.</li><li>Provide an executable named <code>ledger</code> at the application root, invoked as <code>./ledger &lt;command&gt;</code>.</li><li>Read the database location from <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code>.</li><li>Store amounts as integer cents.</li><li>Check every command in full before its first write.</li><li>Run without network access other than to a PostgreSQL server named by <code>DATABASE_URL</code>.</li><li>Diagnostics go to standard error and are never compared.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Do not modify, rewrite, regenerate, or substitute any file under <code>sources/</code>.</li><li>Do not read <code>sources/run.sh</code> or any seed file from application code. Seed files reach the</li></ul>
+<p>database only through <code>ledger load</code>.</p>
+<ul><li>Do not hardcode a report row, a count, or a total. Every value comes from a query.</li><li>Do not open a database driver outside the shipped persistence library.</li><li>Do not use floating point for money at any layer.</li></ul>
+<h2>Verification Protocol</h2>
+<div class="scroll"><table><thead><tr><th>Story kind</th><th>Command</th><th>Asserts</th></tr></thead><tbody><tr><td>Every behavioral story</td><td><code>sh bin/test.sh</code></td><td>exit <code>0</code></td></tr><tr><td>Terminal story (once, last)</td><td><code>sh sources/run.sh</code></td><td>exit <code>0</code></td></tr></tbody></table></div>
+<p>&lt;!-- drydock:build-write-guardrail:start --&gt;</p>
+<h2>Build Write Guardrail</h2>
+<ul><li>Authorized build directory: <code>/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.175746/build/LayersTesting</code></li><li>Authorized Target directory: <code>/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.175746/workspace/targets/LayersTesting</code></li><li>Build agents have permission to create, modify, and remove files required by the active build block inside these authorized directories.</li><li>No path outside these authorized directories may be modified.</li><li>Protected Drydock artifacts:<ul><li><code>/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.175746/workspace/targets/LayersTesting/blueprint/</code></li><li><code>/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.175746/workspace/targets/LayersTesting/MANIFEST.md</code></li><li><code>/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.175746/workspace/targets/LayersTesting/COMPASS.md</code></li><li><code>/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.175746/workspace/targets/LayersTesting/QuarterDeck/</code></li><li><code>/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.175746/workspace/targets/LayersTesting/evidence/</code></li></ul></li></ul>
+<p>&lt;!-- drydock:build-write-guardrail:end --&gt;</p></article>
+</main>
+</body>
+</html>

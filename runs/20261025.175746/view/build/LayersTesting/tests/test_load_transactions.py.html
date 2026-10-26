@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_load_transactions.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_load_transactions.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_load_transactions.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger load transactions``: validation of the whole file before the first write.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import csv
+import os
+
+import pytest
+
+from cli.testing import cli_runner
+
+HEADER = [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;]
+
+
+def _write(directory, name: str, rows: list[list], header=HEADER) -&gt; str:
+    path = os.path.join(directory, name)
+    with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh:
+        writer = csv.writer(fh, lineterminator=&quot;\n&quot;)
+        writer.writerow(list(header))
+        writer.writerows(rows)
+    return path
+
+
+@pytest.fixture
+def ledger(scratch_db):
+    scratch_db.accounts.create(account=&quot;LTA&quot;, name=&quot;Load Account&quot;)
+    scratch_db.categories.create(category=&quot;LTC&quot;, description=&quot;Load Category&quot;)
+    return scratch_db
+
+
+def test_valid_file_keeps_file_txn_ids_and_stores_integer_cents(ledger, tmp_path):
+    rows = [
+        [910001, &quot;2026-05-01&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;100.00&quot;, &quot;opening&quot;],
+        [910002, &quot;2026-05-02&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;-25.50&quot;, &quot;spend&quot;],
+        [910007, &quot;2026-05-03&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;4.75&quot;, &quot;gap id kept&quot;],
+    ]
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;transactions&quot;, _write(tmp_path, &quot;t.csv&quot;, rows))
+    assert code == 0
+    assert list(csv.reader(out.splitlines())) == [[&quot;table&quot;, &quot;loaded&quot;], [&quot;transactions&quot;, &quot;3&quot;]]
+    stored = ledger.transactions.get(txn_id=910007)
+    assert stored.amount == 475
+    assert isinstance(stored.amount, int)
+    assert stored.memo == &quot;gap id kept&quot;
+    assert ledger.transactions.get(txn_id=910002).amount == -2550
+
+
+def test_empty_data_section_loads_zero_rows(ledger, tmp_path):
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;transactions&quot;, _write(tmp_path, &quot;e.csv&quot;, []))
+    assert code == 0
+    assert list(csv.reader(out.splitlines()))[1] == [&quot;transactions&quot;, &quot;0&quot;]
+
+
+def test_unknown_account_in_last_row_stores_none_of_the_valid_rows(ledger, tmp_path):
+    rows = [
+        [920001, &quot;2026-05-01&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;10.00&quot;, &quot;ok&quot;],
+        [920002, &quot;2026-05-01&quot;, &quot;LTNONE&quot;, &quot;LTC&quot;, &quot;10.00&quot;, &quot;bad&quot;],
+    ]
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;transactions&quot;, _write(tmp_path, &quot;a.csv&quot;, rows))
+    assert code == 3
+    assert out == &quot;&quot;
+    assert ledger.transactions.get(txn_id=920001) is None
+
+
+def test_unknown_category_in_last_row_stores_none_of_the_valid_rows(ledger, tmp_path):
+    rows = [
+        [920011, &quot;2026-05-01&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;10.00&quot;, &quot;ok&quot;],
+        [920012, &quot;2026-05-01&quot;, &quot;LTA&quot;, &quot;LTNONE&quot;, &quot;10.00&quot;, &quot;bad&quot;],
+    ]
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;transactions&quot;, _write(tmp_path, &quot;c.csv&quot;, rows))
+    assert code == 3
+    assert out == &quot;&quot;
+    assert ledger.transactions.get(txn_id=920011) is None
+
+
+@pytest.mark.parametrize(
+    &quot;bad&quot;,
+    [
+        [920022, &quot;2026-02-30&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;1.00&quot;, &quot;bad date&quot;],
+        [920023, &quot;2026-05-01&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;1.234&quot;, &quot;three decimals&quot;],
+        [920024, &quot;2026-05-01&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;0.00&quot;, &quot;zero&quot;],
+        [&quot;abc&quot;, &quot;2026-05-01&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;1.00&quot;, &quot;bad id&quot;],
+        [920025, &quot;2026-05-01&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;1.00&quot;, &quot;N&quot; * 61],
+        [920026, &quot;2026-05-01&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;1.00&quot;, &quot;has,comma&quot;],
+    ],
+    ids=[&quot;impossible-date&quot;, &quot;third-decimal&quot;, &quot;zero-amount&quot;, &quot;non-integer-id&quot;, &quot;memo-too-long&quot;, &quot;memo-comma&quot;],
+)
+def test_field_rule_violation_rejects_the_whole_file(ledger, tmp_path, bad):
+    anchor = [920021, &quot;2026-05-01&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;5.00&quot;, &quot;anchor&quot;]
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;transactions&quot;, _write(tmp_path, &quot;f.csv&quot;, [anchor, bad]))
+    assert code == 3
+    assert out == &quot;&quot;
+    assert ledger.transactions.get(txn_id=anchor[0]) is None
+
+
+def test_id_repeated_within_the_file_is_refused(ledger, tmp_path):
+    rows = [
+        [930001, &quot;2026-05-01&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;1.00&quot;, &quot;one&quot;],
+        [930001, &quot;2026-05-01&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;2.00&quot;, &quot;two&quot;],
+    ]
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;transactions&quot;, _write(tmp_path, &quot;d.csv&quot;, rows))
+    assert code == 3
+    assert out == &quot;&quot;
+    assert ledger.transactions.get(txn_id=930001) is None
+
+
+def test_id_already_stored_is_refused_and_stored_row_is_unchanged(ledger, tmp_path):
+    ledger.transactions.create(
+        txn_id=930011, date=&quot;2026-05-01&quot;, account=&quot;LTA&quot;, category=&quot;LTC&quot;, amount=5000, memo=&quot;stored&quot;
+    )
+    rows = [
+        [930012, &quot;2026-05-02&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;1.00&quot;, &quot;fresh&quot;],
+        [930011, &quot;2026-05-02&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;1.00&quot;, &quot;clash&quot;],
+    ]
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;transactions&quot;, _write(tmp_path, &quot;s.csv&quot;, rows))
+    assert code == 3
+    assert out == &quot;&quot;
+    assert ledger.transactions.get(txn_id=930012) is None
+    assert ledger.transactions.get(txn_id=930011).amount == 5000
+
+
+def test_final_balance_below_zero_refuses_the_whole_file(ledger, tmp_path):
+    other = &quot;LTB&quot;
+    ledger.accounts.create(account=other, name=&quot;Other&quot;)
+    rows = [
+        [940001, &quot;2026-05-01&quot;, other, &quot;LTC&quot;, &quot;100.00&quot;, &quot;fine&quot;],
+        [940002, &quot;2026-05-01&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;-0.01&quot;, &quot;overdraw&quot;],
+    ]
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;transactions&quot;, _write(tmp_path, &quot;o.csv&quot;, rows))
+    assert code == 3
+    assert out == &quot;&quot;
+    assert ledger.transactions.get(txn_id=940001) is None
+    assert ledger.transactions.get(txn_id=940002) is None
+
+
+def test_balance_is_checked_on_the_final_total_after_the_whole_file(ledger, tmp_path):
+    rows = [
+        [940011, &quot;2026-05-01&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;-10.00&quot;, &quot;spend first&quot;],
+        [940012, &quot;2026-05-02&quot;, &quot;LTA&quot;, &quot;LTC&quot;, &quot;10.00&quot;, &quot;deposit later&quot;],
+    ]
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;transactions&quot;, _write(tmp_path, &quot;g.csv&quot;, rows))
+    assert code == 0
+    assert list(csv.reader(out.splitlines()))[1] == [&quot;transactions&quot;, &quot;2&quot;]
+
+
+def test_mismatched_header_exits_3_and_stores_nothing(ledger, tmp_path):
+    path = _write(tmp_path, &quot;w.csv&quot;, [[950001, &quot;x&quot;]], header=[&quot;account&quot;, &quot;name&quot;])
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;transactions&quot;, path)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert ledger.transactions.get(txn_id=950001) is None
+
+
+def test_missing_file_exits_1_with_no_stdout(ledger, tmp_path):
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;transactions&quot;, str(tmp_path / &quot;absent.csv&quot;))
+    assert code == 1
+    assert out == &quot;&quot;
+
+
+def test_missing_file_argument_is_a_usage_error(ledger):
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;transactions&quot;)
+    assert code == 2
+    assert out == &quot;&quot;
+</pre></article>
+</main>
+</body>
+</html>

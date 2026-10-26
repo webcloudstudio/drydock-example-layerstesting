@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Count.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Count.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Count.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Count</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>The ledger count command reports the number of rows in each table.</td></tr><tr><td>Depends On</td><td>FEATURE-CliFoundation.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger count</td></tr><tr><td>Consumes</td><td>accounts.list, categories.list, transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger count</code> prints a CSV of row counts per table, read from the database at run time.</p>
+<h2>Behavior</h2>
+<ul><li>Takes no arguments; any argument is a usage error (exit 2).</li><li>Prints the header <code>table,rows</code>, then the rows <code>accounts</code>, <code>categories</code>, <code>transactions</code> in that</li></ul>
+<p>order, each with its stored row count, and exits 0.</p>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNTS-003</code> — read: count accounts from the listed rows - supplies: <code>account</code> - returns: <code>account</code></li><li><code>FEATURE-CATEGORIES-003</code> — read: count categories from the listed rows - supplies: <code>category</code> - returns: <code>category</code></li><li><code>FEATURE-TRANSACTIONS-003</code> — read: count transactions from the listed rows - supplies: <code>account</code> - returns: <code>txn_id</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC count-reports-stored-rows ===<br>Intent: Count prints the table header and the stored row count of each table in the declared order.</p>
+<p>import csv import io</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>acct = &quot;UTCNT1&quot; cat = &quot;UTCNTC1&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Count Probe&quot;) db.categories.create(category=cat, description=&quot;Count Category&quot;) db.transactions.create( txn_id=960001, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=100, memo=&quot;&quot; ) code, out, err = cli_runner(&quot;count&quot;) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;table&quot;, &quot;rows&quot;] assert [r[0] for r in rows[1:]] == [&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;] assert int(rows[1][1]) == len(db.accounts.list()) assert int(rows[2][1]) == len(db.categories.list()) assert int(rows[3][1]) == len(db.transactions.list()) === END AC count-reports-stored-rows ===</p>
+<p>=== AC count-tracks-changes ===<br>Intent: Count reflects rows added after a previous count.</p>
+<p>import csv import io</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>def accounts_count(): code, out, err = cli_runner(&quot;count&quot;) assert code == 0 rows = list(csv.reader(io.StringIO(out))) return int(rows[1][1])</p>
+<p>with db_session() as db: before = accounts_count() db.accounts.create(account=&quot;UTCNT2A&quot;, name=&quot;One&quot;) db.accounts.create(account=&quot;UTCNT2B&quot;, name=&quot;Two&quot;) assert accounts_count() == before + 2 === END AC count-tracks-changes ===</p>
+<p>=== AC count-after-init ===<br>Intent: After init every table reports zero rows.</p>
+<p>import csv import io</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;UTCNT3&quot;, name=&quot;Gone&quot;) assert cli_runner(&quot;init&quot;)[0] == 0 code, out, err = cli_runner(&quot;count&quot;) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert [int(r[1]) for r in rows[1:]] == [0, 0, 0] === END AC count-after-init ===</p>
+<p>=== AC count-argument-usage ===<br>Intent: Count with an extra argument is a usage error with no standard output.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;count&quot;, &quot;extra&quot;) print(err) assert code == 2 assert out == &quot;&quot; === END AC count-argument-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Counts come from queries, never from stored or embedded values.</li><li>Count writes nothing to the database.</li></ul></article>
+</main>
+</body>
+</html>

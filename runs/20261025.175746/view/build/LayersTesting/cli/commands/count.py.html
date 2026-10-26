@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/commands/count.py</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/commands/count.py</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../build/LayersTesting/cli/commands/count.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger count``: the number of stored rows in each table, read from the database.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+from cli.registry import register
+
+
+def count(db, args: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Header ``table,rows``, then accounts, categories, and transactions in that order.&quot;&quot;&quot;
+    return [
+        [&quot;table&quot;, &quot;rows&quot;],
+        [&quot;accounts&quot;, str(len(db.accounts.list()))],
+        [&quot;categories&quot;, str(len(db.categories.list()))],
+        [&quot;transactions&quot;, str(len(db.transactions.list()))],
+    ]
+
+
+register((&quot;count&quot;,), 0, 0, count)
+</pre></article>
+</main>
+</body>
+</html>

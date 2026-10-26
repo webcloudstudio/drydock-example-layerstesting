@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/commands/account_add.py</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/commands/account_add.py</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../build/LayersTesting/cli/commands/account_add.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger account add &lt;code&gt; &lt;name&gt;``: validate and store one new cash account.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+from cli.balance import account_summary
+from cli.errors import Rejected
+from cli.output import ACCOUNT_HEADER, format_account
+from cli.registry import register
+from cli.validate import validate_code, validate_name
+
+
+def account_add(db, args: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Every check completes before the single write; a duplicate code is refused.&quot;&quot;&quot;
+    code = validate_code(args[0])
+    name = validate_name(args[1])
+    if db.accounts.get(account=code) is not None:
+        raise Rejected(f&quot;account {code} already exists&quot;)
+    db.accounts.create(account=code, name=name)
+    count, balance = account_summary(db, code)
+    return [list(ACCOUNT_HEADER), format_account(code, name, count, balance)]
+
+
+register((&quot;account&quot;, &quot;add&quot;), 2, 2, account_add)
+</pre></article>
+</main>
+</body>
+</html>

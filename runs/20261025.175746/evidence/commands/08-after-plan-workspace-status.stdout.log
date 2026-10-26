@@ -1,0 +1,16 @@
+Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Drydock status — workspace
+
+Target: LayersTesting
+   Phase:     Implement
+   State:     22 pending
+   Detail:    6 imported · 22 authored · metadata planned
+   Analysis:  Ready · 17 stories · 0 questions · 0 blockers
+   Plan:      22 pending
+   Next Step: drydock build LayersTesting  (frontier: Stand up the Python project tree, environment, pytest runner, and bin/test.sh.)
+   10-25:     ✅  drydock build status LayersTesting
+   10-25:     ✅  drydock plan verify LayersTesting --plan-override-model sonnet
+   10-25:     ✅  drydock plan LayersTesting --override --plan-override-model sonnet
+   10-25:     ✅  drydock analyze LayersTesting
+   10-25:     ✅  drydock import LayersTesting /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.175746/sources --format markdown
+

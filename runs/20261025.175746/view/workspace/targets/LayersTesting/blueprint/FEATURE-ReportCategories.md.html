@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-ReportCategories.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-ReportCategories.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-ReportCategories.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Report Categories</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261025 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger report categories</code>, the per-category inflow, outflow, and net with a TOTAL row.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-CliFoundation.md</td></tr><tr><td>Provides</td><td>ledger report categories</td></tr><tr><td>Consumes</td><td>categories.list, transactions.list</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Report totals by category, computed from stored rows in integer cents, including categories that have no transactions.</p>
+<h2>Trigger</h2>
+<p><code>./ledger report categories</code></p>
+<h2>Sequence</h2>
+<ol><li>List categories through <code>categories.list</code> (ordered by code) and all transactions through <code>transactions.list</code>.</li><li>For each category compute the transaction count, <code>inflow</code> (sum of positive amounts), <code>outflow</code></li></ol>
+<p>(sum of absolute values of negative amounts, printed as a positive number), and <code>net</code> (<code>inflow - outflow</code>).</p>
+<ol><li>Print the header <code>category,description,transactions,inflow,outflow,net</code>, one row per category</li></ol>
+<p>ordered by code (empty categories print <code>0</code> and <code>0.00</code> values), then <code>TOTAL,,&lt;count&gt;,&lt;inflow&gt;,&lt;outflow&gt;,&lt;net&gt;</code> over all categories.</p>
+<ol><li>Amounts print with exactly two decimal places, a leading <code>-</code> when negative, and no thousands separator.</li><li>Any argument beyond <code>categories</code> is a usage error (exit 2).</li></ol>
+<h2>Reads</h2>
+<ul><li><code>categories.list</code>, <code>transactions.list</code>.</li></ul>
+<h2>Writes</h2>
+<ul><li>None.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-CATEGORIES-003</code> — read: list categories in code order - supplies: <code>category</code> - returns: <code>category</code>, <code>description</code></li><li><code>FEATURE-TRANSACTIONS-003</code> — read: list every transaction - supplies: <code>account</code> - returns: <code>txn_id</code>, <code>category</code>, <code>amount</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC report-categories-row-values ===<br>Intent: A category&#x27;s count, inflow, outflow, and net match the cents of the transactions created for it, and an empty category reports zeros.</p>
+<p>import csv import io import re from decimal import Decimal from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>def to_cents(text): assert re.fullmatch(r&quot;-?\d+\.\d{2}&quot;, text) return int(Decimal(text) * 100)</p>
+<p>acct = &quot;UTSA1&quot; used = &quot;UTSC1&quot; unused = &quot;UTSC2&quot; amounts = [50000, 1999, -1250, -75] inflow = sum(a for a in amounts if a &gt; 0) outflow = sum(-a for a in amounts if a &lt; 0) with db_session() as db: db.accounts.create(account=acct, name=&quot;Cats&quot;) db.categories.create(category=used, description=&quot;Used&quot;) db.categories.create(category=unused, description=&quot;Unused&quot;) for offset, cents in enumerate(amounts): db.transactions.create( txn_id=930001 + offset, date=&quot;2026-05-01&quot;, account=acct, category=used, amount=cents, memo=&quot;&quot;, ) code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;category&quot;, &quot;description&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;] by_code = {r[0]: r for r in rows[1:]} row = by_code[used] assert row[1] == &quot;Used&quot; assert int(row[2]) == len(amounts) assert to_cents(row[3]) == inflow assert to_cents(row[4]) == outflow assert to_cents(row[5]) == inflow - outflow empty = by_code[unused] assert empty[1] == &quot;Unused&quot; assert int(empty[2]) == 0 assert to_cents(empty[3]) == 0 assert to_cents(empty[4]) == 0 assert to_cents(empty[5]) == 0 === END AC report-categories-row-values ===</p>
+<p>=== AC report-categories-order-and-total ===<br>Intent: Category rows are ordered by code and the TOTAL row equals the sums of the category rows and the stored transaction count.</p>
+<p>import csv import io import re from decimal import Decimal from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>def to_cents(text): assert re.fullmatch(r&quot;-?\d+\.\d{2}&quot;, text) return int(Decimal(text) * 100)</p>
+<p>acct = &quot;UTSB1&quot; late = &quot;UTSD9&quot; early = &quot;UTSD1&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Cats&quot;) db.categories.create(category=late, description=&quot;Late&quot;) db.categories.create(category=early, description=&quot;Early&quot;) db.transactions.create( txn_id=930101, date=&quot;2026-05-01&quot;, account=acct, category=late, amount=900, memo=&quot;&quot; ) db.transactions.create( txn_id=930102, date=&quot;2026-05-02&quot;, account=acct, category=early, amount=-300, memo=&quot;&quot; ) code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) data = rows[1:-1] codes = [r[0] for r in data] assert codes == sorted(codes) assert codes.index(early) &lt; codes.index(late) total = rows[-1] assert total[0] == &quot;TOTAL&quot; assert total[1] == &quot;&quot; assert int(total[2]) == sum(int(r[2]) for r in data) assert int(total[2]) == len(db.transactions.list()) assert to_cents(total[3]) == sum(to_cents(r[3]) for r in data) assert to_cents(total[4]) == sum(to_cents(r[4]) for r in data) assert to_cents(total[5]) == to_cents(total[3]) - to_cents(total[4]) === END AC report-categories-order-and-total ===</p>
+<p>=== AC report-categories-reflects-changes ===<br>Intent: The report is recomputed from stored rows, so a later outflow raises the category&#x27;s outflow and lowers its net by exactly its amount.</p>
+<p>import csv import io import re from decimal import Decimal from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>def to_cents(text): assert re.fullmatch(r&quot;-?\d+\.\d{2}&quot;, text) return int(Decimal(text) * 100)</p>
+<p>def row_for(out, category): rows = list(csv.reader(io.StringIO(out))) return {r[0]: r for r in rows[1:]}[category]</p>
+<p>acct = &quot;UTSE1&quot; cat = &quot;UTSEC&quot; deposit = 7000 spend = 2345 with db_session() as db: db.accounts.create(account=acct, name=&quot;Moves&quot;) db.categories.create(category=cat, description=&quot;Moves&quot;) db.transactions.create( txn_id=930201, date=&quot;2026-05-01&quot;, account=acct, category=cat, amount=deposit, memo=&quot;&quot; ) code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;) assert code == 0 before = row_for(out, cat) assert to_cents(before[4]) == 0 db.transactions.create( txn_id=930202, date=&quot;2026-05-02&quot;, account=acct, category=cat, amount=-spend, memo=&quot;&quot; ) code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;) assert code == 0 after = row_for(out, cat) assert int(after[2]) == int(before[2]) + 1 assert to_cents(after[3]) == deposit assert to_cents(after[4]) == spend assert to_cents(after[5]) == deposit - spend === END AC report-categories-reflects-changes ===</p>
+<p>=== AC report-categories-usage ===<br>Intent: An extra argument after categories exits 2 with nothing on stdout.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session(): code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;, &quot;extra&quot;) assert code == 2 and out == &quot;&quot; === END AC report-categories-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Every value comes from a query of stored rows; no row, count, or total is hardcoded or stored.</li><li>Outflow is printed as a positive number; net is inflow minus outflow.</li><li>Money is integer cents internally; no floating point at any layer.</li><li>The command writes nothing to the database.</li><li>Diagnostics go to standard error only.</li></ul></article>
+</main>
+</body>
+</html>

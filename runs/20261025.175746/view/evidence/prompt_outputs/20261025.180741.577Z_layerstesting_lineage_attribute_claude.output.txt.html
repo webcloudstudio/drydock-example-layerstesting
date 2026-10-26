@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261025.180741.577Z_layerstesting_lineage_attribute_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261025.180741.577Z_layerstesting_lineage_attribute_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261025.180741.577Z_layerstesting_lineage_attribute_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>&lt;requirement name=&quot;schema-lifecycle&quot; stories=&quot;init-command,count-command,database&quot;&gt;
+# ── A. Schema lifecycle ──────────────────────────────────────────────────────────────────
+check A1 0 init &lt; /dev/null
+check A2 0 count &lt;&lt;&#x27;EOF&#x27;
+table,rows
+accounts,0
+categories,0
+transactions,0
+EOF
+&lt;/requirement&gt;
+&lt;requirement name=&quot;bulk-load-known-dataset&quot; stories=&quot;load-accounts,load-categories,load-transactions,count-command,balance-rules&quot;&gt;
+# ── B. Bulk load of the known dataset ────────────────────────────────────────────────────
+check B1 0 load accounts &quot;$SEED/seed_accounts.csv&quot; &lt;&lt;&#x27;EOF&#x27;
+table,loaded
+accounts,4
+EOF
+check B2 0 load categories &quot;$SEED/seed_categories.csv&quot; &lt;&lt;&#x27;EOF&#x27;
+table,loaded
+categories,7
+EOF
+check B3 0 load transactions &quot;$SEED/seed_transactions.csv&quot; &lt;&lt;&#x27;EOF&#x27;
+table,loaded
+transactions,120
+EOF
+&lt;/requirement&gt;
+&lt;requirement name=&quot;report-balances&quot; stories=&quot;report-balances&quot;&gt;
+check C1 0 report balances &lt;&lt;&#x27;EOF&#x27;
+account,name,transactions,balance
+DRAWER1,Front Drawer,39,2299.38
+DRAWER2,Back Drawer,39,1378.32
+PETTY,Petty Cash,21,306.25
+SAFE,Store Safe,21,250.00
+TOTAL,,120,4233.95
+EOF
+&lt;/requirement&gt;
+&lt;requirement name=&quot;report-categories&quot; stories=&quot;report-categories&quot;&gt;
+check C2 0 report categories &lt;&lt;&#x27;EOF&#x27;
+category,description,transactions,inflow,outflow,net
+OPENING,Opening balance,2,5200.00,0.00,5200.00
+PAYROLL,Payroll,6,0.00,7200.00,-7200.00
+REFUND,Customer refunds,12,0.00,101.25,-101.25
+RENT,Rent,3,0.00,2700.00,-2700.00
+SALES,Sales receipts,64,9578.95,0.00,9578.95
+SUPPLY,Supplies,15,0.00,543.75,-543.75
+TRANSFER,Internal transfer,18,5100.00,5100.00,0.00
+TOTAL,,120,19878.95,15645.00,4233.95
+EOF
+&lt;/requirement&gt;
+&lt;requirement name=&quot;report-monthly&quot; stories=&quot;report-monthly&quot;&gt;
+check C3 0 report monthly &lt;&lt;&#x27;EOF&#x27;
+month,transactions,inflow,outflow,net
+2026-01,40,9659.45,5215.00,4444.45
+2026-02,40,4979.65,5215.00,-235.35
+2026-03,40,5239.85,5215.00,24.85
+TOTAL,120,19878.95,15645.00,4233.95
+EOF
+&lt;/requirement&gt;
+&lt;requirement name=&quot;rejected-load-changes-nothing&quot; stories=&quot;load-accounts,load-transactions,load-categories,count-command&quot;&gt;
+# ── D. A rejected load changes nothing ───────────────────────────────────────────────────
+check D1 3 load transactions &quot;$SEED/seed_transactions_bad.csv&quot; &lt; /dev/null
+check D2 3 load accounts &quot;$SEED/seed_accounts.csv&quot; &lt; /dev/null
+check D3 0 count &lt;&lt;&#x27;EOF&#x27;
+table,rows
+accounts,4
+categories,7
+transactions,120
+EOF
+&lt;/requirement&gt;
+&lt;requirement name=&quot;account-crud&quot; stories=&quot;account-add,account-get,account-rename,account-delete,balance-rules&quot;&gt;
+# ── E. Account create, read, update, delete ──────────────────────────────────────────────
+check E1 0 account add CASH9 &quot;Event Float&quot; &lt;&lt;&#x27;EOF&#x27;
+account,name,transactions,balance
+CASH9,Event Float,0,0.00
+EOF
+check E2 3 account add CASH9 &quot;Event Float&quot; &lt; /dev/null
+check E3 0 account get CASH9 &lt;&lt;&#x27;EOF&#x27;
+account,name,transactions,balance
+CASH9,Event Float,0,0.00
+EOF
+check E4 0 account rename CASH9 &quot;Event Cash Box&quot; &lt;&lt;&#x27;EOF&#x27;
+account,name,transactions,balance
+CASH9,Event Cash Box,0,0.00
+EOF
+check E5 4 account get NOSUCH &lt; /dev/null
+check E6 3 account delete DRAWER1 &lt; /dev/null
+check E7 0 account delete CASH9 &lt;&lt;&#x27;EOF&#x27;
+deleted
+CASH9
+EOF
+check E8 4 account get CASH9 &lt; /dev/null
+&lt;/requirement&gt;
+&lt;requirement name=&quot;txn-crud&quot; stories=&quot;txn-post,txn-get,txn-amend,txn-delete&quot;&gt;
+# ── F. Transaction create, read, update, delete ──────────────────────────────────────────
+check F1 0 txn post DRAWER1 SALES 45.50 2026-04-01 &quot;walk in sale&quot; &lt;&lt;&#x27;EOF&#x27;
+txn_id,date,account,category,amount,memo
+121,2026-04-01,DRAWER1,SALES,45.50,walk in sale
+EOF
+check F2 0 txn get 121 &lt;&lt;&#x27;EOF&#x27;
+txn_id,date,account,category,amount,memo
+121,2026-04-01,DRAWER1,SALES,45.50,walk in sale
+EOF
+check F3 0 txn amend 121 54.50 &lt;&lt;&#x27;EOF&#x27;
+txn_id,date,account,category,amount,memo
+121,2026-04-01,DRAWER1,SALES,54.50,walk in sale
+EOF
+check F4 4 txn get 999 &lt; /dev/null
+check F5 3 txn post DRAWER1 NOSUCH 1.00 2026-04-01 &lt; /dev/null
+check F6 3 txn post DRAWER1 SALES 1.234 2026-04-01 &lt; /dev/null
+check F7 3 txn post DRAWER1 SALES 1.00 2026-02-30 &lt; /dev/null
+check F8 0 txn delete 121 &lt;&lt;&#x27;EOF&#x27;
+deleted
+121
+EOF
+check F9 4 txn get 121 &lt; /dev/null
+check F10 0 txn post PETTY SUPPLY -12.34 2026-04-02 tape &lt;&lt;&#x27;EOF&#x27;
+txn_id,date,account,category,amount,memo
+121,2026-04-02,PETTY,SUPPLY,-12.34,tape
+EOF
+&lt;/requirement&gt;
+&lt;requirement name=&quot;atomic-transfers-no-negative-balance&quot; stories=&quot;transfer-command,balance-rules,txn-post,txn-amend,txn-delete,count-command&quot;&gt;
+# ── G. Transfers are atomic; no command leaves a negative balance ────────────────────────
+check G1 0 transfer DRAWER1 SAFE 500.00 2026-04-03 &lt;&lt;&#x27;EOF&#x27;
+txn_id,date,account,category,amount,memo
+122,2026-04-03,DRAWER1,TRANSFER,-500.00,transfer to SAFE
+123,2026-04-03,SAFE,TRANSFER,500.00,transfer from DRAWER1
+EOF
+check G2 3 transfer SAFE PETTY 999.99 2026-04-04 &lt; /dev/null
+check G3 3 txn post PETTY SUPPLY -1000.00 2026-04-04 &lt; /dev/null
+check G4 3 txn amend 1 1.00 &lt; /dev/null
+check G5 3 txn delete 1 &lt; /dev/null
+check G6 0 count &lt;&lt;&#x27;EOF&#x27;
+table,rows
+accounts,4
+categories,7
+transactions,123
+EOF
+&lt;/requirement&gt;
+&lt;requirement name=&quot;reports-after-changes&quot; stories=&quot;report-balances,report-categories,report-monthly&quot;&gt;
+# ── H. Reports after the changes ─────────────────────────────────────────────────────
+check H1 0 report balances &lt;&lt;&#x27;EOF&#x27;
+account,name,transactions,balance
+DRAWER1,Front Drawer,40,1799.38
+DRAWER2,Back Drawer,39,1378.32
+PETTY,Petty Cash,22,293.91
+SAFE,Store Safe,22,750.00
+TOTAL,,123,4221.61
+EOF
+check H2 0 report categories &lt;&lt;&#x27;EOF&#x27;
+category,description,transactions,inflow,outflow,net
+OPENING,Opening balance,2,5200.00,0.00,5200.00
+PAYROLL,Payroll,6,0.00,7200.00,-7200.00
+REFUND,Customer refunds,12,0.00,101.25,-101.25
+RENT,Rent,3,0.00,2700.00,-2700.00
+SALES,Sales receipts,64,9578.95,0.00,9578.95
+SUPPLY,Supplies,16,0.00,556.09,-556.09
+TRANSFER,Internal transfer,20,5600.00,5600.00,0.00
+TOTAL,,123,20378.95,16157.34,4221.61
+EOF
+check H3 0 report monthly &lt;&lt;&#x27;EOF&#x27;
+month,transactions,inflow,outflow,net
+2026-01,40,9659.45,5215.00,4444.45
+2026-02,40,4979.65,5215.00,-235.35
+2026-03,40,5239.85,5215.00,24.85
+2026-04,3,500.00,512.34,-12.34
+TOTAL,123,20378.95,16157.34,4221.61
+EOF
+&lt;/requirement&gt;
+&lt;requirement name=&quot;usage-errors&quot; stories=&quot;cli-foundation&quot;&gt;
+# ── U. Usage errors ──────────────────────────────────────────────────────────────────────
+check U1 2 frobnicate &lt; /dev/null
+check U2 2 report nosuch &lt; /dev/null
+&lt;/requirement&gt;
+&lt;requirement name=&quot;reinit-drops-rows&quot; stories=&quot;init-command,count-command&quot;&gt;
+# ── Z. Re-initialization drops every row ─────────────────────────────────────────────────
+check Z1 0 init &lt; /dev/null
+check Z2 0 count &lt;&lt;&#x27;EOF&#x27;
+table,rows
+accounts,0
+categories,0
+transactions,0
+EOF
+&lt;/requirement&gt;
+&lt;requirement name=&quot;ledger-executable-deliverable&quot; stories=&quot;cli-foundation,release-verification&quot;&gt;
+if [ ! -x &quot;$LEDGER&quot; ]; then
+    echo &quot;error: no executable ./ledger at the application root $APP.&quot; &gt;&amp;2
+    echo &quot;The deliverable is an executable named ledger at the application root.&quot; &gt;&amp;2
+    exit 1
+fi
+&lt;/requirement&gt;
+&lt;unattached story=&quot;python-foundation&quot;/&gt;</pre></article>
+</main>
+</body>
+</html>

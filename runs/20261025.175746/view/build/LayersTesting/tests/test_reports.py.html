@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_reports.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_reports.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_reports.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger report monthly|balances|categories``: every row recomputed from stored rows.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import csv
+import io
+import re
+from decimal import Decimal
+
+import pytest
+
+from cli.testing import cli_runner
+
+
+def _rows(out: str) -&gt; list[list[str]]:
+    return list(csv.reader(io.StringIO(out)))
+
+
+def _cents(text: str) -&gt; int:
+    assert re.fullmatch(r&quot;-?\d+\.\d{2}&quot;, text), text
+    return int(Decimal(text) * 100)
+
+
+@pytest.fixture
+def ledger(scratch_db):
+    scratch_db.accounts.create(account=&quot;RPA&quot;, name=&quot;Report A&quot;)
+    scratch_db.accounts.create(account=&quot;RPB&quot;, name=&quot;Report B&quot;)
+    scratch_db.accounts.create(account=&quot;RPE&quot;, name=&quot;Never Used&quot;)
+    scratch_db.categories.create(category=&quot;RPC1&quot;, description=&quot;Used&quot;)
+    scratch_db.categories.create(category=&quot;RPC2&quot;, description=&quot;Unused&quot;)
+    scratch_db.categories.create(category=&quot;RPC0&quot;, description=&quot;First by code&quot;)
+    return scratch_db
+
+
+def _store(db, txn_id: int, date: str, account: str, category: str, cents: int) -&gt; None:
+    db.transactions.create(
+        txn_id=txn_id, date=date, account=account, category=category, amount=cents, memo=&quot;&quot;
+    )
+
+
+# report monthly
+
+
+def test_monthly_rows_are_per_month_in_ascending_order_with_total_last(ledger):
+    _store(ledger, 8001, &quot;2098-06-10&quot;, &quot;RPA&quot;, &quot;RPC1&quot;, 4001)
+    _store(ledger, 8002, &quot;2098-05-10&quot;, &quot;RPA&quot;, &quot;RPC1&quot;, 10000)
+    _store(ledger, 8003, &quot;2098-05-11&quot;, &quot;RPA&quot;, &quot;RPC1&quot;, -2550)
+    code, out, _ = cli_runner(&quot;report&quot;, &quot;monthly&quot;)
+    assert code == 0
+    rows = _rows(out)
+    assert rows[0] == [&quot;month&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;]
+    assert rows[1] == [&quot;2098-05&quot;, &quot;2&quot;, &quot;100.00&quot;, &quot;25.50&quot;, &quot;74.50&quot;]
+    assert rows[2] == [&quot;2098-06&quot;, &quot;1&quot;, &quot;40.01&quot;, &quot;0.00&quot;, &quot;40.01&quot;]
+    assert rows[3] == [&quot;TOTAL&quot;, &quot;3&quot;, &quot;140.01&quot;, &quot;25.50&quot;, &quot;114.51&quot;]
+
+
+def test_monthly_total_equals_sum_of_month_rows(ledger):
+    _store(ledger, 8011, &quot;2098-07-01&quot;, &quot;RPA&quot;, &quot;RPC1&quot;, 12345)
+    _store(ledger, 8012, &quot;2098-08-01&quot;, &quot;RPA&quot;, &quot;RPC1&quot;, -345)
+    rows = _rows(cli_runner(&quot;report&quot;, &quot;monthly&quot;)[1])
+    body, total = rows[1:-1], rows[-1]
+    assert int(total[1]) == sum(int(r[1]) for r in body)
+    for col in (2, 3, 4):
+        assert _cents(total[col]) == sum(_cents(r[col]) for r in body)
+
+
+def test_monthly_total_count_equals_stored_transaction_count(ledger):
+    code, out, _ = cli_runner(&quot;report&quot;, &quot;monthly&quot;)
+    assert code == 0
+    assert _rows(out)[-1][:2] == [&quot;TOTAL&quot;, str(len(ledger.transactions.list()))]
+
+
+def test_monthly_with_no_transactions_has_only_header_and_zero_total(ledger):
+    code, out, _ = cli_runner(&quot;report&quot;, &quot;monthly&quot;)
+    assert code == 0
+    assert _rows(out) == [[&quot;month&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;], [&quot;TOTAL&quot;, &quot;0&quot;, &quot;0.00&quot;, &quot;0.00&quot;, &quot;0.00&quot;]]
+
+
+@pytest.mark.parametrize(&quot;argv&quot;, [[&quot;report&quot;, &quot;monthly&quot;, &quot;extra&quot;], [&quot;report&quot;, &quot;nosuchreport&quot;], [&quot;report&quot;]])
+def test_monthly_usage_errors_exit_2_with_no_stdout(ledger, argv):
+    code, out, _ = cli_runner(*argv)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+# report balances
+
+
+def test_balances_list_every_account_by_code_with_count_and_balance(ledger):
+    _store(ledger, 8101, &quot;2098-05-01&quot;, &quot;RPA&quot;, &quot;RPC1&quot;, 100000)
+    _store(ledger, 8102, &quot;2098-05-01&quot;, &quot;RPA&quot;, &quot;RPC1&quot;, -30050)
+    _store(ledger, 8103, &quot;2098-05-01&quot;, &quot;RPB&quot;, &quot;RPC1&quot;, 1999)
+    code, out, _ = cli_runner(&quot;report&quot;, &quot;balances&quot;)
+    assert code == 0
+    rows = _rows(out)
+    assert rows[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;]
+    assert rows[1:-1] == [
+        [&quot;RPA&quot;, &quot;Report A&quot;, &quot;2&quot;, &quot;699.50&quot;],
+        [&quot;RPB&quot;, &quot;Report B&quot;, &quot;1&quot;, &quot;19.99&quot;],
+        [&quot;RPE&quot;, &quot;Never Used&quot;, &quot;0&quot;, &quot;0.00&quot;],
+    ]
+
+
+def test_balances_total_row_sums_counts_and_balances(ledger):
+    _store(ledger, 8111, &quot;2098-05-01&quot;, &quot;RPA&quot;, &quot;RPC1&quot;, 2500)
+    _store(ledger, 8112, &quot;2098-05-01&quot;, &quot;RPB&quot;, &quot;RPC1&quot;, 700)
+    rows = _rows(cli_runner(&quot;report&quot;, &quot;balances&quot;)[1])
+    total = rows[-1]
+    assert total[:3] == [&quot;TOTAL&quot;, &quot;&quot;, &quot;2&quot;]
+    assert _cents(total[3]) == 3200
+
+
+def test_balances_change_by_exactly_the_amount_of_a_later_transaction(ledger):
+    _store(ledger, 8121, &quot;2098-05-01&quot;, &quot;RPA&quot;, &quot;RPC1&quot;, 8000)
+    before = _rows(cli_runner(&quot;report&quot;, &quot;balances&quot;)[1])[1]
+    _store(ledger, 8122, &quot;2098-05-02&quot;, &quot;RPA&quot;, &quot;RPC1&quot;, 1234)
+    after = _rows(cli_runner(&quot;report&quot;, &quot;balances&quot;)[1])[1]
+    assert _cents(after[3]) == _cents(before[3]) + 1234
+    assert int(after[2]) == int(before[2]) + 1
+
+
+@pytest.mark.parametrize(&quot;argv&quot;, [[&quot;report&quot;, &quot;balances&quot;, &quot;extra&quot;], [&quot;report&quot;], [&quot;report&quot;, &quot;nosuchreport&quot;]])
+def test_balances_usage_errors_exit_2_with_no_stdout(ledger, argv):
+    code, out, _ = cli_runner(*argv)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+# report categories
+
+
+def test_categories_compute_count_inflow_outflow_and_net_and_keep_empty_ones(ledger):
+    amounts = [50000, 1999, -1250, -75]
+    for offset, cents in enumerate(amounts):
+        _store(ledger, 8201 + offset, &quot;2098-05-01&quot;, &quot;RPA&quot;, &quot;RPC1&quot;, cents)
+    code, out, _ = cli_runner(&quot;report&quot;, &quot;categories&quot;)
+    assert code == 0
+    rows = _rows(out)
+    assert rows[0] == [&quot;category&quot;, &quot;description&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;]
+    assert rows[1] == [&quot;RPC0&quot;, &quot;First by code&quot;, &quot;0&quot;, &quot;0.00&quot;, &quot;0.00&quot;, &quot;0.00&quot;]
+    assert rows[2] == [&quot;RPC1&quot;, &quot;Used&quot;, &quot;4&quot;, &quot;519.99&quot;, &quot;13.25&quot;, &quot;506.74&quot;]
+    assert rows[3] == [&quot;RPC2&quot;, &quot;Unused&quot;, &quot;0&quot;, &quot;0.00&quot;, &quot;0.00&quot;, &quot;0.00&quot;]
+
+
+def test_categories_order_by_code_and_total_equals_the_rows(ledger):
+    _store(ledger, 8301, &quot;2098-05-01&quot;, &quot;RPA&quot;, &quot;RPC1&quot;, 900)
+    _store(ledger, 8302, &quot;2098-05-02&quot;, &quot;RPA&quot;, &quot;RPC0&quot;, -300)
+    rows = _rows(cli_runner(&quot;report&quot;, &quot;categories&quot;)[1])
+    data, total = rows[1:-1], rows[-1]
+    codes = [r[0] for r in data]
+    assert codes == sorted(codes)
+    assert total[0] == &quot;TOTAL&quot; and total[1] == &quot;&quot;
+    assert int(total[2]) == len(ledger.transactions.list()) == sum(int(r[2]) for r in data)
+    assert _cents(total[3]) == sum(_cents(r[3]) for r in data)
+    assert _cents(total[4]) == sum(_cents(r[4]) for r in data)
+    assert _cents(total[5]) == _cents(total[3]) - _cents(total[4])
+
+
+def test_categories_outflow_rises_and_net_falls_after_a_spend(ledger):
+    _store(ledger, 8401, &quot;2098-05-01&quot;, &quot;RPA&quot;, &quot;RPC1&quot;, 7000)
+    before = {r[0]: r for r in _rows(cli_runner(&quot;report&quot;, &quot;categories&quot;)[1])[1:]}[&quot;RPC1&quot;]
+    assert _cents(before[4]) == 0
+    _store(ledger, 8402, &quot;2098-05-02&quot;, &quot;RPA&quot;, &quot;RPC1&quot;, -2345)
+    after = {r[0]: r for r in _rows(cli_runner(&quot;report&quot;, &quot;categories&quot;)[1])[1:]}[&quot;RPC1&quot;]
+    assert int(after[2]) == int(before[2]) + 1
+    assert _cents(after[4]) == 2345
+    assert _cents(after[5]) == 7000 - 2345
+
+
+@pytest.mark.parametrize(&quot;argv&quot;, [[&quot;report&quot;, &quot;categories&quot;, &quot;extra&quot;], [&quot;report&quot;]])
+def test_categories_usage_errors_exit_2_with_no_stdout(ledger, argv):
+    code, out, _ = cli_runner(*argv)
+    assert code == 2
+    assert out == &quot;&quot;
+</pre></article>
+</main>
+</body>
+</html>

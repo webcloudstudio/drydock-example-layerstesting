@@ -1,0 +1,33 @@
+This is the same repair request as before, and the blocker is unchanged. I'll rerun the grader once to confirm the build directory's state hasn't moved.RESULT: FAILED
+
+Nothing has changed since the last pass. The grader still reports 4 passed, 39 failed, exit 1, and the working tree is clean. I did not edit the code, because the only fix that passes the grader breaks two explicit guardrails. This needs a spec decision before anyone edits code.
+
+**Why I stopped**
+
+- The grader creates an empty database and runs `ledger init`, so the schema has to exist before any command runs.
+- `FEATURE-Init.md` says the schema "is provisioned by the DATABASE step, so init issues no DDL (decision Q-001)."
+- `DATABASE.md` says "no command issues DDL."
+- Nothing in the Target provisions a database that the grader creates itself. Q-001 is cited but has no decision record.
+- Earlier I confirmed that applying `schema.sql` to a scratch database makes the grader pass 43 of 43. That shows the application logic is correct and the gap is only provisioning.
+
+**What needs deciding**
+
+Pick one, and I'll implement it:
+
+1. **Ensure-schema on open (recommended):** the DATABASE step adds an idempotent schema apply when a store is opened. No command issues DDL explicitly, and the DATABASE and Init specs are amended to say so, with Q-001 recorded.
+2. **Launcher bootstrap:** `ledger` applies `schema.sql` before it runs the CLI. This is the smallest change, but it puts DDL outside the persistence boundary.
+3. **Keep the spec as written:** the gate fails until the grader provisions its own database. The grader is staged and can't be changed.
+
+I wrote nothing to the build directory this pass. The `/tmp/lt-exp/` scratch database is still there.
+
+FILES CHANGED:
+- none
+
+SUMMARY:
+Re-ran the grader on the unchanged build: 4 passed, 39 failed (of 43), exit 1. The tree is clean, and no code was changed. The remaining failure is a specification conflict about where the schema is provisioned, not a defect in any command. I did not run `bin/test.sh`, because this block's criterion is the grader.
+
+BLOCKERS:
+- Schema provisioning for a fresh database conflicts with the Init and DATABASE specs, which forbid any command from issuing DDL. Decision needed on option 1, 2, or 3 above.
+
+FAILURE_SUMMARY: Grader needs a provisioned schema on a fresh database, which the Init and DATABASE specs forbid any command from creating.
+FAILURE_DETAIL: With `schema.sql` applied to the database beforehand, all 43 checks pass (verified in `/tmp/lt-exp`). The specs place schema creation in the DATABASE step and forbid any command from issuing DDL, but the grader's fresh database never passes through that step. Amend DATABASE.md and FEATURE-Init.md, and record Q-001, to choose where provisioning happens (for example, an idempotent ensure-schema on open). Then rerun `sh sources/run.sh`.

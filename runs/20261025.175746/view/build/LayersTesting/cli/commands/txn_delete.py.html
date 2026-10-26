@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/commands/txn_delete.py</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/commands/txn_delete.py</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../build/LayersTesting/cli/commands/txn_delete.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger txn delete &lt;id&gt;``: remove one stored transaction unless it leaves a negative balance.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+from cli.balance import check_balances
+from cli.errors import NotFound
+from cli.registry import register
+from cli.validate import validate_txn_id
+
+
+def txn_delete(db, args: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;The balance check runs with the row removed; a rejected delete keeps the row.&quot;&quot;&quot;
+    txn_id = validate_txn_id(args[0])
+    row = db.transactions.get(txn_id=txn_id)
+    if row is None:
+        raise NotFound(f&quot;no transaction {txn_id}&quot;)
+    check_balances(db, {row.account: -row.amount})
+    db.transactions.delete(txn_id=txn_id)
+    return [[&quot;deleted&quot;], [str(txn_id)]]
+
+
+register((&quot;txn&quot;, &quot;delete&quot;), 1, 1, txn_delete)
+</pre></article>
+</main>
+</body>
+</html>

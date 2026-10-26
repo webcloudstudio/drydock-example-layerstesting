@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/database.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/database.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/database.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Open the ledger&#x27;s store. The only place the database location is resolved.&quot;&quot;&quot;
+
+from __future__ import annotations
+
+import os
+
+from persistence import Database, open_database
+
+DEFAULT_DATABASE_PATH = &quot;data/app.db&quot;
+
+
+def database_location() -&gt; str:
+    &quot;&quot;&quot;``DATABASE_URL``, then ``DATABASE_PATH``, then ``data/app.db``. Empty values count as unset.&quot;&quot;&quot;
+    return (
+        os.environ.get(&quot;DATABASE_URL&quot;)
+        or os.environ.get(&quot;DATABASE_PATH&quot;)
+        or DEFAULT_DATABASE_PATH
+    )
+
+
+def open_ledger() -&gt; Database:
+    &quot;&quot;&quot;Open the configured store through the shipped persistence library.&quot;&quot;&quot;
+    return open_database(database_location())
+</pre></article>
+</main>
+</body>
+</html>

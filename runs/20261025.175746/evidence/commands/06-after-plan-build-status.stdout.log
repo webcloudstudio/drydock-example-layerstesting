@@ -1,0 +1,41 @@
+Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Next: drydock build LayersTesting
+
+Blueprint: LayersTesting
+Target: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261025.175746/workspace/targets/LayersTesting
+Rows: <state> <type>  <Name>  [<id>]   — pass [<id>] to --step
+
+Block: Build Block 1 · Foundational  [block-1]   — 0/1 stories complete
+  [pending] story  Stand up the Python project tree, environment, pytest runner, and bin/test.sh.  [python-foundation]  <- next
+
+Block: Build Block 2 · Foundational  [block-2]   — 0/2 stories complete
+  [pending] story  Declare the accounts, categories, and transactions store and its repository operations.  [database]
+  [pending] story  Provide the ledger executable, command dispatch, exit codes, CSV output, and input validators.  [cli-foundation]
+
+Block: Build Block 3 · Service  [block-3]   — 0/5 stories complete
+  [pending] story  Provide account summaries and the non-negative balance check used by every mutating command.  [balance-rules]
+  [pending] story  Implement ledger init to reset the ledger to empty.  [init-command]
+  [pending] story  Implement ledger count.  [count-command]
+  [pending] story  Implement ledger load categories with all-or-nothing validation.  [load-categories]
+  [pending] story  Implement ledger load accounts with all-or-nothing validation.  [load-accounts]
+
+Block: Build Block 4 · Service  [block-4]   — 0/13 stories complete
+  [pending] story  Implement ledger load transactions keeping file txn_ids, with balance checking.  [load-transactions]
+  [pending] story  Implement ledger account get.  [account-get]
+  [pending] story  Implement ledger txn get.  [txn-get]
+  [pending] story  Implement ledger account rename.  [account-rename]
+  [pending] story  Implement ledger account delete.  [account-delete]
+  [pending] story  Implement ledger account add.  [account-add]
+  [pending] story  Implement ledger txn delete.  [txn-delete]
+  [pending] story  Implement ledger report monthly.  [report-monthly]
+  [pending] story  Implement ledger txn amend.  [txn-amend]
+  [pending] story  Implement ledger report balances.  [report-balances]
+  [pending] story  Implement ledger report categories.  [report-categories]
+  [pending] story  Implement ledger txn post.  [txn-post]
+  [pending] story  Implement ledger transfer between two accounts atomically.  [transfer-command]
+
+Block: Build Block 5 · Feature  [block-5]   — 0/1 stories complete
+  [pending] story  Terminal gate running the full supplied grader.  [release-verification]
+
+Steps: 22 total — 0 done, 0 built (await verify), 0 in review, 22 pending, 0 blocked by questions, 0 failed (0% complete)
+Buildable now: block-1

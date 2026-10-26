@@ -1,0 +1,48 @@
+Baseline is green (124 tests). The existing code has the balance rule, validators, money and loader helpers I need, and the persistence layer is autocommit with no application-level transaction API. I'll build the 13 commands on those helpers, and make the two multi-row writes all-or-nothing by compensating delete on failure.Now the account commands.Now the transaction commands.Now the three reports.Before writing tests, a quick import and smoke check to catch errors early.All 17 commands register and the existing 124 tests still pass. Now the test suite, covering the declared acceptance assertions plus boundaries, starting with the account commands.I left a stray import and a convoluted line in two of those tests. Cleaning them up before running.Now the full suite.The failure is in my test, not the code. `cli_runner` opens its own `Database`, so patching the fixture's instance never reaches the command. I'll test the compensation through `store_transactions` with a wrapper that fails on the second create.Next I'll run the staged acceptance assertions verbatim, not just my restatements of them. I'll extract each `=== AC ===` block from the Feature specs and run it against a throwaway SQLite store in `/tmp`, so `data/app.db` is never touched.All 59 criteria across the 13 Feature specs are extracted. Each criterion writes through the CLI, which opens its own connection, so I'll run each one inside the shipped acceptance transaction (`begin/end_acceptance_transaction`) on a fresh copy of the schema-only store, the way the harness does.My extractor kept the `Intent:` prose line inside each block, so every criterion failed at parse time before running. I'll strip that line and rerun, printing only failures.All 59 declared acceptance criteria pass verbatim. Now the project suite with my new tests.Suite is green at 247 tests. Last, a guardrail check: no floats for money, no driver imports outside `persistence/`, and nothing under `sources/` touched.I implemented all 13 stories in block 4. The project suite passes (247 tests, up from 124), and all 59 declared acceptance criteria from the 13 Feature specs pass when run verbatim.
+
+Verification:
+- **Acceptance criteria:** I extracted each `=== AC ===` block and ran it in the shipped acceptance transaction against a fresh schema-only SQLite copy in `/tmp`, so `data/app.db` was not touched. That temp directory is removed.
+- **Project suite:** `sh bin/test.sh` exits 0. The 123 new tests read state back from the store after each command, and cover the error exit codes and the boundaries.
+- **Guardrails:** no floats in `cli/`, no driver imports outside `persistence/`, and nothing under `sources/` changed.
+
+Choices I made:
+- **Atomic writes:** the shipped persistence layer has no multi-statement transaction for the application. `transfer` and `load transactions` therefore write their rows through `cli/writes.py`, which deletes any rows already created if a later create fails. A failure in that cleanup would itself surface as exit 1.
+- **Transfer and missing `TRANSFER` category:** the spec does not cover this case. I reject it with exit 3 instead of letting a foreign-key error surface as exit 1.
+- **Balance check on load:** the Feature spec (Decision Q-004) checks final balances after the whole file is applied. The build instruction says "in file order." I followed the spec, so a payment that precedes its funding deposit in the file is accepted.
+- **Transaction ids:** `txn_id` accepts an optionally signed run of digits. The spec only says "integer."
+
+<blueprint-decisions>
+[{"spec":"FEATURE-LoadTransactions.md","severity":"Material","subject":"Balance check scope on load","decision":"The Feature spec checks final per-account balances after the whole file is applied (Q-004). The build instruction asked for a check in file order. I followed the spec, so a row may precede the deposit that funds it. Is final-balance the intended rule, or should a file-order check replace it?"},{"spec":"FEATURE-Transfer.md","severity":"Low","subject":"Atomicity of the two transfer rows","decision":"The persistence layer offers no application-level transaction. Both rows are written through store_transactions, which deletes the first row if the second create fails, then re-raises (exit 1). This gives both-or-neither under a store fault, but is compensation, not a true database transaction."},{"spec":"FEATURE-Transfer.md","severity":"Low","subject":"Missing TRANSFER category","decision":"The spec does not cover a store with no TRANSFER category. I reject it with exit 3, matching the unknown-category rule in txn post, rather than letting a foreign-key failure surface as exit 1."}]
+</blueprint-decisions>
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli/balance.py
+- cli/output.py
+- cli/validate.py
+- cli/writes.py
+- cli/commands/account_add.py
+- cli/commands/account_delete.py
+- cli/commands/account_get.py
+- cli/commands/account_rename.py
+- cli/commands/load_transactions.py
+- cli/commands/report_balances.py
+- cli/commands/report_categories.py
+- cli/commands/report_monthly.py
+- cli/commands/transfer.py
+- cli/commands/txn_amend.py
+- cli/commands/txn_delete.py
+- cli/commands/txn_get.py
+- cli/commands/txn_post.py
+- tests/test_account_commands.py
+- tests/test_load_transactions.py
+- tests/test_reports.py
+- tests/test_transfer.py
+- tests/test_txn_commands.py
+
+SUMMARY:
+Implemented the 13 block-4 stories: load transactions, account get/add/rename/delete, txn get/post/amend/delete, transfer, and report monthly/balances/categories. Each is a self-registering module under `cli/commands/`, using the existing balance rule, validators, money helpers, and loader. `cli/writes.py` makes the multi-row writes all-or-nothing by compensation. Results: `sh bin/test.sh` exit 0, 247 passed (124 existing, 123 new). Staged acceptance criteria: 59 of 59 pass verbatim, run in the acceptance transaction against a temp store. Nothing committed.
+
+BLOCKERS:
+- None.

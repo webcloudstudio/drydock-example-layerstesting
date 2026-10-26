@@ -1,0 +1,220 @@
+[
+  {
+    "id": "Q-001",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "FEATURE-Init.md",
+    "story": "init-command",
+    "status": "recommended",
+    "archived": false,
+    "title": "How init empties the ledger",
+    "description": "Sea Trials forbid schema mutation, so init cannot drop and recreate tables. Options: delete rows through declared repository operations, or DDL reset. Chose row deletion, transactions first.",
+    "options": [
+      {
+        "value": "delete-rows",
+        "label": "Delete rows via repository operations"
+      },
+      {
+        "value": "ddl-reset",
+        "label": "Drop and recreate tables"
+      }
+    ],
+    "system_choice": "delete-rows"
+  },
+  {
+    "id": "Q-002",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "FEATURE-BalanceRules.md",
+    "story": "balance-rules",
+    "status": "recommended",
+    "archived": false,
+    "title": "Where aggregates and balance checks are computed",
+    "description": "The repository supports only Match-based operations, no SQL aggregates. Options: add aggregate operations, or compute sums and max id in the service from listed rows in integer cents. Chose service-side computation from queried rows, which keeps every value query-derived.",
+    "options": [
+      {
+        "value": "service-side",
+        "label": "Compute in service from listed rows"
+      },
+      {
+        "value": "sql-aggregate",
+        "label": "Declare aggregate operations"
+      }
+    ],
+    "system_choice": "service-side"
+  },
+  {
+    "id": "Q-003",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "FEATURE-CliFoundation.md",
+    "story": "cli-foundation",
+    "status": "recommended",
+    "archived": false,
+    "title": "Exit code for malformed numeric id arguments",
+    "description": "The brief does not state the exit for a non-integer txn id. Options: 2 (usage) or 3 (rejected input). Chose 3 since the argument count is right and the value is invalid.",
+    "options": [
+      {
+        "value": "3",
+        "label": "Rejected"
+      },
+      {
+        "value": "2",
+        "label": "Usage error"
+      }
+    ],
+    "system_choice": "3"
+  },
+  {
+    "id": "Q-004",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "FEATURE-LoadTransactions.md",
+    "story": "load-transactions",
+    "status": "recommended",
+    "archived": false,
+    "title": "Order of balance evaluation within a transaction load",
+    "description": "A load must not leave any balance negative. Options: check only final balances, or check running balances in file order. Chose final balances over the post-load state, since the brief states the rule about the resulting balance and the seed files order rows by date.",
+    "options": [
+      {
+        "value": "final",
+        "label": "Check final balances after applying the file"
+      },
+      {
+        "value": "running",
+        "label": "Check running balance per row"
+      }
+    ],
+    "system_choice": "final"
+  },
+  {
+    "id": "build-architecture.md-lazy-fixture-imports-in-tests/conftest.py",
+    "type": "text",
+    "severity": "low",
+    "origin": "build",
+    "blueprint": "ARCHITECTURE.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Lazy fixture imports in tests/conftest.py",
+    "description": "db_session and cli_runner import persistence.testing and cli.testing inside the fixture bodies, so the suite collects before those generated packages exist. Acceptable, or should they be imported at module top once persistence and cli land?",
+    "options": [],
+    "system_choice": "db_session and cli_runner import persistence.testing and cli.testing inside the fixture bodies, so the suite collects before those generated packages exist. Acceptable, or should they be imported at module top once persistence and cli land?"
+  },
+  {
+    "id": "build-feature-clifoundation.md-command-registration-before-command-stories",
+    "type": "text",
+    "severity": "low",
+    "origin": "build",
+    "blueprint": "FEATURE-CliFoundation.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Command registration before command stories",
+    "description": "No commands are registered in this block, so every command exits 2 as unknown until the command stories register their handlers. Those stories will add their handlers under cli/commands/.",
+    "options": [],
+    "system_choice": "No commands are registered in this block, so every command exits 2 as unknown until the command stories register their handlers. Those stories will add their handlers under cli/commands/."
+  },
+  {
+    "id": "build-feature-clifoundation.md-forbidden-characters-in-names-and-memos",
+    "type": "text",
+    "severity": "low",
+    "origin": "build",
+    "blueprint": "FEATURE-CliFoundation.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Forbidden characters in names and memos",
+    "description": "Names and memos reject a carriage return as well as a comma or newline, since a carriage return also breaks a CSV line. Is that acceptable, or should only \\n be rejected?",
+    "options": [],
+    "system_choice": "Names and memos reject a carriage return as well as a comma or newline, since a carriage return also breaks a CSV line. Is that acceptable, or should only \\n be rejected?"
+  },
+  {
+    "id": "build-feature-loadaccounts.md-write-phase-atomicity",
+    "type": "text",
+    "severity": "material",
+    "origin": "build",
+    "blueprint": "FEATURE-LoadAccounts.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Write-phase atomicity",
+    "description": "Same as categories: validation is all-or-nothing, but a mid-write store failure is not rolled back because the persistence contract offers no transaction boundary. Should that be added to DATABASE.md?",
+    "options": [],
+    "system_choice": "Same as categories: validation is all-or-nothing, but a mid-write store failure is not rolled back because the persistence contract offers no transaction boundary. Should that be added to DATABASE.md?"
+  },
+  {
+    "id": "build-feature-loadcategories.md-write-phase-atomicity",
+    "type": "text",
+    "severity": "material",
+    "origin": "build",
+    "blueprint": "FEATURE-LoadCategories.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Write-phase atomicity",
+    "description": "All rows are validated before the first write, so every validation failure stores nothing. The persistence API exposes no transaction wrapper, so a store error raised partway through the write loop (exit 1) would leave earlier rows stored. Should a multi-row transaction be added to the DATABASE contract to close this gap?",
+    "options": [],
+    "system_choice": "All rows are validated before the first write, so every validation failure stores nothing. The persistence API exposes no transaction wrapper, so a store error raised partway through the write loop (exit 1) would leave earlier rows stored. Should a multi-row transaction be added to the DATABASE contract to close this gap?"
+  },
+  {
+    "id": "build-feature-loadtransactions.md-balance-check-scope-on-load",
+    "type": "text",
+    "severity": "material",
+    "origin": "build",
+    "blueprint": "FEATURE-LoadTransactions.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Balance check scope on load",
+    "description": "The Feature spec checks final per-account balances after the whole file is applied (Q-004). The build instruction asked for a check in file order. I followed the spec, so a row may precede the deposit that funds it. Is final-balance the intended rule, or should a file-order check replace it?",
+    "options": [],
+    "system_choice": "The Feature spec checks final per-account balances after the whole file is applied (Q-004). The build instruction asked for a check in file order. I followed the spec, so a row may precede the deposit that funds it. Is final-balance the intended rule, or should a file-order check replace it?"
+  },
+  {
+    "id": "build-feature-transfer.md-atomicity-of-the-two-transfer-rows",
+    "type": "text",
+    "severity": "low",
+    "origin": "build",
+    "blueprint": "FEATURE-Transfer.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Atomicity of the two transfer rows",
+    "description": "The persistence layer offers no application-level transaction. Both rows are written through store_transactions, which deletes the first row if the second create fails, then re-raises (exit 1). This gives both-or-neither under a store fault, but is compensation, not a true database transaction.",
+    "options": [],
+    "system_choice": "The persistence layer offers no application-level transaction. Both rows are written through store_transactions, which deletes the first row if the second create fails, then re-raises (exit 1). This gives both-or-neither under a store fault, but is compensation, not a true database transaction."
+  },
+  {
+    "id": "build-feature-transfer.md-missing-transfer-category",
+    "type": "text",
+    "severity": "low",
+    "origin": "build",
+    "blueprint": "FEATURE-Transfer.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Missing TRANSFER category",
+    "description": "The spec does not cover a store with no TRANSFER category. I reject it with exit 3, matching the unknown-category rule in txn post, rather than letting a foreign-key failure surface as exit 1.",
+    "options": [],
+    "system_choice": "The spec does not cover a store with no TRANSFER category. I reject it with exit 3, matching the unknown-category rule in txn post, rather than letting a foreign-key failure surface as exit 1."
+  },
+  {
+    "id": "build-schema-derived-indexes",
+    "type": "text",
+    "severity": "informational",
+    "origin": "build",
+    "blueprint": "DATABASE.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Indexes derived from the persistence declaration",
+    "description": "The rendered schema indexes transactions(account); transactions(category). Each is implied by the declaration \u2014 a foreign key is looked up by its child column, and a read pattern's Input fields are the predicate it filters on. Declare an `- INDEX (...)` bullet in DATABASE.md for any index this does not cover.",
+    "options": [],
+    "system_choice": "transactions(account); transactions(category)"
+  }
+]

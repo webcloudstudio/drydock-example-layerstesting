@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261025.182019.449Z_layerstesting_build_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261025.182019.449Z_layerstesting_build_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261025.182019.449Z_layerstesting_build_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>Baseline is green: 73 tests pass. Now I&#x27;ll write the service modules, starting with the balance rules and a shared loader.Now the four command modules, each self-registering the way the existing registry expects.Next, a scratch-store fixture so command tests never touch the configured store, then the test files.All 124 pass (73 existing plus 51 new). I&#x27;ll smoke-test the real `ledger` launcher against a throwaway store so the configured `data/app.db` stays untouched.&lt;br&gt;
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli/balance.py
+- cli/loader.py
+- cli/validate.py
+- cli/commands/init.py
+- cli/commands/count.py
+- cli/commands/load_categories.py
+- cli/commands/load_accounts.py
+- tests/conftest.py
+- tests/test_balance_rules.py
+- tests/test_init.py
+- tests/test_count.py
+- tests/test_load_categories.py
+- tests/test_load_accounts.py
+
+SUMMARY:
+- **balance-rules:** `cli/balance.py` provides `account_summary`, `balances`, `check_balances` (raises `Rejected`, exit 3, when any stored balance plus its delta goes below zero; writes nothing), and `next_txn_id`. Everything is computed from listed rows in integer cents.
+- **init-command:** `ledger init` deletes transactions, then categories, then accounts, through the declared delete operations. It takes no arguments and prints nothing. No DDL.
+- **count-command:** `ledger count` prints `table,rows` and then the accounts, categories, and transactions counts, all from queries.
+- **load-categories / load-accounts:** each validates the header, every row (code, description or name, field count), duplicates within the file, and duplicates against the store before its first write. Any failure exits 3 and writes nothing. A missing file exits 1. Shared CSV reading is in `cli/loader.py`.
+- **Tests:** `sh bin/test.sh` runs 124 tests, all passing (73 pre-existing and 51 new). The new tests read every result back through the store or the CLI runner and check exit codes and stdout. Balance tests use the shipped `db_session` rollback fixture. Command tests use a new `scratch_db` fixture, a throwaway SQLite file under `tmp_path` selected via `DATABASE_PATH`, so the configured `data/app.db` is never modified.
+- **Smoke test:** I ran the real `./ledger` launcher against a temporary store. count, both loads, a duplicate rejection (exit 3), and init all behaved as specified.
+- **Not run:** the staged `AC` blocks from the specs are executed by the Drydock harness and were not run by me directly. I mirrored their assertions in the tests above. `sources/run.sh` is not part of this block and was not run.
+
+Choices I made:
+- Command modules live in `cli/commands/` as one file per command, self-registering through `cli/registry.py`. Helpers sit outside that package so the auto-importer does not load them as commands.
+- I added `validate_description` (1 to 40 chars, no comma or line break) to `cli/validate.py` for category descriptions.
+- Transactions cannot be deleted as a set, so init deletes them one id at a time.
+
+BLOCKERS:
+- None for this block.
+
+&lt;blueprint-decisions&gt;
+[{&quot;spec&quot;:&quot;FEATURE-LoadCategories.md&quot;,&quot;severity&quot;:&quot;Material&quot;,&quot;subject&quot;:&quot;Write-phase atomicity&quot;,&quot;decision&quot;:&quot;All rows are validated before the first write, so every validation failure stores nothing. The persistence API exposes no transaction wrapper, so a store error raised partway through the write loop (exit 1) would leave earlier rows stored. Should a multi-row transaction be added to the DATABASE contract to close this gap?&quot;},{&quot;spec&quot;:&quot;FEATURE-LoadAccounts.md&quot;,&quot;severity&quot;:&quot;Material&quot;,&quot;subject&quot;:&quot;Write-phase atomicity&quot;,&quot;decision&quot;:&quot;Same as categories: validation is all-or-nothing, but a mid-write store failure is not rolled back because the persistence contract offers no transaction boundary. Should that be added to DATABASE.md?&quot;}]
+&lt;/blueprint-decisions&gt;
+
+FAILURE_SUMMARY: not applicable (step succeeded)</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261025.181628.984Z_layerstesting_build_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261025.181628.984Z_layerstesting_build_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261025.181628.984Z_layerstesting_build_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>The database half of this block is already in place: `persistence/`, `schema.sql`, and the blueprint&#x27;s `DATABASE.md` (protected, under the Target) all exist, so this step is the CLI foundation. Writing the modules now.Launcher and dispatch behave as specified. Now the test file: the declared acceptance assertions as pytest tests, plus finer tests for the validators, dispatch, and output.Two of my assertions compare stderr wording, which the test rules forbid. Fixing those before running.The test runner doesn&#x27;t put the project root on `sys.path`, so `cli` and `persistence` don&#x27;t import under `pytest -q`. I&#x27;ll add `pythonpath` to the existing pytest config in `pyproject.toml`, which is in the build directory.All 73 tests pass. Checking the final file list against the git status.RESULT: SUCCESS
+
+FILES CHANGED:
+- ledger
+- cli/__init__.py
+- cli/__main__.py
+- cli/database.py
+- cli/errors.py
+- cli/money.py
+- cli/output.py
+- cli/registry.py
+- cli/testing.py
+- cli/validate.py
+- cli/commands/__init__.py
+- tests/test_cli_foundation.py
+- pyproject.toml
+
+SUMMARY:
+The cli-foundation story is built. The database story needed no writes in this step: `persistence/`, `schema.sql`, and `schema-verification.json` were already generated, and `DATABASE.md` lives in the protected Target blueprint, so I did not author it.
+
+- **`ledger`**: a POSIX sh launcher. It uses `.venv/bin/python` when present, otherwise `python3`, and runs `python -m cli` with the build root on `PYTHONPATH`. It contains no logic and is executable.
+- **Dispatch (`cli/__init__.py`, `cli/registry.py`)**: `main(argv) -&gt; int` resolves the longest registered command path and checks argument count before opening the database. A `LedgerError` maps to its exit code. A `PersistenceError` maps to 1. Diagnostics go to stderr as one line. The handler runs to completion before any CSV is written.
+- **Errors (`cli/errors.py`)**: `Operational` (1), `Usage` (2), `Rejected` (3), `NotFound` (4).
+- **Output (`cli/output.py`)**: `write_rows` writes comma-separated lines with `\n` endings and no quoting. `TRANSACTION_HEADER` and `format_transaction` produce the six declared fields.
+- **Money (`cli/money.py`)**: integer-cent parsing and two-decimal formatting. Zero, extra decimals, signs other than a leading `-`, and comma forms are rejected.
+- **Validators (`cli/validate.py`)**: codes, names, memos, and dates, each returning its value or raising `Rejected`.
+- **Store location (`cli/database.py`)**: `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`, opened via `persistence.open_database`.
+- **In-process runner (`cli/testing.py`)**: `cli_runner(*args)` returns `(code, stdout, stderr)`.
+- **Command loader (`cli/commands/__init__.py`)**: imports every module in the package at startup so command modules self-register.
+
+Choices I made, for you to redirect:
+1. No commands are registered yet. Every command currently exits 2 as an unknown command. The command stories will register their handlers.
+2. Names and memos also reject `\r`, not only `\n`, because a carriage return would also break a CSV line.
+3. I added `pythonpath = [&quot;.&quot;]` to the existing `[tool.pytest.ini_options]` in `pyproject.toml`. Without it, `pytest -q` could not import `cli` or `persistence`.
+
+Checks: `sh bin/test.sh` reports 73 passed, 0 failed. The file covers each declared FEATURE-CliFoundation assertion, plus boundary, dispatch, output and store-location tests. Tests assert on return values, exit codes, stdout and the stored state, not on stderr wording. I did not run `sources/run.sh`, because it is the terminal story and this block does not declare it.
+
+BLOCKERS: none.
+
+&lt;blueprint-decisions&gt;
+[{&quot;spec&quot;:&quot;FEATURE-CliFoundation.md&quot;,&quot;severity&quot;:&quot;Low&quot;,&quot;subject&quot;:&quot;Forbidden characters in names and memos&quot;,&quot;decision&quot;:&quot;Names and memos reject a carriage return as well as a comma or newline, since a carriage return also breaks a CSV line. Is that acceptable, or should only \\n be rejected?&quot;},{&quot;spec&quot;:&quot;FEATURE-CliFoundation.md&quot;,&quot;severity&quot;:&quot;Low&quot;,&quot;subject&quot;:&quot;Command registration before command stories&quot;,&quot;decision&quot;:&quot;No commands are registered in this block, so every command exits 2 as unknown until the command stories register their handlers. Those stories will add their handlers under cli/commands/.&quot;}]
+&lt;/blueprint-decisions&gt;</pre></article>
+</main>
+</body>
+</html>
