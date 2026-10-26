@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261026.162431.189Z_layerstesting_plan_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261026.162431.189Z_layerstesting_plan_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261026.162431.189Z_layerstesting_plan_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT ARCHITECTURE.md ===
+# ARCHITECTURE: LayersTesting
+
+| Field | Value |
+|-------|-------|
+| Version | 20261026 V1 |
+| Description | Modules, boundaries, and technical decisions for the LayersTesting command-line cash ledger. |
+| Provides | cli, ledger_app |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger` is a command-line cash ledger for a small shop. It keeps accounts, categories, and cash
+transactions in a relational database reached only through the shipped persistence library. Every
+command either completes in full or changes nothing, no command leaves an account balance below
+zero, and three reports (balances, category totals, monthly totals) are computed from stored rows.
+
+## Technology Stack
+
+Derived from `TECHNOLOGY_STACK.md`; that file is the decision of record.
+
+| Technology | Where it applies |
+|---|---|
+| Python 3.11 or newer | Implementation language for the `cli` and `ledger_app` packages. |
+| SQLite | The database, reached through the generated `persistence` package. The DSN selects the engine. |
+| CLI | The `ledger` executable at the application root and the `cli` package behind it. |
+| pytest | Test runner behind `bin/test.sh`. |
+| POSIX sh | `ledger` launcher, `bin/test.sh`, and the supplied grader. |
+
+## Project Layout
+
+| Path | Owner | Content |
+|---|---|---|
+| `pyproject.toml`, `uv.lock` | foundation | Dependency manifest (`requires-python &gt;= 3.11`, pytest, psycopg[binary]) and committed lock. |
+| `.venv/`, `bin/` | foundation | Environment created by `uv venv` and the launchers that activate it. |
+| `ledger` | cli-foundation | Executable POSIX sh launcher at the application root. |
+| `cli/` | cli-foundation | Entry point, registry, errors, output, and `cli/commands/` modules. |
+| `ledger_app/` | foundation and services | Configuration, store access, validation, balances, and services. |
+| `persistence/` | Drydock | Copied and generated; never written by hand. |
+| `tests/` | every story | pytest suite with `conftest.py`. |
+
+The service package is `ledger_app` because a directory named `ledger` cannot coexist with the
+executable `ledger` at the application root.
+
+## Modules
+
+| Module | Responsibility |
+|---|---|
+| `cli.main` | Parse argv, dispatch through the registry, map errors to exit codes, write one stderr line on failure. |
+| `cli.registry` | Command table: path, handler, usage line, argument arity. |
+| `cli.errors` | `UsageError` (2), `Rejected` (3), `NotFound` (4), `OperationalError` (1). |
+| `cli.output` | CSV writing and integer-cent formatting. |
+| `cli.commands.*` | One module per command family; each registers its commands on import. |
+| `ledger_app.config` | Database location resolution. |
+| `ledger_app.store` | Opens the store through `persistence.open_database`; maps failures to exit 1. |
+| `ledger_app.validation` | Pure validators for codes, names, memos, amounts, and dates. |
+| `ledger_app.csv_input` | Strict CSV reader for `load`. |
+| `ledger_app.balances` | Balance computation and the non-negative guard. |
+| `ledger_app.accounts`, `ledger_app.transactions`, `ledger_app.transfers` | Row builders and write services. |
+
+## Module Ownership
+
+| Boundary | Owning module | Allowed low-level access |
+|---|---|---|
+| Persistence | `persistence/` (generated) | The only code that imports a database driver. |
+| Store access | `ledger_app.store` | Calls `persistence.open_database`; nothing else opens a database. |
+| Configuration | `ledger_app.config` | Reads `DATABASE_URL`, `DATABASE_PATH`, and the default `data/app.db`. |
+| File store | none | The only files read are CSV files named on the `load` command. |
+| External services | none | No network access. |
+
+## Technical Decisions
+
+- Services call `db.&lt;table&gt;.&lt;operation&gt;(...)`; SQL, sessions, and table names never cross that boundary.
+- Money is integer cents at every layer; floating point is never used for money.
+- Repository operations have no aggregates, so reports are aggregated in services from list results.
+- Every command validates all inputs and rules before its first write.
+- A handler writes standard output only as its final act, so a failing command never leaks stdout.
+- Failures write one diagnostic line to standard error; standard error is never compared.
+- SQLite is the implemented and verified engine; PostgreSQL DSNs are classified and routed to the persistence library.
+
+## Programmatic Acceptance
+
+=== AC foundation-manifest ===
+Intent: The project root carries the dependency manifest, committed lock, launcher directory, and test tree.
+
+import pathlib
+import tomllib
+
+root = pathlib.Path(&quot;.&quot;)
+text = (root / &quot;pyproject.toml&quot;).read_text()
+data = tomllib.loads(text)
+requires = data[&quot;project&quot;][&quot;requires-python&quot;]
+assert &quot;3.11&quot; in requires
+assert &quot;pytest&quot; in text
+assert &quot;psycopg&quot; in text
+assert (root / &quot;uv.lock&quot;).is_file()
+assert (root / &quot;bin&quot;).is_dir()
+assert (root / &quot;tests&quot; / &quot;conftest.py&quot;).is_file()
+=== END AC foundation-manifest ===
+
+=== AC foundation-packages ===
+Intent: The cli and ledger_app packages import from the application root.
+
+import importlib
+
+for name in (&quot;cli&quot;, &quot;ledger_app&quot;):
+    module = importlib.import_module(name)
+    assert hasattr(module, &quot;__path__&quot;)
+=== END AC foundation-packages ===
+
+=== AC foundation-no-driver-outside-persistence ===
+Intent: No application module imports a database driver; only the persistence package may.
+
+import ast
+import pathlib
+
+drivers = {&quot;sqlite3&quot;, &quot;psycopg&quot;, &quot;psycopg2&quot;, &quot;sqlalchemy&quot;, &quot;pymysql&quot;}
+found = []
+for pkg in (&quot;cli&quot;, &quot;ledger_app&quot;):
+    for path in pathlib.Path(pkg).rglob(&quot;*.py&quot;):
+        tree = ast.parse(path.read_text())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                names = [a.name.split(&quot;.&quot;)[0] for a in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                names = [(node.module or &quot;&quot;).split(&quot;.&quot;)[0]]
+            else:
+                continue
+            for n in names:
+                if n in drivers:
+                    found.append((str(path), n))
+print(found)
+assert found == []
+=== END AC foundation-no-driver-outside-persistence ===
+
+=== AC foundation-money-is-integer ===
+Intent: No application module uses floating point, since money is integer cents at every layer.
+
+import ast
+import pathlib
+
+found = []
+for pkg in (&quot;cli&quot;, &quot;ledger_app&quot;):
+    for path in pathlib.Path(pkg).rglob(&quot;*.py&quot;):
+        tree = ast.parse(path.read_text())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Name) and node.id == &quot;float&quot;:
+                found.append((str(path), node.lineno))
+            elif isinstance(node, ast.Constant) and isinstance(node.value, float):
+                found.append((str(path), node.lineno))
+print(found)
+assert found == []
+=== END AC foundation-money-is-integer ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Only the generated `persistence` package touches a database driver.
+- Amounts are integer cents at every layer; no floating point for money.
+- Do not read `sources/run.sh` or any seed file from application code; seed files reach the database only through `ledger load`.
+- Do not hardcode a report row, a count, or a total; every value comes from a query.
+- Do not modify anything under `sources/`.
+- Do not write the `persistence` package; Drydock copies and generates it.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-CliFoundation.md ===
+# FEATURE: CLI Foundation
+
+| Field | Value |
+|-------|-------|
+| Version | 20261026 V1 |
+| Description | The cli package, command registry, exit-code mapping, and the ledger executable. |
+| Depends On | ARCHITECTURE.md, DATABASE.md |
+| Provides | cli.main, cli.testing.cli_runner, cli.errors, cli.registry.register |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every command story adds a module under `cli.commands` and registers its commands. This story
+fixes the shared contract they all build on: dispatch, usage errors, and exit codes.
+
+## Interface
+
+- `cli.main(argv: list[str] | None = None) -&gt; int` uses `sys.argv[1:]` when `argv` is `None`, never calls `sys.exit`, and returns the exit code.
+- `cli/__main__.py` runs `sys.exit(main())`, so `python -m cli` is the process entry point.
+- `cli.testing.cli_runner(*args) -&gt; (exit_code, stdout, stderr)` runs `main` in-process with captured streams.
+- `ledger` at the application root is an executable POSIX sh launcher. It resolves its own directory, selects `.venv/bin/python` when present and `python3` otherwise, sets `PYTHONPATH` to that directory, does not change the working directory (relative CSV paths belong to the caller), and runs `-m cli &quot;$@&quot;`.
+
+## Errors
+
+`cli.errors` defines a base `LedgerError(Exception)` taking a message, and four subclasses each carrying an integer class attribute `exit_code`:
+
+| Class | exit_code |
+|---|---|
+| `UsageError` | 2 |
+| `Rejected` | 3 |
+| `NotFound` | 4 |
+| `OperationalError` | 1 |
+
+`main` maps each to its exit code, writes exactly one diagnostic line to standard error and nothing to standard output. Any other unexpected exception maps to exit 1 with one stderr line.
+
+## Registry
+
+`cli.registry.register(path, handler, usage, min_args, max_args)` records a command.
+
+- `path` is a tuple of words, such as `(&quot;account&quot;, &quot;add&quot;)`.
+- `handler(args: list[str]) -&gt; None` receives the arguments after the command path and writes any stdout itself as its final act.
+- `usage` is the one-line expected form of the command.
+- `min_args` and `max_args` bound the argument count.
+
+`main` matches the longest registered path prefix and checks arity. An unknown command, or an incomplete group such as a missing sub-verb, raises `UsageError` with a one-line list of commands. A wrong argument count raises `UsageError` whose message is the usage line of the failing command. Command modules are auto-discovered once per process from the `cli.commands` package with `pkgutil`; discovery never clears commands already registered.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC cli-foundation-executable ===
+Intent: An executable named ledger exists at the application root and an unknown command exits 2 with nothing on stdout.
+
+import os
+import subprocess
+
+path = &quot;./ledger&quot;
+assert os.path.isfile(path)
+assert os.access(path, os.X_OK)
+result = subprocess.run([path, &quot;zzunknown&quot;], capture_output=True, text=True)
+print(result.stdout)
+print(result.stderr)
+assert result.returncode == 2
+assert result.stdout == &quot;&quot;
+assert len(result.stderr.strip().splitlines()) == 1
+=== END AC cli-foundation-executable ===
+
+=== AC cli-foundation-runner-shape ===
+Intent: cli_runner returns an exit code, standard output, and standard error without spawning a process.
+
+from cli.testing import cli_runner
+
+result = cli_runner(&quot;zzunknown&quot;)
+assert isinstance(result, tuple)
+assert len(result) == 3
+code, out, err = result
+assert isinstance(code, int)
+assert isinstance(out, str)
+assert isinstance(err, str)
+assert code == 2
+=== END AC cli-foundation-runner-shape ===
+
+=== AC cli-foundation-exit-codes ===
+Intent: Each error class maps to its exit code with empty stdout and one stderr line, and an unexpected exception maps to 1.
+
+from cli import errors, registry
+from cli.testing import cli_runner
+
+cases = [
+    (errors.UsageError, 2),
+    (errors.Rejected, 3),
+    (errors.NotFound, 4),
+    (errors.OperationalError, 1),
+]
+for i, (cls, expected) in enumerate(cases):
+    assert cls.exit_code == expected
+    def handler(args, cls=cls):
+        raise cls(&quot;zz failure&quot;)
+    registry.register((&quot;zzfail&quot;, str(i)), handler, &quot;zzfail &quot; + str(i), 0, 0)
+    code, out, err = cli_runner(&quot;zzfail&quot;, str(i))
+    assert code == expected
+    assert out == &quot;&quot;
+    assert len(err.strip().splitlines()) == 1
+
+def boom(args):
+    raise RuntimeError(&quot;zz unexpected&quot;)
+registry.register((&quot;zzboom&quot;,), boom, &quot;zzboom&quot;, 0, 0)
+code, out, err = cli_runner(&quot;zzboom&quot;)
+assert code == 1
+assert out == &quot;&quot;
+assert len(err.strip().splitlines()) == 1
+=== END AC cli-foundation-exit-codes ===
+
+=== AC cli-foundation-dispatch ===
+Intent: A registered handler receives its arguments, its stdout is returned, and the longest matching path wins.
+
+from cli import registry
+from cli.testing import cli_runner
+
+seen = []
+def group(args):
+    seen.append((&quot;group&quot;, list(args)))
+def sub(args):
+    seen.append((&quot;sub&quot;, list(args)))
+    print(&quot;zz-sub-output&quot;)
+registry.register((&quot;zzgrp&quot;,), group, &quot;zzgrp [x]&quot;, 0, 1)
+registry.register((&quot;zzgrp&quot;, &quot;sub&quot;), sub, &quot;zzgrp sub &lt;a&gt;&quot;, 1, 1)
+
+arg = &quot;alpha&quot;
+code, out, err = cli_runner(&quot;zzgrp&quot;, &quot;sub&quot;, arg)
+assert code == 0
+assert seen == [(&quot;sub&quot;, [arg])]
+assert out.strip() != &quot;&quot;
+code, out, err = cli_runner(&quot;zzgrp&quot;, arg)
+assert code == 0
+assert seen[-1] == (&quot;group&quot;, [arg])
+=== END AC cli-foundation-dispatch ===
+
+=== AC cli-foundation-arity ===
+Intent: Too few or too many arguments exit 2 without running the handler or writing stdout.
+
+from cli import registry
+from cli.testing import cli_runner
+
+calls = []
+def handler(args):
+    calls.append(list(args))
+registry.register((&quot;zzarity&quot;,), handler, &quot;zzarity &lt;a&gt; [b]&quot;, 1, 2)
+
+for argv in ((&quot;zzarity&quot;,), (&quot;zzarity&quot;, &quot;a&quot;, &quot;b&quot;, &quot;c&quot;)):
+    code, out, err = cli_runner(*argv)
+    assert code == 2
+    assert out == &quot;&quot;
+    assert len(err.strip().splitlines()) == 1
+assert calls == []
+code, out, err = cli_runner(&quot;zzarity&quot;, &quot;a&quot;)
+assert code == 0
+assert calls == [[&quot;a&quot;]]
+=== END AC cli-foundation-arity ===
+
+=== AC cli-foundation-discovery ===
+Intent: The cli.commands package exists for auto-discovered command modules.
+
+import importlib
+
+module = importlib.import_module(&quot;cli.commands&quot;)
+assert hasattr(module, &quot;__path__&quot;)
+=== END AC cli-foundation-discovery ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- `main` never calls `sys.exit`; only `cli/__main__.py` does.
+- A failing command writes nothing to standard output and exactly one diagnostic line to standard error.
+- The `ledger` launcher does not change the working directory.
+- No database driver is imported in the `cli` package.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-CsvOutput.md ===
+# FEATURE: CSV Output
+
+| Field | Value |
+|-------|-------|
+| Version | 20261026 V1 |
+| Description | CSV table writing and integer-cent formatting shared by every reporting command. |
+| Depends On | FEATURE-CliFoundation.md |
+| Provides | cli.output.write_table, cli.output.format_cents |
+| Consumes | cli.errors |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every successful command except `init` writes CSV to standard output: one header row, then data
+rows, comma-separated, no quoting, no trailing spaces, `\n` line endings. Amounts are written with
+exactly two decimal places, a leading `-` when negative, and no thousands separator.
+
+## Interface
+
+- `format_cents(cents: int) -&gt; str` uses integer arithmetic only. It writes an optional leading minus, the whole digits, a point, and exactly two decimals, with no separators. Zero is written with two decimals and no sign.
+- `write_table(header: list[str], rows: Iterable[Sequence[str]]) -&gt; None` writes the header row then each row to `sys.stdout`, resolved at call time so redirection works. Fields are joined with commas, never quoted, each line ends in `\n`, and no line has trailing spaces. Values are already strings.
+- Handlers call `write_table` as their last statement, after every check and write has succeeded, so a failing command never leaks stdout.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC csv-output-format-cents ===
+Intent: format_cents writes exactly two decimals, a leading minus when negative, and no separators for a spread of integer cent values.
+
+from decimal import Decimal
+from cli.output import format_cents
+
+values = [0, 1, 5, -5, 99, 100, -1250, 500000, -123456789, 100000000]
+for cents in values:
+    expected = f&quot;{Decimal(cents) / 100:.2f}&quot;
+    got = format_cents(cents)
+    assert isinstance(got, str)
+    assert got == expected
+    assert &quot;,&quot; not in got
+=== END AC csv-output-format-cents ===
+
+=== AC csv-output-write-table ===
+Intent: write_table emits one header row and the data rows as unquoted comma-separated lines ending in newline.
+
+import contextlib
+import csv
+import io
+from cli.output import write_table
+
+header = [&quot;account&quot;, &quot;name&quot;, &quot;balance&quot;]
+rows = [[&quot;DRAWER1&quot;, &quot;Front Drawer&quot;, &quot;12.50&quot;], [&quot;SAFE&quot;, &quot;Store Safe&quot;, &quot;-0.05&quot;]]
+buf = io.StringIO()
+with contextlib.redirect_stdout(buf):
+    write_table(header, rows)
+out = buf.getvalue()
+parsed = list(csv.reader(io.StringIO(out)))
+assert parsed == [header] + rows
+assert out.endswith(&quot;\n&quot;)
+assert &quot;\r&quot; not in out
+assert &#x27;&quot;&#x27; not in out
+assert out.count(&quot;\n&quot;) == len(rows) + 1
+for line in out.split(&quot;\n&quot;):
+    assert line == line.rstrip()
+=== END AC csv-output-write-table ===
+
+=== AC csv-output-header-only ===
+Intent: write_table with no rows writes just the header line.
+
+import contextlib
+import csv
+import io
+from cli.output import write_table
+
+header = [&quot;month&quot;, &quot;transactions&quot;]
+buf = io.StringIO()
+with contextlib.redirect_stdout(buf):
+    write_table(header, [])
+out = buf.getvalue()
+assert list(csv.reader(io.StringIO(out))) == [header]
+assert out.count(&quot;\n&quot;) == 1
+=== END AC csv-output-header-only ===
+
+=== AC csv-output-through-cli ===
+Intent: A command using write_table as its last act returns the table through cli_runner, and a rejected command leaves stdout empty.
+
+import csv
+import io
+from cli import errors, registry
+from cli.output import write_table
+from cli.testing import cli_runner
+
+header = [&quot;k&quot;, &quot;v&quot;]
+rows = [[&quot;a&quot;, &quot;1.00&quot;], [&quot;b&quot;, &quot;-2.50&quot;]]
+def ok(args):
+    write_table(header, rows)
+def bad(args):
+    raise errors.Rejected(&quot;zz rejected&quot;)
+registry.register((&quot;zzcsv&quot;, &quot;ok&quot;), ok, &quot;zzcsv ok&quot;, 0, 0)
+registry.register((&quot;zzcsv&quot;, &quot;bad&quot;), bad, &quot;zzcsv bad&quot;, 0, 0)
+
+code, out, err = cli_runner(&quot;zzcsv&quot;, &quot;ok&quot;)
+assert code == 0
+assert list(csv.reader(io.StringIO(out))) == [header] + rows
+code, out, err = cli_runner(&quot;zzcsv&quot;, &quot;bad&quot;)
+assert code == 3
+assert out == &quot;&quot;
+=== END AC csv-output-through-cli ===
+
+=== AC csv-output-no-float ===
+Intent: The output module never uses floating point.
+
+import ast
+import importlib.util
+
+spec = importlib.util.find_spec(&quot;cli.output&quot;)
+assert spec is not None and spec.origin
+tree = ast.parse(open(spec.origin).read())
+bad = []
+for node in ast.walk(tree):
+    if isinstance(node, ast.Name) and node.id == &quot;float&quot;:
+        bad.append(node.lineno)
+    elif isinstance(node, ast.Constant) and isinstance(node.value, float):
+        bad.append(node.lineno)
+assert bad == []
+=== END AC csv-output-no-float ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Money is formatted with integer arithmetic only; no floating point or Decimal rounding in the application.
+- Output is never quoted, never padded, and always uses `\n` line endings.
+- Handlers write stdout only as their final act.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-TestRunner.md ===
+# FEATURE: Test Runner
+
+| Field | Value |
+|-------|-------|
+| Version | 20261026 V1 |
+| Description | The POSIX bin/test.sh runner and the temporary-database pytest fixtures. |
+| Depends On | FEATURE-CliFoundation.md, DATABASE.md, FEATURE-StoreAccess.md |
+| Provides | bin/test.sh |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The application provides a POSIX-compatible `bin/test.sh` that runs its own automated test suite
+from the application root and exits zero only when every test passes. Every later story adds its
+own tests under `tests/`; this story fixes only the runner and the fixtures.
+
+## Runner
+
+- `bin/test.sh` starts with `#!/bin/sh`, uses no bash-only syntax, changes to the application root regardless of the caller&#x27;s directory, uses the project environment (`.venv` when present), runs `pytest -q`, and exits with pytest&#x27;s status.
+
+## Fixtures
+
+`tests/conftest.py` provides:
+
+- `temp_db` — a fixture yielding a path in a fresh temporary directory. It sets `DATABASE_URL` to that path and removes `DATABASE_PATH` for the test, so the real store is never touched (`DATABASE_URL` outranks `DATABASE_PATH`).
+- `store` — a fixture that opens `temp_db` through `ledger_app.store.open_store` and yields the database.
+
+`tests/test_harness.py::test_temp_database_is_usable` creates an account through the fixture&#x27;s database and reads it back.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC test-runner-script-shape ===
+Intent: bin/test.sh exists as a POSIX sh script with no bash-only syntax.
+
+import pathlib
+
+script = pathlib.Path(&quot;bin&quot;) / &quot;test.sh&quot;
+assert script.is_file()
+text = script.read_text()
+first = text.splitlines()[0]
+assert first.startswith(&quot;#!&quot;)
+assert first.endswith(&quot;/sh&quot;)
+assert &quot;[[&quot; not in text
+assert &quot;pytest&quot; in text
+=== END AC test-runner-script-shape ===
+
+=== AC test-runner-fixture-harness ===
+Intent: The harness test that exercises the temporary-database fixtures passes under pytest.
+
+import os
+import subprocess
+import sys
+
+root = os.getcwd()
+result = subprocess.run(
+    [sys.executable, &quot;-m&quot;, &quot;pytest&quot;, &quot;-q&quot;, &quot;tests/test_harness.py&quot;],
+    capture_output=True, text=True, cwd=root,
+)
+print(result.stdout)
+print(result.stderr)
+assert result.returncode == 0
+=== END AC test-runner-fixture-harness ===
+
+=== AC test-runner-exit-status ===
+Intent: Running bin/test.sh from a different working directory exits zero when the suite passes.
+
+import os
+import subprocess
+import tempfile
+
+script = os.path.abspath(os.path.join(&quot;bin&quot;, &quot;test.sh&quot;))
+elsewhere = tempfile.gettempdir()
+result = subprocess.run(
+    [&quot;sh&quot;, script], capture_output=True, text=True, cwd=elsewhere, env={**os.environ},
+)
+print(result.stdout)
+print(result.stderr)
+assert result.returncode == 0
+=== END AC test-runner-exit-status ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Tests never touch the configured application store; each test uses its own temporary database.
+- `bin/test.sh` contains no bash-only syntax.
+- Do not modify anything under `sources/`.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-TextValidation.md ===
+# FEATURE: Text Validation
+
+| Field | Value |
+|-------|-------|
+| Version | 20261026 V1 |
+| Description | Pure validators for codes, names, descriptions, and memos. |
+| Depends On | FEATURE-CliFoundation.md |
+| Provides | ledger_app.validation.code, ledger_app.validation.name, ledger_app.validation.memo |
+| Consumes | cli.errors |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Rules 3 and 4 of the ledger contract: codes (`account`, `category`) are 1 to 12 characters from
+`A-Z` and `0-9`. Names and descriptions are 1 to 40 characters. Memos are 0 to 60 characters. None
+of them contains a comma or a newline.
+
+## Interface
+
+Each function takes a string, returns it unchanged when valid, and raises `cli.errors.Rejected` (exit 3) otherwise.
+
+| Function | Rule |
+|---|---|
+| `code(value)` | Full match of 1 to 12 characters from `A-Z` and `0-9`; a trailing newline is not tolerated. |
+| `name(value)` | 1 to 40 characters with no comma, carriage return, or newline. Also validates descriptions. |
+| `memo(value)` | 0 to 60 characters with no comma, carriage return, or newline. |
+
+Values are never stripped or altered.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC text-validation-code-valid ===
+Intent: Codes of 1 to 12 uppercase letters and digits are returned unchanged.
+
+from ledger_app.validation import code
+
+for value in (&quot;A&quot;, &quot;ZZ9&quot;, &quot;DRAWER1&quot;, &quot;A&quot; * 12, &quot;0123456789AB&quot;):
+    assert code(value) == value
+=== END AC text-validation-code-valid ===
+
+=== AC text-validation-code-invalid ===
+Intent: Empty, over-long, lowercase, punctuated, spaced, comma, and newline codes are rejected with exit code 3.
+
+from cli.errors import Rejected
+from ledger_app.validation import code
+
+bad = [&quot;&quot;, &quot;A&quot; * 13, &quot;abc&quot;, &quot;A-B&quot;, &quot;A B&quot;, &quot;A,B&quot;, &quot;A\nB&quot;, &quot;A1\n&quot;, &quot;A\r&quot;]
+for value in bad:
+    try:
+        code(value)
+    except Rejected as exc:
+        assert exc.exit_code == 3
+    else:
+        raise AssertionError(&quot;accepted code &quot; + repr(value))
+=== END AC text-validation-code-invalid ===
+
+=== AC text-validation-name-valid ===
+Intent: Names of 1 to 40 characters without comma or newline are returned unchanged.
+
+from ledger_app.validation import name
+
+for value in (&quot;F&quot;, &quot;Front Drawer&quot;, &quot;N&quot; * 40, &quot;Petty Cash 2&quot;):
+    assert name(value) == value
+=== END AC text-validation-name-valid ===
+
+=== AC text-validation-name-invalid ===
+Intent: Empty, over-long, comma, carriage return, and newline names are rejected with exit code 3.
+
+from cli.errors import Rejected
+from ledger_app.validation import name
+
+bad = [&quot;&quot;, &quot;N&quot; * 41, &quot;Front, Drawer&quot;, &quot;Front\nDrawer&quot;, &quot;Front\rDrawer&quot;, &quot;Front Drawer\n&quot;]
+for value in bad:
+    try:
+        name(value)
+    except Rejected as exc:
+        assert exc.exit_code == 3
+    else:
+        raise AssertionError(&quot;accepted name &quot; + repr(value))
+=== END AC text-validation-name-invalid ===
+
+=== AC text-validation-memo ===
+Intent: Memos of 0 to 60 characters pass, and over-long, comma, and newline memos are rejected with exit code 3.
+
+from cli.errors import Rejected
+from ledger_app.validation import memo
+
+for value in (&quot;&quot;, &quot;walk in sale&quot;, &quot;M&quot; * 60):
+    assert memo(value) == value
+bad = [&quot;M&quot; * 61, &quot;a,b&quot;, &quot;line\nbreak&quot;, &quot;line\rbreak&quot;, &quot;tape\n&quot;]
+for value in bad:
+    try:
+        memo(value)
+    except Rejected as exc:
+        assert exc.exit_code == 3
+    else:
+        raise AssertionError(&quot;accepted memo &quot; + repr(value))
+=== END AC text-validation-memo ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Validators are pure: they read no database, file, or environment.
+- Validators never strip, trim, or otherwise alter a value they accept.
+- Violations are always `Rejected` (exit 3), never a usage or operational error.
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

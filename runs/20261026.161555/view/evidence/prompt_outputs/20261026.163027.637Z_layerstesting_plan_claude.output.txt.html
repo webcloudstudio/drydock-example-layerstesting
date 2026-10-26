@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261026.163027.637Z_layerstesting_plan_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261026.163027.637Z_layerstesting_plan_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261026.163027.637Z_layerstesting_plan_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT FEATURE-AccountAdd.md ===
+# FEATURE: Account Add
+
+| Field | Value |
+|-------|-------|
+| Version | 20261026 V1 |
+| Description | Implements `ledger account add` and the shared account row builder used by every account command. |
+| Depends On | ARCHITECTURE.md, DATABASE.md, FEATURE-CliFoundation.md, FEATURE-CsvOutput.md, FEATURE-TextValidation.md, FEATURE-BalanceGuard.md, FEATURE-Init.md, FEATURE-StoreAccess.md |
+| Provides | ledger account add, ledger_app.accounts.account_row |
+| Consumes | ledger_app.validation.code, ledger_app.validation.name, ledger_app.balances.balance_cents, ledger_app.store.open_store, cli.output.write_table, cli.errors |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger account add &lt;code&gt; &lt;name&gt;` stores a new account and writes its row. It also owns
+`ledger_app.accounts.account_row(db, code)`, which the get, rename, and delete commands reuse.
+
+## Interface
+
+| Command | Arguments | Exit codes |
+|---------|-----------|------------|
+| `ledger account add` | `&lt;code&gt; &lt;name&gt;` (exactly two) | 0 stored; 2 wrong argument count; 3 invalid code or name, or duplicate code; 1 operational failure |
+
+- Registered through `cli.registry.register` with a usage line and exact arity of two arguments.
+- The command validates code (`validation.code`) and name (`validation.name`) first, then checks the
+  code is not already stored, then creates the account. Nothing is written when any check fails.
+- Standard output on success is CSV: header `account,name,transactions,balance`, then one row. A new
+  account has `0` transactions and balance `0.00`.
+- The stdout write is the handler&#x27;s final act, through `cli.output.write_table`.
+- Failures write nothing to stdout and one diagnostic line to stderr.
+
+## Shared row builder
+
+`account_row(db, code)` reads the stored account and its stored transactions through the database and
+returns a list of four strings `[account, name, transactions, balance]`, or `None` when the account is
+absent. `transactions` is the count of the account&#x27;s stored transactions. `balance` is the sum of their
+integer-cent amounts formatted with `cli.output.format_cents`. No floating point is used.
+
+## Database Interface
+
+- `FEATURE-ACCOUNTS-001` — read: check whether the account code is already stored - supplies: `account` - returns: `account`, `name`
+- `FEATURE-ACCOUNTS-003` — write: create the account - supplies: `account`, `name` - returns: `account`, `name`
+- `FEATURE-TRANSACTIONS-002` — read: list the account&#x27;s transactions for count and balance - supplies: `account` - returns: `txn_id`, `amount`
+
+## Programmatic Acceptance
+
+=== AC account-add-success ===
+Intent: Adding an account exits 0, writes the new row with zero transactions, and persists it.
+
+import csv
+import io
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def f(r, k):
+    return r[k] if isinstance(r, dict) else getattr(r, k)
+
+code = &quot;ZZADD01&quot;
+name = &quot;Event Float&quot;
+with db_session() as db:
+    assert db.accounts.get(account=code) is None
+    rc, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, code, name)
+    print(out)
+    print(err)
+    assert rc == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert len(rows) == 2
+    assert rows[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;]
+    assert rows[1] == [code, name, &quot;0&quot;, &quot;0.00&quot;]
+    got = db.accounts.get(account=code)
+    assert got is not None
+    assert f(got, &quot;name&quot;) == name
+=== END AC account-add-success ===
+
+=== AC account-add-duplicate ===
+Intent: Adding an existing code exits 3, writes nothing to stdout, and leaves the stored name unchanged.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def f(r, k):
+    return r[k] if isinstance(r, dict) else getattr(r, k)
+
+code = &quot;ZZADD02&quot;
+first = &quot;First Name&quot;
+second = &quot;Second Name&quot;
+with db_session() as db:
+    db.accounts.create(account=code, name=first)
+    rc, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, code, second)
+    print(out)
+    print(err)
+    assert rc == 3
+    assert out == &quot;&quot;
+    assert f(db.accounts.get(account=code), &quot;name&quot;) == first
+=== END AC account-add-duplicate ===
+
+=== AC account-add-invalid-input ===
+Intent: An invalid code or name exits 3, writes nothing to stdout, and stores nothing.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+good_code = &quot;ZZADD03&quot;
+bad_codes = [&quot;zzadd03&quot;, &quot;ZZ ADD03&quot;, &quot;ABCDEFGHIJKLM&quot;, &quot;AB,C&quot;]
+good_name = &quot;Valid Name&quot;
+bad_names = [&quot;&quot;, &quot;has,comma&quot;, &quot;x&quot; * 41]
+with db_session() as db:
+    for bad in bad_codes:
+        rc, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, bad, good_name)
+        assert rc == 3
+        assert out == &quot;&quot;
+        assert db.accounts.get(account=bad) is None
+    for bad in bad_names:
+        rc, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, good_code, bad)
+        assert rc == 3
+        assert out == &quot;&quot;
+        assert db.accounts.get(account=good_code) is None
+=== END AC account-add-invalid-input ===
+
+=== AC account-add-usage ===
+Intent: A wrong argument count exits 2 with nothing on stdout and stores nothing.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+code = &quot;ZZADD04&quot;
+with db_session() as db:
+    for args in ((&quot;account&quot;, &quot;add&quot;), (&quot;account&quot;, &quot;add&quot;, code), (&quot;account&quot;, &quot;add&quot;, code, &quot;A&quot;, &quot;B&quot;)):
+        rc, out, err = cli_runner(*args)
+        assert rc == 2
+        assert out == &quot;&quot;
+        assert len(err.strip().splitlines()) == 1
+    assert db.accounts.get(account=code) is None
+=== END AC account-add-usage ===
+
+=== AC account-row-builder ===
+Intent: account_row computes the transaction count and balance from stored transactions and returns None for an absent account.
+
+from ledger_app.accounts import account_row
+from persistence.testing import db_session
+
+code = &quot;ZZADD05&quot;
+name = &quot;Row Builder&quot;
+cat = &quot;ZZADDC5&quot;
+first_id = 900001001
+amounts = [1000, -250]
+with db_session() as db:
+    db.accounts.create(account=code, name=name)
+    db.categories.create(category=cat, description=&quot;Row Category&quot;)
+    assert account_row(db, code) == [code, name, &quot;0&quot;, &quot;0.00&quot;]
+    for offset, cents in enumerate(amounts):
+        db.transactions.create(
+            txn_id=first_id + offset, date=&quot;2026-04-01&quot;, account=code,
+            category=cat, amount=cents, memo=&quot;&quot;,
+        )
+    total = sum(amounts)
+    text = f&quot;{total // 100}.{total % 100:02d}&quot;
+    assert account_row(db, code) == [code, name, str(len(amounts)), text]
+    assert account_row(db, &quot;ZZADD99&quot;) is None
+=== END AC account-row-builder ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Validation and the duplicate check complete before the first write.
+- Application code reaches the store only through `ledger_app.store.open_store` and `db.&lt;table&gt;.&lt;operation&gt;(...)`.
+- Balances and counts are computed from stored rows in integer cents, never floating point and never hardcoded.
+- A failing command writes nothing to stdout.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-AccountGet.md ===
+# FEATURE: Account Get
+
+| Field | Value |
+|-------|-------|
+| Version | 20261026 V1 |
+| Description | Implements `ledger account get`, returning one account row with its transaction count and balance. |
+| Depends On | FEATURE-AccountAdd.md, FEATURE-CliFoundation.md, FEATURE-TextValidation.md |
+| Provides | ledger account get |
+| Consumes | ledger_app.accounts.account_row, ledger_app.validation.code, ledger_app.store.open_store, cli.output.write_table, cli.errors |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger account get &lt;code&gt;` writes the current row of a stored account.
+
+## Interface
+
+| Command | Arguments | Exit codes |
+|---------|-----------|------------|
+| `ledger account get` | `&lt;code&gt;` (exactly one) | 0 found; 2 wrong argument count; 3 invalid code; 4 absent account; 1 operational failure |
+
+- Arguments are validated first: a malformed code is rejected with exit 3, never reported as absent.
+- A well-formed code with no stored account exits 4.
+- On success the output is header `account,name,transactions,balance` and one row built by `account_row`.
+- Failures write nothing to stdout and one diagnostic line to stderr.
+
+## Database Interface
+
+- `FEATURE-ACCOUNTS-001` — read: fetch the account by code - supplies: `account` - returns: `account`, `name`
+- `FEATURE-TRANSACTIONS-002` — read: list the account&#x27;s transactions for count and balance - supplies: `account` - returns: `txn_id`, `amount`
+
+## Programmatic Acceptance
+
+=== AC account-get-found ===
+Intent: Getting a stored account writes its row with the stored name, transaction count, and computed balance.
+
+import csv
+import io
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+code = &quot;ZZGET01&quot;
+name = &quot;Get Account&quot;
+cat = &quot;ZZGETC1&quot;
+amounts = [5000, -1234]
+with db_session() as db:
+    db.accounts.create(account=code, name=name)
+    db.categories.create(category=cat, description=&quot;Get Category&quot;)
+    for offset, cents in enumerate(amounts):
+        db.transactions.create(
+            txn_id=900002001 + offset, date=&quot;2026-04-01&quot;, account=code,
+            category=cat, amount=cents, memo=&quot;&quot;,
+        )
+    total = sum(amounts)
+    text = f&quot;{total // 100}.{total % 100:02d}&quot;
+    rc, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, code)
+    print(out)
+    print(err)
+    assert rc == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;]
+    assert rows[1:] == [[code, name, str(len(amounts)), text]]
+=== END AC account-get-found ===
+
+=== AC account-get-empty-account ===
+Intent: A stored account with no transactions reports zero transactions.
+
+import csv
+import io
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+code = &quot;ZZGET02&quot;
+name = &quot;Empty Account&quot;
+with db_session() as db:
+    db.accounts.create(account=code, name=name)
+    rc, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, code)
+    assert rc == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[1] == [code, name, &quot;0&quot;, &quot;0.00&quot;]
+=== END AC account-get-empty-account ===
+
+=== AC account-get-absent ===
+Intent: A well-formed code with no stored account exits 4 and writes nothing to stdout.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+code = &quot;ZZGET03&quot;
+with db_session() as db:
+    assert db.accounts.get(account=code) is None
+    rc, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, code)
+    assert rc == 4
+    assert out == &quot;&quot;
+    assert len(err.strip().splitlines()) == 1
+=== END AC account-get-absent ===
+
+=== AC account-get-invalid-code ===
+Intent: A malformed code exits 3 rather than being reported as absent.
+
+from cli.testing import cli_runner
+
+for bad in (&quot;lower&quot;, &quot;HAS SPACE&quot;, &quot;ABCDEFGHIJKLM&quot;, &quot;A,B&quot;):
+    rc, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, bad)
+    assert rc == 3
+    assert out == &quot;&quot;
+=== END AC account-get-invalid-code ===
+
+=== AC account-get-usage ===
+Intent: A wrong argument count exits 2 with one stderr line and nothing on stdout.
+
+from cli.testing import cli_runner
+
+for args in ((&quot;account&quot;, &quot;get&quot;), (&quot;account&quot;, &quot;get&quot;, &quot;ZZGET04&quot;, &quot;EXTRA&quot;)):
+    rc, out, err = cli_runner(*args)
+    assert rc == 2
+    assert out == &quot;&quot;
+    assert len(err.strip().splitlines()) == 1
+=== END AC account-get-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Validation precedes lookup: an invalid code is exit 3, an absent code is exit 4.
+- The command is read-only and writes nothing to the store.
+- Balance and count come from stored rows in integer cents.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-AccountRename.md ===
+# FEATURE: Account Rename
+
+| Field | Value |
+|-------|-------|
+| Version | 20261026 V1 |
+| Description | Implements `ledger account rename`, changing only an account&#x27;s name and returning the updated row. |
+| Depends On | FEATURE-AccountAdd.md, FEATURE-CliFoundation.md, FEATURE-TextValidation.md |
+| Provides | ledger account rename |
+| Consumes | ledger_app.accounts.account_row, ledger_app.validation.code, ledger_app.validation.name, ledger_app.store.open_store, cli.output.write_table, cli.errors |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger account rename &lt;code&gt; &lt;name&gt;` replaces the name of a stored account and writes the updated row.
+
+## Interface
+
+| Command | Arguments | Exit codes |
+|---------|-----------|------------|
+| `ledger account rename` | `&lt;code&gt; &lt;name&gt;` (exactly two) | 0 renamed; 2 wrong argument count; 3 invalid code or name; 4 absent account; 1 operational failure |
+
+- Code and name are validated first (exit 3), then the account must exist (exit 4), then the name is updated.
+- Only the name changes. Transactions, count, and balance are untouched.
+- On success the output is header `account,name,transactions,balance` and the updated row from `account_row`.
+- Failures write nothing to stdout, store nothing, and write one diagnostic line to stderr.
+
+## Database Interface
+
+- `FEATURE-ACCOUNTS-001` — read: confirm the account exists - supplies: `account` - returns: `account`, `name`
+- `FEATURE-ACCOUNTS-004` — write: change the account name - supplies: `account`, `name` - returns: `account`, `name`
+- `FEATURE-TRANSACTIONS-002` — read: list the account&#x27;s transactions for count and balance - supplies: `account` - returns: `txn_id`, `amount`
+
+## Programmatic Acceptance
+
+=== AC account-rename-success ===
+Intent: Renaming returns the updated row and a separate read shows the new name.
+
+import csv
+import io
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def f(r, k):
+    return r[k] if isinstance(r, dict) else getattr(r, k)
+
+code = &quot;ZZREN01&quot;
+old = &quot;Event Float&quot;
+new = &quot;Event Cash Box&quot;
+with db_session() as db:
+    db.accounts.create(account=code, name=old)
+    rc, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, new)
+    print(out)
+    print(err)
+    assert rc == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;]
+    assert rows[1] == [code, new, &quot;0&quot;, &quot;0.00&quot;]
+    assert f(db.accounts.get(account=code), &quot;name&quot;) == new
+=== END AC account-rename-success ===
+
+=== AC account-rename-keeps-transactions ===
+Intent: Renaming changes only the name; stored transactions and the balance are unchanged.
+
+import csv
+import io
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+code = &quot;ZZREN02&quot;
+old = &quot;Old Drawer&quot;
+new = &quot;New Drawer&quot;
+cat = &quot;ZZRENC2&quot;
+tid = 900003001
+cents = 7525
+with db_session() as db:
+    db.accounts.create(account=code, name=old)
+    db.categories.create(category=cat, description=&quot;Rename Category&quot;)
+    db.transactions.create(
+        txn_id=tid, date=&quot;2026-04-01&quot;, account=code, category=cat, amount=cents, memo=&quot;keep&quot;,
+    )
+    rc, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, new)
+    assert rc == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    text = f&quot;{cents // 100}.{cents % 100:02d}&quot;
+    assert rows[1] == [code, new, &quot;1&quot;, text]
+    kept = db.transactions.get(txn_id=tid)
+    assert kept is not None
+    assert (kept[&quot;amount&quot;] if isinstance(kept, dict) else kept.amount) == cents
+=== END AC account-rename-keeps-transactions ===
+
+=== AC account-rename-absent ===
+Intent: Renaming an absent account exits 4, writes nothing to stdout, and creates no account.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+code = &quot;ZZREN03&quot;
+with db_session() as db:
+    rc, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, &quot;Some Name&quot;)
+    assert rc == 4
+    assert out == &quot;&quot;
+    assert db.accounts.get(account=code) is None
+=== END AC account-rename-absent ===
+
+=== AC account-rename-invalid ===
+Intent: An invalid code or name exits 3 and leaves the stored name unchanged.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def f(r, k):
+    return r[k] if isinstance(r, dict) else getattr(r, k)
+
+code = &quot;ZZREN04&quot;
+name = &quot;Stable Name&quot;
+with db_session() as db:
+    db.accounts.create(account=code, name=name)
+    for bad in (&quot;&quot;, &quot;has,comma&quot;, &quot;x&quot; * 41):
+        rc, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, bad)
+        assert rc == 3
+        assert out == &quot;&quot;
+        assert f(db.accounts.get(account=code), &quot;name&quot;) == name
+    rc, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, &quot;lower&quot;, &quot;Valid&quot;)
+    assert rc == 3
+    assert out == &quot;&quot;
+=== END AC account-rename-invalid ===
+
+=== AC account-rename-usage ===
+Intent: A wrong argument count exits 2 with one stderr line and nothing on stdout.
+
+from cli.testing import cli_runner
+
+for args in ((&quot;account&quot;, &quot;rename&quot;), (&quot;account&quot;, &quot;rename&quot;, &quot;ZZREN05&quot;),
+             (&quot;account&quot;, &quot;rename&quot;, &quot;ZZREN05&quot;, &quot;A&quot;, &quot;B&quot;)):
+    rc, out, err = cli_runner(*args)
+    assert rc == 2
+    assert out == &quot;&quot;
+    assert len(err.strip().splitlines()) == 1
+=== END AC account-rename-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Only the account name is written; no other column or table changes.
+- All validation and the existence check complete before the update.
+- Application code reaches the store only through the persistence library.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-AccountDelete.md ===
+# FEATURE: Account Delete
+
+| Field | Value |
+|-------|-------|
+| Version | 20261026 V1 |
+| Description | Implements `ledger account delete`, removing an account that has no transactions. |
+| Depends On | FEATURE-AccountAdd.md, FEATURE-CliFoundation.md, FEATURE-TextValidation.md |
+| Provides | ledger account delete |
+| Consumes | ledger_app.accounts.account_row, ledger_app.validation.code, ledger_app.store.open_store, cli.output.write_table, cli.errors |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger account delete &lt;code&gt;` removes a stored account and writes `deleted` and the code. An account
+that still has stored transactions is refused. An account whose transactions have all been deleted may
+be deleted.
+
+## Interface
+
+| Command | Arguments | Exit codes |
+|---------|-----------|------------|
+| `ledger account delete` | `&lt;code&gt;` (exactly one) | 0 deleted; 2 wrong argument count; 3 invalid code or account in use; 4 absent account; 1 operational failure |
+
+- Validate the code (exit 3), require the account to exist (exit 4), require that it has no stored
+  transactions (exit 3), then delete. Nothing is deleted when any check fails.
+- On success stdout is two CSV lines: `deleted`, then the code.
+- Failures write nothing to stdout and one diagnostic line to stderr.
+
+## Database Interface
+
+- `FEATURE-ACCOUNTS-001` — read: confirm the account exists - supplies: `account` - returns: `account`, `name`
+- `FEATURE-TRANSACTIONS-002` — read: list the account&#x27;s transactions to detect use - supplies: `account` - returns: `txn_id`
+- `FEATURE-ACCOUNTS-005` — write: delete the account - supplies: `account` - returns: `account`
+
+## Programmatic Acceptance
+
+=== AC account-delete-success ===
+Intent: Deleting an account with no transactions writes the deleted lines and removes the account.
+
+import csv
+import io
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+code = &quot;ZZDEL01&quot;
+with db_session() as db:
+    db.accounts.create(account=code, name=&quot;Delete Me&quot;)
+    rc, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, code)
+    print(out)
+    print(err)
+    assert rc == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows == [[&quot;deleted&quot;], [code]]
+    assert db.accounts.get(account=code) is None
+=== END AC account-delete-success ===
+
+=== AC account-delete-in-use ===
+Intent: An account with stored transactions exits 3 and is not deleted.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+code = &quot;ZZDEL02&quot;
+cat = &quot;ZZDELC2&quot;
+tid = 900004001
+with db_session() as db:
+    db.accounts.create(account=code, name=&quot;In Use&quot;)
+    db.categories.create(category=cat, description=&quot;Delete Category&quot;)
+    db.transactions.create(
+        txn_id=tid, date=&quot;2026-04-01&quot;, account=code, category=cat, amount=1000, memo=&quot;&quot;,
+    )
+    rc, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, code)
+    assert rc == 3
+    assert out == &quot;&quot;
+    assert db.accounts.get(account=code) is not None
+    assert db.transactions.get(txn_id=tid) is not None
+=== END AC account-delete-in-use ===
+
+=== AC account-delete-after-transactions-removed ===
+Intent: An account whose transactions were all deleted can then be deleted.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+code = &quot;ZZDEL03&quot;
+cat = &quot;ZZDELC3&quot;
+tid = 900004101
+with db_session() as db:
+    db.accounts.create(account=code, name=&quot;Emptied&quot;)
+    db.categories.create(category=cat, description=&quot;Delete Category&quot;)
+    db.transactions.create(
+        txn_id=tid, date=&quot;2026-04-01&quot;, account=code, category=cat, amount=500, memo=&quot;&quot;,
+    )
+    rc, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, code)
+    assert rc == 3
+    db.transactions.delete(txn_id=tid)
+    rc, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, code)
+    print(err)
+    assert rc == 0
+    assert db.accounts.get(account=code) is None
+=== END AC account-delete-after-transactions-removed ===
+
+=== AC account-delete-absent ===
+Intent: Deleting an absent account exits 4 and writes nothing to stdout.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+code = &quot;ZZDEL04&quot;
+with db_session() as db:
+    assert db.accounts.get(account=code) is None
+    rc, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, code)
+    assert rc == 4
+    assert out == &quot;&quot;
+=== END AC account-delete-absent ===
+
+=== AC account-delete-invalid-and-usage ===
+Intent: A malformed code exits 3 and a wrong argument count exits 2, both with nothing on stdout.
+
+from cli.testing import cli_runner
+
+rc, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, &quot;lower case&quot;)
+assert rc == 3
+assert out == &quot;&quot;
+for args in ((&quot;account&quot;, &quot;delete&quot;), (&quot;account&quot;, &quot;delete&quot;, &quot;ZZDEL05&quot;, &quot;EXTRA&quot;)):
+    rc, out, err = cli_runner(*args)
+    assert rc == 2
+    assert out == &quot;&quot;
+    assert len(err.strip().splitlines()) == 1
+=== END AC account-delete-invalid-and-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- The in-use check and every other check complete before the delete.
+- Deleting an account never deletes or alters transactions.
+- Application code reaches the store only through the persistence library.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-TxnPost.md ===
+# FEATURE: Transaction Post
+
+| Field | Value |
+|-------|-------|
+| Version | 20261026 V1 |
+| Description | Implements `ledger txn post` plus the shared transaction row formatter and next-id rule. |
+| Depends On | ARCHITECTURE.md, DATABASE.md, FEATURE-CliFoundation.md, FEATURE-CsvOutput.md, FEATURE-TextValidation.md, FEATURE-AmountValidation.md, FEATURE-DateValidation.md, FEATURE-BalanceGuard.md, FEATURE-Init.md, FEATURE-StoreAccess.md |
+| Provides | ledger txn post, ledger_app.transactions.txn_row, ledger_app.transactions.next_txn_id |
+| Consumes | ledger_app.validation.code, ledger_app.validation.amount_cents, ledger_app.validation.date, ledger_app.validation.memo, ledger_app.balances.ensure_non_negative, ledger_app.store.open_store, cli.output.write_table, cli.output.format_cents, cli.errors |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger txn post &lt;account&gt; &lt;category&gt; &lt;amount&gt; &lt;date&gt; [&lt;memo&gt;]` validates and stores one transaction
+and writes the stored row. The story also owns `txn_row` and `next_txn_id`, which get, amend, delete,
+and transfer reuse.
+
+## Interface
+
+| Command | Arguments | Exit codes |
+|---------|-----------|------------|
+| `ledger txn post` | `&lt;account&gt; &lt;category&gt; &lt;amount&gt; &lt;date&gt;` and an optional `&lt;memo&gt;` (four or five) | 0 stored; 2 wrong argument count; 3 rejected; 1 operational failure |
+
+Checks, all before the first write:
+
+1. Account and category codes are valid (`validation.code`); the amount parses to non-zero integer
+   cents (`validation.amount_cents`); the date is a real `YYYY-MM-DD` date (`validation.date`); the
+   memo (empty when omitted) is valid (`validation.memo`).
+2. The account and the category exist, otherwise exit 3.
+3. `ensure_non_negative` accepts the account&#x27;s net change, otherwise exit 3.
+
+The new id is one more than the largest stored `txn_id`, or `1` when none is stored. On success the
+output is header `txn_id,date,account,category,amount,memo` and the stored row. Failures write nothing
+to stdout, store nothing, and write one diagnostic line to stderr.
+
+## Shared helpers
+
+- `next_txn_id(db)` returns the largest stored `txn_id` plus one, or `1` in an empty table, computed
+  from `transactions.list`.
+- `txn_row(t)` takes a stored transaction (mapping or attribute row) and returns a list of six strings
+  `[txn_id, date, account, category, amount, memo]`, with the amount formatted by `format_cents`.
+
+## Database Interface
+
+- `FEATURE-ACCOUNTS-001` — read: confirm the account exists - supplies: `account` - returns: `account`
+- `FEATURE-CATEGORIES-001` — read: confirm the category exists - supplies: `category` - returns: `category`
+- `FEATURE-TRANSACTIONS-002` — read: list transactions for the next id and the balance - supplies: `account` - returns: `txn_id`, `amount`
+- `FEATURE-TRANSACTIONS-003` — write: store the transaction - supplies: `txn_id`, `date`, `account`, `category`, `amount`, `memo` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+
+## Programmatic Acceptance
+
+=== AC txn-post-success ===
+Intent: Posting stores a transaction with the next id, writes its row, and a separate read returns every field.
+
+import csv
+import io
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def f(r, k):
+    return r[k] if isinstance(r, dict) else getattr(r, k)
+
+acct = &quot;ZZPST01&quot;
+cat = &quot;ZZPSTC1&quot;
+day = &quot;2026-04-01&quot;
+cents = 4550
+amount_text = f&quot;{cents // 100}.{cents % 100:02d}&quot;
+memo = &quot;walk in sale&quot;
+with db_session() as db:
+    db.accounts.create(account=acct, name=&quot;Post Account&quot;)
+    db.categories.create(category=cat, description=&quot;Post Category&quot;)
+    stored = [f(r, &quot;txn_id&quot;) for r in db.transactions.list()]
+    expected_id = (max(stored) if stored else 0) + 1
+    rc, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, amount_text, day, memo)
+    print(out)
+    print(err)
+    assert rc == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[0] == [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;]
+    assert rows[1:] == [[str(expected_id), day, acct, cat, amount_text, memo]]
+    got = db.transactions.get(txn_id=expected_id)
+    assert got is not None
+    assert f(got, &quot;date&quot;) == day
+    assert f(got, &quot;account&quot;) == acct
+    assert f(got, &quot;category&quot;) == cat
+    assert f(got, &quot;amount&quot;) == cents
+    assert f(got, &quot;memo&quot;) == memo
+=== END AC txn-post-success ===
+
+=== AC txn-post-optional-memo ===
+Intent: Omitting the memo stores an empty memo and writes an empty last field.
+
+import csv
+import io
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def f(r, k):
+    return r[k] if isinstance(r, dict) else getattr(r, k)
+
+acct = &quot;ZZPST02&quot;
+cat = &quot;ZZPSTC2&quot;
+with db_session() as db:
+    db.accounts.create(account=acct, name=&quot;Memo Account&quot;)
+    db.categories.create(category=cat, description=&quot;Memo Category&quot;)
+    rc, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;10.00&quot;, &quot;2026-04-02&quot;)
+    print(err)
+    assert rc == 0
+    row = list(csv.reader(io.StringIO(out)))[1]
+    assert row[-1] == &quot;&quot;
+    assert f(db.transactions.get(txn_id=int(row[0])), &quot;memo&quot;) == &quot;&quot;
+=== END AC txn-post-optional-memo ===
+
+=== AC txn-post-negative-within-balance ===
+Intent: A negative amount that leaves a non-negative balance is stored and written with a leading minus.
+
+import csv
+import io
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def f(r, k):
+    return r[k] if isinstance(r, dict) else getattr(r, k)
+
+acct = &quot;ZZPST03&quot;
+cat = &quot;ZZPSTC3&quot;
+funded = 5000
+spend = 1234
+spend_text = f&quot;-{spend // 100}.{spend % 100:02d}&quot;
+with db_session() as db:
+    db.accounts.create(account=acct, name=&quot;Spend Account&quot;)
+    db.categories.create(category=cat, description=&quot;Spend Category&quot;)
+    db.transactions.create(
+        txn_id=900005001, date=&quot;2026-04-01&quot;, account=acct, category=cat,
+        amount=funded, memo=&quot;&quot;,
+    )
+    rc, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, spend_text, &quot;2026-04-02&quot;, &quot;tape&quot;)
+    print(err)
+    assert rc == 0
+    row = list(csv.reader(io.StringIO(out)))[1]
+    assert row[4] == spend_text
+    assert f(db.transactions.get(txn_id=int(row[0])), &quot;amount&quot;) == -spend
+=== END AC txn-post-negative-within-balance ===
+
+=== AC txn-post-negative-balance-rejected ===
+Intent: A post that would leave the account below zero exits 3 and stores nothing.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = &quot;ZZPST04&quot;
+cat = &quot;ZZPSTC4&quot;
+with db_session() as db:
+    db.accounts.create(account=acct, name=&quot;Empty Account&quot;)
+    db.categories.create(category=cat, description=&quot;Overdraw Category&quot;)
+    rc, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;-1.00&quot;, &quot;2026-04-01&quot;)
+    assert rc == 3
+    assert out == &quot;&quot;
+    assert db.transactions.list(account=acct) == []
+=== END AC txn-post-negative-balance-rejected ===
+
+=== AC txn-post-rejections-store-nothing ===
+Intent: Unknown account or category, bad amount, zero amount, bad date, and bad memo each exit 3 and store nothing.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = &quot;ZZPST05&quot;
+cat = &quot;ZZPSTC5&quot;
+missing = &quot;ZZPSTX5&quot;
+with db_session() as db:
+    db.accounts.create(account=acct, name=&quot;Reject Account&quot;)
+    db.categories.create(category=cat, description=&quot;Reject Category&quot;)
+    before = len(db.transactions.list())
+    cases = [
+        (acct, missing, &quot;1.00&quot;, &quot;2026-04-01&quot;, &quot;&quot;),
+        (missing, cat, &quot;1.00&quot;, &quot;2026-04-01&quot;, &quot;&quot;),
+        (acct, cat, &quot;1.234&quot;, &quot;2026-04-01&quot;, &quot;&quot;),
+        (acct, cat, &quot;0.00&quot;, &quot;2026-04-01&quot;, &quot;&quot;),
+        (acct, cat, &quot;abc&quot;, &quot;2026-04-01&quot;, &quot;&quot;),
+        (acct, cat, &quot;1.00&quot;, &quot;2026-02-30&quot;, &quot;&quot;),
+        (acct, cat, &quot;1.00&quot;, &quot;2026-4-1&quot;, &quot;&quot;),
+        (acct, cat, &quot;1.00&quot;, &quot;2026-04-01&quot;, &quot;has,comma&quot;),
+        (acct, cat, &quot;1.00&quot;, &quot;2026-04-01&quot;, &quot;x&quot; * 61),
+        (&quot;lower&quot;, cat, &quot;1.00&quot;, &quot;2026-04-01&quot;, &quot;&quot;),
+    ]
+    for a, c, amt, day, memo in cases:
+        rc, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, a, c, amt, day, memo)
+        assert rc == 3, (a, c, amt, day, memo)
+        assert out == &quot;&quot;
+    assert len(db.transactions.list()) == before
+=== END AC txn-post-rejections-store-nothing ===
+
+=== AC txn-post-usage ===
+Intent: A wrong argument count exits 2 with one stderr line and nothing on stdout.
+
+from cli.testing import cli_runner
+
+too_few = (&quot;txn&quot;, &quot;post&quot;, &quot;ZZPST06&quot;, &quot;ZZPSTC6&quot;, &quot;1.00&quot;)
+too_many = (&quot;txn&quot;, &quot;post&quot;, &quot;ZZPST06&quot;, &quot;ZZPSTC6&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;, &quot;memo&quot;, &quot;extra&quot;)
+for args in ((&quot;txn&quot;, &quot;post&quot;), too_few, too_many):
+    rc, out, err = cli_runner(*args)
+    assert rc == 2
+    assert out == &quot;&quot;
+    assert len(err.strip().splitlines()) == 1
+=== END AC txn-post-usage ===
+
+=== AC txn-helpers ===
+Intent: next_txn_id is one more than the largest stored id and txn_row formats a stored transaction.
+
+from ledger_app.transactions import next_txn_id, txn_row
+from persistence.testing import db_session
+
+def f(r, k):
+    return r[k] if isinstance(r, dict) else getattr(r, k)
+
+acct = &quot;ZZPST07&quot;
+cat = &quot;ZZPSTC7&quot;
+tid = 900007001
+day = &quot;2026-04-07&quot;
+cents = -1250
+memo = &quot;helper&quot;
+with db_session() as db:
+    db.accounts.create(account=acct, name=&quot;Helper Account&quot;)
+    db.categories.create(category=cat, description=&quot;Helper Category&quot;)
+    db.transactions.create(
+        txn_id=tid, date=day, account=acct, category=cat, amount=cents, memo=memo,
+    )
+    stored = [f(r, &quot;txn_id&quot;) for r in db.transactions.list()]
+    assert next_txn_id(db) == max(stored) + 1
+    magnitude = abs(cents)
+    text = f&quot;-{magnitude // 100}.{magnitude % 100:02d}&quot;
+    row = db.transactions.get(txn_id=tid)
+    assert txn_row(row) == [str(tid), day, acct, cat, text, memo]
+=== END AC txn-helpers ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Every input and rule is checked before the first write; a rejected post stores nothing.
+- Amounts are integer cents at every layer; no floating point.
+- The new id is computed from stored rows, never hardcoded.
+- A failing command writes nothing to stdout.
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

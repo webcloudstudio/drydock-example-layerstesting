@@ -1,0 +1,76 @@
+=== BEGIN ARTIFACT VERIFICATION.md ===
+# FEATURE: Release Verification
+
+| Field | Value |
+|-------|-------|
+| Version | 20261026 V1 |
+| Description | Terminal gate that runs the supplied LayersTesting grader unfiltered and requires every check to pass. |
+| Depends On | FEATURE-AtomicCommands.md, FEATURE-CliContract.md, FEATURE-TestRunner.md |
+| Provides | None |
+| Consumes | ledger init, ledger count, ledger load, ledger account, ledger txn, ledger transfer, ledger report |
+
+## Questions
+
+- None.
+
+## Purpose
+
+This is the terminal story. It runs after every implementation story has closed and proves the
+finished `./ledger` passes the supplied end-to-end grader, `sources/run.sh`, which makes 43 checks
+of exit code and standard output against known answers computed from the seed files.
+
+The grader runs `ledger init`, which deletes every ledger row, against whatever `DATABASE_URL`
+names. The gate therefore removes `DATABASE_URL` and `DATABASE_PATH` from the child environment
+so the grader creates its own temporary SQLite database and can never clear the acceptance store.
+Nothing under `sources/` is modified, filtered, or reinterpreted.
+
+## Behavior
+
+- The gate invokes `sh sources/run.sh` from the application root with no arguments and no filter.
+- Its exit status is the verdict. The grader exits `0` only when every check passes.
+- The captured output, including the closing `LayersTesting: NN passed, NN failed (of 43)` line
+  and any `FAIL` diffs, is printed for diagnosis and is never the oracle.
+
+## Programmatic Acceptance
+
+=== AC grader-full-suite ===
+Intent: The finished ledger passes every check of the supplied grader run unfiltered.
+Suite: full
+Requires: executable=sh; scope=test
+
+import os
+import subprocess
+import sys
+
+# run.sh runs `ledger init`, which clears every row in the database it is pointed at.
+# Drop the store settings so it builds its own temporary database; keep everything else (PATH).
+env = {k: v for k, v in os.environ.items() if k not in ("DATABASE_URL", "DATABASE_PATH")}
+
+result = subprocess.run(
+    ["sh", "sources/run.sh"],
+    capture_output=True,
+    text=True,
+    env=env,
+    timeout=900,
+)
+print(result.stdout)
+print(result.stderr, file=sys.stderr)
+
+passed = sum(1 for line in result.stdout.splitlines() if line.startswith("PASS "))
+failed = sum(1 for line in result.stdout.splitlines() if line.startswith("FAIL "))
+print(f"{passed} passed, {failed} failed")
+
+assert result.returncode == 0
+=== END AC grader-full-suite ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Do not modify, rewrite, regenerate, filter, or substitute any file under `sources/`.
+- The gate never passes `DATABASE_URL` or `DATABASE_PATH` to the grader, so the acceptance store is never cleared.
+- Application code never reads `sources/run.sh` or any seed file; only this gate invokes the grader.
+- The gate asserts the grader's exit status and nothing printed by it.
+=== END ARTIFACT ===

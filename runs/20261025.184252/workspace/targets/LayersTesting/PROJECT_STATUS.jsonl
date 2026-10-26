@@ -1,0 +1,5 @@
+{"label": "INITIALIZED", "result": "pass", "at": "2026-10-25T18:42:54.974+00:00", "detail": "", "command": "drydock init LayersTesting", "attempts": 1}
+{"label": "IMPORTED", "result": "pass", "at": "2026-10-25T18:43:00.929+00:00", "detail": "", "command": "drydock import LayersTesting", "attempts": 1}
+{"label": "ANALYZED", "result": "pass", "at": "2026-10-25T18:45:15.855+00:00", "detail": "", "command": "drydock analyze LayersTesting", "attempts": 1}
+{"label": "PLAN CREATED", "result": "fail", "at": "2026-10-25T18:46:55.573+00:00", "detail": "Plan generation failed: plan LLM execution failed Detail: provider rate limit 429: You've hit your session limit \u00b7 resets 4:50pm (America/New_York) Execution: 20261025.184651.898Z-cde29637", "command": "drydock plan LayersTesting", "attempts": 1}
+{"state": "PLAN CREATED", "result": "fail", "at": "2026-10-25T18:46:55.573+00:00", "attempts": 1}

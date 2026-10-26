@@ -1,0 +1,15 @@
+========================================================================
+POST-LLM FAILURE  ·  plan  ·  plan output validation failed
+========================================================================
+
+  cannot import name 'transport_conflicts' from
+  'drydock.acceptance_requirements'
+  (/mnt/c/Users/barlo/projects/drydock/src/drydock/acceptance_requirements.py)
+    contributing execution ids: 20261026.161932.176Z-80551875, 20261026.162320.753Z-b5a3773c, 20261026.162431.189Z-2d9a4762, 20261026.162629.402Z-7decadb5, 20261026.162821.507Z-e0810009, 20261026.163027.637Z-efdcc893, 20261026.163154.511Z-5b2c8b42, 20261026.163414.314Z-9408cb65, 20261026.163620.682Z-f9b58de5
+    No files were changed.
+
+  Recovery
+    Correct the plan input or model artifact, then run: drydock plan
+    LayersTesting
+
+========================================================================

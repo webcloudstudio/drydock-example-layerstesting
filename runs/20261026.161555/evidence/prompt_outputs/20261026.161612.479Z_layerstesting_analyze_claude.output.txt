@@ -1,0 +1,414 @@
+=== BEGIN ARTIFACT ANALYSIS.md ===
+# Blueprint Analysis: LayersTesting
+
+## Commander Expectations
+
+- assert the product is a command-line ledger that runs as an executable named `ledger` at the application root
+- assert every command either completes in full or changes nothing
+- assert account balances, category totals, and monthly totals are computed from stored ledger data
+- assert the ledger passes the supplied LayersTesting grader with every check passing
+- assert amounts are stored as integer cents and written with exactly two decimal places
+
+## Crew
+
+| Crew | Charge |
+|---|---|
+| Commander | Defines intent and decides what done means. |
+| Team Lead | Confirms epic completeness and stakeholder expectations. |
+| Planning Crew | Authors atomic specifications and the ordered Manifest. |
+| Shipyard Crew | Builds the tickets without synchronous Commander access. |
+
+## Story List
+
+### Feature: Database Setup
+
+| ID | Story | High-level AC |
+|---|---|---|
+| DBSETUP-001 | Initialize an empty ledger | `ledger init` prepares the accounts, categories, and transactions tables, writes nothing, exits 0, and removes existing ledger rows when rerun |
+| DBSETUP-002 | Resolve the database location | DATABASE_URL, then DATABASE_PATH, then data/app.db; optional sqlite:// prefix; postgres:// and postgresql:// values are classed as PostgreSQL DSNs |
+| DBSETUP-003 | Report operational database failures | An unreachable database, missing tables, or an unreadable file exits 1 with one stderr line and no stdout |
+
+### Feature: Data Loading
+
+| ID | Story | High-level AC |
+|---|---|---|
+| LOAD-001 | Load accounts from CSV | Header must equal account,name; all rows are stored or none; writes table,loaded and accounts,N; duplicate codes exit 3 |
+| LOAD-002 | Load categories from CSV | Header must equal category,description; all rows are stored or none; writes table,loaded and categories,N; duplicate codes exit 3 |
+| LOAD-003 | Load transactions from CSV | Header must equal the transaction columns; txn_id kept from file; unknown accounts or categories, duplicate ids, and any balance below zero exit 3 with nothing stored |
+| LOAD-004 | Count rows per table | `ledger count` writes table,rows then accounts, categories, and transactions rows in that order |
+
+### Feature: Accounts
+
+| ID | Story | High-level AC |
+|---|---|---|
+| ACCT-001 | Add an account | `account add` stores the account and returns its row with 0 transactions and balance 0.00; duplicate code exits 3 |
+| ACCT-002 | Get an account | `account get` returns the current row with transaction count and balance; absent code exits 4 |
+| ACCT-003 | Rename an account | `account rename` changes the name only and returns the updated row; absent code exits 4 |
+| ACCT-004 | Delete an account | `account delete` removes an account with no transactions and writes deleted and the code; an account with transactions exits 3; absent code exits 4 |
+
+### Feature: Transactions
+
+| ID | Story | High-level AC |
+|---|---|---|
+| TXN-001 | Post a transaction | `txn post` assigns the next txn_id, validates account, category, amount, date, and memo, stores the row, and returns it |
+| TXN-002 | Get a transaction | `txn get` returns the stored row for the id; absent id exits 4 |
+| TXN-003 | Amend a transaction amount | `txn amend` changes only the amount and returns the updated row; absent id exits 4 |
+| TXN-004 | Delete a transaction | `txn delete` removes the row and writes deleted and the id; absent id exits 4 |
+
+### Feature: Transfers
+
+| ID | Story | High-level AC |
+|---|---|---|
+| XFER-001 | Record a paired transfer | `transfer` stores two TRANSFER rows, -amount on the source and +amount on the destination, with consecutive ids and the specified memos, and returns both rows |
+| XFER-002 | Reject invalid transfers | Zero or negative amounts, identical accounts, and unknown accounts exit 3; a transfer leaving the source below zero exits 3; neither leg is stored |
+
+### Feature: Reports
+
+| ID | Story | High-level AC |
+|---|---|---|
+| RPT-001 | Balances report | `report balances` lists each account by code with its transaction count and balance, then a TOTAL row, all computed from stored rows |
+| RPT-002 | Categories report | `report categories` lists every category by code, including empty ones, with inflow, outflow, and net, then a TOTAL row |
+| RPT-003 | Monthly report | `report monthly` lists each YYYY-MM that has transactions in ascending order with inflow, outflow, and net, then a TOTAL row |
+
+### Feature: Input Validation
+
+| ID | Story | High-level AC |
+|---|---|---|
+| VAL-001 | Validate codes, names, descriptions, and memos | Codes are 1 to 12 characters from A-Z and 0-9; names and descriptions 1 to 40 characters; memos 0 to 60; none contains a comma or newline; violations exit 3 |
+| VAL-002 | Validate amounts | Input matches an optional minus sign, digits, and at most two decimal places; amounts equal to zero are rejected; violations exit 3 |
+| VAL-003 | Validate dates | Dates must be real calendar dates written YYYY-MM-DD; invalid dates such as 2026-02-30 exit 3 |
+
+### Feature: Ledger Integrity
+
+| ID | Story | High-level AC |
+|---|---|---|
+| INT-001 | Rejected commands change nothing | Every write command checks all inputs and rules before its first write; a rejected load, account change, transaction change, or transfer stores no partial rows |
+| INT-002 | No negative balances | Any load, post, amend, delete, or transfer that leaves an account balance below zero exits 3 and preserves prior balances |
+
+### Feature: Command-Line Interface
+
+| ID | Story | High-level AC |
+|---|---|---|
+| CLI-001 | Provide the ledger executable | An executable named ledger exists at the application root; an unknown command or report, or a wrong argument count, exits 2 with one stderr line naming the expected form |
+| CLI-002 | Write CSV output | Successful output has one header, comma-separated rows, no quoting, no trailing spaces, and \n line endings; amounts show two decimals, a leading minus when negative, and no separators; failures write nothing to stdout |
+
+### Feature: Test Suite
+
+| ID | Story | High-level AC |
+|---|---|---|
+| TEST-001 | Provide the application test runner | bin/test.sh, POSIX-compatible, runs the application's pytest suite from the application root and exits 0 only when every test passes; the suite covers each command, exit code, and rule against a temporary database |
+
+### Feature: Acceptance
+
+| ID | Story | High-level AC |
+|---|---|---|
+| ACCEPT-001 | Pass the supplied LayersTesting grader | `sh sources/run.sh` exits 0 with every check passing; this terminal story gates on every implementation story |
+
+## Surfaced Acceptance Criteria
+
+The analyze step has surfaced these acceptance criteria for `drydock plan` to fold into the
+relevant story's typed specification. "None." if the Gap Checklist surfaced no story-scoped items.
+
+| ID | Story ID | Criterion |
+|---|---|---|
+| AC-001 | CLI-001 | A usage error writes exactly one line to standard error that shows the expected form of the failing command, so every command and sub-verb has its help text. |
+| AC-002 | LOAD-001 | A CSV row whose field count differs from the header is rejected with exit 3 and stores no rows from that file. |
+| AC-003 | TXN-002 | A transaction id that is not a positive integer is rejected with exit 3 and is not reported as absent. |
+| AC-004 | ACCT-004 | An account whose transactions have all been deleted may be deleted. |
+| AC-005 | RPT-001 | With no accounts, `report balances` writes the header and `TOTAL,,0,0.00`. |
+| AC-006 | RPT-002 | With no transactions, `report categories` writes every category with 0 transactions and 0.00 for inflow, outflow, and net, followed by `TOTAL,,0,0.00,0.00,0.00`. |
+| AC-007 | RPT-003 | With no transactions, `report monthly` writes the header and `TOTAL,0,0.00,0.00,0.00` with no month rows. |
+| AC-008 | INT-001 | Two commands running concurrently against the same database each complete in full or change nothing, and no partial rows are visible to either. |
+| AC-009 | DBSETUP-002 | An empty DATABASE_URL is treated as unset, so resolution falls through to DATABASE_PATH and then data/app.db. |
+
+## Relationship Model
+
+Infer cross-file delivery relationships from the imported source material. Supporting implementation,
+helper, fixture, and test files are evidence for the capability they enable, not independent
+stories. Use concise cited paths such as `sources/tests/test_parser.py`.
+
+| Source or group | Relationship type | Related source or group | Evidence | Delivery implication |
+|---|---|---|---|---|
+| sources/INSTRUCTIONS.md Commands table | instruction-to-test | sources/run.sh checks A through Z | Each command maps to named check ids such as A1, E1, F10, G1 | Each command story's output must match the checks that exercise it |
+| sources/seed_accounts.csv, sources/seed_categories.csv, sources/seed_transactions.csv | dependency | sources/run.sh section B | run.sh loads these files from sources/ in order | Staged seeds; LOAD-001 through LOAD-003 precede REPORT, XFER, and TXN stories |
+| sources/seed_transactions_bad.csv | dependency | sources/run.sh D1 and sources/INSTRUCTIONS.md Rule 1 | Row 11 names unknown account NOSUCH, and the whole file must be rejected | INT-001 and LOAD-003 must be verified together |
+| sources/run.sh section C and H | instruction-to-test | sources/INSTRUCTIONS.md Output section | Known report answers that must match byte for byte | RPT-001 through RPT-003 and st-005 |
+| sources/INSTRUCTIONS.md Rules 1 and 2 | dependency | sources/run.sh sections D, G | Rejected commands and negative-balance refusals | INT-001 and INT-002 apply to every write story |
+| sources/INSTRUCTIONS.md Database section | dependency | sources/run.sh environment DATABASE_URL | The grader selects the database through DATABASE_URL | DBSETUP-002 |
+| sources/INSTRUCTIONS.md Tests section | instruction-to-test | bin/test.sh in the application root | The application-owned suite covers every command and rule | TEST-001 |
+| sources/run.sh | test-kit-to-implementation | ./ledger at the application root | The grader runs the executable and compares output | CLI-001 and ACCEPT-001 |
+
+## Source Roles
+
+| Path | Role | Plan disposition | Build disposition |
+|---|---|---|---|
+| sources/INSTRUCTIONS.md | normative specification | context | prompt-only |
+| sources/run.sh | conformance harness | context | stage |
+| sources/seed_accounts.csv | asset | context | stage |
+| sources/seed_categories.csv | asset | context | stage |
+| sources/seed_transactions.csv | asset | context | stage |
+| sources/seed_transactions_bad.csv | asset | context | stage |
+
+## Planning Instructions
+
+### Delivery Shape
+
+This is a command-line ledger. Inputs are `ledger` command arguments, CSV files named on the
+`load` command, and the `DATABASE_URL` or `DATABASE_PATH` setting. Outputs are CSV on standard
+output for successful commands, one diagnostic line on standard error for failures, and exit codes
+0 through 4.
+
+Execution flow: `init`, then `load accounts`, `load categories`, and `load transactions`, then any
+mix of account, transaction, transfer, count, and report commands. Every write command validates all
+of its inputs and balance rules before its first write.
+
+Persistence is three relational tables (accounts, categories, transactions) accessed only through the
+shipped persistence library. SQLite is the implemented and verified engine. All persisting commands are
+CLI consumers, so their repository-call contracts use consumer sensitivity `data`. Plan records these
+contracts in DATABASE.md with ids under the domains ACCOUNTS, CATEGORIES, TRANSACTIONS, and REPORTS.
+
+### Story Realization Map
+
+| Story ID | Durable scope | Cited evidence | Related files | Kind |
+|---|---|---|---|---|
+| DBSETUP-001 | Init command and creation of three empty tables | sources/INSTRUCTIONS.md Commands; sources/run.sh A1, Z1 | sources/run.sh | capability |
+| DBSETUP-002 | Database location resolution | sources/INSTRUCTIONS.md Database | sources/run.sh environment | integration |
+| DBSETUP-003 | Exit 1 for database failures | sources/INSTRUCTIONS.md Exit codes | none | capability |
+| LOAD-001 | Accounts file load | sources/seed_accounts.csv; run.sh B1, D2 | seed_accounts.csv | capability |
+| LOAD-002 | Categories file load | sources/seed_categories.csv; run.sh B2 | seed_categories.csv | capability |
+| LOAD-003 | Transactions file load | sources/seed_transactions.csv, seed_transactions_bad.csv; run.sh B3, D1 | both transaction seeds | capability |
+| LOAD-004 | Count command | sources/INSTRUCTIONS.md Commands; run.sh A2, B4, D3, G6 | none | capability |
+| ACCT-001 | Account add | run.sh E1, E2 | none | capability |
+| ACCT-002 | Account get | run.sh E3, E5 | none | capability |
+| ACCT-003 | Account rename | run.sh E4 | none | capability |
+| ACCT-004 | Account delete with in-use refusal | run.sh E6, E7, E8 | none | capability |
+| TXN-001 | Transaction post | run.sh F1, F5, F6, F7, F10 | none | capability |
+| TXN-002 | Transaction get | run.sh F2, F4, F9 | none | capability |
+| TXN-003 | Transaction amend | run.sh F3, G4 | none | capability |
+| TXN-004 | Transaction delete | run.sh F8, G5 | none | capability |
+| XFER-001 | Paired transfer | run.sh G1; sources/INSTRUCTIONS.md transfer row | none | capability |
+| XFER-002 | Invalid transfer rejection | run.sh G2 | none | capability |
+| RPT-001 | Balances report | run.sh C1, H1 | none | capability |
+| RPT-002 | Categories report | run.sh C2, H2 | none | capability |
+| RPT-003 | Monthly report | run.sh C3, H3 | none | capability |
+| VAL-001 | Text field rules | sources/INSTRUCTIONS.md Rules 3 and 4 | none | capability |
+| VAL-002 | Amount rules | sources/INSTRUCTIONS.md Rule 5; run.sh F6 | none | capability |
+| VAL-003 | Date rules | sources/INSTRUCTIONS.md Rule 6; run.sh F7 | none | capability |
+| INT-001 | Atomic command behavior | sources/INSTRUCTIONS.md Rule 1; run.sh D1, D2, D3 | sources/seed_transactions_bad.csv | acceptance contract |
+| INT-002 | Negative-balance guard | sources/INSTRUCTIONS.md Rule 2; run.sh G2 to G5 | none | acceptance contract |
+| CLI-001 | Executable and usage errors | sources/INSTRUCTIONS.md Run Harness; run.sh U1, U2 | none | capability |
+| CLI-002 | Output and stream contract | sources/INSTRUCTIONS.md Output section | none | acceptance contract |
+| TEST-001 | Application test runner | sources/INSTRUCTIONS.md Tests section | bin/test.sh | test harness |
+| ACCEPT-001 | Grader pass | sources/run.sh | sources/run.sh and staged seeds | acceptance contract |
+
+### Test and Acceptance Strategy
+
+Focused story tests run each story's own pytest cases against a temporary database. Every story except
+ACCEPT-001 declares `Suite: scoped`, runs only the cases it owns, and never executes `sources/run.sh`.
+
+ACCEPT-001 is the single terminal verification story. It declares `Suite: full`, depends on every
+implementation story, and runs `sh sources/run.sh` unfiltered. Its exit status is the complete-suite proof.
+
+Sea Trials are separate from story tests. st-001 is the grader proof. st-004 through st-011 are
+deterministic proofs. st-012 through st-015 are guardrails verified by reviewed evidence.
+
+### Sequencing and Dependencies
+
+1. DBSETUP-002, then DBSETUP-001, then DBSETUP-003.
+2. VAL-001, VAL-002, and VAL-003 before any write story.
+3. LOAD-001, then LOAD-002, then LOAD-003, because transactions reference accounts and categories.
+4. LOAD-004 after the load stories.
+5. ACCT-001 through ACCT-003 before ACCT-004.
+6. TXN-001 before TXN-002 through TXN-004 and XFER-001.
+7. XFER-001 before XFER-002.
+8. CLI-002 before the report stories, because they share amount formatting.
+9. RPT-001 through RPT-003 after the seed loads and transfers.
+10. INT-001 and INT-002 after every write story.
+11. TEST-001 after every implementation story.
+12. ACCEPT-001 last, depending on every implementation story.
+
+External dependencies: Python 3.11 or newer, SQLite, the shipped persistence library, and pytest.
+
+### Source Conflicts and Gaps
+
+Under the unattended UAT policy, no blockers or questionnaires were emitted. Each open point below is
+resolved by the narrowest behavior consistent with the sources.
+
+1. Engine: the Stack section names SQLite as the implementation, while the Database section recognizes
+   PostgreSQL DSNs. Resolved: SQLite is the implemented and verified engine. DSN values are classified
+   and routed to the persistence layer, but no PostgreSQL behavior is acceptance-verified.
+2. Persistence library: INSTRUCTIONS names a shipped persistence library and DATABASE.md, and neither is
+   among the imported sources. Resolved: the Technology Stack rows for persistence.md, sqlite.md,
+   sqlalchemy.md, and alembic.md govern, and Plan authors DATABASE.md from the Database section.
+3. "Amounts ... never zero": resolved as zero-valued input amounts, including 0.00 and -0.00, being rejected with exit 3.
+4. Relative database paths: resolved against the application root.
+5. Missing parent directory for the default path: `init` creates it.
+6. Negative-balance timing: checked against the final balance each command would leave, not per row.
+7. `txn amend` and `txn delete` on a transfer leg: allowed when the balance rule holds. Neither command enforces transfer pairing.
+8. Posting directly to category TRANSFER: allowed, since TRANSFER is a loaded category.
+9. Non-integer transaction ids: rejected with exit 3.
+10. SQLAlchemy and Alembic: Rigging marks SQLAlchemy as superseded and Alembic as unused within a release. Resolved: the mandatory Python relational-persistence rule still selects both.
+11. Retired Sea Trial ids st-002, st-003, and st-009 are not reused.
+12. `bin/test.sh` is application-owned and names no tests. Resolved: TEST-001 defines its scope.
+
+## Analysis Notes
+
+generated: 2026-10-26
+blueprint: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261026.161555/workspace/targets/LayersTesting/blueprint
+
+Quality: Ready
+  blockers: 0
+  questions: 0
+  features: 11
+  stories: 29
+  stack: Python 3.11 or newer over SQLite, through the shipped persistence library
+  display_name: not proposed
+  short_description: not proposed
+
+- Unattended UAT policy applied: no blockers and no questionnaires were emitted. Open choices are recorded under Source Conflicts and Gaps.
+- COMPASS.md omitted: COMPASS_EXISTS is true and COMPASS_PENDING_FORMAT is false.
+- discovery-identity.json omitted: DISPLAY_NAME and SHORT_DESCRIPTION are already set.
+- STORY_GUIDANCE.json omitted: sources/run.sh is one unfiltered runner with no scope selector, so no per-story gate can be supplied.
+- SEA_TRIALS.md keeps the prior ids. The prior Policy and Acceptance scope prose is reader documentation and is not re-emitted. Four guardrails (st-012 to st-015) are added for prohibitions the sources state.
+=== END ARTIFACT ===
+
+=== BEGIN ARTIFACT SEA_TRIALS.md ===
+# Sea Trials: LayersTesting
+
+## st-001: The supplied grader passes
+
+Type: technical
+Required: yes
+Criterion: The completed ledger shall pass every check in the supplied end-to-end workflow grader, sh sources/run.sh, with exit code zero.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Command: ["sh", "sources/run.sh"]
+Pattern: ubiquitous
+
+## st-004: The seed files load exactly
+
+Type: behavioral
+Required: yes
+Criterion: When the supplied accounts, categories, and transactions files are loaded in order into an empty ledger, the application shall accept all records, report the loaded counts, and retain 4 accounts, 7 categories, and 120 transactions across subsequent command invocations.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: event
+
+## st-005: Reports match the known answers
+
+Type: behavioral
+Required: yes
+Criterion: The application shall compute account balances, category totals, and monthly totals from stored ledger data, matching the known answers in sources/run.sh byte for byte both before and after the supplied transaction and transfer workflows.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: ubiquitous
+
+## st-006: Accounts and transactions support create, read, update, and delete
+
+Type: behavioral
+Required: yes
+Criterion: The application shall retain account additions and renames and transaction postings and amendments across command invocations, return their current values on retrieval, remove successfully deleted records, refuse deletion of an account with transactions with exit code 3, and report an absent record with exit code 4.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: ubiquitous
+
+## st-007: A failed command changes nothing
+
+Type: behavioral
+Required: yes
+Criterion: If a load, account change, transaction change, or transfer violates a validation or business rule, then the application shall exit 3 and preserve all previously stored ledger records without adding, altering, or removing any record.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: unwanted
+
+## st-008: No balance goes negative
+
+Type: behavioral
+Required: yes
+Criterion: If loading transactions, posting, amending, deleting, or transferring would leave any account balance below zero, then the application shall reject the entire command with exit code 3 and preserve the prior balances.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: unwanted
+
+## st-010: Transfers conserve cash
+
+Type: behavioral
+Required: yes
+Criterion: When a valid transfer is requested between distinct accounts, the application shall record an equal debit and credit in category TRANSFER, return both transaction rows, and update both account balances without changing the total cash held.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: event
+
+## st-011: Command results follow the CLI contract
+
+Type: behavioral
+Required: yes
+Criterion: The application shall return the CSV headers, row ordering, two-decimal monetary values, and exit codes specified in sources/INSTRUCTIONS.md, returning exit 2 for unknown commands or reports and incorrect argument counts, and writing failures only to standard error.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: ubiquitous
+
+## st-012: The application never embeds report answers
+
+Type: guardrail
+Required: yes
+Criterion: The application shall not read sources/run.sh and shall not contain any literal report answer, computing every report from stored ledger rows.
+Consequence: blocks
+Verification: llm
+Pattern: ubiquitous
+
+## st-013: The application never opens a database driver directly
+
+Type: guardrail
+Required: yes
+Criterion: The application shall not open a database driver directly; every database access shall pass through the shipped persistence library.
+Consequence: blocks
+Verification: llm
+Pattern: ubiquitous
+
+## st-014: Amounts are never floating point
+
+Type: guardrail
+Required: yes
+Criterion: The application shall not store or compute any amount as a floating-point value; amounts shall be stored as integer cents.
+Consequence: blocks
+Verification: llm
+Pattern: ubiquitous
+
+## st-015: The scoring assets are never altered
+
+Type: guardrail
+Required: yes
+Criterion: The build shall not modify, rewrite, regenerate, or substitute sources/run.sh or the seed files in sources/.
+Consequence: blocks
+Verification: llm
+Pattern: ubiquitous
+
+## Questions
+
+- None.
+=== END ARTIFACT ===
+
+=== BEGIN ARTIFACT TECHNOLOGY_STACK.md ===
+# Technology Stack
+
+| Technology | Rigging | Notes |
+|---|---|---|
+| Python 3.11 or newer | python.md | Language and runtime. pytest runs the application's test suite. |
+| SQLite | sqlite.md | Implemented and verified store, selected through DATABASE_URL or DATABASE_PATH. |
+| Shipped persistence library | persistence.md | Relational layer generated from DATABASE.md. The only path to the database. |
+| SQLAlchemy | sqlalchemy.md | Selected by the Python relational-persistence rule. Engine access goes through the persistence library. |
+| Alembic | alembic.md | Selected by the Python relational-persistence rule. The schema is built once by init, so no revisions ship in a release. |
+| Command-line entry point | cli.md | The ledger executable, exit codes, and in-process testing. |
+| PostgreSQL | postgres.md | Recognized as a DSN and not implemented or acceptance-verified for this Target. |
+| pytest | — | Test framework for the application suite. |
+| POSIX sh | — | Runs bin/test.sh and the supplied sources/run.sh grader. |
+=== END ARTIFACT ===
