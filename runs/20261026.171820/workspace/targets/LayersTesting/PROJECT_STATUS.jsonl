@@ -1,0 +1,4 @@
+{"label": "INITIALIZED", "result": "pass", "at": "2026-10-26T17:18:23.905+00:00", "detail": "", "command": "drydock init LayersTesting", "attempts": 1}
+{"label": "IMPORTED", "result": "pass", "at": "2026-10-26T17:18:31.011+00:00", "detail": "", "command": "drydock import LayersTesting", "attempts": 1}
+{"label": "ANALYZED", "result": "fail", "at": "2026-10-26T17:18:38.130+00:00", "detail": "LLM execution failed: provider rate limit 429: You've hit your session limit \u00b7 resets 3:10pm (America/New_York)", "command": "drydock analyze LayersTesting", "attempts": 1}
+{"state": "ANALYZED", "result": "fail", "at": "2026-10-26T17:18:38.130+00:00", "attempts": 1}

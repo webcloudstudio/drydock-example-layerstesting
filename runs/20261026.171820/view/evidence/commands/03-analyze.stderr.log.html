@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/commands/03-analyze.stderr.log</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/commands/03-analyze.stderr.log</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/commands/03-analyze.stderr.log">Raw file</a></div></header>
+<article class="doc"><pre>******************************************************************************
+* FATAL ERROR - PROVIDER RATE LIMIT
+*
+* Drydock could not run &#x27;analyze&#x27; with the claude provider.
+*
+* Details:
+*   provider rate limit 429: You&#x27;ve hit your session limit · resets 3:10pm (America/New_York)
+*
+* Required action:
+*   Wait for the provider quota or session limit to reset,
+*   or switch the configured LLM provider/model, then rerun the Drydock command.
+*
+* execution_id: 20261026.171834.537Z-8a999d55
+******************************************************************************
+Error: LLM execution failed: provider rate limit 429: You&#x27;ve hit your session limit · resets 3:10pm (America/New_York)
+╭─ BLOCKED: LayersTesting  ·  2026-10-26T13:18:39-04:00 ──────────────────────────────────────╮
+│ Rate Limit Hit                                                                              │
+│                                                                                             │
+│ Provider usage limit                                                                        │
+│                                                                                             │
+│ Error                                                                                       │
+│   provider rate limit 429: You&#x27;ve hit your session limit · resets 3:10pm (America/New_York) │
+│                                                                                             │
+│ Recovery                                                                                    │
+│   Wait for the provider limit to reset (the error above names when), or switch              │
+│   provider or model with --llm-provider / --model.                                          │
+│                                                                                             │
+│ Rerun after resolving the error: drydock analyze LayersTesting                              │
+╰─────────────────────────────────────────────────────────────────────────────────────────────╯
+Error: LayersTesting: provider rate limit: provider rate limit 429: You&#x27;ve hit your session limit · resets 3:10pm (America/New_York)
+</pre></article>
+</main>
+</body>
+</html>
