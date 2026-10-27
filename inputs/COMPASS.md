@@ -17,7 +17,7 @@ known answers computed from the seed files. The goal is every check passing.
 - Read the database location from `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`.
 - Store amounts as integer cents.
 - Check every command in full before its first write.
-- Run without network access other than to a PostgreSQL server named by `DATABASE_URL`.
+- Run without network access.
 - Diagnostics go to standard error and are never compared.
 
 ## Guardrails

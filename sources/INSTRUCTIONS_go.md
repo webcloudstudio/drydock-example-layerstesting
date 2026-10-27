@@ -46,9 +46,8 @@ computed from the database.
 
 ## Database
 
-`DATABASE_URL` names the database. A value beginning `postgres://` or `postgresql://` is a
-PostgreSQL DSN. Any other value is a SQLite file path, optionally prefixed `sqlite://`. When
-`DATABASE_URL` is unset, `DATABASE_PATH` is used, then `data/app.db`.
+The database is SQLite. `DATABASE_URL` names the SQLite file path, optionally prefixed
+`sqlite://`. When `DATABASE_URL` is unset, `DATABASE_PATH` is used, then `data/app.db`.
 
 Three tables. Amounts are stored as integer cents and never as floating point.
 
@@ -117,7 +116,7 @@ amounts, written as a positive number. `net` is `inflow - outflow`.
 | Code | Meaning |
 |---|---|
 | `0` | Success. |
-| `1` | Operational failure: database unreachable, tables missing, file unreadable. |
+| `1` | Operational failure: a file named on the command line cannot be read. |
 | `2` | Usage error: unknown command, unknown table or report, wrong argument count. |
 | `3` | Rejected: invalid code, name, amount, date, or file row; duplicate key; unknown account or category; account in use; any change that would leave a negative balance. |
 | `4` | Not found: `account get/rename/delete` of an absent account, `txn get/amend/delete` of an absent id. |
