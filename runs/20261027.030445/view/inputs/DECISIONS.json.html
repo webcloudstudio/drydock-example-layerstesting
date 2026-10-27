@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>inputs/DECISIONS.json</title>
+<link rel="stylesheet" href="../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>inputs/DECISIONS.json</h1><div class="filenav"><a href="../../index.html">&larr; Report</a><a href="../../inputs/DECISIONS.json">Raw file</a></div></header>
+<article class="doc"><pre>[
+  {
+    &quot;id&quot;: &quot;Q-001&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-LedgerInit.md&quot;,
+    &quot;story&quot;: &quot;ledger-init&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;How `init` resets the ledger&quot;,
+    &quot;description&quot;: &quot;Schema is applied only at the DATABASE step and no DDL runs afterward, so `init` cannot drop and recreate tables.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;delete-rows&quot;,
+        &quot;label&quot;: &quot;Delete all rows atomically through repository operations&quot;
+      },
+      {
+        &quot;value&quot;: &quot;drop-recreate&quot;,
+        &quot;label&quot;: &quot;Drop and recreate tables&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;delete-rows&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-002&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;material&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-LoadTransactions.md&quot;,
+    &quot;story&quot;: &quot;load-transactions&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;When the non-negative balance rule is evaluated for a batch&quot;,
+    &quot;description&quot;: &quot;The sources say no command may leave a balance below zero but do not say whether intermediate file order matters.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;final-balance&quot;,
+        &quot;label&quot;: &quot;Check each account&#x27;s final balance after the whole batch plus stored rows&quot;
+      },
+      {
+        &quot;value&quot;: &quot;running-balance&quot;,
+        &quot;label&quot;: &quot;Check the running balance in file order&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;final-balance&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-003&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-LoadAccounts.md&quot;,
+    &quot;story&quot;: &quot;load-accounts&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Exit code for a load file whose header does not match&quot;,
+    &quot;description&quot;: &quot;Exit codes list 1 for unreadable files and 3 for invalid file rows; a wrong header is not stated.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;3&quot;,
+        &quot;label&quot;: &quot;Exit 3 (rejected)&quot;
+      },
+      {
+        &quot;value&quot;: &quot;2&quot;,
+        &quot;label&quot;: &quot;Exit 2 (usage)&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;3&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-004&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-TxnAmend.md&quot;,
+    &quot;story&quot;: &quot;txn-amend&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Precedence between not-found and invalid amount&quot;,
+    &quot;description&quot;: &quot;`txn amend` and `txn delete` with an absent id and an invalid argument could exit 3 or 4.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;not-found-first&quot;,
+        &quot;label&quot;: &quot;Exit 4 for an absent id before validating other arguments&quot;
+      },
+      {
+        &quot;value&quot;: &quot;validate-first&quot;,
+        &quot;label&quot;: &quot;Exit 3 for invalid arguments first&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;not-found-first&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-005&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-Transfer.md&quot;,
+    &quot;story&quot;: &quot;transfer&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Transfer when category TRANSFER is not stored&quot;,
+    &quot;description&quot;: &quot;Transactions reference categories, so the TRANSFER category must exist for a transfer to be stored.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;reject&quot;,
+        &quot;label&quot;: &quot;Exit 3 as an unknown category and write nothing&quot;
+      },
+      {
+        &quot;value&quot;: &quot;auto-create&quot;,
+        &quot;label&quot;: &quot;Create the category implicitly&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;reject&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-006&quot;,
+    &quot;type&quot;: &quot;text&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;ARCHITECTURE.md&quot;,
+    &quot;story&quot;: &quot;foundation&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Atomic multi-row writes&quot;,
+    &quot;description&quot;: &quot;Loads, transfers, and init write several rows; atomicity is delivered by validating everything first and then writing inside the shipped persistence library&#x27;s transaction facility, never by a raw driver.&quot;,
+    &quot;options&quot;: [],
+    &quot;system_choice&quot;: &quot;Validate fully before the first write, then perform all writes in one persistence-library transaction so a failure leaves no partial rows.&quot;
+  }
+]
+</pre></article>
+</main>
+</body>
+</html>

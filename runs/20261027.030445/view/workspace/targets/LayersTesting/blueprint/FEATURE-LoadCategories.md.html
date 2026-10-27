@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-LoadCategories.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-LoadCategories.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-LoadCategories.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Load Categories</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>The categories loader registered with the shared <code>ledger load</code> command.</td></tr><tr><td>Depends On</td><td>FEATURE-LoadAccounts.md, FEATURE-LedgerCli.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger load categories</td></tr><tr><td>Consumes</td><td>ledger load, categories</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Register <code>categories</code> with the shared load dispatcher created by <code>FEATURE-LoadAccounts.md</code>, with the same all-or-nothing contract.</p>
+<h2>Behavior</h2>
+<ul><li>The header must be <code>category,description</code>; a mismatch exits 3.</li><li>Codes follow the shared code rule (1 to 12 characters of <code>A-Z</code>, <code>0-9</code>); descriptions are 1 to 40</li></ul>
+<p>characters with no comma or newline.</p>
+<ul><li>Rows are validated, and duplicate keys detected within the file and against stored categories,</li></ul>
+<p>before the first write. Any failure exits 3 with empty standard output and nothing stored.</p>
+<ul><li>Success stores every row in one transaction and writes <code>table,loaded</code> then <code>categories,&lt;rows&gt;</code>.</li></ul>
+<p>A header-only file writes <code>categories,0</code> and exits 0.</p>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-CATEGORY-001</code> — write: store a category - supplies: <code>category</code>, <code>description</code> - returns: <code>category</code>, <code>description</code></li><li><code>FEATURE-CATEGORY-002</code> — read: detect an existing category by code - supplies: <code>category</code> - returns: <code>category</code>, <code>description</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC load-categories-success ===<br>Intent: A valid categories file exits 0, reports the loaded count, and every row is readable afterward.</p>
+<p>import csv import io import os import tempfile from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>rows = [[&quot;ZQK01&quot;, &quot;Cat One&quot;], [&quot;ZQK02&quot;, &quot;Cat Two&quot;]] with tempfile.TemporaryDirectory() as tmp: path = os.path.join(tmp, &quot;categories.csv&quot;) with open(path, &quot;w&quot;, newline=&quot;&quot;) as f: w = csv.writer(f, lineterminator=&quot;\n&quot;) w.writerow([&quot;category&quot;, &quot;description&quot;]) w.writerows(rows) with db_session() as db: before = len(db.categories.list()) code, out, err = cli_runner(&quot;load&quot;, &quot;categories&quot;, path) print(out, err) assert code == 0 parsed = list(csv.reader(io.StringIO(out))) assert parsed == [[&quot;table&quot;, &quot;loaded&quot;], [&quot;categories&quot;, str(len(rows))]] assert len(db.categories.list()) == before + len(rows) for cat, desc in rows: stored = db.categories.get(category=cat) assert stored is not None assert stored.description == desc === END AC load-categories-success ===</p>
+<p>=== AC load-categories-header-only ===<br>Intent: A header-only categories file loads zero rows, reports zero, and exits 0.</p>
+<p>import csv import io import os import tempfile from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with tempfile.TemporaryDirectory() as tmp: path = os.path.join(tmp, &quot;categories.csv&quot;) with open(path, &quot;w&quot;, newline=&quot;&quot;) as f: csv.writer(f, lineterminator=&quot;\n&quot;).writerow([&quot;category&quot;, &quot;description&quot;]) with db_session() as db: before = len(db.categories.list()) code, out, err = cli_runner(&quot;load&quot;, &quot;categories&quot;, path) print(out, err) assert code == 0 parsed = list(csv.reader(io.StringIO(out))) assert parsed == [[&quot;table&quot;, &quot;loaded&quot;], [&quot;categories&quot;, &quot;0&quot;]] assert len(db.categories.list()) == before === END AC load-categories-header-only ===</p>
+<p>=== AC load-categories-duplicates ===<br>Intent: A code repeated inside the file, and a code already stored, each reject the whole file with exit 3 and store nothing new.</p>
+<p>import csv import os import tempfile from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>stored_code = &quot;ZQK11&quot; kept = &quot;Original&quot; with tempfile.TemporaryDirectory() as tmp: dup_path = os.path.join(tmp, &quot;dup.csv&quot;) with open(dup_path, &quot;w&quot;, newline=&quot;&quot;) as f: w = csv.writer(f, lineterminator=&quot;\n&quot;) w.writerow([&quot;category&quot;, &quot;description&quot;]) w.writerow([&quot;ZQK12&quot;, &quot;First&quot;]) w.writerow([&quot;ZQK12&quot;, &quot;Second&quot;]) stored_path = os.path.join(tmp, &quot;stored.csv&quot;) with open(stored_path, &quot;w&quot;, newline=&quot;&quot;) as f: w = csv.writer(f, lineterminator=&quot;\n&quot;) w.writerow([&quot;category&quot;, &quot;description&quot;]) w.writerow([&quot;ZQK13&quot;, &quot;Fresh&quot;]) w.writerow([stored_code, &quot;Replacement&quot;]) with db_session() as db: db.categories.create(category=stored_code, description=kept) before = len(db.categories.list()) code, out, err = cli_runner(&quot;load&quot;, &quot;categories&quot;, dup_path) assert code == 3 assert out == &quot;&quot; code, out, err = cli_runner(&quot;load&quot;, &quot;categories&quot;, stored_path) print(out, err) assert code == 3 assert out == &quot;&quot; assert len(db.categories.list()) == before assert db.categories.get(category=&quot;ZQK12&quot;) is None assert db.categories.get(category=&quot;ZQK13&quot;) is None assert db.categories.get(category=stored_code).description == kept === END AC load-categories-duplicates ===</p>
+<p>=== AC load-categories-invalid-rows ===<br>Intent: Invalid code or description rows after a valid row exit 3 and store neither row.</p>
+<p>import csv import os import tempfile from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>good = [&quot;ZQK21&quot;, &quot;Good Row&quot;] bad_rows = [ [&quot;lower&quot;, &quot;Lowercase code&quot;], [&quot;B&quot; * 13, &quot;Long code&quot;], [&quot;ZQK22&quot;, &quot;&quot;], [&quot;ZQK23&quot;, &quot;D&quot; * 41], [&quot;ZQK24&quot;, &quot;has,comma&quot;], ] with tempfile.TemporaryDirectory() as tmp: with db_session() as db: before = len(db.categories.list()) for i, bad in enumerate(bad_rows): path = os.path.join(tmp, &quot;c%d.csv&quot; % i) with open(path, &quot;w&quot;, newline=&quot;&quot;) as f: w = csv.writer(f, lineterminator=&quot;\n&quot;) w.writerow([&quot;category&quot;, &quot;description&quot;]) w.writerow(good) w.writerow(bad) code, out, err = cli_runner(&quot;load&quot;, &quot;categories&quot;, path) print(i, code, out, err) assert code == 3 assert out == &quot;&quot; assert db.categories.get(category=good[0]) is None assert len(db.categories.list()) == before === END AC load-categories-invalid-rows ===</p>
+<p>=== AC load-categories-header-mismatch ===<br>Intent: A categories file with the accounts header is rejected with exit 3 and nothing stored.</p>
+<p>import csv import os import tempfile from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with tempfile.TemporaryDirectory() as tmp: path = os.path.join(tmp, &quot;wrong.csv&quot;) with open(path, &quot;w&quot;, newline=&quot;&quot;) as f: w = csv.writer(f, lineterminator=&quot;\n&quot;) w.writerow([&quot;account&quot;, &quot;name&quot;]) w.writerow([&quot;ZQK31&quot;, &quot;Wrong Header&quot;]) with db_session() as db: before = len(db.categories.list()) code, out, err = cli_runner(&quot;load&quot;, &quot;categories&quot;, path) print(out, err) assert code == 3 assert out == &quot;&quot; assert len(db.categories.list()) == before === END AC load-categories-header-mismatch ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>No category is stored when any row, header, or key check fails.</li><li>Persistence is reached only through the <code>persistence</code> package.</li></ul></article>
+</main>
+</body>
+</html>

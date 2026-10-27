@@ -1,0 +1,12 @@
+Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+plan verify: LayersTesting
+  7 criteria cannot run as written
+  ✗  FEATURE-DatabaseSelection.md [config-url-prefix-stripped]: criterion changes the configured database; use the provisioned store
+  ✗  FEATURE-DatabaseSelection.md [config-url-without-prefix]: criterion changes the configured database; use the provisioned store
+  ✗  FEATURE-DatabaseSelection.md [config-database-path-fallback]: criterion changes the configured database; use the provisioned store
+  ✗  FEATURE-DatabaseSelection.md [config-default-path]: criterion changes the configured database; use the provisioned store
+  ✗  FEATURE-DatabaseSelection.md [config-open-store-unavailable]: criterion changes the configured database; use the provisioned store
+  ✗  FEATURE-LedgerCount.md [count-store-unavailable]: criterion changes the configured database; use the provisioned store
+  ✗  FEATURE-LedgerInit.md [init-store-unavailable]: criterion changes the configured database; use the provisioned store
+  Run: drydock plan repair LayersTesting
+Target - committed project workspace git store

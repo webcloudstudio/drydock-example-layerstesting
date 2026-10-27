@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-TestSuite.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-TestSuite.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-TestSuite.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Test Suite</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>A POSIX-compatible bin/test.sh runs the application&#x27;s pytest suite against a real temporary database and exits zero only when every test passes.</td></tr><tr><td>Depends On</td><td>FEATURE-UsageErrors.md, FEATURE-LedgerCli.md</td></tr><tr><td>Provides</td><td>bin/test.sh</td></tr><tr><td>Consumes</td><td>ledger</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>The application carries its own automated suite. <code>bin/test.sh</code> is the single entry point used by the Compass verification protocol for every behavioral story.</p>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Behavior</h2>
+<ol><li><code>bin/test.sh</code> is POSIX sh. It changes to the application root, activates <code>.venv</code> when present, runs <code>pytest -q</code>, and exits with pytest&#x27;s status.</li><li>The suite lives under <code>tests/</code> and runs each test against a real temporary SQLite file, selected through <code>DATABASE_URL</code> inside the test, never the shared application store.</li><li>Coverage: every command; every exit code 0 to 4; rules 1 to 7 (atomic rejection of loads and transfers, non-negative balances for post, amend, delete, transfer, and load, code/name/memo limits, amount formats, real calendar dates including Gregorian leap-day handling, transaction id assignment, report totals including empty-ledger totals); database path selection order; and database-open failure exiting 1.</li><li>The suite never reads <code>sources/run.sh</code> and embeds no report answer computed elsewhere; expected values are derived from fixture inputs written by the tests.</li><li>Expected values in the suite are observed against real output, since the suite is written beside the code.</li></ol>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC testsh-present ===<br>Intent: bin/test.sh exists and is syntactically valid POSIX sh.<br>Requires: executable=sh; scope=test</p>
+<p>import os import subprocess</p>
+<p>path = &quot;bin/test.sh&quot; assert os.path.isfile(path) result = subprocess.run([&quot;sh&quot;, &quot;-n&quot;, path], capture_output=True, text=True) print(result.stdout) print(result.stderr) assert result.returncode == 0 === END AC testsh-present ===</p>
+<p>=== AC testsh-suite-files ===<br>Intent: The pytest suite is present and spans several test modules covering the commands.</p>
+<p>import glob</p>
+<p>files = glob.glob(&quot;tests/test_*.py&quot;) print(files) assert len(files) &gt;= 3 === END AC testsh-suite-files ===</p>
+<p>=== AC testsh-passes ===<br>Intent: Running bin/test.sh exits zero, meaning every automated test in the suite passes.<br>Suite: scoped<br>Requires: executable=sh; scope=test</p>
+<p>import os import subprocess import sys</p>
+<p>result = subprocess.run( [&quot;sh&quot;, &quot;bin/test.sh&quot;], capture_output=True, text=True, env={**os.environ}, ) print(result.stdout) print(result.stderr, file=sys.stderr) assert result.returncode == 0 === END AC testsh-passes ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The suite uses a temporary database and never the shared application store.</li><li>The suite never reads <code>sources/run.sh</code> or the seed files from application code.</li><li><code>bin/test.sh</code> exits non-zero when any test fails.</li></ul></article>
+</main>
+</body>
+</html>

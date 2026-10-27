@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/VERIFICATION.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/VERIFICATION.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/VERIFICATION.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Verification</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Terminal release gate: the finished ledger passes every check in the supplied grader and the application suite.</td></tr><tr><td>Depends On</td><td>FEATURE-TestSuite.md, FEATURE-UsageErrors.md, FEATURE-ReportMonthly.md, FEATURE-Transfer.md</td></tr><tr><td>Provides</td><td>verification</td></tr><tr><td>Consumes</td><td>ledger, bin/test.sh</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>This assembly story confirms the integrated product. It runs the supplied grader unfiltered and the application&#x27;s own suite. It adds no behavior.</p>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Behavior</h2>
+<ol><li><code>ledger</code> exists at the application root and is executable.</li><li><code>sh bin/test.sh</code> exits zero.</li><li><code>sh sources/run.sh</code> exits zero with all 43 checks passing.</li><li>No file under <code>sources/</code> is modified.</li></ol>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC verify-ledger-executable ===<br>Intent: The deliverable is an executable file named ledger at the application root.</p>
+<p>import os</p>
+<p>assert os.path.isfile(&quot;ledger&quot;) assert os.access(&quot;ledger&quot;, os.X_OK) === END AC verify-ledger-executable ===</p>
+<p>=== AC verify-application-suite ===<br>Intent: The application&#x27;s own automated suite passes through bin/test.sh.<br>Requires: executable=sh; scope=test</p>
+<p>import os import subprocess import sys</p>
+<p>result = subprocess.run( [&quot;sh&quot;, &quot;bin/test.sh&quot;], capture_output=True, text=True, env={**os.environ}, ) print(result.stdout) print(result.stderr, file=sys.stderr) assert result.returncode == 0 === END AC verify-application-suite ===</p>
+<p>=== AC verify-supplied-grader ===<br>Intent: The supplied grader passes every check; its exit status is the whole verdict. The child environment omits DATABASE_URL so the grader uses its own fresh temporary database.<br>Suite: full<br>Requires: executable=sh; scope=test</p>
+<p>import os import subprocess import sys</p>
+<p>env = {k: v for k, v in os.environ.items() if k != &quot;DATABASE_URL&quot;} result = subprocess.run( [&quot;sh&quot;, &quot;sources/run.sh&quot;], capture_output=True, text=True, env=env, ) print(result.stdout) print(result.stderr, file=sys.stderr) assert result.returncode == 0 === END AC verify-supplied-grader ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Do not modify, rewrite, regenerate, or substitute any file under <code>sources/</code>.</li><li>Application code never reads <code>sources/run.sh</code> or any seed file.</li><li>No report row, count, or total is hardcoded; every value comes from a query.</li></ul></article>
+</main>
+</body>
+</html>

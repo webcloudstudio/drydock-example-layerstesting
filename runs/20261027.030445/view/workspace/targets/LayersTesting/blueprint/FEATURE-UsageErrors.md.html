@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-UsageErrors.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-UsageErrors.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-UsageErrors.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Usage Errors</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Every command, group, table, and report rejects unknown names and wrong argument counts with exit 2, empty standard output, and one diagnostic on standard error.</td></tr><tr><td>Depends On</td><td>FEATURE-LedgerCli.md, FEATURE-LedgerInit.md, FEATURE-LedgerCount.md, FEATURE-LoadAccounts.md, FEATURE-LoadCategories.md, FEATURE-LoadTransactions.md, FEATURE-AccountAdd.md, FEATURE-AccountGet.md, FEATURE-AccountRename.md, FEATURE-AccountDelete.md, FEATURE-TxnPost.md, FEATURE-TxnGet.md, FEATURE-TxnAmend.md, FEATURE-TxnDelete.md, FEATURE-Transfer.md, FEATURE-ReportBalances.md, FEATURE-ReportCategories.md, FEATURE-ReportMonthly.md</td></tr><tr><td>Provides</td><td>cli.usage-errors</td></tr><tr><td>Consumes</td><td>ledger, ledger init, ledger count, ledger load, ledger account add, ledger account get, ledger account rename, ledger account delete, ledger txn post, ledger txn get, ledger txn amend, ledger txn delete, ledger transfer, ledger report balances, ledger report categories, ledger report monthly</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>This feature makes usage-error handling uniform. A usage error is an unknown top-level command, an unknown <code>account</code> or <code>txn</code> subcommand, an unknown <code>load</code> table, an unknown <code>report</code>, or a wrong argument count for any command. It exits <code>2</code>, writes nothing to standard output, writes one diagnostic line to standard error naming the expected argument form, and never writes to the database.</p>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Behavior</h2>
+<div class="scroll"><table><thead><tr><th>Invocation</th><th>Result</th></tr></thead><tbody><tr><td><code>ledger frobnicate</code></td><td>exit 2</td></tr><tr><td><code>ledger</code> (no command)</td><td>exit 2</td></tr><tr><td><code>ledger account</code> / <code>ledger account nosuch ...</code></td><td>exit 2</td></tr><tr><td><code>ledger txn</code> / <code>ledger txn nosuch ...</code></td><td>exit 2</td></tr><tr><td><code>ledger load nosuch file.csv</code></td><td>exit 2</td></tr><tr><td><code>ledger load accounts</code> (missing file)</td><td>exit 2</td></tr><tr><td><code>ledger report</code> / <code>ledger report nosuch</code></td><td>exit 2</td></tr><tr><td><code>ledger report balances extra</code></td><td>exit 2</td></tr><tr><td><code>ledger init extra</code> / <code>ledger count extra</code></td><td>exit 2</td></tr><tr><td><code>ledger account add X</code> (missing name)</td><td>exit 2</td></tr><tr><td><code>ledger account get</code> (missing code)</td><td>exit 2</td></tr><tr><td><code>ledger txn post A B</code> (too few arguments)</td><td>exit 2</td></tr><tr><td><code>ledger txn get</code> / <code>ledger txn amend 1</code> / <code>ledger txn delete</code></td><td>exit 2</td></tr><tr><td><code>ledger transfer A B 1.00</code> (missing date)</td><td>exit 2</td></tr></tbody></table></div>
+<p>Rules:</p>
+<ol><li>Every handler routes argument-form errors through the shared <code>UsageError</code> path of the CLI foundation.</li><li>Usage checks run before any database access and before any value validation, so a usage error never writes and never depends on stored rows.</li><li>The diagnostic names the expected form (for example <code>usage: ledger account get &lt;code&gt;</code>) and is written only to standard error.</li><li>Any handler found not to use the shared path is corrected in this story.</li></ol>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC usage-unknown-command ===<br>Intent: An unknown top-level command exits 2 with empty standard output and a diagnostic on standard error.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;frobnicate&quot;) print(out) print(err) assert code == 2 assert out == &quot;&quot; assert err.strip() != &quot;&quot; === END AC usage-unknown-command ===</p>
+<p>=== AC usage-no-command ===<br>Intent: Running with no command at all is a usage error.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner() print(out) print(err) assert code == 2 assert out == &quot;&quot; === END AC usage-no-command ===</p>
+<p>=== AC usage-unknown-report ===<br>Intent: An unknown report name and a missing report name both exit 2 with empty standard output.</p>
+<p>from cli.testing import cli_runner</p>
+<p>for args in ((&quot;report&quot;, &quot;nosuch&quot;), (&quot;report&quot;,)): code, out, err = cli_runner(*args) print(args, code, out, err) assert code == 2 assert out == &quot;&quot; === END AC usage-unknown-report ===</p>
+<p>=== AC usage-unknown-table ===<br>Intent: Loading an unknown table, or omitting the file argument, exits 2 with empty standard output.</p>
+<p>from cli.testing import cli_runner</p>
+<p>for args in ((&quot;load&quot;, &quot;nosuch&quot;, &quot;file.csv&quot;), (&quot;load&quot;, &quot;accounts&quot;), (&quot;load&quot;,)): code, out, err = cli_runner(*args) print(args, code, out, err) assert code == 2 assert out == &quot;&quot; === END AC usage-unknown-table ===</p>
+<p>=== AC usage-unknown-subcommand ===<br>Intent: An unknown or missing subcommand under account and txn exits 2 with empty standard output.</p>
+<p>from cli.testing import cli_runner</p>
+<p>cases = [ (&quot;account&quot;,), (&quot;account&quot;, &quot;nosuch&quot;, &quot;X&quot;), (&quot;txn&quot;,), (&quot;txn&quot;, &quot;nosuch&quot;, &quot;1&quot;), ] for args in cases: code, out, err = cli_runner(*args) print(args, code, out, err) assert code == 2 assert out == &quot;&quot; === END AC usage-unknown-subcommand ===</p>
+<p>=== AC usage-wrong-argument-count ===<br>Intent: Every command given too few or too many arguments exits 2 with empty standard output and a nonblank diagnostic.</p>
+<p>from cli.testing import cli_runner</p>
+<p>cases = [ (&quot;init&quot;, &quot;extra&quot;), (&quot;count&quot;, &quot;extra&quot;), (&quot;account&quot;, &quot;add&quot;, &quot;X&quot;), (&quot;account&quot;, &quot;get&quot;), (&quot;account&quot;, &quot;rename&quot;, &quot;X&quot;), (&quot;account&quot;, &quot;delete&quot;), (&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;B&quot;), (&quot;txn&quot;, &quot;get&quot;), (&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;), (&quot;txn&quot;, &quot;delete&quot;), (&quot;transfer&quot;, &quot;A&quot;, &quot;B&quot;, &quot;1.00&quot;), (&quot;report&quot;, &quot;balances&quot;, &quot;extra&quot;), (&quot;report&quot;, &quot;categories&quot;, &quot;extra&quot;), (&quot;report&quot;, &quot;monthly&quot;, &quot;extra&quot;), ] for args in cases: code, out, err = cli_runner(*args) print(args, code, out, err) assert code == 2 assert out == &quot;&quot; assert err.strip() != &quot;&quot; === END AC usage-wrong-argument-count ===</p>
+<p>=== AC usage-writes-nothing ===<br>Intent: Usage errors change no stored record, shown by identical row counts before and after a batch of bad invocations.</p>
+<p>import csv import io from cli.testing import cli_runner</p>
+<p>def counts(): code, out, err = cli_runner(&quot;count&quot;) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) return rows</p>
+<p>before = counts() for args in ((&quot;frobnicate&quot;,), (&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;B&quot;), (&quot;transfer&quot;, &quot;A&quot;, &quot;B&quot;, &quot;1.00&quot;), (&quot;account&quot;, &quot;add&quot;, &quot;X&quot;)): code, out, err = cli_runner(*args) assert code == 2 after = counts() assert after == before === END AC usage-writes-nothing ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A usage error never writes to standard output.</li><li>A usage error never opens a write path to the database.</li><li>The diagnostic goes only to standard error; its wording is not part of the contract.</li><li>No help command is added.</li></ul></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<requirement name="load-seed-transactions" stories="load-transactions,database">
+txn_id,date,account,category,amount,memo
+1,2026-01-01,SAFE,OPENING,5000.00,opening float
+2,2026-01-01,PETTY,OPENING,200.00,opening float
+3,2026-01-02,DRAWER1,SALES,155.26,sales day 1
+4,2026-01-02,DRAWER2,SALES,83.11,sales day 1
+</requirement>
+<requirement name="paired-transfers" stories="transfer">
+27,2026-01-14,DRAWER1,TRANSFER,-1000.00,transfer to SAFE
+28,2026-01-14,SAFE,TRANSFER,1000.00,transfer from DRAWER1
+</requirement>
+<unattached story="foundation"/>
+<unattached story="config"/>
+<unattached story="cli-foundation"/>
+<unattached story="ledger-init"/>
+<unattached story="ledger-count"/>
+<unattached story="load-accounts"/>
+<unattached story="load-categories"/>
+<unattached story="acct-add"/>
+<unattached story="acct-get"/>
+<unattached story="acct-rename"/>
+<unattached story="acct-delete"/>
+<unattached story="txn-post"/>
+<unattached story="txn-get"/>
+<unattached story="txn-delete"/>
+<unattached story="txn-amend"/>
+<unattached story="rpt-balances"/>
+<unattached story="rpt-categories"/>
+<unattached story="rpt-monthly"/>
+<unattached story="cli-usage"/>
+<unattached story="test-suite"/>
+<unattached story="verification"/>

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-AccountDelete.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-AccountDelete.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-AccountDelete.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Account Delete</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger account delete</code>, which removes an account that has no transactions.</td></tr><tr><td>Depends On</td><td>FEATURE-AccountGet.md, FEATURE-LedgerCli.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger account delete</td></tr><tr><td>Consumes</td><td>ledger, accounts, transactions</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Let the shop remove an account created in error, while protecting any account that already carries transaction history.</p>
+<h2>Trigger</h2>
+<p><code>ledger account delete &lt;code&gt;</code> invoked from the command line.</p>
+<h2>Sequence</h2>
+<ol><li>Require exactly one argument after <code>delete</code>; otherwise raise the shared usage error (exit 2).</li><li>Look up the account. An absent code exits 4.</li><li>List the account&#x27;s transactions. If any exist, exit 3 and remove nothing.</li><li>Delete the account through the persistence library.</li><li>Write <code>deleted</code> and then the code, one per line.</li></ol>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNT-002</code> — read: look up the account by code - supplies: <code>account</code> - returns: <code>account</code></li><li><code>FEATURE-ACCOUNT-004</code> — write: delete the account - supplies: <code>account</code> - returns: <code>account</code></li><li><code>FEATURE-TXN-005</code> — read: list the account&#x27;s transactions to detect use - supplies: <code>account</code> - returns: <code>txn_id</code></li></ul>
+<h2>Behavior Rules</h2>
+<ul><li>An account with at least one transaction is never removed.</li><li>A failing command writes nothing to standard output and one diagnostic line to standard error.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC acct-delete-success ===<br>Intent: Deleting an unused account exits 0, writes the word deleted then the code, and a separate read finds the account gone.</p>
+<p>import csv import io from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>code = &quot;ZDL1&quot; with db_session() as db: db.accounts.create(account=code, name=&quot;Disposable&quot;) exit_code, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, code) print(exit_code, out, err) assert exit_code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows == [[&quot;deleted&quot;], [code]] assert db.accounts.get(account=code) is None === END AC acct-delete-success ===</p>
+<p>=== AC acct-delete-in-use ===<br>Intent: An account that has a transaction is refused with exit 3, and both the account and its transaction remain.</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>code = &quot;ZDL2&quot; cat = &quot;ZDL2&quot; txn_id = 920001 with db_session() as db: db.accounts.create(account=code, name=&quot;In Use&quot;) db.categories.create(category=cat, description=&quot;Delete Category&quot;) db.transactions.create( txn_id=txn_id, date=&quot;2026-05-01&quot;, account=code, category=cat, amount=500, memo=&quot;&quot; ) exit_code, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, code) print(exit_code, out, err) assert exit_code == 3 assert out == &quot;&quot; assert db.accounts.get(account=code) is not None assert db.transactions.get(txn_id=txn_id) is not None === END AC acct-delete-in-use ===</p>
+<p>=== AC acct-delete-absent ===<br>Intent: Deleting an account that does not exist exits 4 with nothing on standard output.</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>code = &quot;ZDLNONE&quot; with db_session() as db: assert db.accounts.get(account=code) is None exit_code, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, code) print(exit_code, out, err) assert exit_code == 4 assert out == &quot;&quot; === END AC acct-delete-absent ===</p>
+<p>=== AC acct-delete-leaves-others ===<br>Intent: Deleting one account removes only that account; a second account created alongside it is still present.</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>gone = &quot;ZDL3&quot; kept = &quot;ZDL4&quot; kept_name = &quot;Keeper&quot; with db_session() as db: db.accounts.create(account=gone, name=&quot;Goner&quot;) db.accounts.create(account=kept, name=kept_name) exit_code, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, gone) print(exit_code, out, err) assert exit_code == 0 assert db.accounts.get(account=gone) is None survivor = db.accounts.get(account=kept) assert survivor is not None assert survivor.name == kept_name === END AC acct-delete-leaves-others ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>An account with transactions is never deleted.</li><li>Persistence is reached only through the generated persistence package.</li><li>A rejected delete writes nothing to the database.</li></ul></article>
+</main>
+</body>
+</html>

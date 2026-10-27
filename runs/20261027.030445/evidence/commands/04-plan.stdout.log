@@ -61,3 +61,74 @@ Batch Result:       Accepted 5 Blueprint(s)
 ========================================================================
 2026-10-26 23:15:56 EDT  Calling CLAUDE/sonnet (plan · blueprint batch 5)...
   Claude session: start id=dd4fa7f7-c752-45b6-b053-1491193d878a
+  Completed CLAUDE/claude-sonnet-5-5 (plan · blueprint batch 5)  rc=0
+========================================================================
+PLAN PROGRESS  ·  STAGE 2 · BLUEPRINT BATCH 5
+========================================================================
+Topology Created:  True
+Blueprints Created: 21 / 24
+Manifest Created:  False
+Blueprints Remaining: 3
+Batch Result:       Accepted 5 Blueprint(s)
+========================================================================
+2026-10-26 23:17:57 EDT  Calling CLAUDE/sonnet (plan · blueprint batch 6)...
+  Claude session: start id=c1b5d2e3-5375-49bd-af35-bbb85c91cfc0
+  Completed CLAUDE/claude-sonnet-5-5 (plan · blueprint batch 6)  rc=0
+========================================================================
+PLAN PROGRESS  ·  STAGE 2 · BLUEPRINT BATCH 6
+========================================================================
+Topology Created:  True
+Blueprints Created: 24 / 24
+Manifest Created:  False
+Blueprints Remaining: 0
+Batch Result:       Accepted 3 Blueprint(s)
+========================================================================
+========================================================================
+PLAN PROGRESS  ·  STAGE 3 · MANIFEST
+========================================================================
+Topology Created:  True
+Blueprints Created: 24 / 24
+Manifest Created:  True
+Blueprints Remaining: 0
+Batch Result:       Manifest validated and serialized
+========================================================================
+2026-10-26 23:19:01 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+2026-10-26 23:19:19 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+2026-10-26 23:19:36 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+2026-10-26 23:19:43 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+2026-10-26 23:19:49 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+2026-10-26 23:20:02 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+
+Mode: OVERWRITE (Blueprint specs regenerated from analysis)
+Provider: claude / sonnet
+Graph: 0 features, 24 stories, 0 spikes, 0 acceptance gates
+Warnings: 3
+Outcome: updated
+Execution: 20261027.030722.960Z-9740bc17
+Elapsed: 14 minutes 34 seconds
+Review: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.030445/workspace/targets/LayersTesting/QuarterDeck
+
+Planning warnings:
+  - FEATURE-LedgerCount.md: ## Database Interface rewritten from DATABASE.md (FEATURE-LedgerCount.md: malformed ## Database Interface entry '- `FEATURE-ACCOUNT-005`)
+  - FEATURE-LedgerInit.md: ## Database Interface rewritten from DATABASE.md (FEATURE-LedgerInit.md: malformed ## Database Interface entry '- `FEATURE-TXN-006`)
+  - DATABASE.md: Drydock verified SQLite construction and connectivity for 3 declared table(s)
+
+⚠  Plan written but not buildable — the Manifest is draft and Build refuses it.
+plan verify: LayersTesting
+  7 criteria cannot run as written
+  ✗  FEATURE-DatabaseSelection.md [config-url-prefix-stripped]: criterion changes the configured database; use the provisioned store
+  ✗  FEATURE-DatabaseSelection.md [config-url-without-prefix]: criterion changes the configured database; use the provisioned store
+  ✗  FEATURE-DatabaseSelection.md [config-database-path-fallback]: criterion changes the configured database; use the provisioned store
+  ✗  FEATURE-DatabaseSelection.md [config-default-path]: criterion changes the configured database; use the provisioned store
+  ✗  FEATURE-DatabaseSelection.md [config-open-store-unavailable]: criterion changes the configured database; use the provisioned store
+  ✗  FEATURE-LedgerCount.md [count-store-unavailable]: criterion changes the configured database; use the provisioned store
+  ✗  FEATURE-LedgerInit.md [init-store-unavailable]: criterion changes the configured database; use the provisioned store
+  Run: drydock plan repair LayersTesting
+Next step: follow the recovery command(s) in the verification result above.
+Target - committed project workspace git store

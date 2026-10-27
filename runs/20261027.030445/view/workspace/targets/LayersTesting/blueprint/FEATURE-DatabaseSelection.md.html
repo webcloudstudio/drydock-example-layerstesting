@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-DatabaseSelection.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-DatabaseSelection.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-DatabaseSelection.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Database Selection</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Resolve the database location from configuration and open the store through the shipped persistence library.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md</td></tr><tr><td>Provides</td><td>config.database_path, config.open_store</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Every command reads its database location from one place. <code>ledgerapp/config.py</code> resolves it and opens the store.</p>
+<h2>Behavior</h2>
+<ul><li><code>database_path() -&gt; str</code> reads the environment at each call. It returns <code>DATABASE_URL</code> when set and non-empty, with one leading <code>sqlite://</code> prefix removed if present. Otherwise it returns <code>DATABASE_PATH</code> when set and non-empty. Otherwise it returns <code>data/app.db</code>.</li><li><code>open_store()</code> opens the resolved path through <code>persistence.open_database</code> and returns the <code>Database</code>. For the default path only, it first creates the parent directory if absent. For any other path no directory is created.</li><li>When the database cannot be opened, <code>open_store()</code> raises <code>ledgerapp.errors.StoreUnavailable</code> (exit code 1). The CLI maps it to exit 1 with nothing on standard output and no record changed.</li><li>This module imports no database driver and applies no DDL.</li></ul>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC config-url-prefix-stripped ===<br>Intent: DATABASE_URL with the sqlite:// prefix resolves to the bare path and wins over DATABASE_PATH.</p>
+<p>import os</p>
+<p>from ledgerapp import config</p>
+<p>url_path = &quot;/tmp/zq-ledger-url/ledger.db&quot; other_path = &quot;/tmp/zq-ledger-other/ledger.db&quot; saved = {k: os.environ.get(k) for k in (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;)} try: os.environ[&quot;DATABASE_URL&quot;] = &quot;sqlite://&quot; + url_path os.environ[&quot;DATABASE_PATH&quot;] = other_path assert str(config.database_path()) == url_path finally: for key, value in saved.items(): if value is None: os.environ.pop(key, None) else: os.environ[key] = value === END AC config-url-prefix-stripped ===</p>
+<p>=== AC config-url-without-prefix ===<br>Intent: DATABASE_URL given as a plain path is returned unchanged.</p>
+<p>import os</p>
+<p>from ledgerapp import config</p>
+<p>plain_path = &quot;/tmp/zq-ledger-plain/ledger.db&quot; saved = {k: os.environ.get(k) for k in (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;)} try: os.environ[&quot;DATABASE_URL&quot;] = plain_path os.environ.pop(&quot;DATABASE_PATH&quot;, None) assert str(config.database_path()) == plain_path finally: for key, value in saved.items(): if value is None: os.environ.pop(key, None) else: os.environ[key] = value === END AC config-url-without-prefix ===</p>
+<p>=== AC config-database-path-fallback ===<br>Intent: With DATABASE_URL unset, DATABASE_PATH is used.</p>
+<p>import os</p>
+<p>from ledgerapp import config</p>
+<p>path_value = &quot;/tmp/zq-ledger-fallback/ledger.db&quot; saved = {k: os.environ.get(k) for k in (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;)} try: os.environ.pop(&quot;DATABASE_URL&quot;, None) os.environ[&quot;DATABASE_PATH&quot;] = path_value assert str(config.database_path()) == path_value finally: for key, value in saved.items(): if value is None: os.environ.pop(key, None) else: os.environ[key] = value === END AC config-database-path-fallback ===</p>
+<p>=== AC config-default-path ===<br>Intent: With neither variable set, the path is the documented default data/app.db.</p>
+<p>import os</p>
+<p>from ledgerapp import config</p>
+<p>default_path = &quot;data/app.db&quot; saved = {k: os.environ.get(k) for k in (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;)} try: os.environ.pop(&quot;DATABASE_URL&quot;, None) os.environ.pop(&quot;DATABASE_PATH&quot;, None) assert str(config.database_path()) == default_path finally: for key, value in saved.items(): if value is None: os.environ.pop(key, None) else: os.environ[key] = value === END AC config-default-path ===</p>
+<p>=== AC config-open-store-configured ===<br>Intent: open_store opens the configured provisioned store and the declared accounts operations answer on it.</p>
+<p>from ledgerapp import config</p>
+<p>db = config.open_store() rows = db.accounts.list() assert isinstance(rows, list) === END AC config-open-store-configured ===</p>
+<p>=== AC config-open-store-unavailable ===<br>Intent: A path in a directory that does not exist cannot be opened, so open_store raises StoreUnavailable and creates no directory.</p>
+<p>import os import shutil import tempfile</p>
+<p>from ledgerapp import config from ledgerapp.errors import StoreUnavailable</p>
+<p>base = tempfile.mkdtemp() missing_dir = os.path.join(base, &quot;missing-dir&quot;) bad_path = os.path.join(missing_dir, &quot;ledger.db&quot;) saved = {k: os.environ.get(k) for k in (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;)} raised = False try: os.environ[&quot;DATABASE_URL&quot;] = bad_path os.environ.pop(&quot;DATABASE_PATH&quot;, None) try: config.open_store() except StoreUnavailable: raised = True assert raised assert not os.path.exists(missing_dir) finally: for key, value in saved.items(): if value is None: os.environ.pop(key, None) else: os.environ[key] = value shutil.rmtree(base, ignore_errors=True) === END AC config-open-store-unavailable ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Do not import a database driver in this module.</li><li>Do not apply DDL or create tables when opening the store.</li><li>Create a directory only for the default path <code>data/app.db</code>.</li></ul></article>
+</main>
+</body>
+</html>

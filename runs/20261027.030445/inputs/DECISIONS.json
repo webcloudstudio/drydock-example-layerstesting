@@ -1,0 +1,131 @@
+[
+  {
+    "id": "Q-001",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "FEATURE-LedgerInit.md",
+    "story": "ledger-init",
+    "status": "recommended",
+    "archived": false,
+    "title": "How `init` resets the ledger",
+    "description": "Schema is applied only at the DATABASE step and no DDL runs afterward, so `init` cannot drop and recreate tables.",
+    "options": [
+      {
+        "value": "delete-rows",
+        "label": "Delete all rows atomically through repository operations"
+      },
+      {
+        "value": "drop-recreate",
+        "label": "Drop and recreate tables"
+      }
+    ],
+    "system_choice": "delete-rows"
+  },
+  {
+    "id": "Q-002",
+    "type": "choice",
+    "severity": "material",
+    "origin": "plan",
+    "blueprint": "FEATURE-LoadTransactions.md",
+    "story": "load-transactions",
+    "status": "recommended",
+    "archived": false,
+    "title": "When the non-negative balance rule is evaluated for a batch",
+    "description": "The sources say no command may leave a balance below zero but do not say whether intermediate file order matters.",
+    "options": [
+      {
+        "value": "final-balance",
+        "label": "Check each account's final balance after the whole batch plus stored rows"
+      },
+      {
+        "value": "running-balance",
+        "label": "Check the running balance in file order"
+      }
+    ],
+    "system_choice": "final-balance"
+  },
+  {
+    "id": "Q-003",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "FEATURE-LoadAccounts.md",
+    "story": "load-accounts",
+    "status": "recommended",
+    "archived": false,
+    "title": "Exit code for a load file whose header does not match",
+    "description": "Exit codes list 1 for unreadable files and 3 for invalid file rows; a wrong header is not stated.",
+    "options": [
+      {
+        "value": "3",
+        "label": "Exit 3 (rejected)"
+      },
+      {
+        "value": "2",
+        "label": "Exit 2 (usage)"
+      }
+    ],
+    "system_choice": "3"
+  },
+  {
+    "id": "Q-004",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "FEATURE-TxnAmend.md",
+    "story": "txn-amend",
+    "status": "recommended",
+    "archived": false,
+    "title": "Precedence between not-found and invalid amount",
+    "description": "`txn amend` and `txn delete` with an absent id and an invalid argument could exit 3 or 4.",
+    "options": [
+      {
+        "value": "not-found-first",
+        "label": "Exit 4 for an absent id before validating other arguments"
+      },
+      {
+        "value": "validate-first",
+        "label": "Exit 3 for invalid arguments first"
+      }
+    ],
+    "system_choice": "not-found-first"
+  },
+  {
+    "id": "Q-005",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "FEATURE-Transfer.md",
+    "story": "transfer",
+    "status": "recommended",
+    "archived": false,
+    "title": "Transfer when category TRANSFER is not stored",
+    "description": "Transactions reference categories, so the TRANSFER category must exist for a transfer to be stored.",
+    "options": [
+      {
+        "value": "reject",
+        "label": "Exit 3 as an unknown category and write nothing"
+      },
+      {
+        "value": "auto-create",
+        "label": "Create the category implicitly"
+      }
+    ],
+    "system_choice": "reject"
+  },
+  {
+    "id": "Q-006",
+    "type": "text",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "ARCHITECTURE.md",
+    "story": "foundation",
+    "status": "recommended",
+    "archived": false,
+    "title": "Atomic multi-row writes",
+    "description": "Loads, transfers, and init write several rows; atomicity is delivered by validating everything first and then writing inside the shipped persistence library's transaction facility, never by a raw driver.",
+    "options": [],
+    "system_choice": "Validate fully before the first write, then perform all writes in one persistence-library transaction so a failure leaves no partial rows."
+  }
+]

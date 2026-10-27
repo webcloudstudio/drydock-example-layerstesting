@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-ReportBalances.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-ReportBalances.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-ReportBalances.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Report Balances</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger report balances</code>, one row per account with its transaction count and balance computed from stored transactions.</td></tr><tr><td>Depends On</td><td>FEATURE-LoadTransactions.md, FEATURE-LedgerCli.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger report balances</td></tr><tr><td>Consumes</td><td>ledger, accounts, transactions</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Report the cash held in each account. Every value is computed from stored rows at the time of the command; nothing is embedded.</p>
+<h2>Interface</h2>
+<p><code>ledger report balances</code></p>
+<p>Standard output on success (exit 0), CSV with <code>\n</code> endings and no quoting:</p>
+<ul><li>header <code>account,name,transactions,balance</code></li><li>one row per account ordered by code ascending</li><li>final row <code>TOTAL,,&lt;count&gt;,&lt;sum&gt;</code>, where <code>&lt;count&gt;</code> is the total number of transactions and <code>&lt;sum&gt;</code> the sum of all balances</li></ul>
+<h2>Behavior</h2>
+<ol><li>Read accounts with <code>db.accounts.list</code> and each account&#x27;s transactions with <code>db.transactions.list(account=...)</code>.</li><li>Balance is the sum of integer cents; the count is the number of the account&#x27;s transactions.</li><li>Write balances with exactly two decimals, a leading <code>-</code> when negative, and no thousands separator.</li><li>An empty ledger writes the header and <code>TOTAL,,0,0.00</code>.</li><li>The command is read-only.</li></ol>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC report-balances-rows ===<br>Intent: The balances report lists every account in code order with count and balance derived from the stored transactions, followed by a TOTAL row, and the report writes no record.</p>
+<p>import csv import io import re from decimal import Decimal from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>cat = &quot;ZQRC&quot; with db_session() as db: db.accounts.create(account=&quot;ZQR2&quot;, name=&quot;Second Account&quot;) db.accounts.create(account=&quot;ZQR1&quot;, name=&quot;First Account&quot;) db.categories.create(category=cat, description=&quot;Report Cat&quot;) base = max([r.txn_id for r in db.transactions.list()] or [0]) + 1 db.transactions.create(txn_id=base, date=&quot;2026-06-01&quot;, account=&quot;ZQR1&quot;, category=cat, amount=120050, memo=&quot;&quot;) db.transactions.create(txn_id=base + 1, date=&quot;2026-06-02&quot;, account=&quot;ZQR1&quot;, category=cat, amount=-2500, memo=&quot;&quot;) db.transactions.create(txn_id=base + 2, date=&quot;2026-06-03&quot;, account=&quot;ZQR2&quot;, category=cat, amount=75000, memo=&quot;&quot;) count_before = len(db.transactions.list()) code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;) print(out) print(err) assert code == 0 assert &quot;\r&quot; not in out rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;] expected = [] for a in sorted(db.accounts.list(), key=lambda r: r.account): txns = db.transactions.list(account=a.account) expected.append((a.account, a.name, len(txns), sum(t.amount for t in txns))) data = rows[1:-1] assert len(data) == len(expected) for row, (acct_code, name, n, bal) in zip(data, expected): assert row[0] == acct_code assert row[1] == name assert int(row[2]) == n assert Decimal(row[3]) == Decimal(bal).scaleb(-2) assert re.fullmatch(r&quot;-?\d+\.\d{2}&quot;, row[3]) codes = [r[0] for r in data] assert codes.index(&quot;ZQR1&quot;) &lt; codes.index(&quot;ZQR2&quot;) total = rows[-1] assert total[0] == &quot;TOTAL&quot; assert total[1] == &quot;&quot; assert int(total[2]) == sum(e[2] for e in expected) assert Decimal(total[3]) == Decimal(sum(e[3] for e in expected)).scaleb(-2) assert re.fullmatch(r&quot;-?\d+\.\d{2}&quot;, total[3]) assert len(db.transactions.list()) == count_before === END AC report-balances-rows ===</p>
+<p>=== AC report-balances-empty-ledger ===<br>Intent: With no accounts or transactions the report writes only its header and a zero TOTAL row.</p>
+<p>import csv import io from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: db.transactions.delete_all(min_txn_id=0) db.categories.delete_all(min_category=&quot;&quot;) db.accounts.delete_all(min_account=&quot;&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows == [[&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;], [&quot;TOTAL&quot;, &quot;&quot;, &quot;0&quot;, &quot;0.00&quot;]] === END AC report-balances-empty-ledger ===</p>
+<p>=== AC report-balances-negative-and-account-without-rows ===<br>Intent: An account with no transactions reports a zero count and a 0.00 balance, and balances follow later changes made through the store.</p>
+<p>import csv import io from decimal import Decimal from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>cat = &quot;ZQRD&quot; with db_session() as db: db.accounts.create(account=&quot;ZQR3&quot;, name=&quot;Empty Account&quot;) db.accounts.create(account=&quot;ZQR4&quot;, name=&quot;Funded Account&quot;) db.categories.create(category=cat, description=&quot;Report Cat&quot;) base = max([r.txn_id for r in db.transactions.list()] or [0]) + 1 db.transactions.create(txn_id=base, date=&quot;2026-06-01&quot;, account=&quot;ZQR4&quot;, category=cat, amount=1234, memo=&quot;&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;) print(out) print(err) assert code == 0 by_code = {r[0]: r for r in csv.reader(io.StringIO(out))} assert int(by_code[&quot;ZQR3&quot;][2]) == 0 assert Decimal(by_code[&quot;ZQR3&quot;][3]) == 0 assert int(by_code[&quot;ZQR4&quot;][2]) == 1 assert Decimal(by_code[&quot;ZQR4&quot;][3]) == Decimal(1234).scaleb(-2) db.transactions.update(txn_id=base, amount=4321) code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;) print(out) assert code == 0 by_code = {r[0]: r for r in csv.reader(io.StringIO(out))} assert Decimal(by_code[&quot;ZQR4&quot;][3]) == Decimal(4321).scaleb(-2) === END AC report-balances-negative-and-account-without-rows ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Every value comes from a query; no row, count, or total is hardcoded.</li><li>Amounts are integer cents; no floating point.</li><li>The report writes nothing to the store.</li></ul></article>
+</main>
+</body>
+</html>
