@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Init.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Init.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Init.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Init</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Implement <code>ledger init</code>, which prepares an empty ledger and removes existing rows when rerun.</td></tr><tr><td>Depends On</td><td>FEATURE-DatabaseSelection.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger init</td></tr><tr><td>Consumes</td><td>ledgerlib.config, persistence</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger init</code> makes the configured database ready and empty. It creates the parent directory of the SQLite file when missing, opens the database through <code>open_database</code> (which provisions the declared tables idempotently), then removes every row, children first: transactions, then categories, then accounts. It writes nothing to standard output and exits 0.</p>
+<h2>Behavior</h2>
+<ul><li><code>cli/commands/init.py</code> exposes <code>run(args) -&gt; list[str]</code> and returns no lines.</li><li>Any argument is a usage error (exit 2).</li><li>A PostgreSQL DSN or unreachable database exits 1 with nothing on standard output.</li><li>Clearing uses the declared <code>clear</code> operations with the lowest possible bound (<code>min_txn_id</code> of a value below every id, empty-string bounds for codes). No driver import and no DDL outside the persistence library.</li><li>Rerunning on a populated ledger removes every row, leaving all three tables empty.</li><li>Creating a missing parent directory is covered by the project&#x27;s own pytest suite, which owns temporary database locations.</li></ul>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC init-clears-rows ===<br>Intent: Init exits 0 with empty standard output and leaves every table empty after rows were seeded through the persistence interface.</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>acct = &quot;ZZINI1&quot; cat = &quot;ZZINCAT1&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Init Seed&quot;) db.categories.create(category=cat, description=&quot;Init Seed Cat&quot;) db.transactions.create(txn_id=960001, date=&quot;2026-05-01&quot;, account=acct, category=cat, amount=100, memo=&quot;s&quot;) assert len(db.transactions.list()) &gt;= 1</p>
+<p>code, out, err = cli_runner(&quot;init&quot;) print(out) print(err) assert code == 0 assert out == &quot;&quot;</p>
+<p>assert db.transactions.list() == [] assert db.categories.list() == [] assert db.accounts.list() == [] assert db.accounts.get(account=acct) is None === END AC init-clears-rows ===</p>
+<p>=== AC init-rerun ===<br>Intent: Running init again on an already empty ledger still succeeds with no output and the tables stay empty.</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>code1, out1, err1 = cli_runner(&quot;init&quot;) code2, out2, err2 = cli_runner(&quot;init&quot;) print(err1) print(err2) assert code1 == 0 assert code2 == 0 assert out1 == &quot;&quot; assert out2 == &quot;&quot; with db_session() as db: assert db.accounts.list() == [] assert db.categories.list() == [] assert db.transactions.list() == [] === END AC init-rerun ===</p>
+<p>=== AC init-usage ===<br>Intent: Init rejects an unexpected argument as a usage error with exit 2, empty standard output and a diagnostic on standard error.</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>acct = &quot;ZZINU1&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Init Usage&quot;) code, out, err = cli_runner(&quot;init&quot;, &quot;extra&quot;) assert code == 2 assert out == &quot;&quot; assert err != &quot;&quot; assert db.accounts.get(account=acct) is not None === END AC init-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Init never imports a database driver and never runs DDL itself.</li><li>Init writes nothing to standard output.</li></ul></article>
+</main>
+</body>
+</html>

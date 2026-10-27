@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-AccountGet.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-AccountGet.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-AccountGet.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Account Get</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger account get &lt;code&gt;</code> printing the current account row with computed transaction count and balance.</td></tr><tr><td>Depends On</td><td>FEATURE-AccountAdd.md, FEATURE-LedgerRules.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger account get</td></tr><tr><td>Consumes</td><td>ledger account add, ledgerlib.rules</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Show one account with its live transaction count and balance computed from stored transactions.</p>
+<h2>Interface</h2>
+<p><code>ledger account get &lt;code&gt;</code>. Output:</p>
+<pre><code>account,name,transactions,balance
+&lt;code&gt;,&lt;name&gt;,&lt;count&gt;,&lt;balance&gt;</code></pre>
+<p><code>balance</code> is the sum of the account&#x27;s transaction amounts, written with exactly two decimals from integer cents.</p>
+<h2>Behavior</h2>
+<ol><li><code>get</code> with other than exactly one argument is a usage error (exit 2).</li><li>An absent code is not found (exit 4) with nothing on stdout.</li><li>Count and balance are computed at run time from the account&#x27;s stored transactions only.</li></ol>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC acct-get-empty-account ===<br>Intent: An account with no transactions prints count 0 and balance 0.00.</p>
+<p>import csv from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>code_arg = &quot;ZZAG1&quot; name = &quot;Get Empty&quot; with db_session() as db: db.accounts.create(account=code_arg, name=name) code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, code_arg) print(out, err) assert code == 0 parsed = list(csv.reader(out.splitlines())) assert parsed == [[&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;], [code_arg, name, &quot;0&quot;, &quot;0.00&quot;]] === END AC acct-get-empty-account ===</p>
+<p>=== AC acct-get-with-transactions ===<br>Intent: Count and balance reflect only this account&#x27;s stored transactions, with the balance formatted from the integer cents sum.</p>
+<p>import csv from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>mine = &quot;ZZAG2&quot; other = &quot;ZZAG3&quot; cat = &quot;ZZAGC1&quot; name = &quot;Get Busy&quot; amounts = [12345, -2000, 500] other_amounts = [99999] with db_session() as db: db.accounts.create(account=mine, name=name) db.accounts.create(account=other, name=&quot;Get Other&quot;) db.categories.create(category=cat, description=&quot;Get Cat&quot;) tid = 870001 for amount in amounts: db.transactions.create(txn_id=tid, date=&quot;2026-04-01&quot;, account=mine, category=cat, amount=amount, memo=&quot;m&quot;) tid += 1 for amount in other_amounts: db.transactions.create(txn_id=tid, date=&quot;2026-04-01&quot;, account=other, category=cat, amount=amount, memo=&quot;o&quot;) tid += 1 total = sum(amounts) assert total &gt;= 0 expected_balance = f&quot;{total // 100}.{total % 100:02d}&quot; code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, mine) print(out, err) assert code == 0 parsed = list(csv.reader(out.splitlines())) assert parsed[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;] assert parsed[1] == [mine, name, str(len(amounts)), expected_balance] === END AC acct-get-with-transactions ===</p>
+<p>=== AC acct-get-reflects-changes ===<br>Intent: A later get returns current values after another transaction is stored, not a cached earlier result.</p>
+<p>import csv from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZZAG4&quot; cat = &quot;ZZAGC2&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Get Fresh&quot;) db.categories.create(category=cat, description=&quot;Get Cat2&quot;) db.transactions.create(txn_id=870011, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=1000, memo=&quot;a&quot;) code1, out1, err1 = cli_runner(&quot;account&quot;, &quot;get&quot;, acct) db.transactions.create(txn_id=870012, date=&quot;2026-04-02&quot;, account=acct, category=cat, amount=250, memo=&quot;b&quot;) code2, out2, err2 = cli_runner(&quot;account&quot;, &quot;get&quot;, acct) print(out1, err1, out2, err2) assert code1 == 0 and code2 == 0 row1 = list(csv.reader(out1.splitlines()))[1] row2 = list(csv.reader(out2.splitlines()))[1] assert row1[2] == &quot;1&quot; assert row2[2] == &quot;2&quot; assert row1[3] != row2[3] === END AC acct-get-reflects-changes ===</p>
+<p>=== AC acct-get-not-found ===<br>Intent: An absent account code exits 4 with nothing on standard output.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>missing = &quot;ZZNOSUCH1&quot; with db_session() as db: assert db.accounts.get(account=missing) is None code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, missing) print(out, err) assert code == 4 assert out == &quot;&quot; === END AC acct-get-not-found ===</p>
+<p>=== AC acct-get-usage ===<br>Intent: Missing or extra arguments to account get are usage errors with exit 2.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: for args in [(&quot;account&quot;, &quot;get&quot;), (&quot;account&quot;, &quot;get&quot;, &quot;ZZAG5&quot;, &quot;extra&quot;)]: code, out, err = cli_runner(*args) print(args, code, out, err) assert code == 2 assert out == &quot;&quot; === END AC acct-get-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Get never writes to the store.</li><li>Count and balance are computed from stored transactions, never stored or hardcoded.</li><li>Money is formatted from integer cents; no floating point.</li></ul></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,174 @@
+=== BEGIN ARTIFACT FEATURE-TxnPost.md ===
+# FEATURE: Transaction Post
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger txn post` with validation, id allocation and the non-negative balance rule. |
+| Depends On | FEATURE-LedgerRules.md, FEATURE-LoadCategories.md, FEATURE-AccountAdd.md, FEATURE-Validation.md, FEATURE-CsvOutput.md, DATABASE.md |
+| Provides | ledger txn post |
+| Consumes | ledgerlib.rules, ledgerlib.validation, ledgerlib.csvout |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Record one receipt or payment against an account. The command lives in `cli/commands/txn.py`, which owns the verb table for `txn post|get|amend|delete`.
+
+## Behavior
+
+1. Usage: `ledger txn post <account> <category> <amount> <date> [<memo>]`. Fewer than four or more than five arguments is a usage error (exit 2). The memo defaults to the empty string.
+2. Every input is validated before any write: codes, amount (integer cents, never zero, at most two decimals), real calendar date, and memo rules. Violations exit 3.
+3. The account and the category must exist, else exit 3.
+4. The projected balance of the account after the post must not be negative, else exit 3.
+5. The new `txn_id` is the largest present plus one, or 1 when empty. The id is read and the row written in one database transaction.
+6. Output is the header `txn_id,date,account,category,amount,memo` and the new row, amount with exactly two decimals.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC txn-post-success ===
+Intent: A valid post returns the next id and the row, and a separate read returns the same stored values in integer cents.
+
+import csv
+import io
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = "ZZTPOST1"
+cat = "ZZTPCAT1"
+amount_arg = "45.50"
+date = "2026-04-01"
+memo = "walk in sale"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Post One")
+    db.categories.create(category=cat, description="Post Cat")
+    before = max([r.txn_id for r in db.transactions.list()], default=0)
+    exit_code, out, err = cli_runner("txn", "post", acct, cat, amount_arg, date, memo)
+    print(out)
+    print(err)
+    assert exit_code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[0] == ["txn_id", "date", "account", "category", "amount", "memo"]
+    new_id = before + 1
+    assert rows[1] == [str(new_id), date, acct, cat, amount_arg, memo]
+    back = db.transactions.get(txn_id=new_id)
+    assert back is not None
+    assert back.account == acct
+    assert back.category == cat
+    assert back.date == date
+    assert back.memo == memo
+    assert back.amount == 4550
+=== END AC txn-post-success ===
+
+=== AC txn-post-default-memo-and-ids ===
+Intent: A post without a memo stores an empty memo, and two consecutive posts receive consecutive ids.
+
+import csv
+import io
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = "ZZTPOST2"
+cat = "ZZTPCAT2"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Post Two")
+    db.categories.create(category=cat, description="Post Cat Two")
+    before = max([r.txn_id for r in db.transactions.list()], default=0)
+    c1, o1, e1 = cli_runner("txn", "post", acct, cat, "10.00", "2026-04-02")
+    c2, o2, e2 = cli_runner("txn", "post", acct, cat, "-3.00", "2026-04-03", "second")
+    print(o1, e1, o2, e2)
+    assert c1 == 0
+    assert c2 == 0
+    first = list(csv.reader(io.StringIO(o1)))[1]
+    second = list(csv.reader(io.StringIO(o2)))[1]
+    assert first[0] == str(before + 1)
+    assert second[0] == str(before + 2)
+    assert first[5] == ""
+    stored = db.transactions.get(txn_id=before + 1)
+    assert stored is not None
+    assert stored.memo == ""
+    other = db.transactions.get(txn_id=before + 2)
+    assert other is not None
+    assert other.amount == -300
+=== END AC txn-post-default-memo-and-ids ===
+
+=== AC txn-post-rejects-invalid-input ===
+Intent: Unknown account, unknown category, a three-decimal amount, a zero amount and an impossible date each exit 3 and store nothing.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = "ZZTPOST3"
+cat = "ZZTPCAT3"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Post Three")
+    db.categories.create(category=cat, description="Post Cat Three")
+    count_before = len(db.transactions.list())
+    cases = [
+        ("ZZTPNOACCT", cat, "1.00", "2026-04-01"),
+        (acct, "ZZTPNOCAT", "1.00", "2026-04-01"),
+        (acct, cat, "1.234", "2026-04-01"),
+        (acct, cat, "0.00", "2026-04-01"),
+        (acct, cat, "1.00", "2026-02-30"),
+    ]
+    for args in cases:
+        exit_code, out, err = cli_runner("txn", "post", *args)
+        print(args, exit_code, out, err)
+        assert exit_code == 3
+        assert out == ""
+    assert len(db.transactions.list()) == count_before
+=== END AC txn-post-rejects-invalid-input ===
+
+=== AC txn-post-rejects-negative-balance ===
+Intent: A post that would take an account below zero exits 3 and stores nothing, while a post that brings it exactly to zero succeeds.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = "ZZTPOST4"
+cat = "ZZTPCAT4"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Post Four")
+    db.categories.create(category=cat, description="Post Cat Four")
+    exit_code, out, err = cli_runner("txn", "post", acct, cat, "-1.00", "2026-04-04")
+    print(out, err)
+    assert exit_code == 3
+    assert out == ""
+    assert db.transactions.list(account=acct) == []
+    c_in, o_in, e_in = cli_runner("txn", "post", acct, cat, "5.00", "2026-04-04")
+    assert c_in == 0
+    c_out, o_out, e_out = cli_runner("txn", "post", acct, cat, "-5.00", "2026-04-05")
+    print(o_out, e_out)
+    assert c_out == 0
+    assert len(db.transactions.list(account=acct)) == 2
+=== END AC txn-post-rejects-negative-balance ===
+
+=== AC txn-post-usage ===
+Intent: Too few arguments to txn post is a usage error with exit 2 and nothing on standard output.
+
+from cli.testing import cli_runner
+
+exit_code, out, err = cli_runner("txn", "post", "ZZTPOST5", "ZZTPCAT5", "1.00")
+print(out)
+print(err)
+assert exit_code == 2
+assert out == ""
+=== END AC txn-post-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Money is parsed and stored as integer cents; no floating point at any layer.
+- All checks complete before the first write; a rejected post changes nothing.
+- The id read and row write share one database transaction.
+- Diagnostics go to standard error only.
+=== END ARTIFACT ===

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-AccountRename.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-AccountRename.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-AccountRename.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Account Rename</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger account rename &lt;code&gt; &lt;name&gt;</code> changing only an account&#x27;s name.</td></tr><tr><td>Depends On</td><td>FEATURE-AccountGet.md, FEATURE-Validation.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger account rename</td></tr><tr><td>Consumes</td><td>ledger account get, ledgerlib.validation</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Rename an existing account and print its updated row.</p>
+<h2>Interface</h2>
+<p><code>ledger account rename &lt;code&gt; &lt;name&gt;</code>. Output is the header <code>account,name,transactions,balance</code> and the updated account row read back from storage.</p>
+<h2>Behavior</h2>
+<ol><li><code>rename</code> with other than exactly two arguments is a usage error (exit 2).</li><li><code>name</code> is 1 to 40 characters with no comma or newline, else exit 3 and the stored name is unchanged.</li><li>An absent code is not found (exit 4) and nothing is created.</li><li>Only the name changes; the transaction count and balance of the printed row are computed from stored transactions.</li></ol>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC acct-rename-success ===<br>Intent: Renaming prints the updated row, keeps the transaction count and balance, and the new name reads back from the store.</p>
+<p>import csv from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZZAR1&quot; cat = &quot;ZZARC1&quot; old_name = &quot;Rename Before&quot; new_name = &quot;Rename After&quot; amount = 4250 with db_session() as db: db.accounts.create(account=acct, name=old_name) db.categories.create(category=cat, description=&quot;Rename Cat&quot;) db.transactions.create(txn_id=860001, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=amount, memo=&quot;m&quot;) expected_balance = f&quot;{amount // 100}.{amount % 100:02d}&quot; code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, acct, new_name) print(out, err) assert code == 0 parsed = list(csv.reader(out.splitlines())) assert parsed[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;] assert parsed[1] == [acct, new_name, &quot;1&quot;, expected_balance] row = db.accounts.get(account=acct) assert row is not None assert row.name == new_name assert db.transactions.get(txn_id=860001).amount == amount === END AC acct-rename-success ===</p>
+<p>=== AC acct-rename-not-found ===<br>Intent: Renaming an absent account exits 4, prints nothing to standard output, and creates no account.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>missing = &quot;ZZAR2&quot; with db_session() as db: assert db.accounts.get(account=missing) is None code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, missing, &quot;Some Name&quot;) print(out, err) assert code == 4 assert out == &quot;&quot; assert db.accounts.get(account=missing) is None === END AC acct-rename-not-found ===</p>
+<p>=== AC acct-rename-invalid-name ===<br>Intent: Empty, over-long, comma-containing and newline-containing names are rejected with exit 3 and the stored name is unchanged.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZZAR3&quot; original = &quot;Keep This Name&quot; bad_names = [&quot;&quot;, &quot;n&quot; * 41, &quot;has, comma&quot;, &quot;has\nnewline&quot;] with db_session() as db: db.accounts.create(account=acct, name=original) for bad in bad_names: code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, acct, bad) print(repr(bad), code, out, err) assert code == 3 assert out == &quot;&quot; row = db.accounts.get(account=acct) assert row is not None assert row.name == original === END AC acct-rename-invalid-name ===</p>
+<p>=== AC acct-rename-boundary-name ===<br>Intent: A 40-character name is the accepted maximum and is stored exactly.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZZAR4&quot; new_name = &quot;m&quot; * 40 with db_session() as db: db.accounts.create(account=acct, name=&quot;Short&quot;) code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, acct, new_name) print(out, err) assert code == 0 row = db.accounts.get(account=acct) assert row is not None assert row.name == new_name === END AC acct-rename-boundary-name ===</p>
+<p>=== AC acct-rename-usage ===<br>Intent: Wrong argument counts for rename are usage errors with exit 2 and change nothing.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZZAR5&quot; original = &quot;Usage Name&quot; with db_session() as db: db.accounts.create(account=acct, name=original) for args in [ (&quot;account&quot;, &quot;rename&quot;), (&quot;account&quot;, &quot;rename&quot;, acct), (&quot;account&quot;, &quot;rename&quot;, acct, &quot;New&quot;, &quot;extra&quot;), ]: code, out, err = cli_runner(*args) print(args, code, out, err) assert code == 2 assert out == &quot;&quot; assert db.accounts.get(account=acct).name == original === END AC acct-rename-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Rename changes only the account name; no transaction row is touched.</li><li>A rejected rename writes nothing.</li><li>Only the generated persistence package touches the database.</li></ul></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,731 @@
+=== BEGIN ARTIFACT FEATURE-Validation.md ===
+# FEATURE: Validation
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Validate codes, names, memos, amounts, dates and transaction ids per the ledger rules. |
+| Depends On | FEATURE-CliEntry.md |
+| Provides | ledgerlib.validation |
+| Consumes | cli.main |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every command validates its inputs before its first write. `ledgerlib/validation.py` is the single owner of the field rules in `sources/INSTRUCTIONS.md` Rules 3 to 6 and the transaction id rule. Each function raises `cli.errors.RejectedError` (exit 3) on violation and otherwise returns the validated value.
+
+## Interface
+
+| Function | Returns | Rule |
+|----------|---------|------|
+| `validate_code(value: str) -> str` | the value | 1 to 12 characters from `A-Z` and `0-9` |
+| `validate_name(value: str) -> str` | the value | 1 to 40 characters, no comma, no newline (also used for descriptions) |
+| `validate_memo(value: str) -> str` | the value | 0 to 60 characters, no comma, no newline |
+| `parse_amount(text: str) -> int` | integer cents | matches `-?DIGITS[.D[D]]`, at most two decimals, never zero |
+| `validate_date(text: str) -> str` | the value | real calendar date written `YYYY-MM-DD` |
+| `parse_txn_id(text: str) -> int` | the integer | a non-empty string of decimal digits |
+
+## Rules
+
+- Amount parsing uses integer arithmetic on the digit strings only. No `float` or `Decimal`-free shortcut through floating point is permitted at any layer.
+- `.5`, `5.`, `1.234`, `+5`, `1e3`, `0`, `0.0` and `0.00` are rejected.
+- A date must match the `YYYY-MM-DD` shape exactly and be a real calendar date; `2026-02-30` is rejected.
+- A transaction id with a sign, a decimal point, whitespace or no digits is rejected with exit 3.
+- Validation reads no database and writes nothing.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC validation-codes ===
+Intent: Codes of 1 to 12 characters from A-Z and 0-9 are returned unchanged and every other shape is rejected with exit code 3.
+
+from cli.errors import RejectedError
+from ledgerlib import validation
+
+good = "DRAWER1"
+longest = "A" * 12
+assert validation.validate_code(good) == good
+assert validation.validate_code(longest) == longest
+for bad in ["", "A" * 13, "drawer1", "AB-C", "A B", "AB,C"]:
+    try:
+        validation.validate_code(bad)
+    except RejectedError as exc:
+        assert exc.exit_code == 3
+    else:
+        raise AssertionError("accepted bad code")
+=== END AC validation-codes ===
+
+=== AC validation-names-memos ===
+Intent: Names are 1 to 40 characters and memos 0 to 60 characters, neither may contain a comma or newline, and violations exit 3.
+
+from cli.errors import RejectedError
+from ledgerlib import validation
+
+name = "Front Drawer"
+assert validation.validate_name(name) == name
+assert validation.validate_name("N" * 40) == "N" * 40
+assert validation.validate_memo("") == ""
+assert validation.validate_memo("m" * 60) == "m" * 60
+
+bad_names = ["", "N" * 41, "a,b", "a" + chr(10) + "b"]
+for bad in bad_names:
+    try:
+        validation.validate_name(bad)
+    except RejectedError as exc:
+        assert exc.exit_code == 3
+    else:
+        raise AssertionError("accepted bad name")
+
+bad_memos = ["m" * 61, "a,b", "a" + chr(10) + "b"]
+for bad in bad_memos:
+    try:
+        validation.validate_memo(bad)
+    except RejectedError as exc:
+        assert exc.exit_code == 3
+    else:
+        raise AssertionError("accepted bad memo")
+=== END AC validation-names-memos ===
+
+=== AC validation-amounts ===
+Intent: Amounts parse to exact integer cents with at most two decimals and zero, malformed or over-precise amounts are rejected with exit 3.
+
+from cli.errors import RejectedError
+from ledgerlib import validation
+
+cases = [
+    ("12.50", 1250),
+    ("-12.50", -1250),
+    ("5", 500),
+    ("-5", -500),
+    ("1.5", 150),
+    ("0.01", 1),
+    ("-0.01", -1),
+    ("5000.00", 500000),
+]
+for text, cents in cases:
+    got = validation.parse_amount(text)
+    assert isinstance(got, int) and not isinstance(got, bool)
+    assert got == cents
+
+for bad in ["0", "0.00", "-0", "1.234", "abc", "1.", ".5", "+5", "1e3", "", "1,5"]:
+    try:
+        validation.parse_amount(bad)
+    except RejectedError as exc:
+        assert exc.exit_code == 3
+    else:
+        raise AssertionError("accepted bad amount " + bad)
+=== END AC validation-amounts ===
+
+=== AC validation-dates ===
+Intent: Only real calendar dates written YYYY-MM-DD are accepted, so a nonexistent day or a different shape exits 3.
+
+from cli.errors import RejectedError
+from ledgerlib import validation
+
+good = "2026-04-01"
+leap = "2024-02-29"
+assert validation.validate_date(good) == good
+assert validation.validate_date(leap) == leap
+
+for bad in ["2026-02-30", "2026-13-01", "2026-00-10", "2025-02-29", "2026-2-3", "20260401", "2026/04/01", ""]:
+    try:
+        validation.validate_date(bad)
+    except RejectedError as exc:
+        assert exc.exit_code == 3
+    else:
+        raise AssertionError("accepted bad date " + bad)
+=== END AC validation-dates ===
+
+=== AC validation-txn-id ===
+Intent: A transaction id argument must be a string of decimal digits and returns its integer value, otherwise exit 3.
+
+from cli.errors import RejectedError
+from ledgerlib import validation
+
+assert validation.parse_txn_id("121") == 121
+assert validation.parse_txn_id("1") == 1
+
+for bad in ["", "abc", "-1", "+1", "1.0", " 1", "1 ", "0x10"]:
+    try:
+        validation.parse_txn_id(bad)
+    except RejectedError as exc:
+        assert exc.exit_code == 3
+    else:
+        raise AssertionError("accepted bad id " + repr(bad))
+=== END AC validation-txn-id ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- No floating point is used to parse, hold or compare money.
+- Validation never reads or writes the database.
+- Error message wording is not part of the contract; only the exit code is.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-LedgerRules.md ===
+# FEATURE: Ledger Rules
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Compute account views and projected balances, enforce the non-negative balance rule, and allocate transaction ids. |
+| Depends On | DATABASE.md, FEATURE-CsvOutput.md, FEATURE-Validation.md |
+| Provides | ledgerlib.rules |
+| Consumes | persistence, ledgerlib.csvout |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledgerlib/rules.py` owns the business rules every write command shares: an account's transaction count and balance, the projected balance after a set of changes, the rule that no balance goes below zero, and transaction id allocation. All reads go through `db.<table>.<operation>(...)`; balances are computed in Python from list rows in integer cents.
+
+## Interface
+
+| Function | Behavior |
+|----------|----------|
+| `account_view(db, code)` | Returns an object with `account`, `name`, `transactions` (count) and `balance` (integer cents), or `None` when the account is absent. |
+| `balances_after(db, changes)` | `changes` is a list of `(account_code, delta_cents)` pairs. Returns a dict mapping each affected account to its balance after every change in the list is applied. |
+| `require_non_negative(db, changes)` | Raises `cli.errors.RejectedError` (exit 3) when any account in the projected result would be below zero; returns `None` otherwise. Writes nothing. |
+| `next_txn_id(db)` | Returns the largest stored `txn_id` plus one, or `1` when there are no transactions. |
+
+## Rules
+
+- The balance check is evaluated on each account's final balance after the whole change set, not change by change, so a set that dips below zero and recovers is accepted.
+- A balance of exactly zero is accepted.
+- Callers read `next_txn_id` and write the row inside one database transaction so two concurrent posts never receive the same id.
+- Every check happens before the caller's first write; these functions perform no writes.
+- No floating point is used for money.
+
+## Database Interface
+
+- `FEATURE-LEDGER-002` — read: get an account by code - supplies: `account` - returns: `account`, `name`
+- `FEATURE-LEDGER-013` — read: list transactions, optionally for one account - supplies: `account` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+
+## Programmatic Acceptance
+
+=== AC rules-account-view ===
+Intent: The account view reports the transaction count and the integer-cent balance computed from stored rows, and an absent account yields none.
+
+from persistence.testing import db_session
+from ledgerlib import rules
+
+acct = "ZZRLV1"
+missing = "ZZRLVNONE"
+cat = "ZZRLCAT1"
+first = 930001
+second = 930002
+plus = 10000
+minus = -2550
+with db_session() as db:
+    db.accounts.create(account=acct, name="Rules View")
+    db.categories.create(category=cat, description="Rules View Cat")
+    db.transactions.create(txn_id=first, date="2026-05-01", account=acct, category=cat, amount=plus, memo="a")
+    db.transactions.create(txn_id=second, date="2026-05-02", account=acct, category=cat, amount=minus, memo="b")
+    view = rules.account_view(db, acct)
+    assert view is not None
+    assert view.account == acct
+    assert view.transactions == 2
+    assert view.balance == plus + minus
+    assert isinstance(view.balance, int)
+    assert rules.account_view(db, missing) is None
+=== END AC rules-account-view ===
+
+=== AC rules-balances-after ===
+Intent: The projection applies the whole change set to current balances for every affected account without writing anything.
+
+from persistence.testing import db_session
+from ledgerlib import rules
+
+a = "ZZRLB1"
+b = "ZZRLB2"
+cat = "ZZRLCAT2"
+start_a = 5000
+start_b = 700
+delta = 1200
+with db_session() as db:
+    db.accounts.create(account=a, name="Rules Proj A")
+    db.accounts.create(account=b, name="Rules Proj B")
+    db.categories.create(category=cat, description="Rules Proj Cat")
+    db.transactions.create(txn_id=930011, date="2026-05-01", account=a, category=cat, amount=start_a, memo="a")
+    db.transactions.create(txn_id=930012, date="2026-05-01", account=b, category=cat, amount=start_b, memo="b")
+    before = len(db.transactions.list())
+    result = rules.balances_after(db, [(a, -delta), (b, delta)])
+    assert result[a] == start_a - delta
+    assert result[b] == start_b + delta
+    assert len(db.transactions.list()) == before
+=== END AC rules-balances-after ===
+
+=== AC rules-require-non-negative ===
+Intent: A change set leaving any balance below zero is rejected with exit 3 while exactly zero and a recovering set are accepted, and nothing is written.
+
+from persistence.testing import db_session
+from cli.errors import RejectedError
+from ledgerlib import rules
+
+acct = "ZZRLN1"
+cat = "ZZRLCAT3"
+start = 5000
+with db_session() as db:
+    db.accounts.create(account=acct, name="Rules Neg")
+    db.categories.create(category=cat, description="Rules Neg Cat")
+    db.transactions.create(txn_id=930021, date="2026-05-01", account=acct, category=cat, amount=start, memo="s")
+    before = len(db.transactions.list())
+
+    assert rules.require_non_negative(db, [(acct, -start)]) is None
+    assert rules.require_non_negative(db, [(acct, -8000), (acct, 4000)]) is None
+
+    try:
+        rules.require_non_negative(db, [(acct, -(start + 1))])
+    except RejectedError as exc:
+        assert exc.exit_code == 3
+    else:
+        raise AssertionError("negative balance accepted")
+
+    assert len(db.transactions.list()) == before
+=== END AC rules-require-non-negative ===
+
+=== AC rules-next-txn-id ===
+Intent: The next id is the largest stored id plus one, or one for an empty table, derived here from the stored rows.
+
+from persistence.testing import db_session
+from ledgerlib import rules
+
+acct = "ZZRLI1"
+cat = "ZZRLCAT4"
+high = 940500
+with db_session() as db:
+    db.accounts.create(account=acct, name="Rules Id")
+    db.categories.create(category=cat, description="Rules Id Cat")
+    existing = [t.txn_id for t in db.transactions.list()]
+    expected = (max(existing) + 1) if existing else 1
+    assert rules.next_txn_id(db) == expected
+
+    db.transactions.create(txn_id=high, date="2026-05-01", account=acct, category=cat, amount=100, memo="i")
+    existing = [t.txn_id for t in db.transactions.list()]
+    assert rules.next_txn_id(db) == max(existing) + 1
+    assert rules.next_txn_id(db) >= high + 1
+=== END AC rules-next-txn-id ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Rules never write; callers write after every check passes.
+- Balances and counts are computed from stored rows at run time and never stored or hardcoded.
+- No floating point is used for money.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Init.md ===
+# FEATURE: Init
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implement `ledger init`, which prepares an empty ledger and removes existing rows when rerun. |
+| Depends On | FEATURE-DatabaseSelection.md, DATABASE.md |
+| Provides | ledger init |
+| Consumes | ledgerlib.config, persistence |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger init` makes the configured database ready and empty. It creates the parent directory of the SQLite file when missing, opens the database through `open_database` (which provisions the declared tables idempotently), then removes every row, children first: transactions, then categories, then accounts. It writes nothing to standard output and exits 0.
+
+## Behavior
+
+- `cli/commands/init.py` exposes `run(args) -> list[str]` and returns no lines.
+- Any argument is a usage error (exit 2).
+- A PostgreSQL DSN or unreachable database exits 1 with nothing on standard output.
+- Clearing uses the declared `clear` operations with the lowest possible bound (`min_txn_id` of a value below every id, empty-string bounds for codes). No driver import and no DDL outside the persistence library.
+- Rerunning on a populated ledger removes every row, leaving all three tables empty.
+- Creating a missing parent directory is covered by the project's own pytest suite, which owns temporary database locations.
+
+## Database Interface
+
+- `FEATURE-LEDGER-006` — write: clear accounts from a code upward - supplies: `min_account`
+- `FEATURE-LEDGER-010` — write: clear categories from a code upward - supplies: `min_category`
+- `FEATURE-LEDGER-016` — write: clear transactions from an id upward - supplies: `min_txn_id`
+
+## Programmatic Acceptance
+
+=== AC init-clears-rows ===
+Intent: Init exits 0 with empty standard output and leaves every table empty after rows were seeded through the persistence interface.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZZINI1"
+cat = "ZZINCAT1"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Init Seed")
+    db.categories.create(category=cat, description="Init Seed Cat")
+    db.transactions.create(txn_id=960001, date="2026-05-01", account=acct, category=cat, amount=100, memo="s")
+    assert len(db.transactions.list()) >= 1
+
+    code, out, err = cli_runner("init")
+    print(out)
+    print(err)
+    assert code == 0
+    assert out == ""
+
+    assert db.transactions.list() == []
+    assert db.categories.list() == []
+    assert db.accounts.list() == []
+    assert db.accounts.get(account=acct) is None
+=== END AC init-clears-rows ===
+
+=== AC init-rerun ===
+Intent: Running init again on an already empty ledger still succeeds with no output and the tables stay empty.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+code1, out1, err1 = cli_runner("init")
+code2, out2, err2 = cli_runner("init")
+print(err1)
+print(err2)
+assert code1 == 0
+assert code2 == 0
+assert out1 == ""
+assert out2 == ""
+with db_session() as db:
+    assert db.accounts.list() == []
+    assert db.categories.list() == []
+    assert db.transactions.list() == []
+=== END AC init-rerun ===
+
+=== AC init-usage ===
+Intent: Init rejects an unexpected argument as a usage error with exit 2, empty standard output and a diagnostic on standard error.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZZINU1"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Init Usage")
+    code, out, err = cli_runner("init", "extra")
+    assert code == 2
+    assert out == ""
+    assert err != ""
+    assert db.accounts.get(account=acct) is not None
+=== END AC init-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Init never imports a database driver and never runs DDL itself.
+- Init writes nothing to standard output.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Count.md ===
+# FEATURE: Count
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implement `ledger count`, which prints the row count of each table. |
+| Depends On | FEATURE-DatabaseSelection.md, FEATURE-CsvOutput.md, DATABASE.md |
+| Provides | ledger count |
+| Consumes | ledgerlib.config, ledgerlib.csvout |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`ledger count` prints `table,rows` and then one row each for `accounts`, `categories` and `transactions`, in that order. Each count is taken from the stored rows at run time.
+
+## Behavior
+
+- `cli/commands/count.py` exposes `run(args) -> list[str]`.
+- Any argument is a usage error (exit 2).
+- A missing table or unreachable database exits 1 with nothing on standard output.
+- Counts are `len` of the declared list operations; none is hardcoded or cached.
+
+## Database Interface
+
+- `FEATURE-LEDGER-003` — read: list accounts ordered by code - returns: `account`, `name`
+- `FEATURE-LEDGER-009` — read: list categories ordered by code - returns: `category`, `description`
+- `FEATURE-LEDGER-013` — read: list transactions - supplies: `account` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+
+## Programmatic Acceptance
+
+=== AC count-rows ===
+Intent: Count prints the header and the three tables in order with counts equal to the stored rows read back through the persistence interface.
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZZCNT1"
+cat = "ZZCNTCAT1"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Count Acct")
+    db.categories.create(category=cat, description="Count Cat")
+    db.transactions.create(txn_id=961001, date="2026-05-01", account=acct, category=cat, amount=100, memo="c")
+    db.transactions.create(txn_id=961002, date="2026-05-02", account=acct, category=cat, amount=200, memo="c")
+
+    code, out, err = cli_runner("count")
+    print(out)
+    print(err)
+    assert code == 0
+    assert out.endswith("\n")
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[0] == ["table", "rows"]
+    assert [r[0] for r in rows[1:]] == ["accounts", "categories", "transactions"]
+    assert len(rows) == 4
+    assert int(rows[1][1]) == len(db.accounts.list())
+    assert int(rows[2][1]) == len(db.categories.list())
+    assert int(rows[3][1]) == len(db.transactions.list())
+=== END AC count-rows ===
+
+=== AC count-tracks-changes ===
+Intent: Count reflects an added account by exactly one row compared with a count read before the change.
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+def accounts_count():
+    code, out, err = cli_runner("count")
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    return int(rows[1][1])
+
+with db_session() as db:
+    before = accounts_count()
+    db.accounts.create(account="ZZCNT2", name="Count Two")
+    after = accounts_count()
+    assert after == before + 1
+=== END AC count-tracks-changes ===
+
+=== AC count-usage ===
+Intent: Count with an extra argument is a usage error with exit 2 and empty standard output.
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("count", "extra")
+assert code == 2
+assert out == ""
+assert err != ""
+=== END AC count-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- No count is hardcoded; every value is computed from stored rows.
+- Standard output holds only the CSV table on success.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-LoadAccounts.md ===
+# FEATURE: Load Accounts
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implement `ledger load accounts <csv>` as an all-or-nothing bulk load. |
+| Depends On | FEATURE-DatabaseSelection.md, FEATURE-Validation.md, FEATURE-CsvOutput.md, DATABASE.md |
+| Provides | ledger load accounts |
+| Consumes | ledgerlib.config, ledgerlib.validation, ledgerlib.csvout |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`cli/commands/load.py` owns `ledger load <table> <csv>` with a per-table handler registry; an unknown table is a usage error (exit 2). This story adds the `accounts` handler. The whole file is accepted or none of it is stored.
+
+## Behavior
+
+- The header must be exactly `account,name`; any other header is rejected with exit 3.
+- Every data row must have the header's field count; each code and name is validated with `ledgerlib.validation`.
+- A duplicate code within the file, or one already stored, is rejected with exit 3.
+- Every check completes before the first write. Writes happen in one database transaction, so a rejected file stores nothing.
+- A file that cannot be read exits 1 with nothing on standard output.
+- A header-only file loads zero rows, prints `accounts,0`, and exits 0.
+- Output is `table,loaded` followed by `accounts,<rows>`.
+- Missing arguments or extra arguments are a usage error (exit 2).
+
+## Database Interface
+
+- `FEATURE-LEDGER-001` — write: create an account - supplies: `account`, `name` - returns: `account`, `name`
+- `FEATURE-LEDGER-002` — read: get an account by code - supplies: `account` - returns: `account`, `name`
+
+## Programmatic Acceptance
+
+=== AC load-accounts-success ===
+Intent: A valid accounts file stores every row, prints the loaded count, and the rows read back through the persistence interface.
+
+import csv
+import io
+import os
+import tempfile
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+records = [("ZZLA1", "Load One"), ("ZZLA2", "Load Two"), ("ZZLA3", "Load Three")]
+with tempfile.TemporaryDirectory() as d:
+    path = os.path.join(d, "accounts.csv")
+    with open(path, "w", newline="") as fh:
+        w = csv.writer(fh, lineterminator="\n")
+        w.writerow(["account", "name"])
+        w.writerows(records)
+    with db_session() as db:
+        code, out, err = cli_runner("load", "accounts", path)
+        print(out)
+        print(err)
+        assert code == 0
+        rows = list(csv.reader(io.StringIO(out)))
+        assert rows[0] == ["table", "loaded"]
+        assert rows[1] == ["accounts", str(len(records))]
+        assert len(rows) == 2
+        for acct, name in records:
+            got = db.accounts.get(account=acct)
+            assert got is not None
+            assert got.name == name
+=== END AC load-accounts-success ===
+
+=== AC load-accounts-header-only ===
+Intent: A file with a valid header and no data rows loads zero rows, prints a zero count, and exits 0.
+
+import csv
+import io
+import os
+import tempfile
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as d:
+    path = os.path.join(d, "accounts.csv")
+    with open(path, "w", newline="") as fh:
+        csv.writer(fh, lineterminator="\n").writerow(["account", "name"])
+    with db_session() as db:
+        before = len(db.accounts.list())
+        code, out, err = cli_runner("load", "accounts", path)
+        print(out)
+        print(err)
+        assert code == 0
+        rows = list(csv.reader(io.StringIO(out)))
+        assert rows == [["table", "loaded"], ["accounts", "0"]]
+        assert len(db.accounts.list()) == before
+=== END AC load-accounts-header-only ===
+
+=== AC load-accounts-rejects-atomic ===
+Intent: A file with a bad row, duplicate code, wrong header or short row exits 3 with empty standard output and stores none of its rows.
+
+import csv
+import os
+import tempfile
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+good = ("ZZLB1", "Atomic One")
+cases = {
+    "invalid-code": [["account", "name"], list(good), ["bad code", "Atomic Two"]],
+    "duplicate-in-file": [["account", "name"], list(good), ["ZZLB1", "Atomic Dup"]],
+    "wrong-header": [["code", "name"], list(good)],
+    "short-row": [["account", "name"], list(good), ["ZZLB2"]],
+    "empty-name": [["account", "name"], list(good), ["ZZLB3", ""]],
+}
+with tempfile.TemporaryDirectory() as d:
+    with db_session() as db:
+        before = len(db.accounts.list())
+        for label, rows in cases.items():
+            path = os.path.join(d, label + ".csv")
+            with open(path, "w", newline="") as fh:
+                csv.writer(fh, lineterminator="\n").writerows(rows)
+            code, out, err = cli_runner("load", "accounts", path)
+            print(label, code, err)
+            assert code == 3
+            assert out == ""
+            assert err != ""
+            assert db.accounts.get(account=good[0]) is None
+            assert len(db.accounts.list()) == before
+=== END AC load-accounts-rejects-atomic ===
+
+=== AC load-accounts-duplicate-stored ===
+Intent: A file naming an account that is already stored is rejected with exit 3 and its other rows are not stored.
+
+import csv
+import os
+import tempfile
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+stored = "ZZLC1"
+fresh = "ZZLC2"
+original = "Stored Name"
+with tempfile.TemporaryDirectory() as d:
+    path = os.path.join(d, "accounts.csv")
+    with open(path, "w", newline="") as fh:
+        w = csv.writer(fh, lineterminator="\n")
+        w.writerow(["account", "name"])
+        w.writerow([fresh, "Fresh"])
+        w.writerow([stored, "Replacement"])
+    with db_session() as db:
+        db.accounts.create(account=stored, name=original)
+        code, out, err = cli_runner("load", "accounts", path)
+        print(err)
+        assert code == 3
+        assert out == ""
+        assert db.accounts.get(account=fresh) is None
+        kept = db.accounts.get(account=stored)
+        assert kept is not None
+        assert kept.name == original
+=== END AC load-accounts-duplicate-stored ===
+
+=== AC load-accounts-operational-and-usage ===
+Intent: An unreadable file exits 1, an unknown table or a missing file argument exits 2, and each leaves standard output empty.
+
+import os
+import tempfile
+from cli.testing import cli_runner
+
+with tempfile.TemporaryDirectory() as d:
+    missing = os.path.join(d, "no-such-file.csv")
+    code, out, err = cli_runner("load", "accounts", missing)
+    assert code == 1
+    assert out == ""
+    assert err != ""
+
+    code, out, err = cli_runner("load", "nosuchtable", missing)
+    assert code == 2
+    assert out == ""
+
+    code, out, err = cli_runner("load", "accounts")
+    assert code == 2
+    assert out == ""
+=== END AC load-accounts-operational-and-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A rejected load changes nothing: all validation precedes the first write.
+- Application code never reads `sources/run.sh` or any seed file; seed files reach the database only through `ledger load`.
+- Loading uses the persistence library only; no database driver is opened here.
+=== END ARTIFACT ===

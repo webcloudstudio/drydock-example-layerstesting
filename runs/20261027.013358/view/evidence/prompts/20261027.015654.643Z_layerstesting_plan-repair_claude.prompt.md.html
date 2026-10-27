@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompts/20261027.015654.643Z_layerstesting_plan-repair_claude.prompt.md</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompts/20261027.015654.643Z_layerstesting_plan-repair_claude.prompt.md</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompts/20261027.015654.643Z_layerstesting_plan-repair_claude.prompt.md">Raw file</a></div></header>
+<article class="doc"><h1>System Instructions</h1>
+<p>This prompt is divided into three sections:</p>
+<ol><li><strong>System Instructions</strong> (this section) — structural orientation only. Do not treat this</li></ol>
+<p>section as task input.</p>
+<ol><li><strong>Input Context</strong> — begins with the heading <code># Input Context</code>. All blocks are wrapped in</li></ol>
+<p><code>&lt;pblock&gt;</code> tags. Two block types:</p>
+<ul><li>File blocks: <code>&lt;pblock filename=&quot;&lt;name&gt;&quot; role=&quot;&lt;role&gt;&quot; guidance=&quot;...&quot;&gt;</code> — optional</li></ul>
+<p><code>guidance</code> attribute carries context-specific instructions; content is in a fenced block.</p>
+<ul><li>Metadata/section blocks: <code>&lt;pblock label=&quot;&lt;label&gt;&quot; kind=&quot;&lt;kind&gt;&quot;&gt;</code> — job parameters,</li></ul>
+<p>rules, instructions, or group headers.</p>
+<ol><li><strong>Agent Task</strong> — begins with the heading <code># Agent Task</code>. Defines your persona, constraints,</li></ol>
+<p>and required outputs. Read all input context before acting on this section.</p>
+<h1>Input Context</h1>
+<p>&lt;pblock label=&quot;Repair job&quot; kind=&quot;job&quot;&gt;</p>
+<h2>Repair job</h2>
+<ul><li>DATE: 2026-10-26</li><li>CRITERIA: 4</li></ul>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock file=&quot;FEATURE-OperationalFailures.md&quot; check_id=&quot;operational-postgres-refused&quot; kind=&quot;acceptance-store&quot;&gt;<br>Error: criterion changes the configured database; use the provisioned store</p>
+<pre><code>Intent: A PostgreSQL DSN is refused with exit 1, nothing on standard output, for a read and a load command.
+
+import os
+
+from cli.testing import cli_runner
+
+dsn = &quot;postgresql://nobody@localhost/none&quot;
+saved = os.environ.get(&quot;DATABASE_URL&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+try:
+    code, out, err = cli_runner(&quot;count&quot;)
+    print(out)
+    print(err)
+    assert code == 1
+    assert out == &quot;&quot;
+    code2, out2, err2 = cli_runner(&quot;report&quot;, &quot;balances&quot;)
+    print(out2)
+    print(err2)
+    assert code2 == 1
+    assert out2 == &quot;&quot;
+finally:
+    if saved is None:
+        os.environ.pop(&quot;DATABASE_URL&quot;, None)
+    else:
+        os.environ[&quot;DATABASE_URL&quot;] = saved</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock file=&quot;FEATURE-OperationalFailures.md&quot; check_id=&quot;operational-unreachable-database&quot; kind=&quot;acceptance-store&quot;&gt;<br>Error: criterion changes the configured database; use the provisioned store</p>
+<pre><code>Intent: A database location whose parent directory is missing exits 1 with empty standard output and creates nothing.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+saved = os.environ.get(&quot;DATABASE_URL&quot;)
+with tempfile.TemporaryDirectory() as root:
+    target = os.path.join(root, &quot;missing_dir&quot;, &quot;ledger.db&quot;)
+    os.environ[&quot;DATABASE_URL&quot;] = target
+    try:
+        code, out, err = cli_runner(&quot;count&quot;)
+        print(out)
+        print(err)
+        assert code == 1
+        assert out == &quot;&quot;
+        code2, out2, err2 = cli_runner(&quot;report&quot;, &quot;balances&quot;)
+        print(out2)
+        print(err2)
+        assert code2 == 1
+        assert out2 == &quot;&quot;
+        assert not os.path.exists(target)
+        assert not os.path.exists(os.path.dirname(target))
+    finally:
+        if saved is None:
+            os.environ.pop(&quot;DATABASE_URL&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_URL&quot;] = saved</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock file=&quot;FEATURE-OperationalFailures.md&quot; check_id=&quot;operational-invalid-database-file&quot; kind=&quot;acceptance-store&quot;&gt;<br>Error: criterion changes the configured database; use the provisioned store</p>
+<pre><code>Intent: An existing file that is not a database makes every database command exit 1 with empty standard output and leaves the file unchanged.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+junk = b&quot;this is not a database file, only plain text\n&quot; * 20
+saved = os.environ.get(&quot;DATABASE_URL&quot;)
+with tempfile.TemporaryDirectory() as root:
+    target = os.path.join(root, &quot;junk.db&quot;)
+    with open(target, &quot;wb&quot;) as fh:
+        fh.write(junk)
+    csv_path = os.path.join(root, &quot;accounts.csv&quot;)
+    with open(csv_path, &quot;w&quot;, newline=&quot;&quot;) as fh:
+        fh.write(&quot;account,name\nJUNK1,Junk One\n&quot;)
+    os.environ[&quot;DATABASE_URL&quot;] = target
+    try:
+        for args in ((&quot;count&quot;,), (&quot;report&quot;, &quot;balances&quot;), (&quot;load&quot;, &quot;accounts&quot;, csv_path)):
+            code, out, err = cli_runner(*args)
+            print(out)
+            print(err)
+            assert code == 1
+            assert out == &quot;&quot;
+    finally:
+        if saved is None:
+            os.environ.pop(&quot;DATABASE_URL&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_URL&quot;] = saved
+    with open(target, &quot;rb&quot;) as fh:
+        assert fh.read() == junk</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock file=&quot;FEATURE-OperationalFailures.md&quot; check_id=&quot;operational-usage-before-database&quot; kind=&quot;acceptance-store&quot;&gt;<br>Error: criterion changes the configured database; use the provisioned store</p>
+<pre><code>Intent: A wrong argument count is a usage error with exit 2 even when the database is unusable, so usage is checked before database access.
+
+import os
+
+from cli.testing import cli_runner
+
+saved = os.environ.get(&quot;DATABASE_URL&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = &quot;postgresql://nobody@localhost/none&quot;
+try:
+    code, out, err = cli_runner(&quot;count&quot;, &quot;extra&quot;)
+    print(out)
+    print(err)
+    assert code == 2
+    assert out == &quot;&quot;
+finally:
+    if saved is None:
+        os.environ.pop(&quot;DATABASE_URL&quot;, None)
+    else:
+        os.environ[&quot;DATABASE_URL&quot;] = saved</code></pre>
+<p>&lt;/pblock&gt;</p>
+<h2>Selected foundation contracts</h2>
+<h2>Foundation Contract</h2>
+<ul><li>source_root: ./</li><li>test_command: pytest -q</li><li>environment: <code>.venv</code>, created by <code>uv venv</code> and activated by launchers in <code>bin/</code></li><li>dependencies: <code>pyproject.toml</code> and committed <code>uv.lock</code></li></ul>
+<p>The language foundation owns the project root, environment, dependency manifest, and test runner. Later foundations add their packages to this tree without replacing those contracts.</p>
+<h3>How do we execute and measure Acceptance Criteria in this language?</h3>
+<p>An Acceptance Criterion (AC) is an executable check of Blueprint-required behavior. Use the existing Programmatic Acceptance format: a Python script with assertions against the built product. Drydock executes each criterion through <code>languages/python/acceptance/runner.py</code>; <code>pytest -q</code> runs the project test suite. Retain the criterion ID, observed values, stdout/stderr and result; an assertion failure fails the check. The harness reports failure operands and available case counts. Code coverage and persistence interactions require explicit instrumentation; record available observations as key/value data associated with the criterion. Missing observations are unknown, not proof that code or an interaction was unused.</p>
+<h3>How does this language provide the shared persistence contract?</h3>
+<p>Use <code>stack/persistence.md</code>. Drydock copies <code>Rigging/languages/python/persistence/{db,sqlite,postgres}.py</code> and generates <code>persistence/{schema,__init__,testing}.py</code> plus <code>schema.sql</code> from <code>DATABASE.md</code>. Call <code>open_database(dsn)</code> and <code>db.&lt;table&gt;.&lt;operation&gt;(...)</code>; use <code>persistence.testing.db_session()</code> for criteria. SQLite uses the standard library; PostgreSQL needs <code>psycopg[binary]</code> in the project dependencies. Both engines ship together and the DSN selects the engine. Library verification lives in <code>tests/test_shipped_database.py</code>; a Target still verifies its own schema and operations.</p>
+<h2>Foundation Contract</h2>
+<p>The published Python binding follows. Go callers use the language-native API in <code>languages/go/go.md</code>; Go tests run through the existing Blueprint AC container. Carried verbatim into <code>sqlite_compact.md</code>.</p>
+<ul><li>package: persistence</li><li>entry: open_database(dsn) -&gt; Database</li><li>fixture: db_session</li><li>fixture_source: persistence/testing.py</li></ul>
+<h3>How is this engine configured and initialized?</h3>
+<p>For the shipped Python binding, use the standard-library <code>sqlite3</code> driver and a file path or <code>sqlite://</code> DSN. Configuration resolves <code>DATABASE_URL</code>, then <code>DATABASE_PATH</code>, then <code>data/app.db</code>. Drydock applies generated <code>schema.sql</code> only at the DATABASE step; later acceptance verifies the existing store without DDL. Declare schema changes in <code>DATABASE.md</code>; rebuilding applies idempotent creation statements, not a migration of existing tables. The engine owns connections and enables foreign keys.</p>
+<h3>How does this engine implement the shared persistence contract?</h3>
+<p>The shipped Python binding is <code>Rigging/languages/python/persistence/sqlite.py</code>, used through <code>persistence.db</code> and <code>open_database(dsn)</code>. Call declared table operations and use <code>db_session()</code> for criteria; do not import the driver in application code. SQLite does not prove PostgreSQL length/type enforcement. Library verification is in <code>tests/test_shipped_database.py</code>; verify Target-specific operations separately. The Go binding is <code>languages/go/persistence/sqlite.go</code>, verified against this engine. Use <code>OpenDatabase(ctx, dsn)</code> and generated typed methods; <code>OpenSession(ctx, dsn)</code> supplies a test store. The Go library is linked as <code>drydock.local/persistence</code>. The detailed Python interface follows.</p>
+<p><strong>How the Python binding is built.</strong> Drydock builds this foundation deterministically. No build agent writes, edits, or replaces any file listed below.</p>
+<ol><li>Plan declares the store in <code>DATABASE.md</code>: every table, every column, and each access pattern&#x27;s</li></ol>
+<p><code>Repository operation</code> as <code>&lt;table&gt;.&lt;verb&gt;</code>.</p>
+<ol><li>Plan emits the story that implements <code>DATABASE.md</code>, with <code>persistence.md</code> and <code>sqlite.md</code> in</li></ol>
+<p><code>stack:</code>. That story is the DATABASE step. Its builder writes no persistence code.</p>
+<ol><li>Before that story&#x27;s step runs, Drydock writes the package into the build root, so a story in</li></ol>
+<p>the same step can import it:</p>
+<div class="scroll"><table><thead><tr><th>Layer</th><th>File</th><th>Origin</th></tr></thead><tbody><tr><td>Library</td><td><code>persistence/db.py</code></td><td>shipped <code>Rigging/languages/python/persistence/db.py</code>, copied unchanged: <code>Database</code>, statement construction, parameter binding, engine selection</td></tr><tr><td>Engines</td><td><code>persistence/sqlite.py</code>, <code>persistence/postgres.py</code></td><td>shipped, copied unchanged; the DSN selects one at runtime</td></tr><tr><td>Declaration</td><td><code>persistence/schema.py</code></td><td>generated from <code>DATABASE.md</code>: <code>SCHEMA</code> (tables, operations, row dataclasses) and <code>open_database(dsn)</code>; contains no SQL</td></tr><tr><td>Interface</td><td><code>persistence/__init__.py</code></td><td>generated; exports <code>Database</code>, <code>PersistenceError</code>, <code>UnknownOperation</code>, <code>SCHEMA</code>, <code>open_database</code></td></tr><tr><td>Verification</td><td><code>schema-verification.json</code></td><td>generated runtime catalog and count probes</td></tr><tr><td>Fixture</td><td><code>persistence/testing.py</code></td><td>generated; <code>db_session()</code></td></tr><tr><td>DDL</td><td><code>schema.sql</code></td><td>generated from <code>DATABASE.md</code>; <code>CREATE ... IF NOT EXISTS</code> throughout</td></tr></tbody></table></div>
+<ol><li>Drydock applies <code>schema.sql</code> through <code>open_database</code> to the configured store — <code>DATABASE_URL</code>,</li></ol>
+<p>else <code>DATABASE_PATH</code>, else <code>data/app.db</code> — at the DATABASE step and again before every acceptance run, so a criterion that drives the application through its own client finds the declared tables.</p>
+<p>Every later story writes callers only: <code>route → service → db.&lt;table&gt;.&lt;name&gt;(...)</code>. The package exposes one attribute per declared table and one method per declared operation. Changing the store means changing <code>DATABASE.md</code> and rebuilding.</p>
+<p>Each Kind returns one fixed shape, so a pattern&#x27;s Output declares the row, never a wrapper around it:</p>
+<div class="scroll"><table><thead><tr><th>Kind</th><th>Returns</th></tr></thead><tbody><tr><td><code>get</code></td><td>the Output row, or <code>None</code> (Go <code>nil</code>) when nothing matches</td></tr><tr><td><code>list</code></td><td>a list of Output rows, one per record; the Output names the row&#x27;s columns</td></tr><tr><td><code>create</code></td><td>the Output row, read back by key; the key when no Output is declared</td></tr><tr><td><code>update</code></td><td>the Output row, read back by its Match, or <code>None</code> when nothing matched; the count when it reaches many rows or no Output is declared</td></tr><tr><td><code>upsert</code></td><td>the Output row inserted or replaced, read back by its Match</td></tr><tr><td><code>delete</code></td><td>the Output built from its Match, or <code>None</code> when nothing matched; the count when it reaches many rows or no Output is declared</td></tr></tbody></table></div>
+<pre><code># persistence/testing.py — generated by Drydock
+@contextmanager
+def db_session() -&gt; Iterator[Database]: ...
+def committed_session() -&gt; Iterator[Database]: ...
+
+# application code
+from persistence import open_database
+
+db = open_database(config.database_path)
+
+# a criterion
+from persistence.testing import db_session
+
+with db_session() as db:
+    row = db.&lt;table&gt;.create(...)  # the declared Output row
+
+# conftest.py
+import pytest
+from persistence import testing
+
+@pytest.fixture
+def db_session():
+    with testing.db_session() as db:
+        yield db</code></pre>
+<p><code>db_session()</code> opens the configured application store (DATABASE_URL, else DATABASE_PATH, else data/app.db). Schema is provisioned only at the DATABASE step. Pass the yielded database into the feature. Under the acceptance harness, every database the criterion&#x27;s process opens, including this fixture, the application behind <code>web_client()</code>, and commands run through <code>cli_runner()</code>, joins one transaction that the harness rolls back when the criterion ends, pass or fail. Leaving the <code>with</code> block rolls nothing back, so a later request still sees the setup. Outside the harness (the project&#x27;s pytest suite) the fixture starts its own transaction and rolls it back on exit. It never creates a temporary database or applies schema. <code>committed_session()</code> opens the same store with autocommit for project tests that need committed state, and joins the harness transaction under acceptance. A process the criterion launches cannot see that transaction and must not depend on its rows. Never reset the database or delete unrelated records.</p>
+<hr>
+<h2>Foundation Contract</h2>
+<p>The published shape of this foundation. Drydock synthesizes the story that builds it and every acceptance criterion writes against these names. Carried verbatim into <code>cli_compact.md</code>.</p>
+<ul><li>package: cli</li><li>entry: main(argv: list[str] | None = None) -&gt; int</li><li>fixture: cli_runner</li><li>fixture_source: cli/testing.py</li></ul>
+<pre><code># cli/__init__.py
+def main(argv: list[str] | None = None) -&gt; int:
+    ...
+
+# cli/testing.py
+import contextlib
+import io
+from cli import main
+
+def cli_runner(*args: str) -&gt; tuple[int, str, str]:
+    &quot;&quot;&quot;Return (exit_code, stdout, stderr) without spawning a process.&quot;&quot;&quot;
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        code = main(list(args))
+    return code, out.getvalue(), err.getvalue()
+
+# conftest.py
+import pytest
+from cli import testing
+
+@pytest.fixture
+def cli_runner():
+    return testing.cli_runner</code></pre>
+<p>A criterion imports <code>cli_runner</code> from <code>cli.testing</code>, calls <code>cli_runner(&quot;status&quot;, &quot;--json&quot;)</code>, and asserts on the returned tuple. It does not call <code>subprocess.run</code>, which measures the installed console script and the shell rather than the code the story wrote.</p>
+<hr>
+<h1>Agent Task</h1>
+<h1>Agent for: making a broken acceptance criterion runnable</h1>
+<p>You are given a batch of acceptance criteria that <strong>cannot execute as written</strong>, possibly drawn from several different Blueprint specification files in one request. Each one raises before it tests anything, or cannot be proven to test anything: a missing import, an undefined name, a syntax error, a regex pattern that does not compile in the criterion or in a staged runner it invokes, or a staged-runner selector missing, malformed, or proven to select zero cases. A criterion in this state is not a failing test. It is a test that never ran — or that runs against nothing — and the build cannot tell either apart from a genuine product defect.</p>
+<p>Each criterion arrives as its own self-contained block:</p>
+<pre><code>&lt;pblock file=&quot;&lt;filename&gt;&quot; check_id=&quot;&lt;check-id&gt;&quot; kind=&quot;&lt;defect kind&gt;&quot;&gt;
+Error: &lt;one sentence naming the fault&gt;
+
+&lt;the criterion&#x27;s own Intent and Python, exactly as written&gt;
+&lt;/pblock&gt;</code></pre>
+<p>Nothing else about that criterion&#x27;s file, and nothing about any other criterion, is provided. For a <code>bad-citation</code> defect, numbered source files may also be supplied as context. Use only those sources to repair its <code>Cite:</code> declaration; never infer missing source text or line numbers.</p>
+<p>Selection-probe repairs also receive the implicated staged runner source. Derive supported flags and count formats from that source; never invent a listing flag or edit the supplied runner. <code>Probe Count: json</code> counts JSON array elements; <code>[]</code> means zero, not one output line.</p>
+<p>Your job is to make each criterion named in its own block run. Nothing else.</p>
+<p>A second, independent job shape may also appear: when the input names a <strong>Bad acceptance container</strong>, the file has no safely addressable criterion, and the whole file&#x27;s source is provided instead of a per-criterion block. Repair only its <code>=== AC &lt;id&gt; ===</code> and <code>=== END AC &lt;id&gt; ===</code> delimiter lines. Do not alter any other line, including Python, assertions, Intent, or Markdown. A closer that names the wrong id may mean a boundary is missing entirely: two criteria were fused under one opener, and fixing it requires <em>inserting</em> the missing <code>=== AC &lt;id&gt; ===</code> line for the second criterion immediately before its body, not only renaming the existing closer to match the first. Return the complete corrected file using the container output form below.</p>
+<h2>The one rule</h2>
+<p><strong>Repair the mechanics. Never touch the assertion.</strong></p>
+<p>The criterion&#x27;s expected values, comparisons, inputs, program text, and intent are correct until proven otherwise by executing them. You are not judging whether the criterion is right. You are removing the reason it cannot be judged at all.</p>
+<p>Permitted:</p>
+<ul><li>for a <code>bad-citation</code> fault, correct only the existing <code>Cite:</code> declaration to name the supplied</li></ul>
+<p>source lines supporting the unchanged expectation. Source line numbers are one-based and inclusive; use <code>sources/&lt;file&gt;:&lt;line&gt;</code> or <code>sources/&lt;file&gt;:&lt;start&gt;-&lt;end&gt;</code>. Preserve every other line, including all inputs, assertions, and metadata. Never remove the citation. If the supporting source is not supplied or does not state the expectation, emit <code>REPAIR_IMPOSSIBLE</code>;</p>
+<ul><li>add an <code>import</code> for a name the criterion reads but never binds;</li><li>bind a name the criterion clearly intends to use, in the obvious way;</li><li>correct a syntax error, preserving the evident meaning of the line;</li><li>correct a regex pattern passed to <code>re.compile</code> or another <code>re.*</code> call that fails to compile,</li></ul>
+<p>preserving the evident set of forms it is meant to select — the usual cause is a raw string that escapes the backslash instead of the metacharacter (<code>r&#x27;\\[&#x27;</code> matches one literal backslash then opens an unterminated class; <code>r&#x27;\[&#x27;</code> matches a literal <code>[</code>, which is normally the intended fix);</p>
+<ul><li>correct a literal regex supplied to a staged runner option whose contract compiles that option</li></ul>
+<p>as a regex, preserving the intended selected forms;</p>
+<ul><li>reorder imports to the top of the criterion;</li><li>for a <code>test-transport</code> fault, replace the named <code>Requires: python-package=httpx; scope=test</code></li></ul>
+<p>line with <code>Requires: python-package=httpx2; scope=test</code>, and only that line;</p>
+<ul><li>for a <code>missing-selection-probe</code> or <code>invalid-selection-probe</code> fault, add or correct the</li></ul>
+<p>criterion&#x27;s <code>Probe:</code> and <code>Probe Count:</code> declaration lines so the selector it already invokes can be proven non-empty, and only that;</p>
+<ul><li>for a <code>probe-failed</code> fault, correct <code>Probe:</code> and <code>Probe Count:</code> to match the supplied runner&#x27;s</li></ul>
+<p>supported listing flag and count format, preserving the existing command, filter, corpus path, <code>Suite:</code>, <code>Intent:</code>, and assertions; never drop probe declarations to bypass validation;</p>
+<ul><li>for an <code>empty-selection</code> fault, correct the selector value itself so it selects the existing</li></ul>
+<p>section the criterion&#x27;s <code>Intent:</code> names; never widen it to &quot;select everything&quot;, and emit <code>REPAIR_IMPOSSIBLE</code> if the supplied evidence cannot establish a correct section;</p>
+<ul><li>for a <code>harness-exit</code> fault, change the named call&#x27;s expected exit status to the value the</li></ul>
+<p><code>Error:</code> line says the staged harness expects, and correct any later assertion in the same criterion that held only because that call had the wrong outcome. The staged harness is the user&#x27;s own test and outranks the criterion. Change no input and no command.</p>
+<ul><li>for an <code>unchecked-call</code> fault, bind each named <code>cli_runner</code> call as</li></ul>
+<p><code>code, out, err = cli_runner(...)</code> and add <code>assert code == 0</code> directly after it — a setup call must succeed before the criterion relies on it. Change no argument and no other assert;</p>
+<ul><li>for a <code>staged-value</code> fault, create the state the criterion depends on inside the criterion,</li></ul>
+<p>under an identifier no staged file holds, with the same commands the other criteria in the Blueprint use to create it, each followed by <code>assert code == 0</code>, and use that identifier in place of the staged one throughout the criterion. Keep every expected exit status and output.</p>
+<ul><li>for a <code>go-run</code> or <code>go-package-launch</code> fault, replace each named <code>go run &lt;package&gt; &lt;args...&gt;</code></li></ul>
+<p>or direct <code>./cmd/&lt;name&gt; &lt;args...&gt;</code> invocation with <code>code, out, err = cli_runner(&lt;args...&gt;)</code> after <code>from drydock_go import cli_runner</code>, passing the same arguments, <code>input=</code> for the same standard input, and <code>package=&quot;&lt;package&gt;&quot;</code> only when the package is not the sole <code>./cmd/&lt;name&gt;</code>. Read the exit status, standard output, and standard error from <code>code</code>, <code>out</code>, and <code>err</code> in place of the subprocess result. The helper returns text; replace byte-stream <code>.decode(...)</code> calls with the returned text. Keep every expected value, including bytes comparisons by encoding the returned text when necessary. <code>./cmd/&lt;name&gt;</code> is the Go source package directory; never chmod it or execute it directly.</p>
+<ul><li>for an <code>acceptance-store</code> fault that launches the application (<code>subprocess</code>, <code>os.system</code>, or a</li></ul>
+<p>launcher such as <code>./&lt;name&gt;</code>), replace each launch with the in-process fixture the selected foundation contract below publishes — <code>cli_runner</code>, imported from the module its <code>fixture_source</code> names, for a command; <code>web_client()</code> for an HTTP request — passing the same command arguments without the executable. Bind <code>code, out, err = cli_runner(...)</code> and read the exit status, standard output, and standard error from them in place of the subprocess result. Keep every store read, expected value, and input. Remove an import the replacement leaves unused.</p>
+<p>Go CLI client contract:</p>
+<pre><code>from drydock_go import cli_runner
+# Signature: cli_runner(*args: str, package: str | None = None,
+#                       input: str | None = None) -&gt; tuple[int, str, str]
+code, out, err = cli_runner()                    # no command arguments
+code, out, err = cli_runner(&quot;--summary&quot;, &quot;.&quot;)   # separate string arguments</code></pre>
+<p>Never pass a list or tuple as one positional argument. For a <code>go-cli-args</code> fault, unpack that sequence with <code>*</code> and preserve every argument and assertion.</p>
+<p>Forbidden:</p>
+<ul><li>changing any <code>assert</code> — its operands, its comparison, or its expected value — except as</li></ul>
+<p>permitted above for a <code>harness-exit</code> fault, or renaming its operands to <code>code</code>, <code>out</code>, and <code>err</code> for a <code>go-run</code>, <code>go-package-launch</code>, or <code>acceptance-store</code> fault;</p>
+<ul><li>changing the input payload, the program under test, or the command invoked, except as</li></ul>
+<p>permitted above for an <code>unchecked-call</code>, <code>staged-value</code>, <code>go-run</code>, <code>go-package-launch</code>, or <code>acceptance-store</code> fault;</p>
+<ul><li>adding <code>try</code>, <code>except</code>, <code>pytest.skip</code>, or any construct that lets the criterion pass without</li></ul>
+<p>testing what it claims to test;</p>
+<ul><li>deleting a criterion, renaming its id, or altering its <code>Intent:</code> line;</li><li>adding a <code>Suite:</code> or <code>Requires:</code> line that was not already there;</li><li>adding, correcting, or removing <code>Probe:</code>/<code>Probe Count:</code> for any fault other than</li></ul>
+<p><code>missing-selection-probe</code>, <code>invalid-selection-probe</code>, <code>empty-selection</code>, or <code>probe-failed</code>;</p>
+<ul><li>touching a criterion that was not named in its own block;</li><li>editing any other part of a specification.</li></ul>
+<p>Preserve the product requirement and assertion intent. Mechanical repair does not decide a new expected outcome, move coverage or change dependencies. If the named defect requires those changes, follow Impossible repair and state the required source-aware authoring action.</p>
+<h2>Impossible repair</h2>
+<p>If a criterion cannot be made runnable without changing what it asserts, do not change it. Emit its block <strong>unmodified</strong> and add one line immediately after the block:</p>
+<pre><code>REPAIR_IMPOSSIBLE: &lt;file&gt; :: &lt;check-id&gt; — &lt;one sentence saying what the criterion would have to change&gt;</code></pre>
+<p>The separator between the id and the reason is always an em dash (<code>—</code>); filenames and check_ids commonly contain hyphens, so no other character can be used to tell them apart.</p>
+<h2>Output</h2>
+<p>For a Bad acceptance container, emit exactly:</p>
+<pre><code>=== BEGIN REPAIRED SPECIFICATION ===
+&lt;the complete original specification with only AC delimiter lines corrected&gt;
+=== END REPAIRED SPECIFICATION ===</code></pre>
+<p>For every defective criterion in the batch, emit one block, and nothing else:</p>
+<p>Use no prose, no summary, and no fenced code around a criterion block. Use the exact delimiters, with the criterion&#x27;s own file and id, copied exactly from its <code>file=</code> and <code>check_id=</code> attributes — this is what tells two criteria that happen to share a check_id in different files apart:</p>
+<pre><code>=== AC &lt;file&gt; :: &lt;check-id&gt; ===
+Intent: &lt;unchanged&gt;
+
+&lt;the repaired Python&gt;
+=== END AC &lt;file&gt; :: &lt;check-id&gt; ===</code></pre>
+<p>Identify the criterion by its file and id; you do not need to know or reproduce its file&#x27;s own internal delimiter format. Include the whole criterion — every line that was inside its block — not a patch or a diff.</p>
+<h2>Acceptance persistence lifecycle</h2>
+<p><strong>Acceptance store lifecycle.</strong> The DATABASE step provisions and verifies the configured store once. Criteria never replace DATABASE_URL/DATABASE_PATH, create a temporary database, apply DDL, or assume an empty store. The store may hold data before any criterion runs: assert on records the criterion created, or on a count read before setup (<code>after == before + 5</code>), never on an absolute table count.</p>
+<p>The acceptance harness owns isolation. It begins one transaction before each Python criterion and rolls it back when the criterion ends, pass or fail. Every database the criterion&#x27;s process opens joins it: <code>db_session()</code>, the application behind <code>web_client()</code>, and commands run through <code>cli_runner()</code>. Setup, behavior and readback therefore see one another&#x27;s writes, and none persists; leaving a <code>with db_session() as db:</code> block rolls nothing back. Seed with <code>with db_session() as db:</code> and pass that database into feature operations. Never commit, clean up, or open a transaction.</p>
+<p>A criterion that launches a process (<code>subprocess</code>, a server on a port, a shell script) cannot see that transaction. It does not open the store and does not depend on rows it wrote; exercise stored behavior in-process instead. Go criteria use <code>OpenSession(ctx, &quot;&quot;)</code> with checked deferred cleanup, which rolls back its own transaction. Go HTTP, CLI and restart criteria use <code>OpenCommittedSession(ctx, &quot;&quot;)</code> with a criterion-owned identifier and checked <code>defer</code> cleanup through supported product interfaces. Database acceptance must not be replaced by a project test count: runtime catalog and row-count evidence proves provisioning, feature criteria prove behavior.</p></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Count.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Count.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Count.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Count</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Implement <code>ledger count</code>, which prints the row count of each table.</td></tr><tr><td>Depends On</td><td>FEATURE-DatabaseSelection.md, FEATURE-CsvOutput.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger count</td></tr><tr><td>Consumes</td><td>ledgerlib.config, ledgerlib.csvout</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger count</code> prints <code>table,rows</code> and then one row each for <code>accounts</code>, <code>categories</code> and <code>transactions</code>, in that order. Each count is taken from the stored rows at run time.</p>
+<h2>Behavior</h2>
+<ul><li><code>cli/commands/count.py</code> exposes <code>run(args) -&gt; list[str]</code>.</li><li>Any argument is a usage error (exit 2).</li><li>A missing table or unreachable database exits 1 with nothing on standard output.</li><li>Counts are <code>len</code> of the declared list operations; none is hardcoded or cached.</li></ul>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC count-rows ===<br>Intent: Count prints the header and the three tables in order with counts equal to the stored rows read back through the persistence interface.</p>
+<p>import csv import io from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>acct = &quot;ZZCNT1&quot; cat = &quot;ZZCNTCAT1&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Count Acct&quot;) db.categories.create(category=cat, description=&quot;Count Cat&quot;) db.transactions.create(txn_id=961001, date=&quot;2026-05-01&quot;, account=acct, category=cat, amount=100, memo=&quot;c&quot;) db.transactions.create(txn_id=961002, date=&quot;2026-05-02&quot;, account=acct, category=cat, amount=200, memo=&quot;c&quot;)</p>
+<p>code, out, err = cli_runner(&quot;count&quot;) print(out) print(err) assert code == 0 assert out.endswith(&quot;\n&quot;) rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;table&quot;, &quot;rows&quot;] assert [r[0] for r in rows[1:]] == [&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;] assert len(rows) == 4 assert int(rows[1][1]) == len(db.accounts.list()) assert int(rows[2][1]) == len(db.categories.list()) assert int(rows[3][1]) == len(db.transactions.list()) === END AC count-rows ===</p>
+<p>=== AC count-tracks-changes ===<br>Intent: Count reflects an added account by exactly one row compared with a count read before the change.</p>
+<p>import csv import io from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>def accounts_count(): code, out, err = cli_runner(&quot;count&quot;) assert code == 0 rows = list(csv.reader(io.StringIO(out))) return int(rows[1][1])</p>
+<p>with db_session() as db: before = accounts_count() db.accounts.create(account=&quot;ZZCNT2&quot;, name=&quot;Count Two&quot;) after = accounts_count() assert after == before + 1 === END AC count-tracks-changes ===</p>
+<p>=== AC count-usage ===<br>Intent: Count with an extra argument is a usage error with exit 2 and empty standard output.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;count&quot;, &quot;extra&quot;) assert code == 2 assert out == &quot;&quot; assert err != &quot;&quot; === END AC count-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>No count is hardcoded; every value is computed from stored rows.</li><li>Standard output holds only the CSV table on success.</li></ul></article>
+</main>
+</body>
+</html>

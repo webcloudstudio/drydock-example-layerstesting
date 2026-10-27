@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-CliEntry.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-CliEntry.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-CliEntry.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: CLI Entry</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>The <code>ledger</code> executable, the <code>cli</code> dispatcher and the exit-code error mapping.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger, cli.main</td></tr><tr><td>Consumes</td><td>python-project, persistence</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Give every command one entry point with one failure contract: output is buffered and written only on success, and any failure produces one line on standard error, nothing on standard output, and a conventional exit code.</p>
+<h2>Interface</h2>
+<ul><li><code>ledger</code> at the application root is an executable POSIX sh launcher. It runs</li></ul>
+<p><code>cli.main(sys.argv[1:])</code> with <code>.venv/bin/python</code> when present, otherwise <code>python3</code>, and exits with the returned value.</p>
+<ul><li><code>cli.main(argv: list[str] | None = None) -&gt; int</code>.</li><li><code>cli/testing.py</code> provides <code>cli_runner(*args) -&gt; (exit_code, stdout, stderr)</code>.</li><li><code>cli/errors.py</code> defines <code>CliError</code> with an <code>exit_code</code> attribute and the subclasses</li></ul>
+<p><code>OperationalError</code> (1), <code>UsageError</code> (2), <code>RejectedError</code> (3) and <code>NotFoundError</code> (4).</p>
+<ul><li><code>cli/commands/</code> is a package. <code>argv[0]</code> names the module <code>cli.commands.&lt;command&gt;</code>, imported</li></ul>
+<p>lazily; each module exposes <code>run(args: list[str]) -&gt; list[str]</code> returning output lines and printing nothing.</p>
+<h2>Behavior</h2>
+<ul><li>With no arguments, or when the command module does not exist, <code>main</code> raises a usage error:</li></ul>
+<p>exit 2, nothing on standard output, one diagnostic line on standard error.</p>
+<ul><li>On success <code>main</code> writes the returned lines to standard output, each ended by <code>\n</code>, and returns 0.</li><li>A <code>CliError</code> raised by a command produces one diagnostic line on standard error, nothing on</li></ul>
+<p>standard output, and the error&#x27;s <code>exit_code</code>.</p>
+<ul><li>Any other exception is an operational failure: exit 1, one diagnostic line, nothing on standard</li></ul>
+<p>output.</p>
+<ul><li>The remaining arguments after the command name are passed to <code>run</code> unchanged.</li><li>No command logic lives in this feature.</li></ul>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is declared by DATABASE.md and reached through ledgerlib by later features.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC cli-no-arguments ===<br>Intent: Calling main with no arguments is a usage error with exit 2 and an empty standard output.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner() print(out) print(err) assert code == 2 assert out == &quot;&quot; === END AC cli-no-arguments ===</p>
+<p>=== AC cli-unknown-command ===<br>Intent: An unknown command exits 2, writes nothing to standard output and one diagnostic line to standard error.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;zzunknowncommand&quot;) print(out) print(err) assert code == 2 assert out == &quot;&quot; assert len(err.strip().splitlines()) == 1 === END AC cli-unknown-command ===</p>
+<p>=== AC cli-error-mapping ===<br>Intent: Each CliError subclass maps to its exit code, with empty standard output and one standard error line.</p>
+<p>import sys import types</p>
+<p>from cli.errors import NotFoundError, OperationalError, RejectedError, UsageError from cli.testing import cli_runner</p>
+<p>expected = {OperationalError: 1, UsageError: 2, RejectedError: 3, NotFoundError: 4} for error_class, status in expected.items(): def run(args, error_class=error_class): raise error_class(&quot;probe failure&quot;)</p>
+<p>module = types.ModuleType(&quot;cli.commands.zzprobe&quot;) module.run = run sys.modules[&quot;cli.commands.zzprobe&quot;] = module code, out, err = cli_runner(&quot;zzprobe&quot;) print(code, repr(out), repr(err)) assert code == status assert error_class(&quot;x&quot;).exit_code == status assert out == &quot;&quot; assert len(err.strip().splitlines()) == 1 sys.modules.pop(&quot;cli.commands.zzprobe&quot;, None) === END AC cli-error-mapping ===</p>
+<p>=== AC cli-unexpected-exception ===<br>Intent: An unexpected exception from a command is an operational failure with exit 1 and empty standard output.</p>
+<p>import sys import types</p>
+<p>from cli.testing import cli_runner</p>
+<p>def run(args): raise RuntimeError(&quot;probe crash&quot;)</p>
+<p>module = types.ModuleType(&quot;cli.commands.zzcrash&quot;) module.run = run sys.modules[&quot;cli.commands.zzcrash&quot;] = module code, out, err = cli_runner(&quot;zzcrash&quot;) sys.modules.pop(&quot;cli.commands.zzcrash&quot;, None) print(code, repr(out), repr(err)) assert code == 1 assert out == &quot;&quot; assert len(err.strip().splitlines()) == 1 === END AC cli-unexpected-exception ===</p>
+<p>=== AC cli-success-output ===<br>Intent: A successful command&#x27;s lines reach standard output one per line with newline endings, and arguments pass through unchanged.</p>
+<p>import sys import types</p>
+<p>from cli.testing import cli_runner</p>
+<p>lines = [&quot;header,value&quot;, &quot;alpha,beta&quot;] passed_args = [&quot;first&quot;, &quot;second&quot;] received = []</p>
+<p>def run(args): received.append(list(args)) return lines</p>
+<p>module = types.ModuleType(&quot;cli.commands.zzok&quot;) module.run = run sys.modules[&quot;cli.commands.zzok&quot;] = module code, out, err = cli_runner(&quot;zzok&quot;, *passed_args) sys.modules.pop(&quot;cli.commands.zzok&quot;, None) print(code, repr(out), repr(err)) assert code == 0 assert out.splitlines() == lines assert out.endswith(&quot;\n&quot;) assert &quot;\r&quot; not in out assert received == [passed_args] === END AC cli-success-output ===</p>
+<p>=== AC cli-executable-launcher ===<br>Intent: The ledger executable exists at the application root and exits 2 for an unknown command without touching a database.</p>
+<p>import os import subprocess</p>
+<p>path = &quot;./ledger&quot; assert os.path.isfile(path) assert os.access(path, os.X_OK) result = subprocess.run([path, &quot;zzunknowncommand&quot;], capture_output=True, text=True) print(result.stdout) print(result.stderr) assert result.returncode == 2 assert result.stdout == &quot;&quot; === END AC cli-executable-launcher ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A failing command writes nothing to standard output.</li><li>Diagnostics go to standard error and are never compared.</li><li>This feature contains no command logic and opens no database driver.</li></ul></article>
+</main>
+</body>
+</html>

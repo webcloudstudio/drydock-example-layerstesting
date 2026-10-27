@@ -1,0 +1,38 @@
+<requirement name="transaction-csv-rows" stories="load-transactions,database,validation,ledger-rules">
+txn_id,date,account,category,amount,memo
+3,2026-01-02,DRAWER1,SALES,155.26,sales day 1
+</requirement>
+<requirement name="opening-balances" stories="load-transactions,ledger-rules">
+1,2026-01-01,SAFE,OPENING,5000.00,opening float
+2,2026-01-01,PETTY,OPENING,200.00,opening float
+</requirement>
+<requirement name="signed-amount-outflows" stories="load-transactions,validation,ledger-rules">
+23,2026-01-12,DRAWER1,REFUND,-12.50,refund
+</requirement>
+<requirement name="transfer-row-pairs" stories="transfer,load-transactions,ledger-rules">
+27,2026-01-14,DRAWER1,TRANSFER,-1000.00,transfer to SAFE
+28,2026-01-14,SAFE,TRANSFER,1000.00,transfer from DRAWER1
+</requirement>
+<unattached story="foundation"/>
+<unattached story="cli-entry"/>
+<unattached story="test-runner"/>
+<unattached story="setup-config"/>
+<unattached story="csv-output"/>
+<unattached story="setup-count"/>
+<unattached story="setup-init"/>
+<unattached story="load-accounts"/>
+<unattached story="load-categories"/>
+<unattached story="acct-add"/>
+<unattached story="acct-get"/>
+<unattached story="txn-post"/>
+<unattached story="acct-rename"/>
+<unattached story="txn-get"/>
+<unattached story="acct-delete"/>
+<unattached story="txn-amend"/>
+<unattached story="txn-delete"/>
+<unattached story="rpt-balances"/>
+<unattached story="rpt-categories"/>
+<unattached story="rpt-monthly"/>
+<unattached story="cli-usage"/>
+<unattached story="cli-operational"/>
+<unattached story="verify"/>

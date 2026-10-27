@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261027.015654.643Z_layerstesting_plan-repair_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261027.015654.643Z_layerstesting_plan-repair_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261027.015654.643Z_layerstesting_plan-repair_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== AC FEATURE-OperationalFailures.md :: operational-postgres-refused ===
+Intent: A PostgreSQL DSN is refused with exit 1, nothing on standard output, for a read and a load command.
+
+import os
+
+from cli.testing import cli_runner
+
+dsn = &quot;postgresql://nobody@localhost/none&quot;
+saved = os.environ.get(&quot;DATABASE_URL&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = dsn
+try:
+    code, out, err = cli_runner(&quot;count&quot;)
+    print(out)
+    print(err)
+    assert code == 1
+    assert out == &quot;&quot;
+    code2, out2, err2 = cli_runner(&quot;report&quot;, &quot;balances&quot;)
+    print(out2)
+    print(err2)
+    assert code2 == 1
+    assert out2 == &quot;&quot;
+finally:
+    if saved is None:
+        os.environ.pop(&quot;DATABASE_URL&quot;, None)
+    else:
+        os.environ[&quot;DATABASE_URL&quot;] = saved
+=== END AC FEATURE-OperationalFailures.md :: operational-postgres-refused ===
+REPAIR_IMPOSSIBLE: FEATURE-OperationalFailures.md :: operational-postgres-refused — The criterion&#x27;s purpose is to point DATABASE_URL at an unusable PostgreSQL store, which the acceptance store lifecycle forbids, so it would need to be re-authored to test the refusal without replacing the configured database.
+
+=== AC FEATURE-OperationalFailures.md :: operational-unreachable-database ===
+Intent: A database location whose parent directory is missing exits 1 with empty standard output and creates nothing.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+saved = os.environ.get(&quot;DATABASE_URL&quot;)
+with tempfile.TemporaryDirectory() as root:
+    target = os.path.join(root, &quot;missing_dir&quot;, &quot;ledger.db&quot;)
+    os.environ[&quot;DATABASE_URL&quot;] = target
+    try:
+        code, out, err = cli_runner(&quot;count&quot;)
+        print(out)
+        print(err)
+        assert code == 1
+        assert out == &quot;&quot;
+        code2, out2, err2 = cli_runner(&quot;report&quot;, &quot;balances&quot;)
+        print(out2)
+        print(err2)
+        assert code2 == 1
+        assert out2 == &quot;&quot;
+        assert not os.path.exists(target)
+        assert not os.path.exists(os.path.dirname(target))
+    finally:
+        if saved is None:
+            os.environ.pop(&quot;DATABASE_URL&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_URL&quot;] = saved
+=== END AC FEATURE-OperationalFailures.md :: operational-unreachable-database ===
+REPAIR_IMPOSSIBLE: FEATURE-OperationalFailures.md :: operational-unreachable-database — The criterion&#x27;s purpose is to point DATABASE_URL at a path with a missing parent directory, which the acceptance store lifecycle forbids, so it would need to be re-authored to test this failure without replacing the configured database.
+
+=== AC FEATURE-OperationalFailures.md :: operational-invalid-database-file ===
+Intent: An existing file that is not a database makes every database command exit 1 with empty standard output and leaves the file unchanged.
+
+import os
+import tempfile
+
+from cli.testing import cli_runner
+
+junk = b&quot;this is not a database file, only plain text\n&quot; * 20
+saved = os.environ.get(&quot;DATABASE_URL&quot;)
+with tempfile.TemporaryDirectory() as root:
+    target = os.path.join(root, &quot;junk.db&quot;)
+    with open(target, &quot;wb&quot;) as fh:
+        fh.write(junk)
+    csv_path = os.path.join(root, &quot;accounts.csv&quot;)
+    with open(csv_path, &quot;w&quot;, newline=&quot;&quot;) as fh:
+        fh.write(&quot;account,name\nJUNK1,Junk One\n&quot;)
+    os.environ[&quot;DATABASE_URL&quot;] = target
+    try:
+        for args in ((&quot;count&quot;,), (&quot;report&quot;, &quot;balances&quot;), (&quot;load&quot;, &quot;accounts&quot;, csv_path)):
+            code, out, err = cli_runner(*args)
+            print(out)
+            print(err)
+            assert code == 1
+            assert out == &quot;&quot;
+    finally:
+        if saved is None:
+            os.environ.pop(&quot;DATABASE_URL&quot;, None)
+        else:
+            os.environ[&quot;DATABASE_URL&quot;] = saved
+    with open(target, &quot;rb&quot;) as fh:
+        assert fh.read() == junk
+=== END AC FEATURE-OperationalFailures.md :: operational-invalid-database-file ===
+REPAIR_IMPOSSIBLE: FEATURE-OperationalFailures.md :: operational-invalid-database-file — The criterion&#x27;s purpose is to point DATABASE_URL at a non-database file, which the acceptance store lifecycle forbids, so it would need to be re-authored to test this failure without replacing the configured database.
+
+=== AC FEATURE-OperationalFailures.md :: operational-usage-before-database ===
+Intent: A wrong argument count is a usage error with exit 2 even when the database is unusable, so usage is checked before database access.
+
+import os
+
+from cli.testing import cli_runner
+
+saved = os.environ.get(&quot;DATABASE_URL&quot;)
+os.environ[&quot;DATABASE_URL&quot;] = &quot;postgresql://nobody@localhost/none&quot;
+try:
+    code, out, err = cli_runner(&quot;count&quot;, &quot;extra&quot;)
+    print(out)
+    print(err)
+    assert code == 2
+    assert out == &quot;&quot;
+finally:
+    if saved is None:
+        os.environ.pop(&quot;DATABASE_URL&quot;, None)
+    else:
+        os.environ[&quot;DATABASE_URL&quot;] = saved
+=== END AC FEATURE-OperationalFailures.md :: operational-usage-before-database ===
+REPAIR_IMPOSSIBLE: FEATURE-OperationalFailures.md :: operational-usage-before-database — The criterion&#x27;s purpose is to make the configured database unusable by overriding DATABASE_URL, which the acceptance store lifecycle forbids, so it would need to be re-authored to prove usage is checked before database access without replacing the configured database.</pre></article>
+</main>
+</body>
+</html>

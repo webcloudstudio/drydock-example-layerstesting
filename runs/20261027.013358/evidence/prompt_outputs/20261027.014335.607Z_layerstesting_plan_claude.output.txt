@@ -1,0 +1,1127 @@
+=== BEGIN ARTIFACT FEATURE-LoadCategories.md ===
+# FEATURE: Load Categories
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger load categories <csv>` as an all-or-nothing bulk load of categories. |
+| Depends On | FEATURE-LoadAccounts.md, FEATURE-Validation.md, DATABASE.md |
+| Provides | ledger load categories |
+| Consumes | ledger load accounts, ledgerlib.validation |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Load category records from a CSV file into the ledger. The whole file is accepted or none of it is stored.
+
+## Interface
+
+`ledger load categories <csv>` adds the `categories` handler to the per-table registry in `cli/commands/load.py` created by the accounts load story.
+
+Output on success, as CSV with `\n` endings:
+
+```text
+table,loaded
+categories,<rows>
+```
+
+## Behavior
+
+1. The file must be readable. An unreadable or missing file is an operational failure (exit 1, nothing on stdout).
+2. The header row must be exactly `category,description`. Any other header is rejected (exit 3).
+3. Every data row has the same field count as the header, else the file is rejected (exit 3).
+4. Each `category` is a code of 1 to 12 characters from `A-Z` and `0-9`. Each `description` is 1 to 40 characters with no comma or newline.
+5. A code repeated within the file, or already stored, is rejected (exit 3).
+6. Every check completes before the first write. Writes happen in one database transaction, so a rejected file stores nothing.
+7. A file with a valid header and no data rows loads zero rows, prints `categories,0` and exits 0.
+8. A missing path argument is a usage error (exit 2).
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC load-categories-success ===
+Intent: A valid categories file loads in full, reports the row count, and every row reads back through the public store interface.
+
+import csv
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def write_csv(directory, name, rows):
+    path = os.path.join(directory, name)
+    with open(path, "w", newline="") as fh:
+        csv.writer(fh, lineterminator="\n").writerows(rows)
+    return path
+
+data = [["ZZLC1", "Load Cat One"], ["ZZLC2", "Load Cat Two"], ["ZZLC3", "Load Cat Three"]]
+with db_session() as db:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = write_csv(tmp, "cats.csv", [["category", "description"]] + data)
+        code, out, err = cli_runner("load", "categories", path)
+    print(out, err)
+    assert code == 0
+    parsed = list(csv.reader(out.splitlines()))
+    assert parsed == [["table", "loaded"], ["categories", str(len(data))]]
+    for cat, desc in data:
+        row = db.categories.get(category=cat)
+        assert row is not None
+        assert row.description == desc
+=== END AC load-categories-success ===
+
+=== AC load-categories-header-only ===
+Intent: A file with a valid header and no data rows loads zero rows and exits zero.
+
+import csv
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+with db_session() as db:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "empty.csv")
+        with open(path, "w", newline="") as fh:
+            csv.writer(fh, lineterminator="\n").writerow(["category", "description"])
+        code, out, err = cli_runner("load", "categories", path)
+    print(out, err)
+    assert code == 0
+    parsed = list(csv.reader(out.splitlines()))
+    assert parsed == [["table", "loaded"], ["categories", "0"]]
+=== END AC load-categories-header-only ===
+
+=== AC load-categories-atomic-rejection ===
+Intent: A file whose last row has an invalid code is rejected with exit 3 and none of its valid earlier rows are stored.
+
+import csv
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+good = [["ZZLA1", "Atomic One"], ["ZZLA2", "Atomic Two"]]
+bad = ["zzbad", "Atomic Bad"]
+with db_session() as db:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "atomic.csv")
+        with open(path, "w", newline="") as fh:
+            w = csv.writer(fh, lineterminator="\n")
+            w.writerow(["category", "description"])
+            w.writerows(good)
+            w.writerow(bad)
+        code, out, err = cli_runner("load", "categories", path)
+    print(out, err)
+    assert code == 3
+    assert out == ""
+    for cat, _ in good:
+        assert db.categories.get(category=cat) is None
+=== END AC load-categories-atomic-rejection ===
+
+=== AC load-categories-bad-header ===
+Intent: A file whose header differs from the table columns is rejected with exit 3 and stores nothing.
+
+import csv
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+cat = "ZZLH1"
+with db_session() as db:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "hdr.csv")
+        with open(path, "w", newline="") as fh:
+            w = csv.writer(fh, lineterminator="\n")
+            w.writerow(["category", "desc"])
+            w.writerow([cat, "Header Test"])
+        code, out, err = cli_runner("load", "categories", path)
+    print(out, err)
+    assert code == 3
+    assert out == ""
+    assert db.categories.get(category=cat) is None
+=== END AC load-categories-bad-header ===
+
+=== AC load-categories-field-count ===
+Intent: A data row whose field count differs from the header is rejected with exit 3 and the whole file is not stored.
+
+import csv
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+first = "ZZLF1"
+with db_session() as db:
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "count.csv")
+        with open(path, "w", newline="") as fh:
+            w = csv.writer(fh, lineterminator="\n")
+            w.writerow(["category", "description"])
+            w.writerow([first, "Count One"])
+            w.writerow(["ZZLF2"])
+        code, out, err = cli_runner("load", "categories", path)
+    print(out, err)
+    assert code == 3
+    assert out == ""
+    assert db.categories.get(category=first) is None
+=== END AC load-categories-field-count ===
+
+=== AC load-categories-duplicates ===
+Intent: A code repeated within the file, and a code already stored, are each rejected with exit 3 without changing stored data.
+
+import csv
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+dup = "ZZLD1"
+stored = "ZZLD2"
+stored_desc = "Stored Desc"
+with db_session() as db:
+    db.categories.create(category=stored, description=stored_desc)
+    with tempfile.TemporaryDirectory() as tmp:
+        p1 = os.path.join(tmp, "dup_in_file.csv")
+        with open(p1, "w", newline="") as fh:
+            w = csv.writer(fh, lineterminator="\n")
+            w.writerow(["category", "description"])
+            w.writerow([dup, "First"])
+            w.writerow([dup, "Second"])
+        code1, out1, err1 = cli_runner("load", "categories", p1)
+        p2 = os.path.join(tmp, "dup_stored.csv")
+        with open(p2, "w", newline="") as fh:
+            w = csv.writer(fh, lineterminator="\n")
+            w.writerow(["category", "description"])
+            w.writerow(["ZZLD3", "New One"])
+            w.writerow([stored, "Replacement"])
+        code2, out2, err2 = cli_runner("load", "categories", p2)
+    print(out1, err1, out2, err2)
+    assert code1 == 3
+    assert code2 == 3
+    assert out1 == "" and out2 == ""
+    assert db.categories.get(category=dup) is None
+    assert db.categories.get(category="ZZLD3") is None
+    kept = db.categories.get(category=stored)
+    assert kept is not None
+    assert kept.description == stored_desc
+=== END AC load-categories-duplicates ===
+
+=== AC load-categories-invalid-fields ===
+Intent: An over-long code, an empty description and a description containing a comma (quoted in the file) are each rejected with exit 3 and store nothing.
+
+import csv
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+cases = [
+    ["ZZ" + "A" * 11, "Too Long Code"],
+    ["ZZLV1", ""],
+    ["ZZLV2", "x" * 41],
+    ["ZZLV3", "has, comma"],
+]
+with db_session() as db:
+    with tempfile.TemporaryDirectory() as tmp:
+        for i, row in enumerate(cases):
+            path = os.path.join(tmp, f"bad{i}.csv")
+            with open(path, "w", newline="") as fh:
+                w = csv.writer(fh, lineterminator="\n")
+                w.writerow(["category", "description"])
+                w.writerow(row)
+            code, out, err = cli_runner("load", "categories", path)
+            print(row, code, out, err)
+            assert code == 3
+            assert out == ""
+            assert db.categories.get(category=row[0]) is None
+=== END AC load-categories-invalid-fields ===
+
+=== AC load-categories-unreadable-file ===
+Intent: A path that cannot be read is an operational failure with exit 1 and nothing on standard output.
+
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+with db_session() as db:
+    with tempfile.TemporaryDirectory() as tmp:
+        missing = os.path.join(tmp, "no_such_file.csv")
+        code, out, err = cli_runner("load", "categories", missing)
+    print(out, err)
+    assert code == 1
+    assert out == ""
+=== END AC load-categories-unreadable-file ===
+
+=== AC load-categories-usage ===
+Intent: A categories load with no file argument is a usage error with exit 2 and nothing on standard output.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+with db_session() as db:
+    code, out, err = cli_runner("load", "categories")
+    print(out, err)
+    assert code == 2
+    assert out == ""
+=== END AC load-categories-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A rejected load stores none of the file's rows.
+- Application code does not read `sources/seed_categories.csv`; seed files reach the database only through `ledger load`.
+- Only the generated persistence package touches the database; no driver import in load code.
+- Diagnostics go to standard error and never to standard output.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-LoadTransactions.md ===
+# FEATURE: Load Transactions
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger load transactions <csv>` with whole-file validation and whole-file balance checking. |
+| Depends On | FEATURE-LoadCategories.md, FEATURE-LedgerRules.md, FEATURE-Validation.md, DATABASE.md |
+| Provides | ledger load transactions |
+| Consumes | ledger load categories, ledgerlib.rules, ledgerlib.validation |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Bulk load transactions, keeping each file's `txn_id`, so that either every row is stored or none is.
+
+## Interface
+
+`ledger load transactions <csv>` adds the `transactions` handler to `cli/commands/load.py`.
+
+Output on success:
+
+```text
+table,loaded
+transactions,<rows>
+```
+
+## Behavior
+
+1. An unreadable file is exit 1 with nothing on stdout.
+2. The header must be exactly `txn_id,date,account,category,amount,memo`, else exit 3.
+3. Each row has the header's field count, else exit 3.
+4. `txn_id` is a string of decimal digits; each row keeps its file `txn_id`. A `txn_id` repeated in the file or already stored is rejected (exit 3).
+5. `date` is a real calendar date `YYYY-MM-DD`. `amount` matches `-?DIGITS[.D[D]]`, at most two decimals, never zero, and is converted to integer cents with integer arithmetic. `memo` is 0 to 60 characters with no comma or newline.
+6. `account` must be stored and `category` must be stored, else exit 3.
+7. The balance rule is evaluated on each affected account's final balance after the whole file is applied on top of the stored transactions, not row by row. Any final balance below zero rejects the whole file (exit 3).
+8. Every check precedes the first write; writes happen in one database transaction. A rejected file changes nothing.
+9. A header-only file loads zero rows and prints `transactions,0`.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC load-txn-success ===
+Intent: A valid file loads every row keeping its file txn_id, reports the count, and each row reads back with cents derived from the input text.
+
+import csv
+import os
+import tempfile
+from decimal import Decimal
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = "ZZLTA1"
+cat = "ZZLTC1"
+rows = [
+    ["880001", "2026-04-01", acct, cat, "100.00", "first"],
+    ["880002", "2026-04-02", acct, cat, "-30.25", "second"],
+]
+with db_session() as db:
+    db.accounts.create(account=acct, name="Load Txn A")
+    db.categories.create(category=cat, description="Load Txn Cat")
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "t.csv")
+        with open(path, "w", newline="") as fh:
+            w = csv.writer(fh, lineterminator="\n")
+            w.writerow(["txn_id", "date", "account", "category", "amount", "memo"])
+            w.writerows(rows)
+        code, out, err = cli_runner("load", "transactions", path)
+    print(out, err)
+    assert code == 0
+    parsed = list(csv.reader(out.splitlines()))
+    assert parsed == [["table", "loaded"], ["transactions", str(len(rows))]]
+    for tid, date, a, c, amount, memo in rows:
+        row = db.transactions.get(txn_id=int(tid))
+        assert row is not None
+        assert row.date == date
+        assert row.account == a
+        assert row.category == c
+        assert row.amount == int(Decimal(amount) * 100)
+        assert row.memo == memo
+=== END AC load-txn-success ===
+
+=== AC load-txn-final-balance-rule ===
+Intent: The balance rule uses each account's balance after the whole file, so a withdrawal listed before the deposit that covers it is accepted.
+
+import csv
+import os
+import tempfile
+from decimal import Decimal
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = "ZZLTA2"
+cat = "ZZLTC2"
+rows = [
+    ["880011", "2026-04-01", acct, cat, "-50.00", "out first"],
+    ["880012", "2026-04-01", acct, cat, "100.00", "in second"],
+]
+with db_session() as db:
+    db.accounts.create(account=acct, name="Load Txn B")
+    db.categories.create(category=cat, description="Load Txn Cat2")
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "t.csv")
+        with open(path, "w", newline="") as fh:
+            w = csv.writer(fh, lineterminator="\n")
+            w.writerow(["txn_id", "date", "account", "category", "amount", "memo"])
+            w.writerows(rows)
+        code, out, err = cli_runner("load", "transactions", path)
+    print(out, err)
+    assert code == 0
+    stored = db.transactions.list(account=acct)
+    assert sum(r.amount for r in stored) == sum(int(Decimal(r[4]) * 100) for r in rows)
+=== END AC load-txn-final-balance-rule ===
+
+=== AC load-txn-negative-final-balance ===
+Intent: A file that leaves an account below zero is rejected with exit 3 and none of its rows, including valid ones, are stored.
+
+import csv
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = "ZZLTA3"
+cat = "ZZLTC3"
+rows = [
+    ["880021", "2026-04-01", acct, cat, "10.00", "in"],
+    ["880022", "2026-04-02", acct, cat, "-20.00", "out"],
+]
+with db_session() as db:
+    db.accounts.create(account=acct, name="Load Txn C")
+    db.categories.create(category=cat, description="Load Txn Cat3")
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "t.csv")
+        with open(path, "w", newline="") as fh:
+            w = csv.writer(fh, lineterminator="\n")
+            w.writerow(["txn_id", "date", "account", "category", "amount", "memo"])
+            w.writerows(rows)
+        code, out, err = cli_runner("load", "transactions", path)
+    print(out, err)
+    assert code == 3
+    assert out == ""
+    for r in rows:
+        assert db.transactions.get(txn_id=int(r[0])) is None
+=== END AC load-txn-negative-final-balance ===
+
+=== AC load-txn-stored-balance-counts ===
+Intent: The balance check includes already stored transactions, so a withdrawal exceeding the stored balance is rejected with exit 3 and the stored data is unchanged.
+
+import csv
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = "ZZLTA4"
+cat = "ZZLTC4"
+stored_id = 880031
+new_id = 880032
+with db_session() as db:
+    db.accounts.create(account=acct, name="Load Txn D")
+    db.categories.create(category=cat, description="Load Txn Cat4")
+    db.transactions.create(
+        txn_id=stored_id, date="2026-04-01", account=acct, category=cat, amount=5000, memo="stored"
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        path = os.path.join(tmp, "t.csv")
+        with open(path, "w", newline="") as fh:
+            w = csv.writer(fh, lineterminator="\n")
+            w.writerow(["txn_id", "date", "account", "category", "amount", "memo"])
+            w.writerow([str(new_id), "2026-04-02", acct, cat, "-60.00", "too much"])
+        code, out, err = cli_runner("load", "transactions", path)
+    print(out, err)
+    assert code == 3
+    assert db.transactions.get(txn_id=new_id) is None
+    assert len(db.transactions.list(account=acct)) == 1
+=== END AC load-txn-stored-balance-counts ===
+
+=== AC load-txn-unknown-references ===
+Intent: A row naming an unknown account or an unknown category rejects the whole file with exit 3 and stores nothing.
+
+import csv
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = "ZZLTA5"
+cat = "ZZLTC5"
+good_id = 880041
+with db_session() as db:
+    db.accounts.create(account=acct, name="Load Txn E")
+    db.categories.create(category=cat, description="Load Txn Cat5")
+    variants = [
+        ["880042", "2026-04-02", "ZZNOACCT", cat, "5.00", "unknown account"],
+        ["880043", "2026-04-02", acct, "ZZNOCAT", "5.00", "unknown category"],
+    ]
+    with tempfile.TemporaryDirectory() as tmp:
+        for i, bad in enumerate(variants):
+            path = os.path.join(tmp, f"u{i}.csv")
+            with open(path, "w", newline="") as fh:
+                w = csv.writer(fh, lineterminator="\n")
+                w.writerow(["txn_id", "date", "account", "category", "amount", "memo"])
+                w.writerow([str(good_id), "2026-04-01", acct, cat, "5.00", "valid"])
+                w.writerow(bad)
+            code, out, err = cli_runner("load", "transactions", path)
+            print(code, out, err)
+            assert code == 3
+            assert out == ""
+            assert db.transactions.get(txn_id=good_id) is None
+            assert db.transactions.get(txn_id=int(bad[0])) is None
+=== END AC load-txn-unknown-references ===
+
+=== AC load-txn-duplicate-ids ===
+Intent: A txn_id repeated in the file, or already stored, is rejected with exit 3 and the stored row is unchanged.
+
+import csv
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = "ZZLTA6"
+cat = "ZZLTC6"
+stored_id = 880051
+with db_session() as db:
+    db.accounts.create(account=acct, name="Load Txn F")
+    db.categories.create(category=cat, description="Load Txn Cat6")
+    db.transactions.create(
+        txn_id=stored_id, date="2026-04-01", account=acct, category=cat, amount=1000, memo="stored"
+    )
+    with tempfile.TemporaryDirectory() as tmp:
+        p1 = os.path.join(tmp, "a.csv")
+        with open(p1, "w", newline="") as fh:
+            w = csv.writer(fh, lineterminator="\n")
+            w.writerow(["txn_id", "date", "account", "category", "amount", "memo"])
+            w.writerow(["880052", "2026-04-02", acct, cat, "1.00", "one"])
+            w.writerow(["880052", "2026-04-02", acct, cat, "2.00", "two"])
+        code1, out1, err1 = cli_runner("load", "transactions", p1)
+        p2 = os.path.join(tmp, "b.csv")
+        with open(p2, "w", newline="") as fh:
+            w = csv.writer(fh, lineterminator="\n")
+            w.writerow(["txn_id", "date", "account", "category", "amount", "memo"])
+            w.writerow([str(stored_id), "2026-04-03", acct, cat, "9.00", "clash"])
+        code2, out2, err2 = cli_runner("load", "transactions", p2)
+    print(out1, err1, out2, err2)
+    assert code1 == 3
+    assert code2 == 3
+    assert db.transactions.get(txn_id=880052) is None
+    kept = db.transactions.get(txn_id=stored_id)
+    assert kept is not None
+    assert kept.amount == 1000
+    assert kept.memo == "stored"
+=== END AC load-txn-duplicate-ids ===
+
+=== AC load-txn-invalid-fields ===
+Intent: An impossible date, a three-decimal amount, a zero amount, and a non-numeric id are each rejected with exit 3 and store nothing.
+
+import csv
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = "ZZLTA7"
+cat = "ZZLTC7"
+header = ["txn_id", "date", "account", "category", "amount", "memo"]
+cases = [
+    ["880061", "2026-02-30", acct, cat, "1.00", "bad date"],
+    ["880062", "2026-04-01", acct, cat, "1.234", "bad amount"],
+    ["880063", "2026-04-01", acct, cat, "0.00", "zero amount"],
+    ["abc", "2026-04-01", acct, cat, "1.00", "bad id"],
+]
+with db_session() as db:
+    db.accounts.create(account=acct, name="Load Txn G")
+    db.categories.create(category=cat, description="Load Txn Cat7")
+    with tempfile.TemporaryDirectory() as tmp:
+        for i, row in enumerate(cases):
+            path = os.path.join(tmp, f"c{i}.csv")
+            with open(path, "w", newline="") as fh:
+                w = csv.writer(fh, lineterminator="\n")
+                w.writerow(header)
+                w.writerow(row)
+            code, out, err = cli_runner("load", "transactions", path)
+            print(row, code, out, err)
+            assert code == 3
+            assert out == ""
+    assert db.transactions.list(account=acct) == []
+=== END AC load-txn-invalid-fields ===
+
+=== AC load-txn-header-and-field-count ===
+Intent: A wrong header and a short data row are each rejected with exit 3 and store nothing; a header-only file loads zero rows.
+
+import csv
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = "ZZLTA8"
+cat = "ZZLTC8"
+header = ["txn_id", "date", "account", "category", "amount", "memo"]
+with db_session() as db:
+    db.accounts.create(account=acct, name="Load Txn H")
+    db.categories.create(category=cat, description="Load Txn Cat8")
+    with tempfile.TemporaryDirectory() as tmp:
+        p1 = os.path.join(tmp, "h.csv")
+        with open(p1, "w", newline="") as fh:
+            w = csv.writer(fh, lineterminator="\n")
+            w.writerow(["id", "date", "account", "category", "amount", "memo"])
+            w.writerow(["880071", "2026-04-01", acct, cat, "1.00", "x"])
+        code1, out1, err1 = cli_runner("load", "transactions", p1)
+        p2 = os.path.join(tmp, "s.csv")
+        with open(p2, "w", newline="") as fh:
+            w = csv.writer(fh, lineterminator="\n")
+            w.writerow(header)
+            w.writerow(["880072", "2026-04-01", acct, cat, "1.00", "x"])
+            w.writerow(["880073", "2026-04-01", acct])
+        code2, out2, err2 = cli_runner("load", "transactions", p2)
+        p3 = os.path.join(tmp, "e.csv")
+        with open(p3, "w", newline="") as fh:
+            csv.writer(fh, lineterminator="\n").writerow(header)
+        code3, out3, err3 = cli_runner("load", "transactions", p3)
+    print(out1, err1, out2, err2, out3, err3)
+    assert code1 == 3
+    assert code2 == 3
+    assert code3 == 0
+    assert list(csv.reader(out3.splitlines())) == [["table", "loaded"], ["transactions", "0"]]
+    assert db.transactions.list(account=acct) == []
+=== END AC load-txn-header-and-field-count ===
+
+=== AC load-txn-unreadable-file ===
+Intent: An unreadable path is an operational failure with exit 1 and nothing on standard output.
+
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+with db_session() as db:
+    with tempfile.TemporaryDirectory() as tmp:
+        code, out, err = cli_runner("load", "transactions", os.path.join(tmp, "missing.csv"))
+    print(out, err)
+    assert code == 1
+    assert out == ""
+=== END AC load-txn-unreadable-file ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A rejected load stores none of the file's rows and changes no stored row.
+- The balance rule is evaluated once per account on the final balance after the whole file.
+- Amounts are integer cents; no floating point at any layer.
+- Application code never reads `sources/seed_transactions.csv` or `sources/run.sh`.
+- Diagnostics go to standard error only.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-AccountAdd.md ===
+# FEATURE: Account Add
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger account add <code> <name>` creating a new account with a zero balance. |
+| Depends On | FEATURE-LedgerRules.md, FEATURE-Validation.md, FEATURE-CsvOutput.md, FEATURE-LoadCategories.md, DATABASE.md |
+| Provides | ledger account add |
+| Consumes | ledgerlib.rules, ledgerlib.validation, ledgerlib.csvout |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Add one account. This story creates `cli/commands/account.py` with the verb table that later account verbs extend.
+
+## Interface
+
+`ledger account add <code> <name>`. Output:
+
+```text
+account,name,transactions,balance
+<code>,<name>,0,0.00
+```
+
+## Behavior
+
+1. `account` with an unknown verb, or `add` with other than exactly two arguments, is a usage error (exit 2).
+2. `code` is 1 to 12 characters from `A-Z` and `0-9`; `name` is 1 to 40 characters with no comma or newline. Violations exit 3.
+3. A code already stored is rejected (exit 3) and the stored account is unchanged.
+4. All checks precede the write. The printed row is read back from storage.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC acct-add-success ===
+Intent: Adding an account prints the new row with zero transactions and balance 0.00, and the account reads back from the store.
+
+import csv
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+code_arg = "ZZAA1"
+name = "Add Account One"
+with db_session() as db:
+    code, out, err = cli_runner("account", "add", code_arg, name)
+    print(out, err)
+    assert code == 0
+    parsed = list(csv.reader(out.splitlines()))
+    assert parsed[0] == ["account", "name", "transactions", "balance"]
+    assert parsed[1] == [code_arg, name, "0", "0.00"]
+    assert len(parsed) == 2
+    row = db.accounts.get(account=code_arg)
+    assert row is not None
+    assert row.name == name
+=== END AC acct-add-success ===
+
+=== AC acct-add-duplicate ===
+Intent: Adding a code that already exists exits 3 and leaves the stored name unchanged.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+code_arg = "ZZAA2"
+original = "Original Name"
+with db_session() as db:
+    db.accounts.create(account=code_arg, name=original)
+    code, out, err = cli_runner("account", "add", code_arg, "Other Name")
+    print(out, err)
+    assert code == 3
+    assert out == ""
+    row = db.accounts.get(account=code_arg)
+    assert row is not None
+    assert row.name == original
+=== END AC acct-add-duplicate ===
+
+=== AC acct-add-invalid-code ===
+Intent: Codes that are lowercase, too long, contain a symbol, or are empty are rejected with exit 3 and nothing is stored.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+bad_codes = ["zzlower", "Z" * 13, "ZZ-BAD", ""]
+with db_session() as db:
+    before = [r.account for r in db.accounts.list()]
+    for bad in bad_codes:
+        code, out, err = cli_runner("account", "add", bad, "Valid Name")
+        print(repr(bad), code, out, err)
+        assert code == 3
+        assert out == ""
+    after = [r.account for r in db.accounts.list()]
+    assert after == before
+=== END AC acct-add-invalid-code ===
+
+=== AC acct-add-invalid-name ===
+Intent: Names that are empty, longer than 40 characters, or contain a comma or newline are rejected with exit 3 and the account is not created.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+code_arg = "ZZAA3"
+bad_names = ["", "n" * 41, "has, comma", "has\nnewline"]
+with db_session() as db:
+    for bad in bad_names:
+        code, out, err = cli_runner("account", "add", code_arg, bad)
+        print(repr(bad), code, out, err)
+        assert code == 3
+        assert out == ""
+        assert db.accounts.get(account=code_arg) is None
+=== END AC acct-add-invalid-name ===
+
+=== AC acct-add-boundaries ===
+Intent: A 12-character code and a 40-character name are the accepted maxima and are stored exactly.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+code_arg = "ZZ" + "B" * 10
+name = "n" * 40
+with db_session() as db:
+    code, out, err = cli_runner("account", "add", code_arg, name)
+    print(out, err)
+    assert code == 0
+    row = db.accounts.get(account=code_arg)
+    assert row is not None
+    assert row.name == name
+=== END AC acct-add-boundaries ===
+
+=== AC acct-add-usage ===
+Intent: Wrong argument counts and an unknown verb are usage errors with exit 2 and create nothing.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+code_arg = "ZZAA4"
+with db_session() as db:
+    attempts = [
+        ("account", "add"),
+        ("account", "add", code_arg),
+        ("account", "add", code_arg, "Name", "extra"),
+        ("account", "frobnicate", code_arg),
+    ]
+    for args in attempts:
+        code, out, err = cli_runner(*args)
+        print(args, code, out, err)
+        assert code == 2
+        assert out == ""
+    assert db.accounts.get(account=code_arg) is None
+=== END AC acct-add-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A rejected add writes nothing.
+- Balance is derived from stored transactions, never stored on the account.
+- Only the generated persistence package touches the database.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-AccountGet.md ===
+# FEATURE: Account Get
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger account get <code>` printing the current account row with computed transaction count and balance. |
+| Depends On | FEATURE-AccountAdd.md, FEATURE-LedgerRules.md, DATABASE.md |
+| Provides | ledger account get |
+| Consumes | ledger account add, ledgerlib.rules |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Show one account with its live transaction count and balance computed from stored transactions.
+
+## Interface
+
+`ledger account get <code>`. Output:
+
+```text
+account,name,transactions,balance
+<code>,<name>,<count>,<balance>
+```
+
+`balance` is the sum of the account's transaction amounts, written with exactly two decimals from integer cents.
+
+## Behavior
+
+1. `get` with other than exactly one argument is a usage error (exit 2).
+2. An absent code is not found (exit 4) with nothing on stdout.
+3. Count and balance are computed at run time from the account's stored transactions only.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC acct-get-empty-account ===
+Intent: An account with no transactions prints count 0 and balance 0.00.
+
+import csv
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+code_arg = "ZZAG1"
+name = "Get Empty"
+with db_session() as db:
+    db.accounts.create(account=code_arg, name=name)
+    code, out, err = cli_runner("account", "get", code_arg)
+    print(out, err)
+    assert code == 0
+    parsed = list(csv.reader(out.splitlines()))
+    assert parsed == [["account", "name", "transactions", "balance"], [code_arg, name, "0", "0.00"]]
+=== END AC acct-get-empty-account ===
+
+=== AC acct-get-with-transactions ===
+Intent: Count and balance reflect only this account's stored transactions, with the balance formatted from the integer cents sum.
+
+import csv
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+mine = "ZZAG2"
+other = "ZZAG3"
+cat = "ZZAGC1"
+name = "Get Busy"
+amounts = [12345, -2000, 500]
+other_amounts = [99999]
+with db_session() as db:
+    db.accounts.create(account=mine, name=name)
+    db.accounts.create(account=other, name="Get Other")
+    db.categories.create(category=cat, description="Get Cat")
+    tid = 870001
+    for amount in amounts:
+        db.transactions.create(txn_id=tid, date="2026-04-01", account=mine, category=cat, amount=amount, memo="m")
+        tid += 1
+    for amount in other_amounts:
+        db.transactions.create(txn_id=tid, date="2026-04-01", account=other, category=cat, amount=amount, memo="o")
+        tid += 1
+    total = sum(amounts)
+    assert total >= 0
+    expected_balance = f"{total // 100}.{total % 100:02d}"
+    code, out, err = cli_runner("account", "get", mine)
+    print(out, err)
+    assert code == 0
+    parsed = list(csv.reader(out.splitlines()))
+    assert parsed[0] == ["account", "name", "transactions", "balance"]
+    assert parsed[1] == [mine, name, str(len(amounts)), expected_balance]
+=== END AC acct-get-with-transactions ===
+
+=== AC acct-get-reflects-changes ===
+Intent: A later get returns current values after another transaction is stored, not a cached earlier result.
+
+import csv
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = "ZZAG4"
+cat = "ZZAGC2"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Get Fresh")
+    db.categories.create(category=cat, description="Get Cat2")
+    db.transactions.create(txn_id=870011, date="2026-04-01", account=acct, category=cat, amount=1000, memo="a")
+    code1, out1, err1 = cli_runner("account", "get", acct)
+    db.transactions.create(txn_id=870012, date="2026-04-02", account=acct, category=cat, amount=250, memo="b")
+    code2, out2, err2 = cli_runner("account", "get", acct)
+    print(out1, err1, out2, err2)
+    assert code1 == 0 and code2 == 0
+    row1 = list(csv.reader(out1.splitlines()))[1]
+    row2 = list(csv.reader(out2.splitlines()))[1]
+    assert row1[2] == "1"
+    assert row2[2] == "2"
+    assert row1[3] != row2[3]
+=== END AC acct-get-reflects-changes ===
+
+=== AC acct-get-not-found ===
+Intent: An absent account code exits 4 with nothing on standard output.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+missing = "ZZNOSUCH1"
+with db_session() as db:
+    assert db.accounts.get(account=missing) is None
+    code, out, err = cli_runner("account", "get", missing)
+    print(out, err)
+    assert code == 4
+    assert out == ""
+=== END AC acct-get-not-found ===
+
+=== AC acct-get-usage ===
+Intent: Missing or extra arguments to account get are usage errors with exit 2.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+with db_session() as db:
+    for args in [("account", "get"), ("account", "get", "ZZAG5", "extra")]:
+        code, out, err = cli_runner(*args)
+        print(args, code, out, err)
+        assert code == 2
+        assert out == ""
+=== END AC acct-get-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Get never writes to the store.
+- Count and balance are computed from stored transactions, never stored or hardcoded.
+- Money is formatted from integer cents; no floating point.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-AccountRename.md ===
+# FEATURE: Account Rename
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger account rename <code> <name>` changing only an account's name. |
+| Depends On | FEATURE-AccountGet.md, FEATURE-Validation.md, DATABASE.md |
+| Provides | ledger account rename |
+| Consumes | ledger account get, ledgerlib.validation |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Rename an existing account and print its updated row.
+
+## Interface
+
+`ledger account rename <code> <name>`. Output is the header `account,name,transactions,balance` and the updated account row read back from storage.
+
+## Behavior
+
+1. `rename` with other than exactly two arguments is a usage error (exit 2).
+2. `name` is 1 to 40 characters with no comma or newline, else exit 3 and the stored name is unchanged.
+3. An absent code is not found (exit 4) and nothing is created.
+4. Only the name changes; the transaction count and balance of the printed row are computed from stored transactions.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC acct-rename-success ===
+Intent: Renaming prints the updated row, keeps the transaction count and balance, and the new name reads back from the store.
+
+import csv
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = "ZZAR1"
+cat = "ZZARC1"
+old_name = "Rename Before"
+new_name = "Rename After"
+amount = 4250
+with db_session() as db:
+    db.accounts.create(account=acct, name=old_name)
+    db.categories.create(category=cat, description="Rename Cat")
+    db.transactions.create(txn_id=860001, date="2026-04-01", account=acct, category=cat, amount=amount, memo="m")
+    expected_balance = f"{amount // 100}.{amount % 100:02d}"
+    code, out, err = cli_runner("account", "rename", acct, new_name)
+    print(out, err)
+    assert code == 0
+    parsed = list(csv.reader(out.splitlines()))
+    assert parsed[0] == ["account", "name", "transactions", "balance"]
+    assert parsed[1] == [acct, new_name, "1", expected_balance]
+    row = db.accounts.get(account=acct)
+    assert row is not None
+    assert row.name == new_name
+    assert db.transactions.get(txn_id=860001).amount == amount
+=== END AC acct-rename-success ===
+
+=== AC acct-rename-not-found ===
+Intent: Renaming an absent account exits 4, prints nothing to standard output, and creates no account.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+missing = "ZZAR2"
+with db_session() as db:
+    assert db.accounts.get(account=missing) is None
+    code, out, err = cli_runner("account", "rename", missing, "Some Name")
+    print(out, err)
+    assert code == 4
+    assert out == ""
+    assert db.accounts.get(account=missing) is None
+=== END AC acct-rename-not-found ===
+
+=== AC acct-rename-invalid-name ===
+Intent: Empty, over-long, comma-containing and newline-containing names are rejected with exit 3 and the stored name is unchanged.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = "ZZAR3"
+original = "Keep This Name"
+bad_names = ["", "n" * 41, "has, comma", "has\nnewline"]
+with db_session() as db:
+    db.accounts.create(account=acct, name=original)
+    for bad in bad_names:
+        code, out, err = cli_runner("account", "rename", acct, bad)
+        print(repr(bad), code, out, err)
+        assert code == 3
+        assert out == ""
+        row = db.accounts.get(account=acct)
+        assert row is not None
+        assert row.name == original
+=== END AC acct-rename-invalid-name ===
+
+=== AC acct-rename-boundary-name ===
+Intent: A 40-character name is the accepted maximum and is stored exactly.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = "ZZAR4"
+new_name = "m" * 40
+with db_session() as db:
+    db.accounts.create(account=acct, name="Short")
+    code, out, err = cli_runner("account", "rename", acct, new_name)
+    print(out, err)
+    assert code == 0
+    row = db.accounts.get(account=acct)
+    assert row is not None
+    assert row.name == new_name
+=== END AC acct-rename-boundary-name ===
+
+=== AC acct-rename-usage ===
+Intent: Wrong argument counts for rename are usage errors with exit 2 and change nothing.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = "ZZAR5"
+original = "Usage Name"
+with db_session() as db:
+    db.accounts.create(account=acct, name=original)
+    for args in [
+        ("account", "rename"),
+        ("account", "rename", acct),
+        ("account", "rename", acct, "New", "extra"),
+    ]:
+        code, out, err = cli_runner(*args)
+        print(args, code, out, err)
+        assert code == 2
+        assert out == ""
+    assert db.accounts.get(account=acct).name == original
+=== END AC acct-rename-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Rename changes only the account name; no transaction row is touched.
+- A rejected rename writes nothing.
+- Only the generated persistence package touches the database.
+=== END ARTIFACT ===

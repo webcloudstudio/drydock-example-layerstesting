@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>inputs/DECISIONS.json</title>
+<link rel="stylesheet" href="../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>inputs/DECISIONS.json</h1><div class="filenav"><a href="../../index.html">&larr; Report</a><a href="../../inputs/DECISIONS.json">Raw file</a></div></header>
+<article class="doc"><pre>[
+  {
+    &quot;id&quot;: &quot;Q-001&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;material&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-Init.md&quot;,
+    &quot;story&quot;: &quot;setup-init&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;How init creates tables&quot;,
+    &quot;description&quot;: &quot;The grader runs init against a brand-new database file, but the schema is otherwise applied only at the DATABASE step. Options: init provisions the declared tables through open_database, or init runs hand-written DDL.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;provision&quot;,
+        &quot;label&quot;: &quot;Provision through open_database (idempotent) then clear rows&quot;
+      },
+      {
+        &quot;value&quot;: &quot;ddl&quot;,
+        &quot;label&quot;: &quot;Run hand-written DDL&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;provision&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-002&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;DATABASE.md&quot;,
+    &quot;story&quot;: &quot;database&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Reports computed in Python from list operations&quot;,
+    &quot;description&quot;: &quot;Declared repository Kinds have no aggregate operation. Reports and balances are computed in Python from list rows in integer cents rather than adding aggregate SQL.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;python&quot;,
+        &quot;label&quot;: &quot;Compute in Python from list operations&quot;
+      },
+      {
+        &quot;value&quot;: &quot;sql&quot;,
+        &quot;label&quot;: &quot;Add aggregate SQL&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;python&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-003&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;DATABASE.md&quot;,
+    &quot;story&quot;: &quot;database&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Clearing tables on init&quot;,
+    &quot;description&quot;: &quot;Clearing all rows is declared as a many-row delete with a comparison Match term, avoiding a new operation Kind.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;comparison-delete&quot;,
+        &quot;label&quot;: &quot;Delete with comparison Match&quot;
+      },
+      {
+        &quot;value&quot;: &quot;per-row&quot;,
+        &quot;label&quot;: &quot;List then delete each row&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;comparison-delete&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-004&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-CliEntry.md&quot;,
+    &quot;story&quot;: &quot;cli-entry&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;Domain package name and stdout buffering&quot;,
+    &quot;description&quot;: &quot;The root file `ledger` prevents a package named ledger, so domain code lives in ledgerlib. Commands return lines and main prints only on success to guarantee empty stdout on failure.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;ledgerlib-buffered&quot;,
+        &quot;label&quot;: &quot;ledgerlib package; commands return lines&quot;
+      },
+      {
+        &quot;value&quot;: &quot;print-direct&quot;,
+        &quot;label&quot;: &quot;Commands print directly&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;ledgerlib-buffered&quot;
+  },
+  {
+    &quot;id&quot;: &quot;Q-005&quot;,
+    &quot;type&quot;: &quot;choice&quot;,
+    &quot;severity&quot;: &quot;low&quot;,
+    &quot;origin&quot;: &quot;plan&quot;,
+    &quot;blueprint&quot;: &quot;FEATURE-DatabaseSelection.md&quot;,
+    &quot;story&quot;: &quot;setup-config&quot;,
+    &quot;status&quot;: &quot;recommended&quot;,
+    &quot;archived&quot;: false,
+    &quot;title&quot;: &quot;PostgreSQL DSN handling&quot;,
+    &quot;description&quot;: &quot;Stack specifies SQLite only; a postgres:// or postgresql:// DSN is refused with exit 1 and nothing is written.&quot;,
+    &quot;options&quot;: [
+      {
+        &quot;value&quot;: &quot;refuse&quot;,
+        &quot;label&quot;: &quot;Refuse with exit 1&quot;
+      },
+      {
+        &quot;value&quot;: &quot;support&quot;,
+        &quot;label&quot;: &quot;Support PostgreSQL&quot;
+      }
+    ],
+    &quot;system_choice&quot;: &quot;refuse&quot;
+  }
+]
+</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-TxnDelete.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-TxnDelete.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-TxnDelete.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Transaction Delete</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger txn delete &lt;id&gt;</code> removing one transaction under the non-negative balance rule.</td></tr><tr><td>Depends On</td><td>FEATURE-TxnGet.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger txn delete</td></tr><tr><td>Consumes</td><td>ledger txn get</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Remove one stored transaction through the <code>txn</code> verb table in <code>cli/commands/txn.py</code>.</p>
+<h2>Behavior</h2>
+<ol><li>Usage: <code>ledger txn delete &lt;id&gt;</code>; any other argument count is a usage error (exit 2).</li><li>An id that is not decimal digits exits 3. An absent id exits 4.</li><li>If removing the transaction would leave the account balance below zero, exit 3 and change nothing.</li><li>Otherwise delete the row and print <code>deleted</code> then the id.</li><li>Deleting one leg of a transfer is permitted under the same rule; the paired leg is left unchanged.</li></ol>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC txn-delete-success ===<br>Intent: Deleting a transaction prints deleted and the id, and a separate read finds it gone.</p>
+<p>import csv import io from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZZTDEL1&quot; cat = &quot;ZZTDCAT1&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Delete One&quot;) db.categories.create(category=cat, description=&quot;Delete Cat&quot;) txn_id = max([r.txn_id for r in db.transactions.list()], default=0) + 1 db.transactions.create( txn_id=txn_id, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=450, memo=&quot;gone&quot; ) exit_code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, str(txn_id)) print(out) print(err) assert exit_code == 0 assert list(csv.reader(io.StringIO(out))) == [[&quot;deleted&quot;], [str(txn_id)]] assert db.transactions.get(txn_id=txn_id) is None === END AC txn-delete-success ===</p>
+<p>=== AC txn-delete-rejects-negative-balance ===<br>Intent: Deleting an inflow that funds a later outflow would leave a negative balance, so it exits 3 and both rows remain.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZZTDEL2&quot; cat = &quot;ZZTDCAT2&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Delete Two&quot;) db.categories.create(category=cat, description=&quot;Delete Cat Two&quot;) inflow_id = max([r.txn_id for r in db.transactions.list()], default=0) + 1 outflow_id = inflow_id + 1 db.transactions.create( txn_id=inflow_id, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=1000, memo=&quot;in&quot; ) db.transactions.create( txn_id=outflow_id, date=&quot;2026-04-02&quot;, account=acct, category=cat, amount=-500, memo=&quot;out&quot; ) exit_code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, str(inflow_id)) print(out, err) assert exit_code == 3 assert out == &quot;&quot; assert db.transactions.get(txn_id=inflow_id) is not None assert db.transactions.get(txn_id=outflow_id) is not None === END AC txn-delete-rejects-negative-balance ===</p>
+<p>=== AC txn-delete-transfer-leg ===<br>Intent: Deleting one leg of a transfer is allowed when the balance rule holds, and the paired leg is left unchanged.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>src = &quot;ZZTDEL3A&quot; dst = &quot;ZZTDEL3B&quot; cat = &quot;ZZTDCAT3&quot; with db_session() as db: db.accounts.create(account=src, name=&quot;Leg Source&quot;) db.accounts.create(account=dst, name=&quot;Leg Dest&quot;) db.categories.create(category=cat, description=&quot;Leg Cat&quot;) base = max([r.txn_id for r in db.transactions.list()], default=0) + 1 seed_id, out_id, in_id = base, base + 1, base + 2 db.transactions.create( txn_id=seed_id, date=&quot;2026-04-01&quot;, account=src, category=cat, amount=1000, memo=&quot;seed&quot; ) db.transactions.create( txn_id=out_id, date=&quot;2026-04-02&quot;, account=src, category=cat, amount=-300, memo=&quot;leg out&quot; ) db.transactions.create( txn_id=in_id, date=&quot;2026-04-02&quot;, account=dst, category=cat, amount=300, memo=&quot;leg in&quot; ) exit_code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, str(in_id)) print(out, err) assert exit_code == 0 assert db.transactions.get(txn_id=in_id) is None paired = db.transactions.get(txn_id=out_id) assert paired is not None assert paired.amount == -300 assert paired.account == src === END AC txn-delete-transfer-leg ===</p>
+<p>=== AC txn-delete-absent ===<br>Intent: Deleting an id no transaction holds exits 4 with nothing on standard output.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with db_session() as db: missing = max([r.txn_id for r in db.transactions.list()], default=0) + 1000 exit_code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, str(missing)) print(out) print(err) assert exit_code == 4 assert out == &quot;&quot; === END AC txn-delete-absent ===</p>
+<p>=== AC txn-delete-bad-input ===<br>Intent: A non-digit id exits 3 and a missing id is a usage error with exit 2.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code_bad, out_bad, err_bad = cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;abc&quot;) print(out_bad, err_bad) assert code_bad == 3 assert out_bad == &quot;&quot; code_usage, out_usage, err_usage = cli_runner(&quot;txn&quot;, &quot;delete&quot;) print(out_usage, err_usage) assert code_usage == 2 assert out_usage == &quot;&quot; === END AC txn-delete-bad-input ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The balance check completes before the delete; a rejected delete changes nothing.</li><li>Deleting a transfer leg never alters the paired leg.</li><li>Diagnostics go to standard error only.</li></ul></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-AccountAdd.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-AccountAdd.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-AccountAdd.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Account Add</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger account add &lt;code&gt; &lt;name&gt;</code> creating a new account with a zero balance.</td></tr><tr><td>Depends On</td><td>FEATURE-LedgerRules.md, FEATURE-Validation.md, FEATURE-CsvOutput.md, FEATURE-LoadCategories.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger account add</td></tr><tr><td>Consumes</td><td>ledgerlib.rules, ledgerlib.validation, ledgerlib.csvout</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Add one account. This story creates <code>cli/commands/account.py</code> with the verb table that later account verbs extend.</p>
+<h2>Interface</h2>
+<p><code>ledger account add &lt;code&gt; &lt;name&gt;</code>. Output:</p>
+<pre><code>account,name,transactions,balance
+&lt;code&gt;,&lt;name&gt;,0,0.00</code></pre>
+<h2>Behavior</h2>
+<ol><li><code>account</code> with an unknown verb, or <code>add</code> with other than exactly two arguments, is a usage error (exit 2).</li><li><code>code</code> is 1 to 12 characters from <code>A-Z</code> and <code>0-9</code>; <code>name</code> is 1 to 40 characters with no comma or newline. Violations exit 3.</li><li>A code already stored is rejected (exit 3) and the stored account is unchanged.</li><li>All checks precede the write. The printed row is read back from storage.</li></ol>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC acct-add-success ===<br>Intent: Adding an account prints the new row with zero transactions and balance 0.00, and the account reads back from the store.</p>
+<p>import csv from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>code_arg = &quot;ZZAA1&quot; name = &quot;Add Account One&quot; with db_session() as db: code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, code_arg, name) print(out, err) assert code == 0 parsed = list(csv.reader(out.splitlines())) assert parsed[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;] assert parsed[1] == [code_arg, name, &quot;0&quot;, &quot;0.00&quot;] assert len(parsed) == 2 row = db.accounts.get(account=code_arg) assert row is not None assert row.name == name === END AC acct-add-success ===</p>
+<p>=== AC acct-add-duplicate ===<br>Intent: Adding a code that already exists exits 3 and leaves the stored name unchanged.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>code_arg = &quot;ZZAA2&quot; original = &quot;Original Name&quot; with db_session() as db: db.accounts.create(account=code_arg, name=original) code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, code_arg, &quot;Other Name&quot;) print(out, err) assert code == 3 assert out == &quot;&quot; row = db.accounts.get(account=code_arg) assert row is not None assert row.name == original === END AC acct-add-duplicate ===</p>
+<p>=== AC acct-add-invalid-code ===<br>Intent: Codes that are lowercase, too long, contain a symbol, or are empty are rejected with exit 3 and nothing is stored.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>bad_codes = [&quot;zzlower&quot;, &quot;Z&quot; * 13, &quot;ZZ-BAD&quot;, &quot;&quot;] with db_session() as db: before = [r.account for r in db.accounts.list()] for bad in bad_codes: code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, bad, &quot;Valid Name&quot;) print(repr(bad), code, out, err) assert code == 3 assert out == &quot;&quot; after = [r.account for r in db.accounts.list()] assert after == before === END AC acct-add-invalid-code ===</p>
+<p>=== AC acct-add-invalid-name ===<br>Intent: Names that are empty, longer than 40 characters, or contain a comma or newline are rejected with exit 3 and the account is not created.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>code_arg = &quot;ZZAA3&quot; bad_names = [&quot;&quot;, &quot;n&quot; * 41, &quot;has, comma&quot;, &quot;has\nnewline&quot;] with db_session() as db: for bad in bad_names: code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, code_arg, bad) print(repr(bad), code, out, err) assert code == 3 assert out == &quot;&quot; assert db.accounts.get(account=code_arg) is None === END AC acct-add-invalid-name ===</p>
+<p>=== AC acct-add-boundaries ===<br>Intent: A 12-character code and a 40-character name are the accepted maxima and are stored exactly.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>code_arg = &quot;ZZ&quot; + &quot;B&quot; * 10 name = &quot;n&quot; * 40 with db_session() as db: code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, code_arg, name) print(out, err) assert code == 0 row = db.accounts.get(account=code_arg) assert row is not None assert row.name == name === END AC acct-add-boundaries ===</p>
+<p>=== AC acct-add-usage ===<br>Intent: Wrong argument counts and an unknown verb are usage errors with exit 2 and create nothing.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>code_arg = &quot;ZZAA4&quot; with db_session() as db: attempts = [ (&quot;account&quot;, &quot;add&quot;), (&quot;account&quot;, &quot;add&quot;, code_arg), (&quot;account&quot;, &quot;add&quot;, code_arg, &quot;Name&quot;, &quot;extra&quot;), (&quot;account&quot;, &quot;frobnicate&quot;, code_arg), ] for args in attempts: code, out, err = cli_runner(*args) print(args, code, out, err) assert code == 2 assert out == &quot;&quot; assert db.accounts.get(account=code_arg) is None === END AC acct-add-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A rejected add writes nothing.</li><li>Balance is derived from stored transactions, never stored on the account.</li><li>Only the generated persistence package touches the database.</li></ul></article>
+</main>
+</body>
+</html>

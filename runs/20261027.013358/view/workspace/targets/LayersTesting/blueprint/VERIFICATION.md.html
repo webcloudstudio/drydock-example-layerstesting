@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/VERIFICATION.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/VERIFICATION.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/VERIFICATION.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Release Verification</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Terminal gate that runs the supplied end-to-end grader unfiltered and the application test runner, requiring exit zero from both.</td></tr><tr><td>Depends On</td><td>FEATURE-UsageErrors.md, FEATURE-OperationalFailures.md, FEATURE-TestRunner.md</td></tr><tr><td>Provides</td><td>release-verification</td></tr><tr><td>Consumes</td><td>ledger, test-runner-contract</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>This is the terminal story. Every command story has closed before it runs. It proves the assembled ledger passes all 43 supplied checks in <code>sources/run.sh</code> and that the application&#x27;s own suite passes through <code>bin/test.sh</code>. Application code never reads <code>sources/run.sh</code> or any seed file.</p>
+<h2>Assembly and Intent</h2>
+<ul><li>Run <code>sh sources/run.sh</code> from the application root, unfiltered; exit status is the verdict.</li><li>The grader chooses its own temporary database when <code>DATABASE_URL</code> is unset, so the child process</li></ul>
+<p>is run without <code>DATABASE_URL</code> and <code>DATABASE_PATH</code>; this protects the configured store from <code>init</code>.</p>
+<ul><li>Run <code>sh bin/test.sh</code> and require exit zero.</li><li>Do not modify, regenerate, or substitute any file under <code>sources/</code>.</li></ul>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC verify-grader-full ===<br>Intent: The supplied grader sh sources/run.sh passes every check, so the runner exits zero.<br>Suite: full<br>Requires: executable=sh; scope=test</p>
+<p>import os import subprocess import sys</p>
+<p>env = {k: v for k, v in os.environ.items() if k not in (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;)} result = subprocess.run( [&quot;sh&quot;, &quot;sources/run.sh&quot;], capture_output=True, text=True, env=env, ) print(result.stdout) print(result.stderr, file=sys.stderr) assert result.returncode == 0 === END AC verify-grader-full ===</p>
+<p>=== AC verify-application-tests ===<br>Intent: The application&#x27;s own test runner bin/test.sh exits zero only when every application test passes.<br>Requires: executable=sh; scope=test</p>
+<p>import os import subprocess import sys</p>
+<p>env = {k: v for k, v in os.environ.items() if k not in (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;)} result = subprocess.run( [&quot;sh&quot;, &quot;bin/test.sh&quot;], capture_output=True, text=True, env=env, ) print(result.stdout) print(result.stderr, file=sys.stderr) assert result.returncode == 0 === END AC verify-application-tests ===</p>
+<p>=== AC verify-ledger-executable ===<br>Intent: The ledger executable exists at the application root and rejects an unknown command with the usage exit status.<br>Requires: executable=sh; scope=test</p>
+<p>import os import subprocess import sys</p>
+<p>assert os.path.isfile(&quot;ledger&quot;) assert os.access(&quot;ledger&quot;, os.X_OK) env = {k: v for k, v in os.environ.items() if k not in (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;)} result = subprocess.run( [&quot;./ledger&quot;, &quot;frobnicate&quot;], capture_output=True, text=True, env=env, ) print(result.stdout) print(result.stderr, file=sys.stderr) assert result.returncode == 2 assert result.stdout == &quot;&quot; === END AC verify-ledger-executable ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Do not modify, rewrite, regenerate, or substitute any file under <code>sources/</code>.</li><li>Application code never reads <code>sources/run.sh</code> or any seed file; seed files reach the database only through <code>ledger load</code>.</li><li>No report row, count, or total is hardcoded; every value comes from a query.</li><li>Only the terminal story runs the whole grader.</li></ul></article>
+</main>
+</body>
+</html>

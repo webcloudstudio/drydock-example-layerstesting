@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-LedgerRules.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-LedgerRules.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-LedgerRules.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Ledger Rules</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Compute account views and projected balances, enforce the non-negative balance rule, and allocate transaction ids.</td></tr><tr><td>Depends On</td><td>DATABASE.md, FEATURE-CsvOutput.md, FEATURE-Validation.md</td></tr><tr><td>Provides</td><td>ledgerlib.rules</td></tr><tr><td>Consumes</td><td>persistence, ledgerlib.csvout</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledgerlib/rules.py</code> owns the business rules every write command shares: an account&#x27;s transaction count and balance, the projected balance after a set of changes, the rule that no balance goes below zero, and transaction id allocation. All reads go through <code>db.&lt;table&gt;.&lt;operation&gt;(...)</code>; balances are computed in Python from list rows in integer cents.</p>
+<h2>Interface</h2>
+<div class="scroll"><table><thead><tr><th>Function</th><th>Behavior</th></tr></thead><tbody><tr><td><code>account_view(db, code)</code></td><td>Returns an object with <code>account</code>, <code>name</code>, <code>transactions</code> (count) and <code>balance</code> (integer cents), or <code>None</code> when the account is absent.</td></tr><tr><td><code>balances_after(db, changes)</code></td><td><code>changes</code> is a list of <code>(account_code, delta_cents)</code> pairs. Returns a dict mapping each affected account to its balance after every change in the list is applied.</td></tr><tr><td><code>require_non_negative(db, changes)</code></td><td>Raises <code>cli.errors.RejectedError</code> (exit 3) when any account in the projected result would be below zero; returns <code>None</code> otherwise. Writes nothing.</td></tr><tr><td><code>next_txn_id(db)</code></td><td>Returns the largest stored <code>txn_id</code> plus one, or <code>1</code> when there are no transactions.</td></tr></tbody></table></div>
+<h2>Rules</h2>
+<ul><li>The balance check is evaluated on each account&#x27;s final balance after the whole change set, not change by change, so a set that dips below zero and recovers is accepted.</li><li>A balance of exactly zero is accepted.</li><li>Callers read <code>next_txn_id</code> and write the row inside one database transaction so two concurrent posts never receive the same id.</li><li>Every check happens before the caller&#x27;s first write; these functions perform no writes.</li><li>No floating point is used for money.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-LEDGER-002</code> — read: get an account by code - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-LEDGER-013</code> — read: list transactions, optionally for one account - supplies: <code>account</code> - returns: <code>txn_id</code>, <code>date</code>, <code>account</code>, <code>category</code>, <code>amount</code>, <code>memo</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC rules-account-view ===<br>Intent: The account view reports the transaction count and the integer-cent balance computed from stored rows, and an absent account yields none.</p>
+<p>from persistence.testing import db_session from ledgerlib import rules</p>
+<p>acct = &quot;ZZRLV1&quot; missing = &quot;ZZRLVNONE&quot; cat = &quot;ZZRLCAT1&quot; first = 930001 second = 930002 plus = 10000 minus = -2550 with db_session() as db: db.accounts.create(account=acct, name=&quot;Rules View&quot;) db.categories.create(category=cat, description=&quot;Rules View Cat&quot;) db.transactions.create(txn_id=first, date=&quot;2026-05-01&quot;, account=acct, category=cat, amount=plus, memo=&quot;a&quot;) db.transactions.create(txn_id=second, date=&quot;2026-05-02&quot;, account=acct, category=cat, amount=minus, memo=&quot;b&quot;) view = rules.account_view(db, acct) assert view is not None assert view.account == acct assert view.transactions == 2 assert view.balance == plus + minus assert isinstance(view.balance, int) assert rules.account_view(db, missing) is None === END AC rules-account-view ===</p>
+<p>=== AC rules-balances-after ===<br>Intent: The projection applies the whole change set to current balances for every affected account without writing anything.</p>
+<p>from persistence.testing import db_session from ledgerlib import rules</p>
+<p>a = &quot;ZZRLB1&quot; b = &quot;ZZRLB2&quot; cat = &quot;ZZRLCAT2&quot; start_a = 5000 start_b = 700 delta = 1200 with db_session() as db: db.accounts.create(account=a, name=&quot;Rules Proj A&quot;) db.accounts.create(account=b, name=&quot;Rules Proj B&quot;) db.categories.create(category=cat, description=&quot;Rules Proj Cat&quot;) db.transactions.create(txn_id=930011, date=&quot;2026-05-01&quot;, account=a, category=cat, amount=start_a, memo=&quot;a&quot;) db.transactions.create(txn_id=930012, date=&quot;2026-05-01&quot;, account=b, category=cat, amount=start_b, memo=&quot;b&quot;) before = len(db.transactions.list()) result = rules.balances_after(db, [(a, -delta), (b, delta)]) assert result[a] == start_a - delta assert result[b] == start_b + delta assert len(db.transactions.list()) == before === END AC rules-balances-after ===</p>
+<p>=== AC rules-require-non-negative ===<br>Intent: A change set leaving any balance below zero is rejected with exit 3 while exactly zero and a recovering set are accepted, and nothing is written.</p>
+<p>from persistence.testing import db_session from cli.errors import RejectedError from ledgerlib import rules</p>
+<p>acct = &quot;ZZRLN1&quot; cat = &quot;ZZRLCAT3&quot; start = 5000 with db_session() as db: db.accounts.create(account=acct, name=&quot;Rules Neg&quot;) db.categories.create(category=cat, description=&quot;Rules Neg Cat&quot;) db.transactions.create(txn_id=930021, date=&quot;2026-05-01&quot;, account=acct, category=cat, amount=start, memo=&quot;s&quot;) before = len(db.transactions.list())</p>
+<p>assert rules.require_non_negative(db, [(acct, -start)]) is None assert rules.require_non_negative(db, [(acct, -8000), (acct, 4000)]) is None</p>
+<p>try: rules.require_non_negative(db, [(acct, -(start + 1))]) except RejectedError as exc: assert exc.exit_code == 3 else: raise AssertionError(&quot;negative balance accepted&quot;)</p>
+<p>assert len(db.transactions.list()) == before === END AC rules-require-non-negative ===</p>
+<p>=== AC rules-next-txn-id ===<br>Intent: The next id is the largest stored id plus one, or one for an empty table, derived here from the stored rows.</p>
+<p>from persistence.testing import db_session from ledgerlib import rules</p>
+<p>acct = &quot;ZZRLI1&quot; cat = &quot;ZZRLCAT4&quot; high = 940500 with db_session() as db: db.accounts.create(account=acct, name=&quot;Rules Id&quot;) db.categories.create(category=cat, description=&quot;Rules Id Cat&quot;) existing = [t.txn_id for t in db.transactions.list()] expected = (max(existing) + 1) if existing else 1 assert rules.next_txn_id(db) == expected</p>
+<p>db.transactions.create(txn_id=high, date=&quot;2026-05-01&quot;, account=acct, category=cat, amount=100, memo=&quot;i&quot;) existing = [t.txn_id for t in db.transactions.list()] assert rules.next_txn_id(db) == max(existing) + 1 assert rules.next_txn_id(db) &gt;= high + 1 === END AC rules-next-txn-id ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Rules never write; callers write after every check passes.</li><li>Balances and counts are computed from stored rows at run time and never stored or hardcoded.</li><li>No floating point is used for money.</li></ul></article>
+</main>
+</body>
+</html>

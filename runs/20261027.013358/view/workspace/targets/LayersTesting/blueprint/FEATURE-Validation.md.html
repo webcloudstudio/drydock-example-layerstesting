@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Validation.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Validation.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Validation.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Validation</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Validate codes, names, memos, amounts, dates and transaction ids per the ledger rules.</td></tr><tr><td>Depends On</td><td>FEATURE-CliEntry.md</td></tr><tr><td>Provides</td><td>ledgerlib.validation</td></tr><tr><td>Consumes</td><td>cli.main</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Every command validates its inputs before its first write. <code>ledgerlib/validation.py</code> is the single owner of the field rules in <code>sources/INSTRUCTIONS.md</code> Rules 3 to 6 and the transaction id rule. Each function raises <code>cli.errors.RejectedError</code> (exit 3) on violation and otherwise returns the validated value.</p>
+<h2>Interface</h2>
+<div class="scroll"><table><thead><tr><th>Function</th><th>Returns</th><th>Rule</th></tr></thead><tbody><tr><td><code>validate_code(value: str) -&gt; str</code></td><td>the value</td><td>1 to 12 characters from <code>A-Z</code> and <code>0-9</code></td></tr><tr><td><code>validate_name(value: str) -&gt; str</code></td><td>the value</td><td>1 to 40 characters, no comma, no newline (also used for descriptions)</td></tr><tr><td><code>validate_memo(value: str) -&gt; str</code></td><td>the value</td><td>0 to 60 characters, no comma, no newline</td></tr><tr><td><code>parse_amount(text: str) -&gt; int</code></td><td>integer cents</td><td>matches <code>-?DIGITS[.D[D]]</code>, at most two decimals, never zero</td></tr><tr><td><code>validate_date(text: str) -&gt; str</code></td><td>the value</td><td>real calendar date written <code>YYYY-MM-DD</code></td></tr><tr><td><code>parse_txn_id(text: str) -&gt; int</code></td><td>the integer</td><td>a non-empty string of decimal digits</td></tr></tbody></table></div>
+<h2>Rules</h2>
+<ul><li>Amount parsing uses integer arithmetic on the digit strings only. No <code>float</code> or <code>Decimal</code>-free shortcut through floating point is permitted at any layer.</li><li><code>.5</code>, <code>5.</code>, <code>1.234</code>, <code>+5</code>, <code>1e3</code>, <code>0</code>, <code>0.0</code> and <code>0.00</code> are rejected.</li><li>A date must match the <code>YYYY-MM-DD</code> shape exactly and be a real calendar date; <code>2026-02-30</code> is rejected.</li><li>A transaction id with a sign, a decimal point, whitespace or no digits is rejected with exit 3.</li><li>Validation reads no database and writes nothing.</li></ul>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC validation-codes ===<br>Intent: Codes of 1 to 12 characters from A-Z and 0-9 are returned unchanged and every other shape is rejected with exit code 3.</p>
+<p>from cli.errors import RejectedError from ledgerlib import validation</p>
+<p>good = &quot;DRAWER1&quot; longest = &quot;A&quot; * 12 assert validation.validate_code(good) == good assert validation.validate_code(longest) == longest for bad in [&quot;&quot;, &quot;A&quot; * 13, &quot;drawer1&quot;, &quot;AB-C&quot;, &quot;A B&quot;, &quot;AB,C&quot;]: try: validation.validate_code(bad) except RejectedError as exc: assert exc.exit_code == 3 else: raise AssertionError(&quot;accepted bad code&quot;) === END AC validation-codes ===</p>
+<p>=== AC validation-names-memos ===<br>Intent: Names are 1 to 40 characters and memos 0 to 60 characters, neither may contain a comma or newline, and violations exit 3.</p>
+<p>from cli.errors import RejectedError from ledgerlib import validation</p>
+<p>name = &quot;Front Drawer&quot; assert validation.validate_name(name) == name assert validation.validate_name(&quot;N&quot; * 40) == &quot;N&quot; * 40 assert validation.validate_memo(&quot;&quot;) == &quot;&quot; assert validation.validate_memo(&quot;m&quot; * 60) == &quot;m&quot; * 60</p>
+<p>bad_names = [&quot;&quot;, &quot;N&quot; * 41, &quot;a,b&quot;, &quot;a&quot; + chr(10) + &quot;b&quot;] for bad in bad_names: try: validation.validate_name(bad) except RejectedError as exc: assert exc.exit_code == 3 else: raise AssertionError(&quot;accepted bad name&quot;)</p>
+<p>bad_memos = [&quot;m&quot; * 61, &quot;a,b&quot;, &quot;a&quot; + chr(10) + &quot;b&quot;] for bad in bad_memos: try: validation.validate_memo(bad) except RejectedError as exc: assert exc.exit_code == 3 else: raise AssertionError(&quot;accepted bad memo&quot;) === END AC validation-names-memos ===</p>
+<p>=== AC validation-amounts ===<br>Intent: Amounts parse to exact integer cents with at most two decimals and zero, malformed or over-precise amounts are rejected with exit 3.</p>
+<p>from cli.errors import RejectedError from ledgerlib import validation</p>
+<p>cases = [ (&quot;12.50&quot;, 1250), (&quot;-12.50&quot;, -1250), (&quot;5&quot;, 500), (&quot;-5&quot;, -500), (&quot;1.5&quot;, 150), (&quot;0.01&quot;, 1), (&quot;-0.01&quot;, -1), (&quot;5000.00&quot;, 500000), ] for text, cents in cases: got = validation.parse_amount(text) assert isinstance(got, int) and not isinstance(got, bool) assert got == cents</p>
+<p>for bad in [&quot;0&quot;, &quot;0.00&quot;, &quot;-0&quot;, &quot;1.234&quot;, &quot;abc&quot;, &quot;1.&quot;, &quot;.5&quot;, &quot;+5&quot;, &quot;1e3&quot;, &quot;&quot;, &quot;1,5&quot;]: try: validation.parse_amount(bad) except RejectedError as exc: assert exc.exit_code == 3 else: raise AssertionError(&quot;accepted bad amount &quot; + bad) === END AC validation-amounts ===</p>
+<p>=== AC validation-dates ===<br>Intent: Only real calendar dates written YYYY-MM-DD are accepted, so a nonexistent day or a different shape exits 3.</p>
+<p>from cli.errors import RejectedError from ledgerlib import validation</p>
+<p>good = &quot;2026-04-01&quot; leap = &quot;2024-02-29&quot; assert validation.validate_date(good) == good assert validation.validate_date(leap) == leap</p>
+<p>for bad in [&quot;2026-02-30&quot;, &quot;2026-13-01&quot;, &quot;2026-00-10&quot;, &quot;2025-02-29&quot;, &quot;2026-2-3&quot;, &quot;20260401&quot;, &quot;2026/04/01&quot;, &quot;&quot;]: try: validation.validate_date(bad) except RejectedError as exc: assert exc.exit_code == 3 else: raise AssertionError(&quot;accepted bad date &quot; + bad) === END AC validation-dates ===</p>
+<p>=== AC validation-txn-id ===<br>Intent: A transaction id argument must be a string of decimal digits and returns its integer value, otherwise exit 3.</p>
+<p>from cli.errors import RejectedError from ledgerlib import validation</p>
+<p>assert validation.parse_txn_id(&quot;121&quot;) == 121 assert validation.parse_txn_id(&quot;1&quot;) == 1</p>
+<p>for bad in [&quot;&quot;, &quot;abc&quot;, &quot;-1&quot;, &quot;+1&quot;, &quot;1.0&quot;, &quot; 1&quot;, &quot;1 &quot;, &quot;0x10&quot;]: try: validation.parse_txn_id(bad) except RejectedError as exc: assert exc.exit_code == 3 else: raise AssertionError(&quot;accepted bad id &quot; + repr(bad)) === END AC validation-txn-id ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>No floating point is used to parse, hold or compare money.</li><li>Validation never reads or writes the database.</li><li>Error message wording is not part of the contract; only the exit code is.</li></ul></article>
+</main>
+</body>
+</html>

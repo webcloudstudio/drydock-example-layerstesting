@@ -1,0 +1,22 @@
+Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+repair: FEATURE-OperationalFailures.md · 4 criteria · 1 of 1 attempt
+2026-10-26 21:56:54 EDT  Calling CLAUDE/sonnet (plan repair)...
+  Completed CLAUDE/claude-sonnet-5-5 (plan repair)  rc=0
+  ✗  FEATURE-OperationalFailures.md [operational-usage-before-database]: impossible — The criterion's purpose is to make the configured database unusable by overriding DATABASE_URL, which the acceptance store lifecycle forbids, so it would need to be re-authored to prove usage is checked before database access without replacing the configured database.
+  ✗  FEATURE-OperationalFailures.md [operational-invalid-database-file]: impossible — The criterion's purpose is to point DATABASE_URL at a non-database file, which the acceptance store lifecycle forbids, so it would need to be re-authored to test this failure without replacing the configured database.
+  ✗  FEATURE-OperationalFailures.md [operational-unreachable-database]: impossible — The criterion's purpose is to point DATABASE_URL at a path with a missing parent directory, which the acceptance store lifecycle forbids, so it would need to be re-authored to test this failure without replacing the configured database.
+  ✗  FEATURE-OperationalFailures.md [operational-postgres-refused]: impossible — The criterion's purpose is to point DATABASE_URL at an unusable PostgreSQL store, which the acceptance store lifecycle forbids, so it would need to be re-authored to test the refusal without replacing the configured database.
+plan repair: LayersTesting
+  0 repaired, 4 outstanding, 0 files changed
+  ✗  FEATURE-OperationalFailures.md [operational-usage-before-database]: impossible — The criterion's purpose is to make the configured database unusable by overriding DATABASE_URL, which the acceptance store lifecycle forbids, so it would need to be re-authored to prove usage is checked before database access without replacing the configured database.
+  ✗  FEATURE-OperationalFailures.md [operational-invalid-database-file]: impossible — The criterion's purpose is to point DATABASE_URL at a non-database file, which the acceptance store lifecycle forbids, so it would need to be re-authored to test this failure without replacing the configured database.
+  ✗  FEATURE-OperationalFailures.md [operational-unreachable-database]: impossible — The criterion's purpose is to point DATABASE_URL at a path with a missing parent directory, which the acceptance store lifecycle forbids, so it would need to be re-authored to test this failure without replacing the configured database.
+  ✗  FEATURE-OperationalFailures.md [operational-postgres-refused]: impossible — The criterion's purpose is to point DATABASE_URL at an unusable PostgreSQL store, which the acceptance store lifecycle forbids, so it would need to be re-authored to test the refusal without replacing the configured database.
+plan verify: LayersTesting
+  4 criteria cannot run as written
+  ✗  FEATURE-OperationalFailures.md [operational-postgres-refused]: criterion changes the configured database; use the provisioned store
+  ✗  FEATURE-OperationalFailures.md [operational-unreachable-database]: criterion changes the configured database; use the provisioned store
+  ✗  FEATURE-OperationalFailures.md [operational-invalid-database-file]: criterion changes the configured database; use the provisioned store
+  ✗  FEATURE-OperationalFailures.md [operational-usage-before-database]: criterion changes the configured database; use the provisioned store
+  Run: drydock plan repair LayersTesting
+Target - committed project workspace git store

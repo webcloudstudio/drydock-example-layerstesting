@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-LoadAccounts.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-LoadAccounts.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-LoadAccounts.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Load Accounts</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Implement <code>ledger load accounts &lt;csv&gt;</code> as an all-or-nothing bulk load.</td></tr><tr><td>Depends On</td><td>FEATURE-DatabaseSelection.md, FEATURE-Validation.md, FEATURE-CsvOutput.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger load accounts</td></tr><tr><td>Consumes</td><td>ledgerlib.config, ledgerlib.validation, ledgerlib.csvout</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>cli/commands/load.py</code> owns <code>ledger load &lt;table&gt; &lt;csv&gt;</code> with a per-table handler registry; an unknown table is a usage error (exit 2). This story adds the <code>accounts</code> handler. The whole file is accepted or none of it is stored.</p>
+<h2>Behavior</h2>
+<ul><li>The header must be exactly <code>account,name</code>; any other header is rejected with exit 3.</li><li>Every data row must have the header&#x27;s field count; each code and name is validated with <code>ledgerlib.validation</code>.</li><li>A duplicate code within the file, or one already stored, is rejected with exit 3.</li><li>Every check completes before the first write. Writes happen in one database transaction, so a rejected file stores nothing.</li><li>A file that cannot be read exits 1 with nothing on standard output.</li><li>A header-only file loads zero rows, prints <code>accounts,0</code>, and exits 0.</li><li>Output is <code>table,loaded</code> followed by <code>accounts,&lt;rows&gt;</code>.</li><li>Missing arguments or extra arguments are a usage error (exit 2).</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-LEDGER-001</code> — write: create an account - supplies: <code>account</code>, <code>name</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-LEDGER-002</code> — read: get an account by code - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC load-accounts-success ===<br>Intent: A valid accounts file stores every row, prints the loaded count, and the rows read back through the persistence interface.</p>
+<p>import csv import io import os import tempfile from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>records = [(&quot;ZZLA1&quot;, &quot;Load One&quot;), (&quot;ZZLA2&quot;, &quot;Load Two&quot;), (&quot;ZZLA3&quot;, &quot;Load Three&quot;)] with tempfile.TemporaryDirectory() as d: path = os.path.join(d, &quot;accounts.csv&quot;) with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh: w = csv.writer(fh, lineterminator=&quot;\n&quot;) w.writerow([&quot;account&quot;, &quot;name&quot;]) w.writerows(records) with db_session() as db: code, out, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;table&quot;, &quot;loaded&quot;] assert rows[1] == [&quot;accounts&quot;, str(len(records))] assert len(rows) == 2 for acct, name in records: got = db.accounts.get(account=acct) assert got is not None assert got.name == name === END AC load-accounts-success ===</p>
+<p>=== AC load-accounts-header-only ===<br>Intent: A file with a valid header and no data rows loads zero rows, prints a zero count, and exits 0.</p>
+<p>import csv import io import os import tempfile from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as d: path = os.path.join(d, &quot;accounts.csv&quot;) with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh: csv.writer(fh, lineterminator=&quot;\n&quot;).writerow([&quot;account&quot;, &quot;name&quot;]) with db_session() as db: before = len(db.accounts.list()) code, out, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows == [[&quot;table&quot;, &quot;loaded&quot;], [&quot;accounts&quot;, &quot;0&quot;]] assert len(db.accounts.list()) == before === END AC load-accounts-header-only ===</p>
+<p>=== AC load-accounts-rejects-atomic ===<br>Intent: A file with a bad row, duplicate code, wrong header or short row exits 3 with empty standard output and stores none of its rows.</p>
+<p>import csv import os import tempfile from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>good = (&quot;ZZLB1&quot;, &quot;Atomic One&quot;) cases = { &quot;invalid-code&quot;: [[&quot;account&quot;, &quot;name&quot;], list(good), [&quot;bad code&quot;, &quot;Atomic Two&quot;]], &quot;duplicate-in-file&quot;: [[&quot;account&quot;, &quot;name&quot;], list(good), [&quot;ZZLB1&quot;, &quot;Atomic Dup&quot;]], &quot;wrong-header&quot;: [[&quot;code&quot;, &quot;name&quot;], list(good)], &quot;short-row&quot;: [[&quot;account&quot;, &quot;name&quot;], list(good), [&quot;ZZLB2&quot;]], &quot;empty-name&quot;: [[&quot;account&quot;, &quot;name&quot;], list(good), [&quot;ZZLB3&quot;, &quot;&quot;]], } with tempfile.TemporaryDirectory() as d: with db_session() as db: before = len(db.accounts.list()) for label, rows in cases.items(): path = os.path.join(d, label + &quot;.csv&quot;) with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh: csv.writer(fh, lineterminator=&quot;\n&quot;).writerows(rows) code, out, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path) print(label, code, err) assert code == 3 assert out == &quot;&quot; assert err != &quot;&quot; assert db.accounts.get(account=good[0]) is None assert len(db.accounts.list()) == before === END AC load-accounts-rejects-atomic ===</p>
+<p>=== AC load-accounts-duplicate-stored ===<br>Intent: A file naming an account that is already stored is rejected with exit 3 and its other rows are not stored.</p>
+<p>import csv import os import tempfile from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>stored = &quot;ZZLC1&quot; fresh = &quot;ZZLC2&quot; original = &quot;Stored Name&quot; with tempfile.TemporaryDirectory() as d: path = os.path.join(d, &quot;accounts.csv&quot;) with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh: w = csv.writer(fh, lineterminator=&quot;\n&quot;) w.writerow([&quot;account&quot;, &quot;name&quot;]) w.writerow([fresh, &quot;Fresh&quot;]) w.writerow([stored, &quot;Replacement&quot;]) with db_session() as db: db.accounts.create(account=stored, name=original) code, out, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path) print(err) assert code == 3 assert out == &quot;&quot; assert db.accounts.get(account=fresh) is None kept = db.accounts.get(account=stored) assert kept is not None assert kept.name == original === END AC load-accounts-duplicate-stored ===</p>
+<p>=== AC load-accounts-operational-and-usage ===<br>Intent: An unreadable file exits 1, an unknown table or a missing file argument exits 2, and each leaves standard output empty.</p>
+<p>import os import tempfile from cli.testing import cli_runner</p>
+<p>with tempfile.TemporaryDirectory() as d: missing = os.path.join(d, &quot;no-such-file.csv&quot;) code, out, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, missing) assert code == 1 assert out == &quot;&quot; assert err != &quot;&quot;</p>
+<p>code, out, err = cli_runner(&quot;load&quot;, &quot;nosuchtable&quot;, missing) assert code == 2 assert out == &quot;&quot;</p>
+<p>code, out, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;) assert code == 2 assert out == &quot;&quot; === END AC load-accounts-operational-and-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A rejected load changes nothing: all validation precedes the first write.</li><li>Application code never reads <code>sources/run.sh</code> or any seed file; seed files reach the database only through <code>ledger load</code>.</li><li>Loading uses the persistence library only; no database driver is opened here.</li></ul></article>
+</main>
+</body>
+</html>

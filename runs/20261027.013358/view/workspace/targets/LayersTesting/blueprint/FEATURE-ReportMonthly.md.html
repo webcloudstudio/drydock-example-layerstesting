@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-ReportMonthly.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-ReportMonthly.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-ReportMonthly.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Report Monthly</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Report transaction count, inflow, outflow and net per calendar month that has transactions.</td></tr><tr><td>Depends On</td><td>FEATURE-ReportBalances.md</td></tr><tr><td>Provides</td><td>ledger report monthly</td></tr><tr><td>Consumes</td><td>ledger report balances</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger report monthly</code> summarizes stored transactions per <code>YYYY-MM</code> and in total.</p>
+<h2>Trigger</h2>
+<p>Command line: <code>./ledger report monthly</code>, added to the report-name table in <code>cli/commands/report.py</code>. Extra arguments are a <code>UsageError</code> (exit 2).</p>
+<h2>Output</h2>
+<p>Header <code>month,transactions,inflow,outflow,net</code>, one row per <code>YYYY-MM</code> that has at least one transaction in ascending order, then <code>TOTAL,&lt;count&gt;,&lt;inflow&gt;,&lt;outflow&gt;,&lt;net&gt;</code>. <code>inflow</code> sums positive amounts, <code>outflow</code> sums absolute values of negative amounts as a positive number, and <code>net</code> is <code>inflow - outflow</code>. Money uses exactly two decimals computed from integer cents. On an empty ledger the output is the header and <code>TOTAL,0,0.00,0.00,0.00</code>.</p>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC monthly-report ===<br>Intent: Month rows are the distinct stored YYYY-MM values in ascending order with counts and amounts derived from stored transactions, and the TOTAL row matches.</p>
+<p>import csv import io import re from decimal import Decimal from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>money = re.compile(r&quot;^-?\d+\.\d\d$&quot;) with db_session() as db: db.accounts.create(account=&quot;ZZRM1&quot;, name=&quot;Rpt Month Acct&quot;) db.categories.create(category=&quot;ZZRMCAT&quot;, description=&quot;Rpt Month&quot;) base = max([r.txn_id for r in db.transactions.list()], default=0) + 1 specs = [ (&quot;2099-03-05&quot;, 1000), (&quot;2099-01-20&quot;, 4550), (&quot;2099-01-21&quot;, -1250), (&quot;2099-02-02&quot;, -300), (&quot;2099-03-30&quot;, 25), ] for i, (date, cents) in enumerate(specs): db.transactions.create(txn_id=base + i, date=date, account=&quot;ZZRM1&quot;, category=&quot;ZZRMCAT&quot;, amount=cents, memo=&quot;rm&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;) print(out) print(err) assert code == 0 assert out.endswith(&quot;\n&quot;) rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;month&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;] txns = db.transactions.list() months = sorted({t.date[:7] for t in txns}) data, total = rows[1:-1], rows[-1] assert [r[0] for r in data] == months for r, month in zip(data, months): amounts = [t.amount for t in txns if t.date[:7] == month] inflow = sum(a for a in amounts if a &gt; 0) outflow = -sum(a for a in amounts if a &lt; 0) assert len(r) == 5 assert int(r[1]) == len(amounts) for field in r[2:]: assert money.match(field) assert Decimal(r[2]) == Decimal(inflow) / 100 assert Decimal(r[3]) == Decimal(outflow) / 100 assert Decimal(r[4]) == Decimal(inflow - outflow) / 100 all_amounts = [t.amount for t in txns] t_in = sum(a for a in all_amounts if a &gt; 0) t_out = -sum(a for a in all_amounts if a &lt; 0) assert len(total) == 5 assert total[0] == &quot;TOTAL&quot; assert int(total[1]) == len(txns) assert Decimal(total[2]) == Decimal(t_in) / 100 assert Decimal(total[3]) == Decimal(t_out) / 100 assert Decimal(total[4]) == Decimal(t_in - t_out) / 100 === END AC monthly-report ===</p>
+<p>=== AC monthly-computed-from-storage ===<br>Intent: Adding a transaction in a new month adds that month row with exactly that amount and raises the TOTAL count by one.</p>
+<p>import csv import io from decimal import Decimal from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>month = &quot;2098-07&quot; delta = 4200 with db_session() as db: db.accounts.create(account=&quot;ZZRMS1&quot;, name=&quot;Rpt Month Store&quot;) db.categories.create(category=&quot;ZZRMSCAT&quot;, description=&quot;Rpt Month Store&quot;)</p>
+<p>def snapshot(): code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;) print(out, err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) return rows[1:-1], rows[-1]</p>
+<p>data_before, total_before = snapshot() assert month not in [r[0] for r in data_before] new_id = max([r.txn_id for r in db.transactions.list()], default=0) + 1 db.transactions.create(txn_id=new_id, date=month + &quot;-15&quot;, account=&quot;ZZRMS1&quot;, category=&quot;ZZRMSCAT&quot;, amount=delta, memo=&quot;rms&quot;) data_after, total_after = snapshot() mine = [r for r in data_after if r[0] == month] assert len(mine) == 1 assert int(mine[0][1]) == 1 assert Decimal(mine[0][2]) == Decimal(delta) / 100 assert Decimal(mine[0][3]) == 0 assert Decimal(mine[0][4]) == Decimal(delta) / 100 assert int(total_after[1]) == int(total_before[1]) + 1 months = [r[0] for r in data_after] assert months == sorted(months) === END AC monthly-computed-from-storage ===</p>
+<p>=== AC monthly-usage ===<br>Intent: Extra arguments to the monthly report exit 2 with empty stdout.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;, &quot;extra&quot;) print(code, out, err) assert code == 2 assert out == &quot;&quot; assert err.strip() != &quot;&quot; === END AC monthly-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Every value comes from a query at run time; no month, count or total is hardcoded.</li><li>Only months that have transactions appear.</li><li>Money is integer cents; no floating point at any layer.</li><li>The report never writes to the database.</li></ul></article>
+</main>
+</body>
+</html>

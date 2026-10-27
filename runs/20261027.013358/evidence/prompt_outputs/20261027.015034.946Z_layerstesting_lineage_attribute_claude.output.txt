@@ -1,0 +1,32 @@
+<requirement name="seed-accounts-data" stories="load-accounts,validation,database">
+account,name
+DRAWER1,Front Drawer
+DRAWER2,Back Drawer
+PETTY,Petty Cash
+SAFE,Store Safe
+</requirement>
+<unattached story="foundation"/>
+<unattached story="cli-entry"/>
+<unattached story="test-runner"/>
+<unattached story="setup-config"/>
+<unattached story="csv-output"/>
+<unattached story="ledger-rules"/>
+<unattached story="setup-count"/>
+<unattached story="setup-init"/>
+<unattached story="load-categories"/>
+<unattached story="load-transactions"/>
+<unattached story="acct-add"/>
+<unattached story="transfer"/>
+<unattached story="acct-get"/>
+<unattached story="txn-post"/>
+<unattached story="acct-rename"/>
+<unattached story="txn-get"/>
+<unattached story="acct-delete"/>
+<unattached story="txn-amend"/>
+<unattached story="txn-delete"/>
+<unattached story="rpt-balances"/>
+<unattached story="rpt-categories"/>
+<unattached story="rpt-monthly"/>
+<unattached story="cli-usage"/>
+<unattached story="cli-operational"/>
+<unattached story="verify"/>
