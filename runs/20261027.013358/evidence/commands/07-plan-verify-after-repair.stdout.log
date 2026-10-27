@@ -1,9 +1,0 @@
-Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
-plan verify: LayersTesting
-  4 criteria cannot run as written
-  ✗  FEATURE-OperationalFailures.md [operational-postgres-refused]: criterion changes the configured database; use the provisioned store
-  ✗  FEATURE-OperationalFailures.md [operational-unreachable-database]: criterion changes the configured database; use the provisioned store
-  ✗  FEATURE-OperationalFailures.md [operational-invalid-database-file]: criterion changes the configured database; use the provisioned store
-  ✗  FEATURE-OperationalFailures.md [operational-usage-before-database]: criterion changes the configured database; use the provisioned store
-  Run: drydock plan repair LayersTesting
-Target - committed project workspace git store

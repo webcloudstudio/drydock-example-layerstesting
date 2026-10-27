@@ -1,0 +1,965 @@
+=== BEGIN ARTIFACT FEATURE-AccountRename.md ===
+# FEATURE: Account Rename
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger account rename`, which changes only an account's name and writes the updated account row. |
+| Depends On | FEATURE-AccountGet.md, FEATURE-LedgerCli.md, DATABASE.md |
+| Provides | ledger account rename |
+| Consumes | ledger, accounts |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Let the shop correct the display name of an existing account without touching its code or its transactions.
+
+## Trigger
+
+`ledger account rename <code> <name>` invoked from the command line.
+
+## Sequence
+
+1. Require exactly two arguments after `rename`; otherwise raise the shared usage error (exit 2).
+2. Look up the account by code. An absent code exits 4. This check runs before the name is validated.
+3. Validate the name: 1 to 40 characters, no comma, no newline. An invalid name exits 3 and changes nothing.
+4. Update only the name through the persistence library.
+5. Compute the account's transaction count and balance in integer cents from its stored transactions.
+6. Write the header `account,name,transactions,balance` and the updated row, balance with exactly two decimals.
+
+## Database Interface
+
+- `FEATURE-ACCOUNT-002` — read: look up the account by code - supplies: `account` - returns: `account`, `name`
+- `FEATURE-ACCOUNT-003` — write: rename the account - supplies: `account`, `name` - returns: `account`, `name`
+- `FEATURE-TXN-005` — read: list the account's transactions to count and sum them - supplies: `account` - returns: `txn_id`, `amount`
+
+## Behavior Rules
+
+- Only the name changes; the code and transactions are untouched.
+- A failing command writes nothing to standard output and one diagnostic line to standard error.
+- Money is integer cents at every layer; no floating point.
+
+## Programmatic Acceptance
+
+=== AC acct-rename-success ===
+Intent: Renaming an existing account exits 0, writes the account row with the new name, and a separate read shows the stored name changed.
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+code = "ZRN1"
+old_name = "Old Cash Box"
+new_name = "Event Cash Box"
+with db_session() as db:
+    db.accounts.create(account=code, name=old_name)
+    exit_code, out, err = cli_runner("account", "rename", code, new_name)
+    print(exit_code, out, err)
+    assert exit_code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[0] == ["account", "name", "transactions", "balance"]
+    assert rows[1] == [code, new_name, "0", "0.00"]
+    back = db.accounts.get(account=code)
+    assert back is not None
+    assert back.name == new_name
+=== END AC acct-rename-success ===
+
+=== AC acct-rename-only-name ===
+Intent: Rename changes only the name; the account keeps its transaction and the output reports its count and balance derived from the stored amount.
+
+import csv
+import io
+from decimal import Decimal
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+code = "ZRN2"
+cat = "ZRN2"
+txn_id = 910001
+cents = 1250
+new_name = "Renamed Account"
+with db_session() as db:
+    db.accounts.create(account=code, name="Before")
+    db.categories.create(category=cat, description="Rename Category")
+    db.transactions.create(
+        txn_id=txn_id, date="2026-05-01", account=code, category=cat, amount=cents, memo="keep"
+    )
+    exit_code, out, err = cli_runner("account", "rename", code, new_name)
+    print(exit_code, out, err)
+    assert exit_code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    expected_balance = f"{Decimal(cents) / 100:.2f}"
+    assert rows[1] == [code, new_name, "1", expected_balance]
+    txn = db.transactions.get(txn_id=txn_id)
+    assert txn is not None
+    assert txn.amount == cents
+    assert txn.account == code
+    assert txn.memo == "keep"
+=== END AC acct-rename-only-name ===
+
+=== AC acct-rename-absent ===
+Intent: Renaming an account that does not exist exits 4, writes nothing to standard output, and creates no account.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+code = "ZRNNONE"
+with db_session() as db:
+    assert db.accounts.get(account=code) is None
+    exit_code, out, err = cli_runner("account", "rename", code, "Ghost")
+    print(exit_code, out, err)
+    assert exit_code == 4
+    assert out == ""
+    assert db.accounts.get(account=code) is None
+=== END AC acct-rename-absent ===
+
+=== AC acct-rename-invalid-name ===
+Intent: A name that is too long or contains a comma is rejected with exit 3, nothing on standard output, and the stored name is unchanged.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+code = "ZRN3"
+original = "Original Name"
+too_long = "N" * 41
+with_comma = "Left,Right"
+with db_session() as db:
+    db.accounts.create(account=code, name=original)
+    for bad in (too_long, with_comma):
+        exit_code, out, err = cli_runner("account", "rename", code, bad)
+        print(exit_code, out, err)
+        assert exit_code == 3
+        assert out == ""
+        back = db.accounts.get(account=code)
+        assert back is not None
+        assert back.name == original
+=== END AC acct-rename-invalid-name ===
+
+=== AC acct-rename-absent-before-invalid ===
+Intent: For an absent code with an invalid name the not-found check runs first, so the exit code is 4 rather than 3.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+code = "ZRNNONE2"
+too_long = "N" * 41
+with db_session() as db:
+    assert db.accounts.get(account=code) is None
+    exit_code, out, err = cli_runner("account", "rename", code, too_long)
+    print(exit_code, out, err)
+    assert exit_code == 4
+    assert out == ""
+=== END AC acct-rename-absent-before-invalid ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Only the account name may change; the code and transactions are never altered by rename.
+- Persistence is reached only through the generated persistence package.
+- A rejected rename writes nothing to the database.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-AccountDelete.md ===
+# FEATURE: Account Delete
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger account delete`, which removes an account that has no transactions. |
+| Depends On | FEATURE-AccountGet.md, FEATURE-LedgerCli.md, DATABASE.md |
+| Provides | ledger account delete |
+| Consumes | ledger, accounts, transactions |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Let the shop remove an account created in error, while protecting any account that already carries transaction history.
+
+## Trigger
+
+`ledger account delete <code>` invoked from the command line.
+
+## Sequence
+
+1. Require exactly one argument after `delete`; otherwise raise the shared usage error (exit 2).
+2. Look up the account. An absent code exits 4.
+3. List the account's transactions. If any exist, exit 3 and remove nothing.
+4. Delete the account through the persistence library.
+5. Write `deleted` and then the code, one per line.
+
+## Database Interface
+
+- `FEATURE-ACCOUNT-002` — read: look up the account by code - supplies: `account` - returns: `account`
+- `FEATURE-ACCOUNT-004` — write: delete the account - supplies: `account` - returns: `account`
+- `FEATURE-TXN-005` — read: list the account's transactions to detect use - supplies: `account` - returns: `txn_id`
+
+## Behavior Rules
+
+- An account with at least one transaction is never removed.
+- A failing command writes nothing to standard output and one diagnostic line to standard error.
+
+## Programmatic Acceptance
+
+=== AC acct-delete-success ===
+Intent: Deleting an unused account exits 0, writes the word deleted then the code, and a separate read finds the account gone.
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+code = "ZDL1"
+with db_session() as db:
+    db.accounts.create(account=code, name="Disposable")
+    exit_code, out, err = cli_runner("account", "delete", code)
+    print(exit_code, out, err)
+    assert exit_code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows == [["deleted"], [code]]
+    assert db.accounts.get(account=code) is None
+=== END AC acct-delete-success ===
+
+=== AC acct-delete-in-use ===
+Intent: An account that has a transaction is refused with exit 3, and both the account and its transaction remain.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+code = "ZDL2"
+cat = "ZDL2"
+txn_id = 920001
+with db_session() as db:
+    db.accounts.create(account=code, name="In Use")
+    db.categories.create(category=cat, description="Delete Category")
+    db.transactions.create(
+        txn_id=txn_id, date="2026-05-01", account=code, category=cat, amount=500, memo=""
+    )
+    exit_code, out, err = cli_runner("account", "delete", code)
+    print(exit_code, out, err)
+    assert exit_code == 3
+    assert out == ""
+    assert db.accounts.get(account=code) is not None
+    assert db.transactions.get(txn_id=txn_id) is not None
+=== END AC acct-delete-in-use ===
+
+=== AC acct-delete-absent ===
+Intent: Deleting an account that does not exist exits 4 with nothing on standard output.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+code = "ZDLNONE"
+with db_session() as db:
+    assert db.accounts.get(account=code) is None
+    exit_code, out, err = cli_runner("account", "delete", code)
+    print(exit_code, out, err)
+    assert exit_code == 4
+    assert out == ""
+=== END AC acct-delete-absent ===
+
+=== AC acct-delete-leaves-others ===
+Intent: Deleting one account removes only that account; a second account created alongside it is still present.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+gone = "ZDL3"
+kept = "ZDL4"
+kept_name = "Keeper"
+with db_session() as db:
+    db.accounts.create(account=gone, name="Goner")
+    db.accounts.create(account=kept, name=kept_name)
+    exit_code, out, err = cli_runner("account", "delete", gone)
+    print(exit_code, out, err)
+    assert exit_code == 0
+    assert db.accounts.get(account=gone) is None
+    survivor = db.accounts.get(account=kept)
+    assert survivor is not None
+    assert survivor.name == kept_name
+=== END AC acct-delete-leaves-others ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- An account with transactions is never deleted.
+- Persistence is reached only through the generated persistence package.
+- A rejected delete writes nothing to the database.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-TxnPost.md ===
+# FEATURE: Transaction Post
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger txn post`, which validates a new cash transaction in full and stores it with the next transaction id. |
+| Depends On | FEATURE-LoadTransactions.md, FEATURE-AccountGet.md, FEATURE-LedgerCli.md, DATABASE.md |
+| Provides | ledger txn post |
+| Consumes | ledger, accounts, categories, transactions |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Record one receipt (positive) or payment (negative) against an account and category, assigning its id automatically.
+
+## Trigger
+
+`ledger txn post <account> <category> <amount> <date> [<memo>]` invoked from the command line.
+
+## Sequence
+
+1. Require four or five arguments after `post`; otherwise raise the shared usage error (exit 2).
+2. Validate the amount with the shared parser: `-?DIGITS[.D[D]]`, at most two decimals, never zero; convert to integer cents with no floating point.
+3. Validate the date as a real Gregorian calendar date `YYYY-MM-DD` (February 29 only in leap years).
+4. Validate the memo (0 to 60 characters, no comma, no newline); an omitted memo is stored as the empty string.
+5. Confirm the account and the category exist; either missing exits 3.
+6. Compute the account's balance from its stored transactions and confirm balance plus amount is not below zero.
+7. Assign `txn_id` as one more than the largest stored id, or 1 when no transaction exists.
+8. Only after every check passes, create the row and write the header `txn_id,date,account,category,amount,memo` and the new row with the amount at exactly two decimals.
+
+Any failure in steps 2 to 6 exits 3 and writes nothing.
+
+## Database Interface
+
+- `FEATURE-ACCOUNT-002` — read: confirm the account exists - supplies: `account` - returns: `account`
+- `FEATURE-CATEGORY-002` — read: confirm the category exists - supplies: `category` - returns: `category`
+- `FEATURE-TXN-005` — read: list transactions to compute the balance and the largest id - supplies: `account` - returns: `txn_id`, `amount`
+- `FEATURE-TXN-001` — write: create the transaction - supplies: `txn_id`, `date`, `account`, `category`, `amount`, `memo` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+
+## Behavior Rules
+
+- Amounts are integer cents at every layer.
+- A rejected post changes no stored record.
+- Output uses `\n` line endings and no quoting.
+
+## Programmatic Acceptance
+
+=== AC txn-post-success ===
+Intent: Posting a valid transaction exits 0, writes the new row with the next id, and a separate read returns every stored column.
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZTP1"
+cat = "ZTP1"
+amount_text = "45.50"
+cents = 4550
+date = "2026-04-01"
+memo = "walk in sale"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Post Account")
+    db.categories.create(category=cat, description="Post Category")
+    before = [r.txn_id for r in db.transactions.list()]
+    expected_id = (max(before) + 1) if before else 1
+    exit_code, out, err = cli_runner("txn", "post", acct, cat, amount_text, date, memo)
+    print(exit_code, out, err)
+    assert exit_code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[0] == ["txn_id", "date", "account", "category", "amount", "memo"]
+    assert rows[1] == [str(expected_id), date, acct, cat, amount_text, memo]
+    back = db.transactions.get(txn_id=expected_id)
+    assert back is not None
+    assert back.date == date
+    assert back.account == acct
+    assert back.category == cat
+    assert back.amount == cents
+    assert back.memo == memo
+=== END AC txn-post-success ===
+
+=== AC txn-post-first-id ===
+Intent: In an empty transaction table the first posted transaction receives id 1.
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZTP2"
+cat = "ZTP2"
+amount_text = "10.00"
+with db_session() as db:
+    db.transactions.delete_all(min_txn_id=0)
+    assert db.transactions.list() == []
+    db.accounts.create(account=acct, name="First Id")
+    db.categories.create(category=cat, description="First Id")
+    exit_code, out, err = cli_runner("txn", "post", acct, cat, amount_text, "2026-04-02")
+    print(exit_code, out, err)
+    assert exit_code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[1][0] == str(1)
+    assert db.transactions.get(txn_id=1) is not None
+=== END AC txn-post-first-id ===
+
+=== AC txn-post-no-memo ===
+Intent: A transaction posted without a memo writes an empty final memo field and stores an empty memo.
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZTP3"
+cat = "ZTP3"
+with db_session() as db:
+    db.accounts.create(account=acct, name="No Memo")
+    db.categories.create(category=cat, description="No Memo")
+    before = [r.txn_id for r in db.transactions.list()]
+    expected_id = (max(before) + 1) if before else 1
+    exit_code, out, err = cli_runner("txn", "post", acct, cat, "5.00", "2026-04-03")
+    print(exit_code, out, err)
+    assert exit_code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert len(rows[1]) == 6
+    assert rows[1][5] == ""
+    back = db.transactions.get(txn_id=expected_id)
+    assert back is not None
+    assert back.memo == ""
+=== END AC txn-post-no-memo ===
+
+=== AC txn-post-negative-covered ===
+Intent: A negative amount is accepted when the account balance stays non-negative, and the output carries a leading minus with two decimals.
+
+import csv
+import io
+from decimal import Decimal
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZTP4"
+cat = "ZTP4"
+txn_id = 930001
+funded_cents = 5000
+spend_text = "-12.34"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Spender")
+    db.categories.create(category=cat, description="Spend")
+    db.transactions.create(
+        txn_id=txn_id, date="2026-04-01", account=acct, category=cat, amount=funded_cents, memo=""
+    )
+    exit_code, out, err = cli_runner("txn", "post", acct, cat, spend_text, "2026-04-02", "tape")
+    print(exit_code, out, err)
+    assert exit_code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[1][4] == spend_text
+    assert Decimal(rows[1][4]) == Decimal(spend_text)
+=== END AC txn-post-negative-covered ===
+
+=== AC txn-post-negative-balance-rejected ===
+Intent: A post that would leave the account balance below zero exits 3 and stores nothing.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZTP5"
+cat = "ZTP5"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Broke")
+    db.categories.create(category=cat, description="Spend")
+    before = len(db.transactions.list())
+    exit_code, out, err = cli_runner("txn", "post", acct, cat, "-1000.00", "2026-04-04")
+    print(exit_code, out, err)
+    assert exit_code == 3
+    assert out == ""
+    assert len(db.transactions.list()) == before
+=== END AC txn-post-negative-balance-rejected ===
+
+=== AC txn-post-reference-rejected ===
+Intent: An unknown category or an unknown account is rejected with exit 3 and nothing is stored.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZTP6"
+cat = "ZTP6"
+missing = "ZTPNONE"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Refs")
+    db.categories.create(category=cat, description="Refs")
+    before = len(db.transactions.list())
+    for args in ((acct, missing), (missing, cat)):
+        exit_code, out, err = cli_runner("txn", "post", args[0], args[1], "1.00", "2026-04-01")
+        print(exit_code, out, err)
+        assert exit_code == 3
+        assert out == ""
+    assert len(db.transactions.list()) == before
+=== END AC txn-post-reference-rejected ===
+
+=== AC txn-post-amount-rejected ===
+Intent: Amounts with more than two decimals, zero amounts, and non-numeric amounts are rejected with exit 3 and store nothing.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZTP7"
+cat = "ZTP7"
+bad_amounts = ["1.234", "0", "0.00", "abc", "1,5"]
+with db_session() as db:
+    db.accounts.create(account=acct, name="Amounts")
+    db.categories.create(category=cat, description="Amounts")
+    before = len(db.transactions.list())
+    for bad in bad_amounts:
+        exit_code, out, err = cli_runner("txn", "post", acct, cat, bad, "2026-04-01")
+        print(bad, exit_code, out, err)
+        assert exit_code == 3
+        assert out == ""
+    assert len(db.transactions.list()) == before
+=== END AC txn-post-amount-rejected ===
+
+=== AC txn-post-date-rules ===
+Intent: Impossible dates and February 29 in non-leap Gregorian years are rejected with exit 3, while February 29 in a leap year is accepted.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZTP8"
+cat = "ZTP8"
+rejected = ["2026-02-30", "2026-02-29", "2100-02-29", "2026-13-01", "2026-4-1"]
+accepted = ["2024-02-29", "2000-02-29"]
+with db_session() as db:
+    db.accounts.create(account=acct, name="Dates")
+    db.categories.create(category=cat, description="Dates")
+    before = len(db.transactions.list())
+    for bad in rejected:
+        exit_code, out, err = cli_runner("txn", "post", acct, cat, "1.00", bad)
+        print(bad, exit_code, out, err)
+        assert exit_code == 3
+        assert out == ""
+    assert len(db.transactions.list()) == before
+    for good in accepted:
+        exit_code, out, err = cli_runner("txn", "post", acct, cat, "1.00", good)
+        print(good, exit_code, out, err)
+        assert exit_code == 0
+    assert len(db.transactions.list()) == before + len(accepted)
+=== END AC txn-post-date-rules ===
+
+=== AC txn-post-memo-rejected ===
+Intent: A memo longer than 60 characters or containing a comma is rejected with exit 3 and stores nothing.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZTP9"
+cat = "ZTP9"
+too_long = "m" * 61
+with_comma = "left,right"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Memos")
+    db.categories.create(category=cat, description="Memos")
+    before = len(db.transactions.list())
+    for bad in (too_long, with_comma):
+        exit_code, out, err = cli_runner("txn", "post", acct, cat, "1.00", "2026-04-01", bad)
+        print(exit_code, out, err)
+        assert exit_code == 3
+        assert out == ""
+    assert len(db.transactions.list()) == before
+=== END AC txn-post-memo-rejected ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Every input and rule is checked before the first write; a rejected post changes nothing.
+- No floating point is used for money at any layer.
+- Persistence is reached only through the generated persistence package.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-TxnGet.md ===
+# FEATURE: Transaction Get
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger txn get`, which writes one stored transaction row by id. |
+| Depends On | FEATURE-TxnPost.md, FEATURE-LedgerCli.md, DATABASE.md |
+| Provides | ledger txn get |
+| Consumes | ledger, transactions |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Let the shop look up a single recorded transaction by its id.
+
+## Trigger
+
+`ledger txn get <id>` invoked from the command line.
+
+## Sequence
+
+1. Require exactly one argument after `get`; otherwise raise the shared usage error (exit 2).
+2. Parse the id as an integer; a non-integer id exits 3.
+3. Read the transaction. An absent id exits 4.
+4. Write the header `txn_id,date,account,category,amount,memo` and the stored row, with the amount at exactly two decimals.
+
+## Database Interface
+
+- `FEATURE-TXN-002` — read: get the transaction by id - supplies: `txn_id` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+
+## Behavior Rules
+
+- The command never writes to the database.
+- A failing command writes nothing to standard output and one diagnostic line to standard error.
+
+## Programmatic Acceptance
+
+=== AC txn-get-success ===
+Intent: Getting an existing transaction exits 0 and writes its stored values with the amount formatted from the stored cents.
+
+import csv
+import io
+from decimal import Decimal
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZTG1"
+cat = "ZTG1"
+txn_id = 940001
+date = "2026-04-01"
+cents = 4550
+memo = "walk in sale"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Get Account")
+    db.categories.create(category=cat, description="Get Category")
+    db.transactions.create(
+        txn_id=txn_id, date=date, account=acct, category=cat, amount=cents, memo=memo
+    )
+    exit_code, out, err = cli_runner("txn", "get", str(txn_id))
+    print(exit_code, out, err)
+    assert exit_code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[0] == ["txn_id", "date", "account", "category", "amount", "memo"]
+    amount_text = f"{Decimal(cents) / 100:.2f}"
+    assert rows[1] == [str(txn_id), date, acct, cat, amount_text, memo]
+=== END AC txn-get-success ===
+
+=== AC txn-get-negative-and-empty-memo ===
+Intent: A stored negative amount prints with a leading minus and two decimals, and an empty memo prints as an empty final field.
+
+import csv
+import io
+from decimal import Decimal
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZTG2"
+cat = "ZTG2"
+funding_id = 940002
+txn_id = 940003
+spend_cents = -1234
+with db_session() as db:
+    db.accounts.create(account=acct, name="Get Account")
+    db.categories.create(category=cat, description="Get Category")
+    db.transactions.create(
+        txn_id=funding_id, date="2026-04-01", account=acct, category=cat, amount=10000, memo=""
+    )
+    db.transactions.create(
+        txn_id=txn_id, date="2026-04-02", account=acct, category=cat, amount=spend_cents, memo=""
+    )
+    exit_code, out, err = cli_runner("txn", "get", str(txn_id))
+    print(exit_code, out, err)
+    assert exit_code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[1][4] == f"{Decimal(spend_cents) / 100:.2f}"
+    assert len(rows[1]) == 6
+    assert rows[1][5] == ""
+=== END AC txn-get-negative-and-empty-memo ===
+
+=== AC txn-get-absent ===
+Intent: Getting an id that is not stored exits 4 with nothing on standard output.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    stored = [r.txn_id for r in db.transactions.list()]
+    absent = (max(stored) + 1000) if stored else 999
+    exit_code, out, err = cli_runner("txn", "get", str(absent))
+    print(exit_code, out, err)
+    assert exit_code == 4
+    assert out == ""
+=== END AC txn-get-absent ===
+
+=== AC txn-get-non-integer ===
+Intent: A non-integer id is rejected with exit 3 and nothing on standard output.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    for bad in ("abc", "1.5"):
+        exit_code, out, err = cli_runner("txn", "get", bad)
+        print(bad, exit_code, out, err)
+        assert exit_code == 3
+        assert out == ""
+=== END AC txn-get-non-integer ===
+
+=== AC txn-get-after-post ===
+Intent: A transaction posted through the CLI is returned unchanged by a later get, proving the post persisted.
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZTG3"
+cat = "ZTG3"
+amount_text = "20.25"
+date = "2026-04-05"
+memo = "round trip"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Round Trip")
+    db.categories.create(category=cat, description="Round Trip")
+    exit_code, out, err = cli_runner("txn", "post", acct, cat, amount_text, date, memo)
+    print(exit_code, out, err)
+    assert exit_code == 0
+    posted = list(csv.reader(io.StringIO(out)))[1]
+    exit_code, out, err = cli_runner("txn", "get", posted[0])
+    print(exit_code, out, err)
+    assert exit_code == 0
+    fetched = list(csv.reader(io.StringIO(out)))[1]
+    assert fetched == posted
+=== END AC txn-get-after-post ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- The command is read-only and never changes a stored record.
+- Persistence is reached only through the generated persistence package.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-TxnAmend.md ===
+# FEATURE: Transaction Amend
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger txn amend`, which changes only a transaction's amount while keeping every account balance non-negative. |
+| Depends On | FEATURE-TxnPost.md, FEATURE-LedgerCli.md, DATABASE.md |
+| Provides | ledger txn amend |
+| Consumes | ledger, transactions |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Correct the amount of a recorded transaction without altering its date, account, category, or memo.
+
+## Trigger
+
+`ledger txn amend <id> <amount>` invoked from the command line.
+
+## Sequence
+
+1. Require exactly two arguments after `amend`; otherwise raise the shared usage error (exit 2).
+2. Parse the id as an integer (non-integer exits 3) and look up the transaction. An absent id exits 4; this check runs before the amount is validated.
+3. Validate the amount with the shared parser (`-?DIGITS[.D[D]]`, at most two decimals, never zero) into integer cents. Invalid exits 3.
+4. Compute the owning account's balance from its stored transactions, replace the old amount with the new one, and confirm the result is not below zero. Otherwise exit 3.
+5. Only after every check passes, update the amount and write the header `txn_id,date,account,category,amount,memo` and the updated row.
+
+## Database Interface
+
+- `FEATURE-TXN-002` — read: get the transaction by id - supplies: `txn_id` - returns: `txn_id`, `account`, `amount`
+- `FEATURE-TXN-005` — read: list the account's transactions to compute the resulting balance - supplies: `account` - returns: `txn_id`, `amount`
+- `FEATURE-TXN-003` — write: change the amount - supplies: `txn_id`, `amount` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+
+## Behavior Rules
+
+- Only the amount changes.
+- A rejected amend changes no stored record.
+- Money is integer cents at every layer.
+
+## Programmatic Acceptance
+
+=== AC txn-amend-success ===
+Intent: Amending an amount exits 0, writes the updated row, changes only the amount in storage, and a separate read shows the new cents.
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZTA1"
+cat = "ZTA1"
+txn_id = 950001
+date = "2026-04-01"
+memo = "walk in sale"
+old_cents = 4550
+new_text = "54.50"
+new_cents = 5450
+with db_session() as db:
+    db.accounts.create(account=acct, name="Amend Account")
+    db.categories.create(category=cat, description="Amend Category")
+    db.transactions.create(
+        txn_id=txn_id, date=date, account=acct, category=cat, amount=old_cents, memo=memo
+    )
+    exit_code, out, err = cli_runner("txn", "amend", str(txn_id), new_text)
+    print(exit_code, out, err)
+    assert exit_code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[0] == ["txn_id", "date", "account", "category", "amount", "memo"]
+    assert rows[1] == [str(txn_id), date, acct, cat, new_text, memo]
+    back = db.transactions.get(txn_id=txn_id)
+    assert back is not None
+    assert back.amount == new_cents
+    assert back.date == date
+    assert back.account == acct
+    assert back.category == cat
+    assert back.memo == memo
+=== END AC txn-amend-success ===
+
+=== AC txn-amend-absent ===
+Intent: Amending an id that is not stored exits 4, and the not-found check wins over an invalid amount.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    stored = [r.txn_id for r in db.transactions.list()]
+    absent = (max(stored) + 1000) if stored else 999
+    for amount in ("5.00", "1.234"):
+        exit_code, out, err = cli_runner("txn", "amend", str(absent), amount)
+        print(amount, exit_code, out, err)
+        assert exit_code == 4
+        assert out == ""
+    assert db.transactions.get(txn_id=absent) is None
+=== END AC txn-amend-absent ===
+
+=== AC txn-amend-negative-balance-rejected ===
+Intent: An amendment that would leave the account balance below zero exits 3 and the stored amount is unchanged.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZTA2"
+cat = "ZTA2"
+receipt_id = 950011
+payment_id = 950012
+receipt_cents = 10000
+payment_cents = -6000
+too_small_text = "50.00"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Balance Account")
+    db.categories.create(category=cat, description="Balance Category")
+    db.transactions.create(
+        txn_id=receipt_id, date="2026-04-01", account=acct, category=cat,
+        amount=receipt_cents, memo="",
+    )
+    db.transactions.create(
+        txn_id=payment_id, date="2026-04-02", account=acct, category=cat,
+        amount=payment_cents, memo="",
+    )
+    exit_code, out, err = cli_runner("txn", "amend", str(receipt_id), too_small_text)
+    print(exit_code, out, err)
+    assert exit_code == 3
+    assert out == ""
+    back = db.transactions.get(txn_id=receipt_id)
+    assert back is not None
+    assert back.amount == receipt_cents
+=== END AC txn-amend-negative-balance-rejected ===
+
+=== AC txn-amend-balance-allowed ===
+Intent: An amendment that keeps the account balance at or above zero is accepted and stored.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZTA3"
+cat = "ZTA3"
+receipt_id = 950021
+payment_id = 950022
+receipt_cents = 10000
+payment_cents = -6000
+new_text = "70.00"
+new_cents = 7000
+with db_session() as db:
+    db.accounts.create(account=acct, name="Balance Account")
+    db.categories.create(category=cat, description="Balance Category")
+    db.transactions.create(
+        txn_id=receipt_id, date="2026-04-01", account=acct, category=cat,
+        amount=receipt_cents, memo="",
+    )
+    db.transactions.create(
+        txn_id=payment_id, date="2026-04-02", account=acct, category=cat,
+        amount=payment_cents, memo="",
+    )
+    exit_code, out, err = cli_runner("txn", "amend", str(receipt_id), new_text)
+    print(exit_code, out, err)
+    assert exit_code == 0
+    back = db.transactions.get(txn_id=receipt_id)
+    assert back is not None
+    assert back.amount == new_cents
+=== END AC txn-amend-balance-allowed ===
+
+=== AC txn-amend-invalid-amount ===
+Intent: Amounts with too many decimals, zero, or non-numeric text are rejected with exit 3 and the stored amount is unchanged.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct = "ZTA4"
+cat = "ZTA4"
+txn_id = 950031
+cents = 2500
+bad_amounts = ["1.234", "0", "0.00", "abc"]
+with db_session() as db:
+    db.accounts.create(account=acct, name="Invalid Account")
+    db.categories.create(category=cat, description="Invalid Category")
+    db.transactions.create(
+        txn_id=txn_id, date="2026-04-01", account=acct, category=cat, amount=cents, memo=""
+    )
+    for bad in bad_amounts:
+        exit_code, out, err = cli_runner("txn", "amend", str(txn_id), bad)
+        print(bad, exit_code, out, err)
+        assert exit_code == 3
+        assert out == ""
+        back = db.transactions.get(txn_id=txn_id)
+        assert back is not None
+        assert back.amount == cents
+=== END AC txn-amend-invalid-amount ===
+
+=== AC txn-amend-non-integer-id ===
+Intent: A non-integer id is rejected with exit 3 and writes nothing to standard output.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    exit_code, out, err = cli_runner("txn", "amend", "abc", "5.00")
+    print(exit_code, out, err)
+    assert exit_code == 3
+    assert out == ""
+=== END AC txn-amend-non-integer-id ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Only the amount of a transaction may change.
+- Every rule is checked before the update; a rejected amend changes nothing.
+- Persistence is reached only through the generated persistence package.
+=== END ARTIFACT ===
