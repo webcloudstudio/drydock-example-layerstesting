@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/DATABASE_compact.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/DATABASE_compact.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/DATABASE_compact.md">Raw file</a></div></header>
+<article class="doc"><p>&lt;!-- Compacted from DATABASE.md sha256=a9d242b773d4d8d48d088bcadf1977d0c725cd9a9a0dd205e5e466a140c35e12 on 2026-10-27 by drydock build agent --&gt;</p>
+<p>Database: LayersTesting (version 20261027 V1). Build order 1. Provides persistence.accounts, persistence.categories, persistence.transactions.</p>
+<p>Access: <code>open_database(dsn)</code> returns <code>Database</code>; <code>db.&lt;table&gt;.&lt;op&gt;(...)</code>. Money: integer cents everywhere. No aggregate operations; callers compute counts, sums, next txn_id from list results.</p>
+<p>Operations (input -&gt; output; * = match key):</p>
+<ul><li>accounts.create(account, name) -&gt; (account, name)</li><li>accounts.get(account*) -&gt; (account, name) | None</li><li>accounts.update(account*, name) -&gt; (account, name)</li><li>accounts.delete(account*) -&gt; (account)</li><li>accounts.list() -&gt; [(account, name)] order account asc</li><li>accounts.clear(min_account) -&gt; count; removes account &gt;= min_account; &quot;&quot; removes all</li><li>categories.create(category, description) -&gt; (category, description)</li><li>categories.get(category*) -&gt; (category, description) | None</li><li>categories.update(category*, description) -&gt; (category, description)</li><li>categories.delete(category*) -&gt; (category)</li><li>categories.list() -&gt; [(category, description)] order category asc</li><li>categories.clear(min_category) -&gt; count; &quot;&quot; removes all</li><li>transactions.create(txn_id, date, account, category, amount, memo) -&gt; (txn_id, date, account, category, amount, memo)</li><li>transactions.get(txn_id*) -&gt; row | None</li><li>transactions.update(txn_id*, amount) -&gt; row</li><li>transactions.delete(txn_id*) -&gt; (txn_id)</li><li>transactions.list(account?, category?, start_date?, end_date?) -&gt; [row] filters account, category, date&gt;=start_date, date&lt;=end_date; order txn_id asc</li><li>transactions.clear(min_txn_id) -&gt; count; 0 removes all</li></ul>
+<p>Schema:</p>
+<ul><li>accounts(account TEXT PK, 1-12 chars A-Z0-9; name TEXT NOT NULL, 1-40 chars)</li><li>categories(category TEXT PK, 1-12 chars A-Z0-9; description TEXT NOT NULL, 1-40 chars)</li><li>transactions(txn_id INTEGER PK; date TEXT YYYY-MM-DD; account FK accounts; category FK categories; amount INTEGER cents signed, never zero; memo TEXT 0-60 chars default &#x27;&#x27;); INDEX(account, date)</li></ul>
+<p>Config: DATABASE_URL (SQLite path, optional sqlite:// prefix, wins), DATABASE_PATH (fallback), default data/app.db.</p>
+<p>Guardrails: only the persistence package opens a driver; amounts never float; counts/balances never hardcoded.</p></article>
+</main>
+</body>
+</html>

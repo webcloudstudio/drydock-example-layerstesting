@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/commands/transactions.py</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/commands/transactions.py</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../build/LayersTesting/cli/commands/transactions.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Transaction commands: ``ledger txn post|get|delete|amend``.&quot;&quot;&quot;
+
+from cli.registry import Command
+from ledger_core.balances import Delete, Edit, Insert, check_no_negative
+from ledger_core.errors import NotFound, Rejected
+from ledger_core.money import parse_amount
+from ledger_core.transactions import next_txn_id, parse_txn_id, txn_row
+from ledger_core.validation import validate_date, validate_memo
+
+TXN_HEADER = [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;]
+DELETED_HEADER = [&quot;deleted&quot;]
+
+
+def txn_post(db, args: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Check every input and the balance rule, then insert one transaction and print its row.
+
+    All checks run before the insert, so a rejected post stores nothing.
+    &quot;&quot;&quot;
+    account, category = args[0], args[1]
+    cents = parse_amount(args[2])
+    day = validate_date(args[3])
+    memo = validate_memo(args[4] if len(args) == 5 else &quot;&quot;)
+    if db.accounts.get(account=account) is None:
+        raise Rejected(f&quot;account {account} does not exist&quot;)
+    if db.categories.get(category=category) is None:
+        raise Rejected(f&quot;category {category} does not exist&quot;)
+    check_no_negative(db, [Insert(account=account, amount=cents)])
+    txn = db.transactions.create(
+        txn_id=next_txn_id(db), date=day, account=account, category=category, amount=cents, memo=memo
+    )
+    return [TXN_HEADER, txn_row(txn)]
+
+
+def txn_get(db, args: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Print one stored transaction. Read-only; a non-integer id exits 3 and an absent id exits 4.&quot;&quot;&quot;
+    txn_id = parse_txn_id(args[0])
+    txn = db.transactions.get(txn_id=txn_id)
+    if txn is None:
+        raise NotFound(f&quot;transaction {txn_id} does not exist&quot;)
+    return [TXN_HEADER, txn_row(txn)]
+
+
+def txn_delete(db, args: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Remove a transaction unless its account balance would go below zero without it.&quot;&quot;&quot;
+    txn_id = parse_txn_id(args[0])
+    if db.transactions.get(txn_id=txn_id) is None:
+        raise NotFound(f&quot;transaction {txn_id} does not exist&quot;)
+    check_no_negative(db, [Delete(txn_id=txn_id)])
+    db.transactions.delete(txn_id=txn_id)
+    return [DELETED_HEADER, [str(txn_id)]]
+
+
+def txn_amend(db, args: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Change only the amount of a transaction, and only when its account stays at or above zero.&quot;&quot;&quot;
+    txn_id = parse_txn_id(args[0])
+    cents = parse_amount(args[1])
+    if db.transactions.get(txn_id=txn_id) is None:
+        raise NotFound(f&quot;transaction {txn_id} does not exist&quot;)
+    check_no_negative(db, [Edit(txn_id=txn_id, amount=cents)])
+    txn = db.transactions.update(txn_id=txn_id, amount=cents)
+    return [TXN_HEADER, txn_row(txn)]
+
+
+COMMANDS = {
+    (&quot;txn&quot;, &quot;post&quot;): Command(txn_post, 4, 5),
+    (&quot;txn&quot;, &quot;get&quot;): Command(txn_get, 1, 1),
+    (&quot;txn&quot;, &quot;delete&quot;): Command(txn_delete, 1, 1),
+    (&quot;txn&quot;, &quot;amend&quot;): Command(txn_amend, 2, 2),
+}
+</pre></article>
+</main>
+</body>
+</html>

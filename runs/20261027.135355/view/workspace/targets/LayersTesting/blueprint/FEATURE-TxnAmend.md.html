@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-TxnAmend.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-TxnAmend.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-TxnAmend.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Transaction Amend</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger txn amend &lt;id&gt; &lt;amount&gt;</code>, which changes only a transaction&#x27;s amount without leaving any account balance below zero.</td></tr><tr><td>Depends On</td><td>FEATURE-TxnPost.md, FEATURE-Validation.md, FEATURE-BalanceRule.md, FEATURE-CliEntry.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger txn amend</td></tr><tr><td>Consumes</td><td>ledger_core.transactions, ledger_core.validation, ledger_core.balances, cli.registry</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Amend the amount of an existing transaction. Only the amount changes; date, account, category, and memo are untouched. Persistence is reached only through <code>ledger_core.transactions</code>, which calls the generated <code>persistence</code> package.</p>
+<h2>Behavior</h2>
+<ol><li>Argument count other than two after <code>txn amend</code> exits 2.</li><li>The id must be an integer; otherwise exit 3.</li><li>The amount is validated with <code>ledger_core.validation</code> (<code>-?DIGITS[.D[D]]</code>, at most two decimals, never zero); a violation exits 3.</li><li>An absent id exits 4.</li><li>The resulting balance of the transaction&#x27;s account is the stored balance minus the old amount plus the new amount, computed in integer cents through <code>ledger_core.balances</code>. A negative result exits 3 and nothing is written.</li><li>Otherwise only the amount is updated and the updated row is printed as <code>txn_id,date,account,category,amount,memo</code> with a two-decimal amount.</li><li>A failing command writes nothing to standard output and one diagnostic line to standard error.</li></ol>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md and reached through <code>ledger_core.transactions</code>.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC txn-amend-success ===<br>Intent: Amending an existing transaction exits 0, prints the updated row with the supplied amount text, and a separate read shows the new integer cents.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session import csv import io</p>
+<p>def f(row, name): return row[name] if isinstance(row, dict) else getattr(row, name)</p>
+<p>acct, cat, tid = &quot;ZZAM1&quot;, &quot;ZZAMC1&quot;, 900100001 day = &quot;2026-05-01&quot; newtext = &quot;50.00&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Amend Account&quot;) db.categories.create(category=cat, description=&quot;Amend Category&quot;) db.transactions.create(txn_id=tid, date=day, account=acct, category=cat, amount=10000, memo=&quot;amend probe&quot;) code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, str(tid), newtext) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert len(rows) == 2 assert rows[1][0] == str(tid) assert rows[1][1] == day assert rows[1][4] == newtext assert f(db.transactions.get(txn_id=tid), &quot;amount&quot;) == int(newtext.replace(&quot;.&quot;, &quot;&quot;)) === END AC txn-amend-success ===</p>
+<p>=== AC txn-amend-only-amount ===<br>Intent: Amend changes only the amount; date, account, category, and memo read back exactly as they were created.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>def f(row, name): return row[name] if isinstance(row, dict) else getattr(row, name)</p>
+<p>acct, cat, tid = &quot;ZZAM2&quot;, &quot;ZZAMC2&quot;, 900100002 day = &quot;2026-05-02&quot; note = &quot;keep this memo&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Amend Account&quot;) db.categories.create(category=cat, description=&quot;Amend Category&quot;) db.transactions.create(txn_id=tid, date=day, account=acct, category=cat, amount=2000, memo=note) code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, str(tid), &quot;35.50&quot;) print(out) print(err) assert code == 0 back = db.transactions.get(txn_id=tid) assert f(back, &quot;date&quot;) == day assert f(back, &quot;account&quot;) == acct assert f(back, &quot;category&quot;) == cat assert f(back, &quot;memo&quot;) == note === END AC txn-amend-only-amount ===</p>
+<p>=== AC txn-amend-absent ===<br>Intent: Amending an id that does not exist exits 4, prints nothing to stdout, and creates no row.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>tid = 900199999 with db_session() as db: assert db.transactions.get(txn_id=tid) is None code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, str(tid), &quot;5.00&quot;) print(out) print(err) assert code == 4 assert out == &quot;&quot; assert db.transactions.get(txn_id=tid) is None === END AC txn-amend-absent ===</p>
+<p>=== AC txn-amend-negative-balance ===<br>Intent: An amend that would leave the account balance below zero exits 3 and keeps the original amount, while an amend landing exactly on zero succeeds. The account holds +10000 and -4000 cents, so lowering the first to 3000 gives -1000 and lowering it to 4000 gives 0.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>def f(row, name): return row[name] if isinstance(row, dict) else getattr(row, name)</p>
+<p>acct, cat = &quot;ZZAM3&quot;, &quot;ZZAMC3&quot; tid_in, tid_out = 900100003, 900100004 too_low, exact = &quot;30.00&quot;, &quot;40.00&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Amend Account&quot;) db.categories.create(category=cat, description=&quot;Amend Category&quot;) db.transactions.create(txn_id=tid_in, date=&quot;2026-05-03&quot;, account=acct, category=cat, amount=10000, memo=&quot;&quot;) db.transactions.create(txn_id=tid_out, date=&quot;2026-05-03&quot;, account=acct, category=cat, amount=-4000, memo=&quot;&quot;) code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, str(tid_in), too_low) print(out) print(err) assert code == 3 assert out == &quot;&quot; assert f(db.transactions.get(txn_id=tid_in), &quot;amount&quot;) == 10000 code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, str(tid_in), exact) print(out) print(err) assert code == 0 assert f(db.transactions.get(txn_id=tid_in), &quot;amount&quot;) == int(exact.replace(&quot;.&quot;, &quot;&quot;)) === END AC txn-amend-negative-balance ===</p>
+<p>=== AC txn-amend-invalid-amount ===<br>Intent: Amounts with three decimals, a zero amount, and a non-numeric amount are rejected with exit 3 and the stored amount is unchanged.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>def f(row, name): return row[name] if isinstance(row, dict) else getattr(row, name)</p>
+<p>acct, cat, tid = &quot;ZZAM4&quot;, &quot;ZZAMC4&quot;, 900100005 original = 10000 with db_session() as db: db.accounts.create(account=acct, name=&quot;Amend Account&quot;) db.categories.create(category=cat, description=&quot;Amend Category&quot;) db.transactions.create(txn_id=tid, date=&quot;2026-05-04&quot;, account=acct, category=cat, amount=original, memo=&quot;&quot;) for bad in [&quot;1.234&quot;, &quot;0&quot;, &quot;0.00&quot;, &quot;abc&quot;]: code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, str(tid), bad) print(out) print(err) assert code == 3 assert out == &quot;&quot; assert f(db.transactions.get(txn_id=tid), &quot;amount&quot;) == original === END AC txn-amend-invalid-amount ===</p>
+<p>=== AC txn-amend-usage ===<br>Intent: A wrong argument count for txn amend exits 2 with nothing on stdout.</p>
+<p>from cli.testing import cli_runner</p>
+<p>for args in [(&quot;txn&quot;, &quot;amend&quot;), (&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;), (&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;, &quot;2.00&quot;, &quot;extra&quot;)]: code, out, err = cli_runner(*args) print(out) print(err) assert code == 2 assert out == &quot;&quot; === END AC txn-amend-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Amounts are integer cents in every layer; floating point is never used for money.</li><li>The balance check runs before the update, so a rejected amend writes nothing.</li><li>Only the amount column changes; no other column is ever written by this command.</li><li>Standard output stays empty on any failure; the diagnostic goes to standard error.</li></ul></article>
+</main>
+</body>
+</html>

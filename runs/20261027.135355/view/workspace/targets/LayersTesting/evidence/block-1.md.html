@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-1.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-1.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-1.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 1 · Foundational (block-1)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-27</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 8497</li><li>execution id: 20261027.141932.766Z-ce53d811</li></ul>
+<h2>Stories built</h2>
+<ul><li>Stand up the Python project tree, environment, dependency manifest, pytest runner, and bin/test.sh. (foundation-python) [story]</li></ul>
+<h2>Reusable compacts</h2>
+<ul><li>ARCHITECTURE_compact.md</li></ul>
+<h2>Stacked context</h2>
+<ul><li>implements: python.md (SP 1166)</li><li>compass: COMPASS.md (SP 1134)</li><li>implements: ARCHITECTURE.md (SP 3140)</li><li>stack: common.md (SP 2776)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>.env.example</li><li>.gitignore</li><li>bin/test.sh</li><li>conftest.py</li><li>data/logs/test_2026-10-27_102053.log</li><li>data/logs/test_2026-10-27_102112.log</li><li>data/logs/test_2026-10-27_102118.log</li><li>data/logs/test_2026-10-27_102133.log</li><li>ledger_core/<strong>init</strong>.py</li><li>ledger_core/config.py</li><li>ledger_core/errors.py</li><li>pyproject.toml</li><li>tests/test_config.py</li><li>tests/test_errors.py</li><li>tests/test_foundation.py</li><li>uv.lock</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>RED: arch-project-files (ARCHITECTURE.md)</li></ul>
+<p>intent: The project root carries the dependency manifest, lock, pytest conftest, and a test launcher that runs pytest. return code: 1 stderr: --- drydock: values at failure --- name = &#x27;uv.lock&#x27; --- drydock: end values --- Traceback (most recent call last): File &quot;arch-project-files.py&quot;, line 4, in &lt;module&gt; assert Path(name).is_file(), name ^^^^^^^^^^^^^^^^^^^^<br>AssertionError: uv.lock</p>
+<ul><li>RED: arch-packages-import (ARCHITECTURE.md)</li></ul>
+<p>intent: The ledger_core package and its foundation modules import. return code: 1 stderr: Traceback (most recent call last): File &quot;arch-packages-import.py&quot;, line 1, in &lt;module&gt; import ledger_core<br>ModuleNotFoundError: No module named &#x27;ledger_core&#x27;</p>
+<ul><li>RED: arch-config-precedence (ARCHITECTURE.md)</li></ul>
+<p>intent: DATABASE_URL wins over DATABASE_PATH, an empty URL falls through, and with both unset the default path is used. return code: 1 stderr: Traceback (most recent call last): File &quot;arch-config-precedence.py&quot;, line 2, in &lt;module&gt; from ledger_core.config import database_path<br>ModuleNotFoundError: No module named &#x27;ledger_core&#x27;</p>
+<ul><li>RED: arch-error-exit-codes (ARCHITECTURE.md)</li></ul>
+<p>intent: The three domain error classes derive from LedgerError and carry the exit codes 3, 4, and 1. return code: 1 stderr: Traceback (most recent call last): File &quot;arch-error-exit-codes.py&quot;, line 1, in &lt;module&gt; from ledger_core.errors import LedgerError, Rejected, NotFound, Operational<br>ModuleNotFoundError: No module named &#x27;ledger_core&#x27;</p>
+<ul><li>RED: arch-driver-boundary (ARCHITECTURE.md)</li></ul>
+<p>intent: No application module outside the generated persistence package imports a database driver. return code: 1 stderr: Traceback (most recent call last): File &quot;arch-driver-boundary.py&quot;, line 6, in &lt;module&gt; assert Path(&quot;ledger_core&quot;).is_dir() ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ AssertionError</p>
+<ul><li>RED: arch-no-float (ARCHITECTURE.md)</li></ul>
+<p>intent: Domain code contains no float call and no float literal, so money never uses floating point. return code: 1 stdout: 0 files scanned stderr: --- drydock: values at failure --- checked = 0 --- drydock: end values --- Traceback (most recent call last): File &quot;arch-no-float.py&quot;, line 14, in &lt;module&gt; assert checked &gt;= 1 ^^^^^^^^^^^^ AssertionError</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: arch-project-files (ARCHITECTURE.md)</li></ul>
+<p>intent: The project root carries the dependency manifest, lock, pytest conftest, and a test launcher that runs pytest. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: arch-packages-import (ARCHITECTURE.md)</li></ul>
+<p>intent: The ledger_core package and its foundation modules import. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: arch-config-precedence (ARCHITECTURE.md)</li></ul>
+<p>intent: DATABASE_URL wins over DATABASE_PATH, an empty URL falls through, and with both unset the default path is used. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: arch-error-exit-codes (ARCHITECTURE.md)</li></ul>
+<p>intent: The three domain error classes derive from LedgerError and carry the exit codes 3, 4, and 1. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: arch-driver-boundary (ARCHITECTURE.md)</li></ul>
+<p>intent: No application module outside the generated persistence package imports a database driver. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: 3 files scanned</p>
+<ul><li>PASS: arch-no-float (ARCHITECTURE.md)</li></ul>
+<p>intent: Domain code contains no float call and no float literal, so money never uses floating point. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: 3 files scanned</p>
+<h2>Build summary</h2>
+<p>The project already has a <code>pyproject.toml</code> with no dependencies. I&#x27;ll add the pytest dependency through <code>uv</code>, then create the rest of the foundation tree.pytest resolved and locked through uv. Next I&#x27;ll write the package, config, errors, launcher, conftest, and tests.Now the test suite, the pytest config, <code>.gitignore</code>, and <code>.env.example</code>.Two of the tests I just wrote are brittle or pin an odd edge. The module-list check would break as later stories add modules, and the <code>sqlite://</code> empty-path case encodes questionable behavior. I&#x27;ll remove both.Now I&#x27;ll run the suite through the launcher, which is the verification command for this story.The suite passes (30 tests). The launcher prints a noisy <code>OSTYPE</code> warning because <code>set -u</code> is active when the venv activate script runs. I&#x27;ll scope <code>set +u</code> to the activation and then confirm a failing test makes the launcher exit nonzero.The foundation-python story is built, and <code>sh bin/test.sh</code> passes: 30 tests, exit 0. A deliberately failing probe test made the launcher exit 1, so the exit status propagates. I removed the probe afterward.</p>
+<p>I did not run <code>sh sources/run.sh</code> or the Drydock acceptance criteria. This story is not the terminal one, and the <code>arch-config-precedence</code> criterion imports <code>drydock_acceptance</code>, which is not on disk. The same behavior is covered by <code>tests/test_config.py</code>.</p>
+<p><strong>What&#x27;s in place</strong></p>
+<ul><li><strong>Environment:</strong> <code>uv add --dev pytest</code> created <code>.venv</code> and <code>uv.lock</code>. <code>pyproject.toml</code> declares Python 3.11+, the pytest dev dependency, and pytest config (<code>testpaths = [&quot;tests&quot;]</code>, <code>pythonpath = [&quot;.&quot;]</code>).</li><li><strong><code>ledger_core/config.py</code>:</strong> <code>database_path()</code> resolves <code>DATABASE_URL</code> (optional <code>sqlite://</code> stripped), then <code>DATABASE_PATH</code>, then <code>data/app.db</code>. Empty values are skipped.</li><li><strong><code>ledger_core/errors.py</code>:</strong> <code>LedgerError</code> with <code>Rejected</code> (3), <code>NotFound</code> (4), and <code>Operational</code> (1).</li><li><strong><code>bin/test.sh</code>:</strong> POSIX <code>sh</code>. It creates <code>.venv</code> with <code>uv sync --locked</code> if it is missing, activates it, runs <code>pytest -q</code>, and exits with pytest&#x27;s status. It also writes a log under <code>data/logs/</code>.</li><li><strong><code>conftest.py</code>:</strong> <code>db_session</code> and <code>cli_runner</code> fixtures. They import their helpers lazily because those packages come in later stories.</li><li><strong><code>.gitignore</code> and <code>.env.example</code>:</strong> ignore <code>.venv/</code>, <code>data/</code>, and caches. The example documents the two database variables.</li><li><strong>Tests:</strong> <code>tests/test_config.py</code> covers the precedence rules with the environment cleared first. <code>tests/test_errors.py</code> covers exit codes. <code>tests/test_foundation.py</code> checks the project files, imports, and per-module AST scans of <code>ledger_core</code> for driver imports and floats.</li></ul>
+<p><strong>Choices I made</strong></p>
+<ul><li>The <code>db_session</code> and <code>cli_runner</code> fixtures return whatever their helper returns. I did not assume they are context managers, since their signatures are not in the spec. Later stories should confirm this.</li><li><code>bin/test.sh</code> writes logs and runs <code>uv sync</code> only when <code>.venv</code> is missing. It does not run <code>uv sync</code> on every invocation.</li><li>I did not create <code>CLAUDE.md</code> or <code>Links.md</code>, since they are outside this story&#x27;s scope.</li></ul>
+<p>Nothing is committed, per the build rules.</p>
+<p>&lt;reusable-compact filename=&quot;ARCHITECTURE.md&quot;&gt; Foundation contract (foundation-python):</p>
+<ul><li>Python &gt;=3.11; deps in pyproject.toml; uv.lock committed; .venv local (gitignored).</li><li>bin/test.sh (POSIX sh): runs <code>pytest -q</code> from root; exit status = verdict.</li><li>conftest.py fixtures: db_session (delegates to persistence.testing.db_session), cli_runner (delegates to cli.testing.cli_runner).</li><li>ledger_core.config.database_path() -&gt; str: DATABASE_URL (strip leading &quot;sqlite://&quot;), else DATABASE_PATH, else &quot;data/app.db&quot;; empty = unset.</li><li>ledger_core.errors: LedgerError(Exception) with exit_code:int; Rejected=3, NotFound=4, Operational=1.</li><li>Boundary: no module under ledger_core/ or cli/ imports sqlite3/psycopg/psycopg2; no float calls or float literals in ledger_core/.</li></ul>
+<p>&lt;/reusable-compact&gt;</p>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>pyproject.toml</li><li>uv.lock</li><li>.gitignore</li><li>.env.example</li><li>bin/test.sh</li><li>conftest.py</li><li>ledger_core/<strong>init</strong>.py</li><li>ledger_core/config.py</li><li>ledger_core/errors.py</li><li>tests/test_config.py</li><li>tests/test_errors.py</li><li>tests/test_foundation.py</li></ul>
+<p>SUMMARY: Built the Python project foundation for LayersTesting. <code>sh bin/test.sh</code> runs 30 pytest tests and exits 0. A failing probe test made the launcher exit 1, confirming the exit status propagates; the probe was removed afterward. Not run: <code>sh sources/run.sh</code> (terminal story, not this block) and the Drydock acceptance criteria, since <code>drydock_acceptance</code> is not on disk. The config precedence behavior is covered by <code>tests/test_config.py</code> instead.</p>
+<p>&lt;blueprint-decisions&gt; [{&quot;spec&quot;:&quot;ARCHITECTURE.md&quot;,&quot;severity&quot;:&quot;Low&quot;,&quot;subject&quot;:&quot;conftest.py db_session and cli_runner fixtures&quot;,&quot;decision&quot;:&quot;The persistence.testing.db_session and cli.testing.cli_runner signatures are not in the spec, so the fixtures delegate by calling the helper and returning its result, with imports deferred until those packages exist. Acceptable, or should the fixtures wrap them as context managers once they land?&quot;}] &lt;/blueprint-decisions&gt;</p>
+<p>BLOCKERS:</p>
+<ul><li>None.</li></ul></article>
+</main>
+</body>
+</html>

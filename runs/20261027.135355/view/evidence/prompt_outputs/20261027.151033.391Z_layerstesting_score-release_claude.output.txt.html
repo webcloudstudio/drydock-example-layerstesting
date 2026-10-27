@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261027.151033.391Z_layerstesting_score-release_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261027.151033.391Z_layerstesting_score-release_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261027.151033.391Z_layerstesting_score-release_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>I&#x27;ll start by reading the grader and the spec, since the recorded PASS lines are only evidence if the grader checks what each trial claims.The grader compares stdout and exit codes byte-for-byte, which covers most trials. Two gaps remain: it never compares stderr, and `sources/INSTRUCTIONS.md` (which st-011 cites) does not exist in the tree. I&#x27;ll check the entry point and look for that file elsewhere before probing stderr and argument-count handling.The spec file is missing, so the README is the only written contract I can check against. Next I&#x27;ll probe the things the grader doesn&#x27;t see: where failure text goes, and exit codes for wrong argument counts.```json
+{
+  &quot;criteria&quot;: [
+    {
+      &quot;id&quot;: &quot;st-001&quot;,
+      &quot;verdict&quot;: &quot;MET&quot;,
+      &quot;rationale&quot;: &quot;The governed gate `sh sources/run.sh` exited 0 against the current tree, with 43 of 43 checks passing.&quot;,
+      &quot;evidence&quot;: [&quot;governed gate full: outcome PASS, return_code 0, &#x27;LayersTesting: 43 passed, 0 failed (of 43)&#x27;&quot;, &quot;sources/run.sh:97-98 exits 0 only when FAILED is 0&quot;]
+    },
+    {
+      &quot;id&quot;: &quot;st-004&quot;,
+      &quot;verdict&quot;: &quot;MET&quot;,
+      &quot;rationale&quot;: &quot;The grader loads the three seed files in order into a fresh database and checks each load&#x27;s reported count (4, 7, 120) and the post-load counts, all PASS.&quot;,
+      &quot;evidence&quot;: [&quot;sources/run.sh:B1-B3 expect &#x27;accounts,4&#x27;, &#x27;categories,7&#x27;, &#x27;transactions,120&#x27; with exit 0&quot;, &quot;sources/run.sh:B4 checks counts 4/7/120 across a separate invocation, PASS&quot;, &quot;governed gate stdout: PASS B1, B2, B3, B4&quot;]
+    },
+    {
+      &quot;id&quot;: &quot;st-005&quot;,
+      &quot;verdict&quot;: &quot;MET&quot;,
+      &quot;rationale&quot;: &quot;Balances, category totals, and monthly totals are compared byte-for-byte with `cmp -s` both before the workflows (C1-C3) and after them (H1-H3), and all six checks PASS.&quot;,
+      &quot;evidence&quot;: [&quot;sources/run.sh:45-47 uses cmp -s on stdout for C1-C3&quot;, &quot;sources/run.sh:H1-H3 repeat the comparison after the transfer and posting workflows&quot;, &quot;governed gate stdout: PASS C1, C2, C3, H1, H2, H3&quot;]
+    },
+    {
+      &quot;id&quot;: &quot;st-006&quot;,
+      &quot;verdict&quot;: &quot;MET&quot;,
+      &quot;rationale&quot;: &quot;Grader checks cover account add, rename, get, and delete, and transaction post, get, amend, and delete. They also cover the exit-3 refusal to delete an account that has transactions, and exit-4 for absent records.&quot;,
+      &quot;evidence&quot;: [&quot;sources/run.sh:E1-E4 add, get, and rename CASH9 with expected returned values, all PASS&quot;, &quot;sources/run.sh:E6 &#x27;account delete DRAWER1&#x27; exits 3 and PASS&quot;, &quot;sources/run.sh:E7-E8 delete CASH9, then get exits 4, PASS&quot;, &quot;sources/run.sh:F1-F3 post, get, and amend txn 121 with current values, PASS&quot;, &quot;sources/run.sh:F8-F9 delete txn 121, then get exits 4, PASS&quot;]
+    },
+    {
+      &quot;id&quot;: &quot;st-007&quot;,
+      &quot;verdict&quot;: &quot;MET&quot;,
+      &quot;rationale&quot;: &quot;Rejected loads, account changes, transaction changes, and transfers each exit 3 and are followed by counts and balances that show nothing changed.&quot;,
+      &quot;evidence&quot;: [&quot;sources/run.sh:D1-D2 rejected load of bad transactions and duplicate account load exit 3, PASS&quot;, &quot;sources/run.sh:D3 counts still 4/7/120, PASS&quot;, &quot;sources/run.sh:E2 duplicate account add exits 3, then E3 reads CASH9 unchanged, PASS&quot;, &quot;sources/run.sh:F5-F7 rejected postings exit 3; H1-H3 later show unchanged totals for the same accounts&quot;, &quot;probe st011: &#x27;post bad account&#x27; and &#x27;post bad date&#x27; rc=3, stdout empty&quot;]
+    },
+    {
+      &quot;id&quot;: &quot;st-008&quot;,
+      &quot;verdict&quot;: &quot;MET&quot;,
+      &quot;rationale&quot;: &quot;Every command that would drive a balance below zero (transfer, post, amend, delete) exits 3, and the H-series balances show the prior balances were preserved.&quot;,
+      &quot;evidence&quot;: [&quot;sources/run.sh:G2 transfer SAFE-&gt;PETTY 999.99 exits 3, PASS&quot;, &quot;sources/run.sh:G3 post PETTY -1000.00 exits 3, PASS&quot;, &quot;sources/run.sh:G4 amend txn 1 to 1.00 and G5 delete txn 1 each exit 3, PASS&quot;, &quot;sources/run.sh:H1 PETTY balance 293.91 and SAFE 750.00 show the rejected G-series commands changed nothing, PASS&quot;]
+    },
+    {
+      &quot;id&quot;: &quot;st-010&quot;,
+      &quot;verdict&quot;: &quot;MET&quot;,
+      &quot;rationale&quot;: &quot;A valid transfer between DRAWER1 and SAFE returns two rows with equal and opposite amounts in category TRANSFER, and the balances change accordingly. The total held across accounts is unchanged by the transfer itself.&quot;,
+      &quot;evidence&quot;: [&quot;sources/run.sh:G1 expects txn rows 122 (-500.00 DRAWER1) and 123 (+500.00 SAFE), category TRANSFER, PASS&quot;, &quot;sources/run.sh:H1 SAFE 250.00 -&gt; 750.00 and DRAWER1 2299.38 -&gt; 1799.38 after G1, PASS&quot;, &quot;sources/run.sh:H2 TRANSFER net 0.00 at inflow and outflow 5600.00, PASS&quot;]
+    },
+    {
+      &quot;id&quot;: &quot;st-011&quot;,
+      &quot;verdict&quot;: &quot;MET&quot;,
+      &quot;rationale&quot;: &quot;Unknown commands and wrong argument counts exit 2 with empty stdout and one stderr line. Rejections and not-found exit 3 and 4 with stdout empty. Successful output is the grader&#x27;s CSV. The contract is in README.md because sources/INSTRUCTIONS.md does not exist.&quot;,
+      &quot;evidence&quot;: [&quot;probe st011: &#x27;frobnicate&#x27; rc=2, stdout 0 lines, stderr 1 line&quot;, &quot;probe st011: &#x27;report nosuch&#x27; rc=2, stdout 0 lines, stderr 1 line&quot;, &quot;probe st011: &#x27;account get&#x27; with no argument and with extra arguments rc=2, stdout empty, stderr 1 line&quot;, &quot;probe st011: &#x27;count extra&#x27; and &#x27;init extra&#x27; rc=2, stdout empty&quot;, &quot;probe st011: &#x27;get absent acct&#x27; rc=4, stderr &#x27;error: account NOSUCH does not exist&#x27;&quot;, &quot;sources/run.sh:U1-U2 expect exit 2 for unknown command and report, PASS&quot;, &quot;README.md:28-35 defines the exit-code and stderr contract that the probe checked&quot;]
+    }
+  ],
+  &quot;improvements&quot;: [
+    &quot;st-011 cites sources/INSTRUCTIONS.md, which is not in the tree; the contract actually lives in README.md. Either restore the file or repoint the criterion at README.md so the spec it grades against exists.&quot;,
+    &quot;sources/run.sh captures stderr but never compares it, so the &#x27;failures only to standard error&#x27; clause of st-011 is only checked by an ad-hoc probe. Add a check that asserts stdout is empty and stderr holds one line for each failing case.&quot;,
+    &quot;st-010 does not say what happens when the two accounts are the same. Either add that case to the criterion (expected exit 3) and to the grader, or state that it is out of scope.&quot;,
+    &quot;Several README requirements have no grader or probe coverage: unknown table names exit 2, and exit 1 for unreadable files is only checked in my probe. Add these to the grader so the gate covers the full exit-code contract.&quot;
+  ]
+}
+```</pre></article>
+</main>
+</body>
+</html>

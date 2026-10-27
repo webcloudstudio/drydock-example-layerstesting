@@ -1,0 +1,121 @@
+<requirement name="cli-executable" stories="foundation-cli,foundation-python">
+The product is an executable named `ledger` at the application root.
+</requirement>
+<requirement name="python-sqlite-stack" stories="foundation-python,foundation-database">
+Implement in Python 3.11 or newer over SQLite, through the shipped Python persistence library. Tests run under pytest.
+</requirement>
+<requirement name="database-tables" stories="foundation-database">
+Three tables. Amounts are stored as integer cents and never as floating point.
+</requirement>
+<requirement name="database-access-layer" stories="foundation-database">
+All database access goes through the shipped persistence library and the relational layer
+generated from `DATABASE.md`. Application code never opens a database driver directly.
+</requirement>
+<requirement name="atomic-commands" stories="feature-balance-rule,feature-load-accounts,feature-load-categories,feature-load-transactions,feature-transfer,feature-no-negative-balance">
+1. **A rejected command changes nothing.** A command checks every input and rule before its
+   first write. A load that rejects row 11 stores none of rows 1 to 10. A transfer stores both of
+   its rows or neither.
+</requirement>
+<requirement name="no-negative-balance" stories="feature-balance-rule,feature-no-negative-balance,feature-txn-post,feature-txn-amend,feature-txn-delete,feature-transfer,feature-load-transactions">
+2. **No command leaves an account balance below zero.** An account's balance is the sum of its
+   transaction amounts. Posting, amending, deleting, transferring, and loading are all subject to
+   this rule, checked before the command writes anything.
+</requirement>
+<requirement name="code-format" stories="feature-validation">
+3. **Codes** (`account`, `category`) are 1 to 12 characters from `A-Z` and `0-9`.
+</requirement>
+<requirement name="text-field-format" stories="feature-validation">
+4. **Names and descriptions** are 1 to 40 characters. **Memos** are 0 to 60 characters. None of
+   them contains a comma or a newline.
+</requirement>
+<requirement name="amount-format" stories="feature-validation">
+5. **Amounts** on input match `-?DIGITS[.D[D]]`: at most two decimal places, never zero. On output
+   an amount is written with exactly two decimal places, a leading `-` when negative, and no
+   thousands separator: `-12.50`, `0.00`, `5000.00`.
+</requirement>
+<requirement name="date-format" stories="feature-validation">
+6. **Dates** are real calendar dates written `YYYY-MM-DD`. `2026-02-30` is rejected.
+</requirement>
+<requirement name="transaction-ids" stories="feature-txn-post,feature-transfer,feature-load-transactions">
+7. **Transaction ids.** A loaded transaction keeps the `txn_id` from its file. A posted
+   transaction receives one more than the largest `txn_id` present, or `1` in an empty table. A
+   transfer's outgoing row takes that id and its incoming row the next.
+</requirement>
+<requirement name="csv-output" stories="foundation-cli,feature-command-contract">
+Every successful command except `init` writes CSV to standard output: one header row, then data
+rows, comma-separated, no quoting, no trailing spaces, `\n` line endings. `init` writes nothing.
+A failing command writes nothing to standard output and one diagnostic line to standard error.
+</requirement>
+<requirement name="row-formats" stories="feature-command-contract,feature-account-get,feature-txn-get">
+The account row is `account,name,transactions,balance`, where `transactions` counts the account's
+transactions. The transaction row is `txn_id,date,account,category,amount,memo`.
+</requirement>
+<requirement name="init-command" stories="feature-init-count">
+| `ledger init` | Prepares an empty ledger for loading and use; removes existing ledger records when rerun. Nothing written. |
+</requirement>
+<requirement name="count-command" stories="feature-init-count">
+| `ledger count` | `table,rows`, then `accounts`, `categories`, `transactions` rows in that order. |
+</requirement>
+<requirement name="load-command" stories="feature-load-csv-reader,feature-load-accounts,feature-load-categories,feature-load-transactions">
+| `ledger load <table> <csv>` | Loads `accounts`, `categories`, or `transactions` from a file whose header matches the table's columns in the order above. Writes `table,loaded` and `<table>,<rows>`. |
+</requirement>
+<requirement name="account-add" stories="feature-account-add">
+| `ledger account add <code> <name>` | The new account row. |
+</requirement>
+<requirement name="account-get" stories="feature-account-get">
+| `ledger account get <code>` | The account row. |
+</requirement>
+<requirement name="account-rename" stories="feature-account-rename">
+| `ledger account rename <code> <name>` | The updated account row. |
+</requirement>
+<requirement name="account-delete" stories="feature-account-delete">
+| `ledger account delete <code>` | `deleted` and the code. Refused while the account has transactions. |
+</requirement>
+<requirement name="txn-post" stories="feature-txn-post">
+| `ledger txn post <account> <category> <amount> <date> [<memo>]` | The new transaction row. |
+</requirement>
+<requirement name="txn-get" stories="feature-txn-get">
+| `ledger txn get <id>` | The transaction row. |
+</requirement>
+<requirement name="txn-amend" stories="feature-txn-amend">
+| `ledger txn amend <id> <amount>` | The updated transaction row. Only the amount changes. |
+</requirement>
+<requirement name="txn-delete" stories="feature-txn-delete">
+| `ledger txn delete <id>` | `deleted` and the id. |
+</requirement>
+<requirement name="transfer-command" stories="feature-transfer">
+| `ledger transfer <from> <to> <amount> <date>` | Two transaction rows in category `TRANSFER`: `-amount` on `<from>` with memo `transfer to <to>`, then `+amount` on `<to>` with memo `transfer from <from>`. The amount is positive and the accounts differ. |
+</requirement>
+<requirement name="report-balances" stories="feature-report-balances">
+| `ledger report balances` | `account,name,transactions,balance` per account ordered by code, then `TOTAL,,<count>,<sum>`. |
+</requirement>
+<requirement name="report-categories" stories="feature-report-categories">
+| `ledger report categories` | `category,description,transactions,inflow,outflow,net` per category ordered by code, including categories with no transactions, then `TOTAL,,<count>,<inflow>,<outflow>,<net>`. |
+</requirement>
+<requirement name="report-monthly" stories="feature-report-monthly">
+| `ledger report monthly` | `month,transactions,inflow,outflow,net` per `YYYY-MM` that has transactions, ascending, then `TOTAL,<count>,<inflow>,<outflow>,<net>`. |
+</requirement>
+<requirement name="inflow-outflow-net" stories="feature-report-categories,feature-report-monthly">
+`inflow` is the sum of positive amounts. `outflow` is the sum of the absolute values of negative
+amounts, written as a positive number. `net` is `inflow - outflow`.
+</requirement>
+<requirement name="exit-codes" stories="foundation-cli,feature-command-contract,feature-load-csv-reader">
+| `1` | Operational failure: a file named on the command line cannot be read. |
+| `2` | Usage error: unknown command, unknown table or report, wrong argument count. |
+| `3` | Rejected: invalid code, name, amount, date, or file row; duplicate key; unknown account or category; account in use; any change that would leave a negative balance. |
+| `4` | Not found: `account get/rename/delete` of an absent account, `txn get/amend/delete` of an absent id. |
+</requirement>
+<requirement name="automated-tests" stories="foundation-python,feature-verification">
+The completed application provides a POSIX-compatible `bin/test.sh` that runs its own automated
+test suite from the application root and exits zero only when every test passes. The suite
+covers each command, each exit code, and each rule above against a real temporary database.
+</requirement>
+<requirement name="run-harness-score" stories="feature-verification">
+`sources/run.sh` is the scoring entry point. It is supplied, not authored, and is staged verbatim
+into the application root with the seed files. `drydock uat` runs `sh sources/run.sh` from the
+completed application root and takes its exit code and output as the score.
+</requirement>
+<requirement name="database-location" stories="foundation-database">
+The database is SQLite. `DATABASE_URL` names the SQLite file path, optionally prefixed
+`sqlite://`. When `DATABASE_URL` is unset, `DATABASE_PATH` is used, then `data/app.db`.
+</requirement>

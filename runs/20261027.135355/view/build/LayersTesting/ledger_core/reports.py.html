@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/ledger_core/reports.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/ledger_core/reports.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/ledger_core/reports.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Report arithmetic: transaction counts and cash flows computed in integer cents.
+
+Pure functions over amounts in cents. Nothing here touches storage or prints anything.
+&quot;&quot;&quot;
+
+from collections.abc import Iterable
+
+from ledger_core.money import format_cents
+
+
+def flows(amounts: Iterable[int]) -&gt; tuple[int, int, int, int]:
+    &quot;&quot;&quot;Return ``(count, inflow, outflow, net)`` in cents.
+
+    ``inflow`` is the sum of positive amounts, ``outflow`` the sum of the magnitudes of negative
+    amounts (written positive), and ``net`` is ``inflow - outflow``. No amounts gives all zeros.
+    &quot;&quot;&quot;
+    values = list(amounts)
+    inflow = sum(value for value in values if value &gt; 0)
+    outflow = sum(-value for value in values if value &lt; 0)
+    return len(values), inflow, outflow, inflow - outflow
+
+
+def flow_cells(amounts: Iterable[int]) -&gt; list[str]:
+    &quot;&quot;&quot;Return the report cells ``[transactions, inflow, outflow, net]`` for ``amounts``, formatted.&quot;&quot;&quot;
+    count, inflow, outflow, net = flows(amounts)
+    return [str(count), format_cents(inflow), format_cents(outflow), format_cents(net)]
+</pre></article>
+</main>
+</body>
+</html>

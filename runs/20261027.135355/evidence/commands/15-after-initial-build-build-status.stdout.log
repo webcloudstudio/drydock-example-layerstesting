@@ -1,0 +1,44 @@
+Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Next: (no actionable steps — all done or blocked)
+
+Blueprint: LayersTesting
+Target: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting
+Rows: <state> <type>  <Name>  [<id>]   — pass [<id>] to --step
+Block: Build Block 1 · Foundational  [block-1]   — [built] story Stand up the Python project tree, environment, dependency manifest, pytest runner, and bin/test.sh.  [foundation-python] — complete
+Block: Build Block 2 · Foundational  [block-2]   — [built] story Declare the accounts, categories, and transactions tables and every repository operation the stories need.  [foundation-database] — complete
+Block: Build Block 3 · Foundational  [block-3]   — [built] story Provide the `ledger` executable at the application root with a command registry, usage-error handling, and the stdout/stderr contract.  [foundation-cli] — complete
+
+Block: Build Block 4 · Service  [block-4]   — 2/2 stories complete
+  [built]   story  Validate codes, names, memos, amounts, and dates, and format integer cents as two-decimal text.  [feature-validation]
+  [built]   story  Check that a proposed set of transaction changes leaves no account balance below zero before any write.  [feature-balance-rule]
+
+Block: Build Block 5 · Service  [block-5]   — 4/4 stories complete
+  [built]   story  Implement `ledger init` and `ledger count`.  [feature-init-count]
+  [built]   story  Read and header-check a CSV file named on the command line, exiting 1 when it cannot be read.  [feature-load-csv-reader]
+  [built]   story  Implement `ledger account add <code> <name>`.  [feature-account-add]
+  [built]   story  Implement `ledger txn post <account> <category> <amount> <date> [<memo>]`.  [feature-txn-post]
+
+Block: Build Block 6 · Service  [block-6]   — 9/9 stories complete
+  [built]   story  Implement `ledger load accounts <csv>` as an all-or-nothing load.  [feature-load-accounts]
+  [built]   story  Implement `ledger account delete <code>`.  [feature-account-delete]
+  [built]   story  Implement `ledger txn get <id>`.  [feature-txn-get]
+  [built]   story  Implement `ledger account rename <code> <name>`.  [feature-account-rename]
+  [built]   story  Implement `ledger account get <code>`.  [feature-account-get]
+  [built]   story  Implement `ledger txn delete <id>`.  [feature-txn-delete]
+  [built]   story  Implement `ledger txn amend <id> <amount>`.  [feature-txn-amend]
+  [built]   story  Implement `ledger load categories <csv>` as an all-or-nothing load.  [feature-load-categories]
+  [built]   story  Implement `ledger transfer <from> <to> <amount> <date>` as an atomic two-row write.  [feature-transfer]
+Block: Build Block 7 · Service  [block-7]   — [built] story Implement `ledger load transactions <csv>` with foreign-key, date, amount, and balance validation before any write.  [feature-load-transactions] — complete
+
+Block: Build Block 8 · Service  [block-8]   — 3/3 stories complete
+  [built]   story  Implement `ledger report balances`.  [feature-report-balances]
+  [built]   story  Implement `ledger report monthly`.  [feature-report-monthly]
+  [built]   story  Implement `ledger report categories`.  [feature-report-categories]
+
+Block: Build Block 9 · Feature  [block-9]   — 2/2 stories complete
+  [built]   story  Assemble and verify the CSV output contract and exit codes across every command.  [feature-command-contract]
+  [built]   story  Assemble and verify that every writing command enforces the no-negative-balance rule atomically.  [feature-no-negative-balance]
+Block: Build Block 10 · Feature  [block-10]   — [built] story Terminal gate: run the supplied grader and the full project test suite.  [feature-verification] — complete
+
+Steps: 25 total — 0 done, 25 built (await verify), 0 in review, 0 pending, 0 blocked by questions, 0 failed (0% complete)
+Buildable now: (none)

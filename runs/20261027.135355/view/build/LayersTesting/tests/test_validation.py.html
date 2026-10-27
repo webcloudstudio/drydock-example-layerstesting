@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_validation.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_validation.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_validation.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Validation of codes, names, memos, and dates: accepted values return unchanged, others raise Rejected.&quot;&quot;&quot;
+
+import pytest
+
+from ledger_core.errors import Rejected
+from ledger_core.validation import validate_code, validate_date, validate_memo, validate_name
+
+
+@pytest.mark.parametrize(&quot;value&quot;, [&quot;DRAWER1&quot;, &quot;A&quot;, &quot;0&quot;, &quot;ABCDEFGHIJKL&quot;, &quot;Z9Z9Z9Z9Z9Z9&quot;])
+def test_code_accepts_valid_value_unchanged(value):
+    assert validate_code(value) == value
+
+
+@pytest.mark.parametrize(&quot;value&quot;, [&quot;&quot;, &quot;drawer1&quot;, &quot;Drawer&quot;, &quot;ABCDEFGHIJKLM&quot;, &quot;AB-C&quot;, &quot;A B&quot;, &quot;A_B&quot;, &quot;A\n&quot;])
+def test_code_rejects_invalid_value_with_exit_three(value):
+    with pytest.raises(Rejected) as info:
+        validate_code(value)
+    assert info.value.exit_code == 3
+
+
+def test_code_rejects_non_text():
+    with pytest.raises(Rejected):
+        validate_code(7)
+
+
+@pytest.mark.parametrize(&quot;value&quot;, [&quot;Front Drawer&quot;, &quot;x&quot;, &quot;x&quot; * 40])
+def test_name_accepts_valid_value_unchanged(value):
+    assert validate_name(value) == value
+
+
+@pytest.mark.parametrize(&quot;value&quot;, [&quot;&quot;, &quot;x&quot; * 41, &quot;a,b&quot;, &quot;a\nb&quot;, &quot;a\rb&quot;])
+def test_name_rejects_invalid_value_with_exit_three(value):
+    with pytest.raises(Rejected) as info:
+        validate_name(value)
+    assert info.value.exit_code == 3
+
+
+@pytest.mark.parametrize(&quot;value&quot;, [&quot;&quot;, &quot;walk in sale&quot;, &quot;m&quot; * 60])
+def test_memo_accepts_valid_value_unchanged(value):
+    assert validate_memo(value) == value
+
+
+@pytest.mark.parametrize(&quot;value&quot;, [&quot;m&quot; * 61, &quot;a,b&quot;, &quot;a\nb&quot;, &quot;a\rb&quot;])
+def test_memo_rejects_invalid_value_with_exit_three(value):
+    with pytest.raises(Rejected) as info:
+        validate_memo(value)
+    assert info.value.exit_code == 3
+
+
+@pytest.mark.parametrize(&quot;value&quot;, [&quot;2026-04-01&quot;, &quot;2024-02-29&quot;, &quot;2026-12-31&quot;, &quot;2000-02-29&quot;])
+def test_date_accepts_real_calendar_date_unchanged(value):
+    assert validate_date(value) == value
+
+
+@pytest.mark.parametrize(
+    &quot;value&quot;,
+    [&quot;2026-02-30&quot;, &quot;2026-02-29&quot;, &quot;2026-13-01&quot;, &quot;2026-00-10&quot;, &quot;2026-4-1&quot;, &quot;20260401&quot;, &quot;&quot;, &quot;2026-04-01x&quot;, &quot;1900-02-29&quot;, &quot;0000-01-01&quot;],
+)
+def test_date_rejects_impossible_or_malformed_value_with_exit_three(value):
+    with pytest.raises(Rejected) as info:
+        validate_date(value)
+    assert info.value.exit_code == 3
+</pre></article>
+</main>
+</body>
+</html>

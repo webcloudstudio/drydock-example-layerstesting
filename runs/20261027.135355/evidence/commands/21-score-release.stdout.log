@@ -1,0 +1,20 @@
+Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+2026-10-27 11:10:33 EDT  Calling CLAUDE/claude-haiku-5-5 (score release)...
+[output] json wrapper discarded: 'earlier-turn text'
+[output] json wrapper discarded: 'JSON code fence'
+  Completed CLAUDE/claude-haiku-5-5 (score release)  rc=0
+
+LayersTesting: PASSED — 8 of 8
+
+  st-001  MET       ["sh", "sources/run.sh"] exited 0; governed gate full: outcome PASS, return_code 0, 'LayersTesting: 43 passed, 0 failed (of 43)'; sources/run.sh:97-98 exits 0 only when FAILED is 0
+  st-004  MET       sources/run.sh:B1-B3 expect 'accounts,4', 'categories,7', 'transactions,120' with exit 0; sources/run.sh:B4 checks counts 4/7/120 across a separate invocation, PASS; governed gate stdout: PASS B1, B2, B3, B4
+  st-005  MET       sources/run.sh:45-47 uses cmp -s on stdout for C1-C3; sources/run.sh:H1-H3 repeat the comparison after the transfer and posting workflows; governed gate stdout: PASS C1, C2, C3, H1, H2, H3
+  st-006  MET       sources/run.sh:E1-E4 add, get, and rename CASH9 with expected returned values, all PASS; sources/run.sh:E6 'account delete DRAWER1' exits 3 and PASS; sources/run.sh:E7-E8 delete CASH9, then get exits 4, PASS; sources/run.sh:F1-F3 post, get, and amend txn 121 with current values, PASS; sources/run.sh:F8-F9 delete txn 121, then get exits 4, PASS
+  st-007  MET       sources/run.sh:D1-D2 rejected load of bad transactions and duplicate account load exit 3, PASS; sources/run.sh:D3 counts still 4/7/120, PASS; sources/run.sh:E2 duplicate account add exits 3, then E3 reads CASH9 unchanged, PASS; sources/run.sh:F5-F7 rejected postings exit 3; H1-H3 later show unchanged totals for the same accounts; probe st011: 'post bad account' and 'post bad date' rc=3, stdout empty
+  st-008  MET       sources/run.sh:G2 transfer SAFE->PETTY 999.99 exits 3, PASS; sources/run.sh:G3 post PETTY -1000.00 exits 3, PASS; sources/run.sh:G4 amend txn 1 to 1.00 and G5 delete txn 1 each exit 3, PASS; sources/run.sh:H1 PETTY balance 293.91 and SAFE 750.00 show the rejected G-series commands changed nothing, PASS
+  st-010  MET       sources/run.sh:G1 expects txn rows 122 (-500.00 DRAWER1) and 123 (+500.00 SAFE), category TRANSFER, PASS; sources/run.sh:H1 SAFE 250.00 -> 750.00 and DRAWER1 2299.38 -> 1799.38 after G1, PASS; sources/run.sh:H2 TRANSFER net 0.00 at inflow and outflow 5600.00, PASS
+  st-011  MET       probe st011: 'frobnicate' rc=2, stdout 0 lines, stderr 1 line; probe st011: 'report nosuch' rc=2, stdout 0 lines, stderr 1 line; probe st011: 'account get' with no argument and with extra arguments rc=2, stdout empty, stderr 1 line; probe st011: 'count extra' and 'init extra' rc=2, stdout empty; probe st011: 'get absent acct' rc=4, stderr 'error: account NOSUCH does not exist'; sources/run.sh:U1-U2 expect exit 2 for unknown command and report, PASS; README.md:28-35 defines the exit-code and stderr contract that the probe checked
+
+Scorecard: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/SCORECARD.md
+Evidence: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/evidence/score-release.json
+Target - committed project workspace git store

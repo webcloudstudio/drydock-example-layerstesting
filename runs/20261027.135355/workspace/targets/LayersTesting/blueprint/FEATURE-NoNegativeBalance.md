@@ -1,0 +1,231 @@
+# FEATURE: No Negative Balance
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Assembly story verifying that load, post, amend, delete, and transfer each reject any command that would leave an account balance below zero and change nothing. |
+| Depends On | FEATURE-LoadTransactions.md, FEATURE-TxnPost.md, FEATURE-TxnAmend.md, FEATURE-TxnDelete.md, FEATURE-Transfer.md |
+| Provides | — |
+| Consumes | ledger load transactions, ledger txn post, ledger txn amend, ledger txn delete, ledger transfer |
+
+## Purpose
+
+Assembly and intent only. An account's balance is the sum of its transaction amounts and must never
+be below zero. For each of load, post, amend, delete, and transfer, a case that would leave a
+balance below zero exits 3 and leaves balances and row counts unchanged. A load file whose later
+rows make an earlier-valid balance negative is rejected whole.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC nonneg-load ===
+Intent: A transactions load whose earlier rows are individually valid but whose combined effect makes the balance negative is rejected whole with exit 3 and stores none of its rows.
+
+import csv
+import io
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+def counts():
+    code, out, err = cli_runner("count")
+    assert code == 0
+    return {r[0]: int(r[1]) for r in parse(out)[1:]}
+
+acct = "ZZNL1"
+cat = "ZZNLC"
+with db_session() as db:
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description="Load Probe")
+code, out, err = cli_runner("account", "add", acct, "Load Probe")
+assert code == 0
+before = counts()
+rows = [
+    ["800000001", "2099-03-01", acct, cat, "50.00", "in"],
+    ["800000002", "2099-03-02", acct, cat, "-30.00", "out one"],
+    ["800000003", "2099-03-03", acct, cat, "-30.00", "out two"],
+]
+with tempfile.TemporaryDirectory() as tmp:
+    path = os.path.join(tmp, "txns.csv")
+    with open(path, "w", newline="") as fh:
+        w = csv.writer(fh, lineterminator="\n")
+        w.writerow(["txn_id", "date", "account", "category", "amount", "memo"])
+        w.writerows(rows)
+    code, out, err = cli_runner("load", "transactions", path)
+print(out, err)
+assert code == 3
+assert out == ""
+assert counts() == before
+code, out, err = cli_runner("txn", "get", rows[0][0])
+assert code == 4
+code, out, err = cli_runner("account", "get", acct)
+assert code == 0
+assert parse(out)[1][2] == "0"
+=== END AC nonneg-load ===
+
+=== AC nonneg-post ===
+Intent: Posting an outflow larger than the balance exits 3 and leaves the balance and transaction count unchanged.
+
+import csv
+import io
+from decimal import Decimal
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+acct = "ZZNP1"
+cat = "ZZNPC"
+with db_session() as db:
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description="Post Probe")
+code, out, err = cli_runner("account", "add", acct, "Post Probe")
+assert code == 0
+deposit = Decimal("10.00")
+code, out, err = cli_runner("txn", "post", acct, cat, str(deposit), "2099-03-01", "in")
+assert code == 0
+code, out, err = cli_runner("txn", "post", acct, cat, str(-(deposit + Decimal("0.01"))), "2099-03-02", "out")
+print(out, err)
+assert code == 3
+assert out == ""
+code, out, err = cli_runner("account", "get", acct)
+assert code == 0
+row = parse(out)[1]
+assert row[2] == "1"
+assert Decimal(row[3]) == deposit
+=== END AC nonneg-post ===
+
+=== AC nonneg-amend ===
+Intent: Amending a deposit down so the account would go negative exits 3 and the original amount remains.
+
+import csv
+import io
+from decimal import Decimal
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+acct = "ZZNA1"
+cat = "ZZNAC"
+with db_session() as db:
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description="Amend Probe")
+code, out, err = cli_runner("account", "add", acct, "Amend Probe")
+assert code == 0
+big, spend = Decimal("100.00"), Decimal("60.00")
+code, out, err = cli_runner("txn", "post", acct, cat, str(big), "2099-03-01", "in")
+assert code == 0
+deposit_id = parse(out)[1][0]
+code, out, err = cli_runner("txn", "post", acct, cat, str(-spend), "2099-03-02", "out")
+assert code == 0
+code, out, err = cli_runner("txn", "amend", deposit_id, "50.00")
+print(out, err)
+assert code == 3
+assert out == ""
+code, out, err = cli_runner("txn", "get", deposit_id)
+assert code == 0
+assert Decimal(parse(out)[1][4]) == big
+code, out, err = cli_runner("account", "get", acct)
+assert code == 0
+assert Decimal(parse(out)[1][3]) == big - spend
+=== END AC nonneg-amend ===
+
+=== AC nonneg-delete ===
+Intent: Deleting a deposit that funds a later outflow exits 3, keeps the row, and leaves the balance unchanged.
+
+import csv
+import io
+from decimal import Decimal
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+acct = "ZZND1"
+cat = "ZZNDC"
+with db_session() as db:
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description="Delete Probe")
+code, out, err = cli_runner("account", "add", acct, "Delete Probe")
+assert code == 0
+big, spend = Decimal("100.00"), Decimal("60.00")
+code, out, err = cli_runner("txn", "post", acct, cat, str(big), "2099-03-01", "in")
+assert code == 0
+deposit_id = parse(out)[1][0]
+code, out, err = cli_runner("txn", "post", acct, cat, str(-spend), "2099-03-02", "out")
+assert code == 0
+code, out, err = cli_runner("txn", "delete", deposit_id)
+print(out, err)
+assert code == 3
+assert out == ""
+code, out, err = cli_runner("txn", "get", deposit_id)
+assert code == 0
+code, out, err = cli_runner("account", "get", acct)
+assert code == 0
+row = parse(out)[1]
+assert row[2] == "2"
+assert Decimal(row[3]) == big - spend
+=== END AC nonneg-delete ===
+
+=== AC nonneg-transfer ===
+Intent: A transfer larger than the source balance exits 3 and stores neither row; both balances and the table count are unchanged.
+
+import csv
+import io
+from decimal import Decimal
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+def txn_count():
+    code, out, err = cli_runner("count")
+    assert code == 0
+    return {r[0]: int(r[1]) for r in parse(out)[1:]}["transactions"]
+
+src, dst = "ZZNT1", "ZZNT2"
+cat = "ZZNTC"
+with db_session() as db:
+    for c, d in ((cat, "Transfer Probe"), ("TRANSFER", "Internal transfer")):
+        if db.categories.get(category=c) is None:
+            db.categories.create(category=c, description=d)
+for a in (src, dst):
+    code, out, err = cli_runner("account", "add", a, "Xfer " + a)
+    assert code == 0
+funds = Decimal("20.00")
+code, out, err = cli_runner("txn", "post", src, cat, str(funds), "2099-03-01", "in")
+assert code == 0
+before = txn_count()
+code, out, err = cli_runner("transfer", src, dst, str(funds + Decimal("0.01")), "2099-03-02")
+print(out, err)
+assert code == 3
+assert out == ""
+assert txn_count() == before
+code, out, err = cli_runner("account", "get", src)
+assert code == 0
+assert Decimal(parse(out)[1][3]) == funds
+code, out, err = cli_runner("account", "get", dst)
+assert code == 0
+assert Decimal(parse(out)[1][3]) == Decimal("0")
+=== END AC nonneg-transfer ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- The balance check runs before the first write of every writing command.
+- A rejected command writes nothing to standard output and changes no stored record.

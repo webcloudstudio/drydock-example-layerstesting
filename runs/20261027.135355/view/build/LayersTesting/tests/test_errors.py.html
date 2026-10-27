@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_errors.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_errors.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_errors.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Domain error classes and their exit codes.&quot;&quot;&quot;
+
+import pytest
+
+from ledger_core.errors import LedgerError, NotFound, Operational, Rejected
+
+
+@pytest.mark.parametrize(
+    (&quot;cls&quot;, &quot;code&quot;),
+    [(Rejected, 3), (NotFound, 4), (Operational, 1)],
+)
+def test_error_class_carries_exit_code(cls, code):
+    assert cls(&quot;probe&quot;).exit_code == code
+
+
+@pytest.mark.parametrize(&quot;cls&quot;, [Rejected, NotFound, Operational])
+def test_error_class_derives_from_ledger_error(cls):
+    assert issubclass(cls, LedgerError)
+
+
+def test_error_keeps_its_message():
+    assert str(Rejected(&quot;duplicate account&quot;)) == &quot;duplicate account&quot;
+</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,90 @@
+<requirement name="schema-lifecycle-init-count">
+check A1 0 init < /dev/null
+check A2 0 count <<'EOF'
+</requirement>
+<requirement name="reinit-drops-rows">
+# ── Z. Re-initialization drops every row ─────────────────────────────────────────────────
+check Z1 0 init < /dev/null
+</requirement>
+<requirement name="bulk-load-accounts">
+check B1 0 load accounts "$SEED/seed_accounts.csv" <<'EOF'
+</requirement>
+<requirement name="bulk-load-categories">
+check B2 0 load categories "$SEED/seed_categories.csv" <<'EOF'
+</requirement>
+<requirement name="bulk-load-transactions">
+check B3 0 load transactions "$SEED/seed_transactions.csv" <<'EOF'
+</requirement>
+<requirement name="report-balances">
+check C1 0 report balances <<'EOF'
+</requirement>
+<requirement name="report-categories">
+check C2 0 report categories <<'EOF'
+</requirement>
+<requirement name="report-monthly">
+check C3 0 report monthly <<'EOF'
+</requirement>
+<requirement name="rejected-load-changes-nothing">
+# ── D. A rejected load changes nothing ───────────────────────────────────────────────────
+check D1 3 load transactions "$SEED/seed_transactions_bad.csv" < /dev/null
+check D2 3 load accounts "$SEED/seed_accounts.csv" < /dev/null
+</requirement>
+<requirement name="account-add">
+check E1 0 account add CASH9 "Event Float" <<'EOF'
+check E2 3 account add CASH9 "Event Float" < /dev/null
+</requirement>
+<requirement name="account-get">
+check E3 0 account get CASH9 <<'EOF'
+check E5 4 account get NOSUCH < /dev/null
+</requirement>
+<requirement name="account-rename">
+check E4 0 account rename CASH9 "Event Cash Box" <<'EOF'
+</requirement>
+<requirement name="account-delete">
+check E6 3 account delete DRAWER1 < /dev/null
+check E7 0 account delete CASH9 <<'EOF'
+check E8 4 account get CASH9 < /dev/null
+</requirement>
+<requirement name="txn-post">
+check F1 0 txn post DRAWER1 SALES 45.50 2026-04-01 "walk in sale" <<'EOF'
+check F5 3 txn post DRAWER1 NOSUCH 1.00 2026-04-01 < /dev/null
+check F6 3 txn post DRAWER1 SALES 1.234 2026-04-01 < /dev/null
+check F7 3 txn post DRAWER1 SALES 1.00 2026-02-30 < /dev/null
+check F10 0 txn post PETTY SUPPLY -12.34 2026-04-02 tape <<'EOF'
+</requirement>
+<requirement name="txn-get">
+check F2 0 txn get 121 <<'EOF'
+check F4 4 txn get 999 < /dev/null
+check F9 4 txn get 121 < /dev/null
+</requirement>
+<requirement name="txn-amend">
+check F3 0 txn amend 121 54.50 <<'EOF'
+</requirement>
+<requirement name="txn-delete">
+check F8 0 txn delete 121 <<'EOF'
+</requirement>
+<requirement name="atomic-transfer">
+# ── G. Transfers are atomic; no command leaves a negative balance ────────────────────────
+check G1 0 transfer DRAWER1 SAFE 500.00 2026-04-03 <<'EOF'
+check G2 3 transfer SAFE PETTY 999.99 2026-04-04 < /dev/null
+</requirement>
+<requirement name="no-negative-balance">
+check G3 3 txn post PETTY SUPPLY -1000.00 2026-04-04 < /dev/null
+check G4 3 txn amend 1 1.00 < /dev/null
+check G5 3 txn delete 1 < /dev/null
+</requirement>
+<requirement name="reports-after-changes">
+# ── H. Reports after the changes ─────────────────────────────────────────────────────────
+</requirement>
+<requirement name="usage-errors">
+check U1 2 frobnicate < /dev/null
+check U2 2 report nosuch < /dev/null
+</requirement>
+<requirement name="ledger-executable">
+The deliverable is an executable named ledger at the application root.
+</requirement>
+<requirement name="grader-passes">
+Exit 0 only when every check passes.
+</requirement>
+<unattached story="foundation-python"/>
+<unattached story="foundation-database"/>

@@ -1,0 +1,16 @@
+Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Drydock status — workspace
+
+Target: LayersTesting
+   Phase:     Loop
+   State:     25 closed/implemented
+   Detail:    6 imported · 25 authored · metadata built
+   Analysis:  Ready · 15 stories · 0 questions · 0 blockers
+   Plan:      25 closed/implemented
+   Next Step: drydock plan LayersTesting
+   10-27:     ✅  drydock build status LayersTesting
+   10-27:     ✅  drydock build LayersTesting --override --repair-attempts 6
+   10-27:     ✅  drydock build status LayersTesting
+   10-27:     ✅  drydock plan verify LayersTesting --plan-override-model sonnet
+   10-27:     ✅  drydock plan repair LayersTesting --plan-override-model sonnet
+

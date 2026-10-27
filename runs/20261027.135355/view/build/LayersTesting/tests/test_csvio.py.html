@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_csvio.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_csvio.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_csvio.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;CSV reader: header checks, numbered rows, and the exception each failure raises.&quot;&quot;&quot;
+
+import csv
+import os
+
+import pytest
+
+from ledger_core.csvio import read_rows
+from ledger_core.errors import Operational, Rejected
+
+HEADER = [&quot;account&quot;, &quot;name&quot;]
+
+
+def _write(path, text: str) -&gt; str:
+    with open(path, &quot;w&quot;, newline=&quot;&quot;, encoding=&quot;utf-8&quot;) as fh:
+        fh.write(text)
+    return str(path)
+
+
+def test_returns_every_data_row_with_file_line_numbers(tmp_path):
+    path = _write(tmp_path / &quot;in.csv&quot;, &quot;account,name\nZZR1,First\nZZR2,Second\nZZR3,Third\n&quot;)
+    assert read_rows(path, HEADER) == [
+        (2, [&quot;ZZR1&quot;, &quot;First&quot;]),
+        (3, [&quot;ZZR2&quot;, &quot;Second&quot;]),
+        (4, [&quot;ZZR3&quot;, &quot;Third&quot;]),
+    ]
+
+
+def test_header_only_yields_no_rows(tmp_path):
+    path = _write(tmp_path / &quot;in.csv&quot;, &quot;account,name\n&quot;)
+    assert read_rows(path, HEADER) == []
+
+
+def test_blank_lines_are_skipped_but_still_counted(tmp_path):
+    path = _write(tmp_path / &quot;in.csv&quot;, &quot;account,name\n\nZZR1,First\n\nZZR2,Second\n&quot;)
+    assert read_rows(path, HEADER) == [(3, [&quot;ZZR1&quot;, &quot;First&quot;]), (5, [&quot;ZZR2&quot;, &quot;Second&quot;])]
+
+
+def test_quoted_field_with_comma_is_one_field(tmp_path):
+    path = _write(tmp_path / &quot;in.csv&quot;, &#x27;account,name\nZZR1,&quot;Quoted, Name&quot;\n&#x27;)
+    assert read_rows(path, HEADER) == [(2, [&quot;ZZR1&quot;, &quot;Quoted, Name&quot;])]
+
+
+def test_fields_match_what_the_csv_module_parses(tmp_path):
+    body = [[&quot;ZZR1&quot;, &quot;Alpha&quot;], [&quot;ZZR2&quot;, &quot;Beta gamma&quot;]]
+    path = tmp_path / &quot;in.csv&quot;
+    with open(path, &quot;w&quot;, newline=&quot;&quot;, encoding=&quot;utf-8&quot;) as fh:
+        writer = csv.writer(fh, lineterminator=&quot;\n&quot;)
+        writer.writerow(HEADER)
+        writer.writerows(body)
+    assert [fields for _, fields in read_rows(str(path), HEADER)] == body
+
+
+def test_missing_file_is_operational(tmp_path):
+    with pytest.raises(Operational):
+        read_rows(str(tmp_path / &quot;absent.csv&quot;), HEADER)
+
+
+def test_directory_is_operational(tmp_path):
+    with pytest.raises(Operational):
+        read_rows(str(tmp_path), HEADER)
+
+
+def test_undecodable_file_is_operational(tmp_path):
+    path = tmp_path / &quot;bad.csv&quot;
+    path.write_bytes(b&quot;account,name\nZZR1,\xff\xfe\n&quot;)
+    with pytest.raises(Operational):
+        read_rows(str(path), HEADER)
+
+
+@pytest.mark.parametrize(
+    &quot;header_line&quot;,
+    [&quot;name,account&quot;, &quot;account&quot;, &quot;account,name,extra&quot;, &quot;code,name&quot;, &quot;Account,name&quot;, &quot; account,name&quot;],
+)
+def test_wrong_header_is_rejected(tmp_path, header_line):
+    path = _write(tmp_path / &quot;in.csv&quot;, f&quot;{header_line}\nZZR1,First\n&quot;)
+    with pytest.raises(Rejected):
+        read_rows(path, HEADER)
+
+
+def test_empty_file_is_rejected(tmp_path):
+    path = _write(tmp_path / &quot;empty.csv&quot;, &quot;&quot;)
+    with pytest.raises(Rejected):
+        read_rows(path, HEADER)
+
+
+@pytest.mark.parametrize(&quot;body&quot;, [&quot;ZZR1\n&quot;, &quot;ZZR1,First,Extra\n&quot;])
+def test_wrong_field_count_is_rejected(tmp_path, body):
+    path = _write(tmp_path / &quot;rows.csv&quot;, &quot;account,name\n&quot; + body)
+    with pytest.raises(Rejected):
+        read_rows(path, HEADER)
+
+
+def test_rejection_names_the_offending_line(tmp_path):
+    path = _write(tmp_path / &quot;rows.csv&quot;, &quot;account,name\nZZR1,First\nZZR2\n&quot;)
+    with pytest.raises(Rejected, match=&quot;line 3&quot;):
+        read_rows(path, HEADER)
+
+
+def test_reader_never_writes_the_file(tmp_path):
+    path = _write(tmp_path / &quot;in.csv&quot;, &quot;account,name\nZZR1,First\n&quot;)
+    before = os.stat(path).st_mtime_ns
+    with open(path, &quot;rb&quot;) as fh:
+        content = fh.read()
+    read_rows(path, HEADER)
+    with open(path, &quot;rb&quot;) as fh:
+        assert fh.read() == content
+    assert os.stat(path).st_mtime_ns == before
+
+
+def test_load_naming_missing_file_exits_one_and_stores_nothing(ledger_store, store_open, tmp_path):
+    from cli.testing import cli_runner
+
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;accounts&quot;, str(tmp_path / &quot;missing.csv&quot;))
+    assert code == 1
+    assert out == &quot;&quot;
+    with store_open(ledger_store) as db:
+        assert db.accounts.list() == []
+
+
+def test_load_naming_bad_header_exits_three(ledger_store, tmp_path):
+    from cli.testing import cli_runner
+
+    path = _write(tmp_path / &quot;bad.csv&quot;, &quot;code,name\nZZR1,First\n&quot;)
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path)
+    assert code == 3
+    assert out == &quot;&quot;
+</pre></article>
+</main>
+</body>
+</html>

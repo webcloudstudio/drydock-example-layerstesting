@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_foundation.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_foundation.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_foundation.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Project foundation: files, importable packages, and the static rules on domain code.&quot;&quot;&quot;
+
+import ast
+import importlib
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parent.parent
+DOMAIN_ROOT = ROOT / &quot;ledger_core&quot;
+BANNED_DRIVERS = {&quot;sqlite3&quot;, &quot;psycopg&quot;, &quot;psycopg2&quot;}
+
+
+@pytest.mark.parametrize(&quot;name&quot;, [&quot;pyproject.toml&quot;, &quot;uv.lock&quot;, &quot;conftest.py&quot;, &quot;bin/test.sh&quot;])
+def test_project_file_exists(name):
+    assert (ROOT / name).is_file()
+
+
+def test_test_launcher_runs_pytest():
+    assert &quot;pytest&quot; in (ROOT / &quot;bin&quot; / &quot;test.sh&quot;).read_text()
+
+
+@pytest.mark.parametrize(&quot;module&quot;, [&quot;ledger_core&quot;, &quot;ledger_core.config&quot;, &quot;ledger_core.errors&quot;])
+def test_foundation_module_imports(module):
+    assert importlib.import_module(module) is not None
+
+
+def _domain_files():
+    return sorted(DOMAIN_ROOT.rglob(&quot;*.py&quot;))
+
+
+def test_domain_files_are_scanned():
+    assert len(_domain_files()) &gt;= 1
+
+
+def _imported_top_level_names(tree):
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                yield alias.name.split(&quot;.&quot;)[0]
+        elif isinstance(node, ast.ImportFrom):
+            yield (node.module or &quot;&quot;).split(&quot;.&quot;)[0]
+
+
+@pytest.mark.parametrize(&quot;path&quot;, _domain_files(), ids=lambda p: str(p.relative_to(ROOT)))
+def test_domain_module_imports_no_database_driver(path):
+    tree = ast.parse(path.read_text())
+    assert not (BANNED_DRIVERS &amp; set(_imported_top_level_names(tree)))
+
+
+@pytest.mark.parametrize(&quot;path&quot;, _domain_files(), ids=lambda p: str(p.relative_to(ROOT)))
+def test_domain_module_has_no_float_call_or_literal(path):
+    tree = ast.parse(path.read_text())
+    float_calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == &quot;float&quot;
+    ]
+    float_literals = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant) and isinstance(node.value, float)
+    ]
+    assert not float_calls
+    assert not float_literals
+</pre></article>
+</main>
+</body>
+</html>

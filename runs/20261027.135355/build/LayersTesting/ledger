@@ -1,0 +1,10 @@
+#!/bin/sh
+# ledger: command-line cash ledger. Activates .venv when present and hands off to cli.main.
+set -eu
+ROOT="$(cd "$(dirname "$0")" && pwd)"
+cd "$ROOT"
+if [ -f .venv/bin/activate ]; then
+    # shellcheck disable=SC1091
+    set +u; . .venv/bin/activate; set -u
+fi
+exec python -c 'import sys; from cli import main; sys.exit(main(sys.argv[1:]))' "$@"

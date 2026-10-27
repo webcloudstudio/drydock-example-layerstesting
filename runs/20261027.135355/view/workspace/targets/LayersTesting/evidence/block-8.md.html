@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-8.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-8.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-8.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 8 · Service (block-8)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-27</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 15162</li><li>execution id: 20261027.145729.992Z-56573846</li></ul>
+<h2>Stories built</h2>
+<ul><li>Implement <code>ledger report balances</code>. (feature-report-balances) [story]</li><li>Implement <code>ledger report monthly</code>. (feature-report-monthly) [story]</li><li>Implement <code>ledger report categories</code>. (feature-report-categories) [story]</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 921)</li><li>compass: COMPASS.md (SP 1134)</li><li>implements: FEATURE-ReportBalances.md (SP 2430)</li><li>context: ARCHITECTURE_compact.md (SP 332)</li><li>context: DATABASE_compact.md (SP 884)</li><li>stack: common_compact.md (SP 1653)</li><li>stack: cli.md (SP 2689)</li><li>implements: FEATURE-ReportMonthly.md (SP 2192)</li><li>implements: FEATURE-ReportCategories.md (SP 2671)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>cli/commands/reports.py</li><li>data/app.db-shm</li><li>data/app.db-wal</li><li>data/logs/test_2026-10-27_105846.log</li><li>ledger_core/reports.py</li><li>tests/test_reports.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>RED: report-balances-values (FEATURE-ReportBalances.md)</li></ul>
+<p>intent: Each account row carries the count and formatted balance derived from stored transactions, and the TOTAL row carries the overall count and sum; expectations are computed from the stored rows. return code: 1 stdout: usage: unknown command &#x27;report balances&#x27; stderr: --- drydock: values at failure --- code = 2 --- drydock: end values --- Traceback (most recent call last): File &quot;report-balances-values.py&quot;, line 25, in &lt;module&gt; assert code == 0 ^^^^^^^^^ AssertionError</p>
+<ul><li>RED: report-balances-order-and-empty (FEATURE-ReportBalances.md)</li></ul>
+<p>intent: Accounts are ordered by code regardless of creation order, and an account with no transactions still appears with count 0 and a zero balance. return code: 1 stdout: usage: unknown command &#x27;report balances&#x27; stderr: --- drydock: values at failure --- code = 2 --- drydock: end values --- Traceback (most recent call last): File &quot;report-balances-order-and-empty.py&quot;, line 18, in &lt;module&gt; assert code == 0 ^^^^^^^^^ AssertionError</p>
+<ul><li>RED: report-balances-total-consistency (FEATURE-ReportBalances.md)</li></ul>
+<p>intent: The TOTAL row equals the sum of the per-account rows, including negative-free cent arithmetic across accounts. return code: 1 stdout: usage: unknown command &#x27;report balances&#x27; stderr: --- drydock: values at failure --- code = 2 --- drydock: end values --- Traceback (most recent call last): File &quot;report-balances-total-consistency.py&quot;, line 22, in &lt;module&gt; assert code == 0 ^^^^^^^^^ AssertionError</p>
+<ul><li>RED: report-balances-format (FEATURE-ReportBalances.md)</li></ul>
+<p>intent: Output uses newline endings only, ends with a newline, and no line carries trailing spaces. return code: 1 stdout: usage: unknown command &#x27;report balances&#x27; stderr: --- drydock: values at failure --- code = 2 --- drydock: end values --- Traceback (most recent call last): File &quot;report-balances-format.py&quot;, line 6, in &lt;module&gt; assert code == 0 ^^^^^^^^^ AssertionError</p>
+<ul><li>GREEN (prepassed): report-balances-usage (FEATURE-ReportBalances.md)</li></ul>
+<p>intent: Extra arguments and an unknown report name exit 2 with nothing on stdout. return code: 0 stdout: usage: unknown command &#x27;report balances extra&#x27;</p>
+<p>usage: unknown command &#x27;report nosuchreport&#x27;</p>
+<p>usage: unknown command &#x27;report&#x27;</p>
+<ul><li>RED: report-monthly-rows (FEATURE-ReportMonthly.md)</li></ul>
+<p>intent: Monthly rows, ordering, and the TOTAL row are computed from posted transactions; expected counts and sums are derived from the supplied amounts with Decimal. return code: 1 stdout: account,name,transactions,balance ZZRM1,Monthly Probe,0,0.00</p>
+<p>txn_id,date,account,category,amount,memo 1,2099-01-05,ZZRM1,ZZRMC,100.50,m</p>
+<p>txn_id,date,account,category,amount,memo 2,2099-01-20,ZZRM1,ZZRMC,40.25,m</p>
+<p>txn_id,date,account,category,amount,memo 3,2099-01-21,ZZRM1,ZZRMC,-30.10,m</p>
+<p>txn_id,date,account,category,amount,memo 4,2099-03-02,ZZRM1,ZZRMC,10.00,m</p>
+<p>usage: unknown command &#x27;report monthly&#x27; stderr: --- drydock: values at failure --- code = 2 --- drydock: end values --- Traceback (most recent call last): File &quot;report-monthly-rows.py&quot;, line 26, in &lt;module&gt; assert code == 0 ^^^^^^^^^ AssertionError</p>
+<ul><li>GREEN (prepassed): report-monthly-usage (FEATURE-ReportMonthly.md)</li></ul>
+<p>intent: Extra arguments to report monthly are a usage error with exit 2 and nothing on standard output. return code: 0 stdout: usage: unknown command &#x27;report monthly extra&#x27;</p>
+<ul><li>RED: report-monthly-reflects-changes (FEATURE-ReportMonthly.md)</li></ul>
+<p>intent: The report is recomputed from the database: posting one more transaction in a new month adds exactly one month row with the posted amount as inflow. return code: 1 stderr: --- drydock: values at failure --- code = 2 --- drydock: end values --- Traceback (most recent call last): File &quot;report-monthly-reflects-changes.py&quot;, line 20, in &lt;module&gt; assert code == 0 ^^^^^^^^^ AssertionError</p>
+<ul><li>RED: report-categories-values (FEATURE-ReportCategories.md)</li></ul>
+<p>intent: Each category row and the TOTAL row match inflow, outflow, net, and count derived from stored transactions, including a category with mixed signs and an empty category. return code: 1 stdout: usage: unknown command &#x27;report categories&#x27; stderr: --- drydock: values at failure --- code = 2 --- drydock: end values --- Traceback (most recent call last): File &quot;report-categories-values.py&quot;, line 30, in &lt;module&gt; assert code == 0 ^^^^^^^^^ AssertionError</p>
+<ul><li>RED: report-categories-empty (FEATURE-ReportCategories.md)</li></ul>
+<p>intent: A category with no transactions is listed with count 0 and zero inflow, outflow, and net. return code: 1 stdout: usage: unknown command &#x27;report categories&#x27; stderr: --- drydock: values at failure --- code = 2 --- drydock: end values --- Traceback (most recent call last): File &quot;report-categories-empty.py&quot;, line 17, in &lt;module&gt; assert code == 0 ^^^^^^^^^ AssertionError</p>
+<ul><li>RED: report-categories-order (FEATURE-ReportCategories.md)</li></ul>
+<p>intent: Categories are ordered by code regardless of creation order, and the TOTAL row is last. return code: 1 stdout: usage: unknown command &#x27;report categories&#x27; stderr: --- drydock: values at failure --- code = 2 --- drydock: end values --- Traceback (most recent call last): File &quot;report-categories-order.py&quot;, line 13, in &lt;module&gt; assert code == 0 ^^^^^^^^^ AssertionError</p>
+<ul><li>RED: report-categories-net-identity (FEATURE-ReportCategories.md)</li></ul>
+<p>intent: For every row including TOTAL, net equals inflow minus outflow, and outflow is never written with a leading minus. return code: 1 stdout: usage: unknown command &#x27;report categories&#x27; stderr: --- drydock: values at failure --- code = 2 --- drydock: end values --- Traceback (most recent call last): File &quot;report-categories-net-identity.py&quot;, line 21, in &lt;module&gt; assert code == 0 ^^^^^^^^^ AssertionError</p>
+<ul><li>RED: report-categories-format (FEATURE-ReportCategories.md)</li></ul>
+<p>intent: Output uses newline endings only, ends with a newline, and no line carries trailing spaces. return code: 1 stdout: usage: unknown command &#x27;report categories&#x27; stderr: --- drydock: values at failure --- code = 2 --- drydock: end values --- Traceback (most recent call last): File &quot;report-categories-format.py&quot;, line 6, in &lt;module&gt; assert code == 0 ^^^^^^^^^ AssertionError</p>
+<ul><li>GREEN (prepassed): report-categories-usage (FEATURE-ReportCategories.md)</li></ul>
+<p>intent: Extra arguments exit 2 with nothing on stdout. return code: 0 stdout: usage: unknown command &#x27;report categories extra&#x27;</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: report-balances-values (FEATURE-ReportBalances.md)</li></ul>
+<p>intent: Each account row carries the count and formatted balance derived from stored transactions, and the TOTAL row carries the overall count and sum; expectations are computed from the stored rows. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: account,name,transactions,balance ZZRB1,Report One,2,1211.11 ZZRB2,Report Two,1,0.05 TOTAL,,3,1211.16</p>
+<ul><li>PASS: report-balances-order-and-empty (FEATURE-ReportBalances.md)</li></ul>
+<p>intent: Accounts are ordered by code regardless of creation order, and an account with no transactions still appears with count 0 and a zero balance. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: account,name,transactions,balance ZZRB3,Empty ZZRB3,0,0.00 ZZRB4,Empty ZZRB4,0,0.00 TOTAL,,0,0.00</p>
+<ul><li>PASS: report-balances-total-consistency (FEATURE-ReportBalances.md)</li></ul>
+<p>intent: The TOTAL row equals the sum of the per-account rows, including negative-free cent arithmetic across accounts. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: account,name,transactions,balance ZZRB5,Total One,1,700.01 ZZRB6,Total Two,1,300.02 TOTAL,,2,1000.03</p>
+<ul><li>PASS: report-balances-format (FEATURE-ReportBalances.md)</li></ul>
+<p>intent: Output uses newline endings only, ends with a newline, and no line carries trailing spaces. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: account,name,transactions,balance TOTAL,,0,0.00</p>
+<ul><li>PASS: report-balances-usage (FEATURE-ReportBalances.md)</li></ul>
+<p>intent: Extra arguments and an unknown report name exit 2 with nothing on stdout. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: usage: wrong number of arguments for &#x27;report balances&#x27;</p>
+<p>usage: unknown command &#x27;report nosuchreport&#x27;</p>
+<p>usage: unknown command &#x27;report&#x27;</p>
+<ul><li>PASS: report-monthly-rows (FEATURE-ReportMonthly.md)</li></ul>
+<p>intent: Monthly rows, ordering, and the TOTAL row are computed from posted transactions; expected counts and sums are derived from the supplied amounts with Decimal. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: account,name,transactions,balance ZZRM1,Monthly Probe,0,0.00</p>
+<p>txn_id,date,account,category,amount,memo 1,2099-01-05,ZZRM1,ZZRMC,100.50,m</p>
+<p>txn_id,date,account,category,amount,memo 2,2099-01-20,ZZRM1,ZZRMC,40.25,m</p>
+<p>txn_id,date,account,category,amount,memo 3,2099-01-21,ZZRM1,ZZRMC,-30.10,m</p>
+<p>txn_id,date,account,category,amount,memo 4,2099-03-02,ZZRM1,ZZRMC,10.00,m</p>
+<p>month,transactions,inflow,outflow,net 2099-01,3,140.75,30.10,110.65 2099-03,1,10.00,0.00,10.00 TOTAL,4,150.75,30.10,120.65</p>
+<ul><li>PASS: report-monthly-usage (FEATURE-ReportMonthly.md)</li></ul>
+<p>intent: Extra arguments to report monthly are a usage error with exit 2 and nothing on standard output. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: usage: wrong number of arguments for &#x27;report monthly&#x27;</p>
+<ul><li>PASS: report-monthly-reflects-changes (FEATURE-ReportMonthly.md)</li></ul>
+<p>intent: The report is recomputed from the database: posting one more transaction in a new month adds exactly one month row with the posted amount as inflow. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: txn_id,date,account,category,amount,memo 1,2098-07-10,ZZRM2,ZZRMD,12.34,m</p>
+<ul><li>PASS: report-categories-values (FEATURE-ReportCategories.md)</li></ul>
+<p>intent: Each category row and the TOTAL row match inflow, outflow, net, and count derived from stored transactions, including a category with mixed signs and an empty category. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: category,description,transactions,inflow,outflow,net ZZRCE,Empty Category,0,0.00,0.00,0.00 ZZRCM,Mixed Category,3,1000.50,25.12,975.38 TOTAL,,3,1000.50,25.12,975.38</p>
+<ul><li>PASS: report-categories-empty (FEATURE-ReportCategories.md)</li></ul>
+<p>intent: A category with no transactions is listed with count 0 and zero inflow, outflow, and net. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: category,description,transactions,inflow,outflow,net ZZRCE2,Nothing here,0,0.00,0.00,0.00 TOTAL,,0,0.00,0.00,0.00</p>
+<ul><li>PASS: report-categories-order (FEATURE-ReportCategories.md)</li></ul>
+<p>intent: Categories are ordered by code regardless of creation order, and the TOTAL row is last. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: category,description,transactions,inflow,outflow,net ZZRCA,Order ZZRCA,0,0.00,0.00,0.00 ZZRCB,Order ZZRCB,0,0.00,0.00,0.00 TOTAL,,0,0.00,0.00,0.00</p>
+<ul><li>PASS: report-categories-net-identity (FEATURE-ReportCategories.md)</li></ul>
+<p>intent: For every row including TOTAL, net equals inflow minus outflow, and outflow is never written with a leading minus. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: category,description,transactions,inflow,outflow,net ZZRCN,Net Category,2,10.00,15.00,-5.00 TOTAL,,2,10.00,15.00,-5.00</p>
+<ul><li>PASS: report-categories-format (FEATURE-ReportCategories.md)</li></ul>
+<p>intent: Output uses newline endings only, ends with a newline, and no line carries trailing spaces. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: category,description,transactions,inflow,outflow,net TOTAL,,0,0.00,0.00,0.00</p>
+<ul><li>PASS: report-categories-usage (FEATURE-ReportCategories.md)</li></ul>
+<p>intent: Extra arguments exit 2 with nothing on stdout. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: usage: wrong number of arguments for &#x27;report categories&#x27;</p>
+<h2>Build summary</h2>
+<p>I&#x27;ll start by inspecting the build directory and the files this block depends on.The <code>report</code> command group doesn&#x27;t exist yet, and <code>ledger_core</code> already has the money and transaction helpers I need. I&#x27;ll check the existing CLI test conventions before writing anything.I have what I need. The plan:</p>
+<ul><li><code>ledger_core/reports.py</code>: pure integer-cent aggregation (count, inflow, outflow, net), with no storage access.</li><li><code>cli/commands/reports.py</code>: the three <code>report</code> handlers, registered as <code>(&quot;report&quot;, &quot;balances&quot;)</code>, <code>(&quot;report&quot;, &quot;monthly&quot;)</code>, and <code>(&quot;report&quot;, &quot;categories&quot;)</code>. Each reads its rows through <code>db.&lt;table&gt;.list()</code>.</li><li><code>tests/test_reports.py</code>: behavioral tests on a fresh store per test, reading results back as CSV.</li></ul>
+<p>I&#x27;ll write the aggregation module first.Now the command module. Each handler reads the rows, groups them in integer cents, and returns CSV rows.Next, the tests. I&#x27;m using a fixed dataset whose expected report values I worked out by hand in integer cents, so the expectations aren&#x27;t computed by the code under test. Each test gets a fresh store.Now I&#x27;ll run the new test file on its own, then the full suite through the declared <code>bin/test.sh</code>.The full suite passes: 415 tests, exit 0. As a last check I&#x27;ll run the real <code>./ledger</code> launcher against a throwaway store, since the tests go through <code>cli_runner</code> and not the shell.<code>report balances</code>, <code>report monthly</code>, and <code>report categories</code> are implemented. The full suite passes (415 tests) and the real launcher output matches the seed-data expectations in <code>sources/run.sh</code> for C1–C3.</p>
+<p>I did not run <code>sources/run.sh</code> itself. This block doesn&#x27;t declare it, and the terminal-story check belongs to a later step.</p>
+<ul><li><strong><code>ledger_core/reports.py</code></strong> (new): integer-cent aggregation of count, inflow, outflow, and net. No storage access and no floats.</li><li><strong><code>cli/commands/reports.py</code></strong> (new): the three report handlers. Each reads rows through <code>db.&lt;table&gt;.list()</code>, groups them in cents, and formats with <code>format_cents</code>. Nothing is hardcoded and nothing is written.</li><li><strong><code>tests/test_reports.py</code></strong> (new): 24 tests on a fresh store each. Expected values are hand-computed from a fixed dataset, and results are read back by parsing CSV. They cover values, ordering, zero-count and empty-ledger cases, TOTAL rows, newline/trailing-space format, a monthly change after a new posting, and usage errors with exit 2.</li></ul>
+<p>Verification:</p>
+<ul><li><code>pytest -q tests/test_reports.py</code>: 24 passed.</li><li><code>sh bin/test.sh</code>: 415 passed, exit 0.</li><li>Manual run of <code>./ledger</code> against a throwaway store loaded with the seed files: all three reports print the expected rows, and <code>report balances extra</code> and bare <code>report</code> both exit 2.</li></ul>
+<p>Choices I made that you can redirect:</p>
+<ul><li>The aggregation lives in <code>ledger_core/reports.py</code>, not inside the command module, so it can be tested without the CLI.</li><li>Accounts, categories, and months are sorted explicitly in Python rather than relying on the order the persistence layer returns.</li></ul>
+<p>No files were committed.</p>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>ledger_core/reports.py</li><li>cli/commands/reports.py</li><li>tests/test_reports.py</li></ul>
+<p>SUMMARY: Implemented <code>ledger report balances</code>, <code>ledger report monthly</code>, and <code>ledger report categories</code> as integer-cent computations over stored transactions and accounts/categories. Added 24 behavioral tests in <code>tests/test_reports.py</code>. <code>sh bin/test.sh</code> passes with 415 tests and exit 0. Smoke-tested <code>./ledger</code> on the seed data; the output matches <code>sources/run.sh</code> checks C1–C3. I did not run <code>sources/run.sh</code> itself, since this block does not declare it.</p>
+<p>BLOCKERS:</p>
+<ul><li>None</li></ul></article>
+</main>
+</body>
+</html>

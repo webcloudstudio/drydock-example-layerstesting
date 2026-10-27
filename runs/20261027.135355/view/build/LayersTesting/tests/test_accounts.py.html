@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_accounts.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_accounts.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_accounts.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger account add`` and the ``account_row`` helper, against a fresh store per test.&quot;&quot;&quot;
+
+import csv
+import io
+
+import pytest
+
+from cli.testing import cli_runner
+from ledger_core.accounts import account_row
+
+ACCOUNT_HEADER = [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;]
+
+
+def _rows(out: str) -&gt; list[list[str]]:
+    return list(csv.reader(io.StringIO(out)))
+
+
+def test_add_prints_header_and_zero_row(ledger_store):
+    code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZZNA1&quot;, &quot;Add Probe&quot;)
+    assert code == 0, err
+    assert _rows(out) == [ACCOUNT_HEADER, [&quot;ZZNA1&quot;, &quot;Add Probe&quot;, &quot;0&quot;, &quot;0.00&quot;]]
+
+
+def test_added_account_reads_back_from_the_store(ledger_store, store_open):
+    cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZZNA2&quot;, &quot;Read Back&quot;)
+    with store_open(ledger_store) as db:
+        row = db.accounts.get(account=&quot;ZZNA2&quot;)
+        assert row is not None
+        assert row.name == &quot;Read Back&quot;
+
+
+def test_added_account_is_listed_once(ledger_store, store_open):
+    cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZZNA3&quot;, &quot;Listed&quot;)
+    with store_open(ledger_store) as db:
+        assert [row.account for row in db.accounts.list()] == [&quot;ZZNA3&quot;]
+
+
+def test_duplicate_code_is_rejected_and_name_unchanged(ledger_store, store_open):
+    code, _, err = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZZNB1&quot;, &quot;Original Name&quot;)
+    assert code == 0, err
+    code, out, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZZNB1&quot;, &quot;Different Name&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+    with store_open(ledger_store) as db:
+        assert db.accounts.get(account=&quot;ZZNB1&quot;).name == &quot;Original Name&quot;
+
+
+@pytest.mark.parametrize(&quot;bad&quot;, [&quot;zznc1&quot;, &quot;ABCDEFGHIJKLM&quot;, &quot;ZZ-NC&quot;, &quot;ZZ NC&quot;, &quot;&quot;, &quot;ZZé&quot;])
+def test_invalid_code_is_rejected_and_stores_nothing(ledger_store, store_open, bad):
+    code, out, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, bad, &quot;Valid Name&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+    with store_open(ledger_store) as db:
+        assert db.accounts.list() == []
+
+
+@pytest.mark.parametrize(&quot;bad&quot;, [&quot;&quot;, &quot;n&quot; * 41, &quot;has,comma&quot;, &quot;line\nbreak&quot;])
+def test_invalid_name_is_rejected_and_stores_nothing(ledger_store, store_open, bad):
+    code, out, _ = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZZND1&quot;, bad)
+    assert code == 3
+    assert out == &quot;&quot;
+    with store_open(ledger_store) as db:
+        assert db.accounts.get(account=&quot;ZZND1&quot;) is None
+
+
+def test_largest_code_and_name_are_stored_whole(ledger_store, store_open):
+    code_text, name = &quot;Z&quot; * 12, &quot;n&quot; * 40
+    code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, code_text, name)
+    assert code == 0, err
+    assert _rows(out)[1] == [code_text, name, &quot;0&quot;, &quot;0.00&quot;]
+    with store_open(ledger_store) as db:
+        assert db.accounts.get(account=code_text).name == name
+
+
+def test_single_character_code_and_name_are_accepted(ledger_store):
+    code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;A&quot;, &quot;n&quot;)
+    assert code == 0, err
+    assert _rows(out)[1] == [&quot;A&quot;, &quot;n&quot;, &quot;0&quot;, &quot;0.00&quot;]
+
+
+@pytest.mark.parametrize(
+    &quot;args&quot;,
+    [(&quot;account&quot;, &quot;add&quot;), (&quot;account&quot;, &quot;add&quot;, &quot;ZZNE1&quot;), (&quot;account&quot;, &quot;add&quot;, &quot;ZZNE1&quot;, &quot;Name&quot;, &quot;Extra&quot;)],
+)
+def test_wrong_argument_count_is_usage_error(ledger_store, args):
+    code, out, _ = cli_runner(*args)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+def test_account_row_reports_count_and_cent_balance(ledger_store, store_open):
+    amounts = [10000, -2550, 1]
+    with store_open(ledger_store) as db:
+        db.accounts.create(account=&quot;ZZNF1&quot;, name=&quot;Helper Probe&quot;)
+        db.categories.create(category=&quot;ZZNFC&quot;, description=&quot;Helper Category&quot;)
+        for i, cents in enumerate(amounts):
+            db.transactions.create(txn_id=930000000 + i, date=&quot;2026-03-01&quot;, account=&quot;ZZNF1&quot;,
+                                   category=&quot;ZZNFC&quot;, amount=cents, memo=&quot;&quot;)
+        row = account_row(db, &quot;ZZNF1&quot;)
+    assert tuple(row) == (&quot;ZZNF1&quot;, &quot;Helper Probe&quot;, len(amounts), sum(amounts))
+
+
+def test_account_row_is_none_for_absent_account(ledger_store, store_open):
+    with store_open(ledger_store) as db:
+        assert account_row(db, &quot;ZZNFNONE&quot;) is None
+
+
+def test_account_row_is_zero_for_account_without_transactions(ledger_store, store_open):
+    cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZZNG1&quot;, &quot;Empty&quot;)
+    with store_open(ledger_store) as db:
+        assert account_row(db, &quot;ZZNG1&quot;) == (&quot;ZZNG1&quot;, &quot;Empty&quot;, 0, 0)
+</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_cli.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_cli.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_cli.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;CLI entry: registry loading, dispatch, usage errors, domain exit codes, and the stdout contract.&quot;&quot;&quot;
+
+import csv
+import io
+import os
+import subprocess
+from pathlib import Path
+
+import pytest
+
+from cli import registry
+from cli.testing import cli_runner
+from ledger_core.errors import NotFound, Operational, Rejected
+
+ROOT = Path(__file__).resolve().parent.parent
+
+
+@pytest.fixture
+def scratch_commands():
+    &quot;&quot;&quot;Register probe commands for one test and remove exactly those afterwards.&quot;&quot;&quot;
+    registry.load()
+    before = dict(registry.COMMANDS)
+    yield registry.COMMANDS
+    registry.COMMANDS.clear()
+    registry.COMMANDS.update(before)
+
+
+def test_load_is_idempotent():
+    registry.load()
+    first = dict(registry.COMMANDS)
+    registry.load()
+    assert registry.COMMANDS == first
+
+
+def test_registry_keys_are_word_tuples():
+    registry.load()
+    for words in registry.COMMANDS:
+        assert isinstance(words, tuple)
+        assert all(isinstance(word, str) for word in words)
+
+
+def test_load_keeps_entries_added_by_hand(scratch_commands):
+    key = (&quot;zztest&quot;, &quot;kept&quot;)
+    scratch_commands[key] = registry.Command(lambda db, args: [], 0, 0)
+    registry.load()
+    assert key in registry.COMMANDS
+
+
+def test_unknown_command_exits_two_with_one_stderr_line():
+    code, out, err = cli_runner(&quot;zzfrobnicate&quot;)
+    assert code == 2
+    assert out == &quot;&quot;
+    assert len(err.strip().splitlines()) == 1
+
+
+def test_no_command_exits_two_with_one_stderr_line():
+    code, out, err = cli_runner()
+    assert code == 2
+    assert out == &quot;&quot;
+    assert len(err.strip().splitlines()) == 1
+
+
+def test_group_word_alone_is_usage_error(scratch_commands):
+    scratch_commands[(&quot;zzgrp&quot;, &quot;ok&quot;)] = registry.Command(lambda db, args: [[&quot;h&quot;]], 0, 0)
+    code, out, _ = cli_runner(&quot;zzgrp&quot;)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+def test_group_word_with_unknown_sub_word_is_usage_error(scratch_commands):
+    scratch_commands[(&quot;zzgrp&quot;, &quot;ok&quot;)] = registry.Command(lambda db, args: [[&quot;h&quot;]], 0, 0)
+    code, out, _ = cli_runner(&quot;zzgrp&quot;, &quot;nosuch&quot;)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+@pytest.mark.parametrize(&quot;extra&quot;, [(), (&quot;a&quot;, &quot;b&quot;)])
+def test_wrong_argument_count_is_usage_error(scratch_commands, extra):
+    scratch_commands[(&quot;zzcount&quot;, &quot;ok&quot;)] = registry.Command(lambda db, args: [[&quot;h&quot;]], 1, 1)
+    code, out, err = cli_runner(&quot;zzcount&quot;, &quot;ok&quot;, *extra)
+    assert code == 2
+    assert out == &quot;&quot;
+    assert err.strip() != &quot;&quot;
+
+
+def test_unbounded_max_args_accepts_many(scratch_commands):
+    scratch_commands[(&quot;zzmany&quot;,)] = registry.Command(lambda db, args: [[str(len(args))]], 0, None)
+    code, out, _ = cli_runner(&quot;zzmany&quot;, &quot;a&quot;, &quot;b&quot;, &quot;c&quot;, &quot;d&quot;)
+    assert code == 0
+    assert out == &quot;4\n&quot;
+
+
+def test_handler_receives_arguments_after_command_words(scratch_commands):
+    seen = {}
+
+    def handler(db, args):
+        seen[&quot;db&quot;] = db
+        seen[&quot;args&quot;] = args
+        return [[&quot;x&quot;]]
+
+    scratch_commands[(&quot;zzargs&quot;, &quot;go&quot;)] = registry.Command(handler, 2, 2)
+    code, _, _ = cli_runner(&quot;zzargs&quot;, &quot;go&quot;, &quot;one&quot;, &quot;two&quot;)
+    assert code == 0
+    assert seen[&quot;args&quot;] == [&quot;one&quot;, &quot;two&quot;]
+    assert seen[&quot;db&quot;] is not None
+
+
+def test_rows_print_as_unquoted_csv_with_newline_endings(scratch_commands):
+    scratch_commands[(&quot;zzcsv&quot;, &quot;ok&quot;)] = registry.Command(
+        lambda db, args: [[&quot;h1&quot;, &quot;h2&quot;], [args[0], &quot;v&quot;]], 1, 1
+    )
+    code, out, _ = cli_runner(&quot;zzcsv&quot;, &quot;ok&quot;, &quot;alpha&quot;)
+    assert code == 0
+    assert list(csv.reader(io.StringIO(out))) == [[&quot;h1&quot;, &quot;h2&quot;], [&quot;alpha&quot;, &quot;v&quot;]]
+    assert &quot;\r&quot; not in out
+    assert out == &quot;h1,h2\nalpha,v\n&quot;
+
+
+def test_no_rows_prints_nothing(scratch_commands):
+    scratch_commands[(&quot;zzempty&quot;, &quot;ok&quot;)] = registry.Command(lambda db, args: [], 0, 0)
+    code, out, err = cli_runner(&quot;zzempty&quot;, &quot;ok&quot;)
+    assert code == 0
+    assert out == &quot;&quot;
+    assert err == &quot;&quot;
+
+
+def test_no_trailing_spaces_in_output(scratch_commands):
+    scratch_commands[(&quot;zzpad&quot;, &quot;ok&quot;)] = registry.Command(lambda db, args: [[&quot;a&quot;, &quot;b&quot;]], 0, 0)
+    _, out, _ = cli_runner(&quot;zzpad&quot;, &quot;ok&quot;)
+    assert all(not line.endswith(&quot; &quot;) for line in out.splitlines())
+
+
+@pytest.mark.parametrize(
+    (&quot;error&quot;, &quot;expected&quot;),
+    [(Rejected, 3), (NotFound, 4), (Operational, 1)],
+)
+def test_domain_error_maps_to_exit_code(scratch_commands, error, expected):
+    def handler(db, args):
+        raise error(&quot;probe failure&quot;)
+
+    scratch_commands[(&quot;zzerr&quot;, &quot;probe&quot;)] = registry.Command(handler, 0, 0)
+    code, out, err = cli_runner(&quot;zzerr&quot;, &quot;probe&quot;)
+    assert code == expected
+    assert out == &quot;&quot;
+    assert len(err.strip().splitlines()) == 1
+
+
+def test_unexpected_exception_exits_one_with_empty_stdout(scratch_commands):
+    def handler(db, args):
+        raise RuntimeError(&quot;boom&quot;)
+
+    scratch_commands[(&quot;zzboom&quot;, &quot;probe&quot;)] = registry.Command(handler, 0, 0)
+    code, out, err = cli_runner(&quot;zzboom&quot;, &quot;probe&quot;)
+    assert code == 1
+    assert out == &quot;&quot;
+    assert len(err.strip().splitlines()) == 1
+
+
+def test_stdout_is_empty_when_handler_fails_after_partial_work(scratch_commands):
+    def handler(db, args):
+        raise Rejected(&quot;late rule&quot;)
+
+    scratch_commands[(&quot;zzlate&quot;, &quot;probe&quot;)] = registry.Command(handler, 0, 0)
+    code, out, _ = cli_runner(&quot;zzlate&quot;, &quot;probe&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+
+
+def test_unopenable_database_exits_one_with_empty_stdout(scratch_commands, monkeypatch, tmp_path):
+    absent = tmp_path / &quot;absent&quot;
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, str(absent / &quot;app.db&quot;))
+    monkeypatch.delenv(&quot;DATABASE_PATH&quot;, raising=False)
+    scratch_commands[(&quot;zzopen&quot;, &quot;ok&quot;)] = registry.Command(lambda db, args: [[&quot;h&quot;]], 0, 0)
+    code, out, _ = cli_runner(&quot;zzopen&quot;, &quot;ok&quot;)
+    assert code == 1
+    assert out == &quot;&quot;
+    assert not absent.exists()
+
+
+def test_main_returns_rather_than_exits(scratch_commands):
+    scratch_commands[(&quot;zzret&quot;, &quot;ok&quot;)] = registry.Command(lambda db, args: [[&quot;h&quot;]], 0, 0)
+    from cli import main
+
+    assert main([&quot;zzret&quot;, &quot;ok&quot;]) == 0
+
+
+def test_ledger_launcher_is_executable():
+    assert os.access(ROOT / &quot;ledger&quot;, os.X_OK)
+
+
+def test_ledger_launcher_returns_usage_exit_code_for_unknown_command():
+    result = subprocess.run(
+        [str(ROOT / &quot;ledger&quot;), &quot;zzfrobnicate&quot;], capture_output=True, text=True, check=False
+    )
+    assert result.returncode == 2
+    assert result.stdout == &quot;&quot;
+</pre></article>
+</main>
+</body>
+</html>

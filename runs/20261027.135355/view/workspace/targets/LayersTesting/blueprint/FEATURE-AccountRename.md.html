@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-AccountRename.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-AccountRename.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-AccountRename.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Account Rename</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger account rename &lt;code&gt; &lt;name&gt;</code>, changing only an account&#x27;s name and printing the updated row.</td></tr><tr><td>Depends On</td><td>FEATURE-AccountAdd.md, FEATURE-CliEntry.md, FEATURE-Validation.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger account rename</td></tr><tr><td>Consumes</td><td>ledger_core.accounts, ledger_core.validation, cli.registry</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>ledger account rename &lt;code&gt; &lt;name&gt;</code> validates the new name, updates only the name column, and prints the header row and the updated account row <code>account,name,transactions,balance</code>.</p>
+<h2>Behavior</h2>
+<ul><li>Exactly two arguments are required; otherwise exit 2.</li><li>Name validation (1 to 40 characters, no comma, no newline) happens first; a violation exits 3 and changes nothing.</li><li>An absent code exits 4 and changes nothing.</li><li>On success only <code>name</code> changes; the transaction count and balance in the output are computed live.</li></ul>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNT-002</code> — read: check the account exists - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-ACCOUNT-003</code> — write: rename an account - supplies: <code>account</code>, <code>name</code> - returns: <code>account</code>, <code>name</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC account-rename-success ===<br>Intent: Renaming prints the updated row and a separate read shows the new name persisted.<br>Requires: executable=python3; scope=test</p>
+<p>import csv import io from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>code, before, after = &quot;ZZAR1&quot;, &quot;Old Name&quot;, &quot;New Name&quot; with db_session() as db: db.accounts.create(account=code, name=before) rc, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, after) print(out) print(err) assert rc == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;] assert rows[1] == [code, after, str(0), &quot;0.00&quot;] back = db.accounts.get(account=code) assert back is not None name = back[&quot;name&quot;] if isinstance(back, dict) else back.name assert name == after === END AC account-rename-success ===</p>
+<p>=== AC account-rename-absent ===<br>Intent: Renaming an absent account exits 4 with no standard output and creates nothing.<br>Requires: executable=python3; scope=test</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>code = &quot;ZZARNONE&quot; with db_session() as db: rc, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, &quot;Any Name&quot;) print(err) assert rc == 4 assert out == &quot;&quot; assert db.accounts.get(account=code) is None === END AC account-rename-absent ===</p>
+<p>=== AC account-rename-invalid-name ===<br>Intent: A name containing a comma, an empty name, and an over-length name each exit 3 and leave the stored name unchanged.<br>Requires: executable=python3; scope=test</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>code, original = &quot;ZZAR2&quot;, &quot;Keep Me&quot; bad_names = [&quot;has,comma&quot;, &quot;&quot;, &quot;x&quot; * 41] with db_session() as db: db.accounts.create(account=code, name=original) for bad in bad_names: rc, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, code, bad) print(err) assert rc == 3 assert out == &quot;&quot; back = db.accounts.get(account=code) name = back[&quot;name&quot;] if isinstance(back, dict) else back.name assert name == original === END AC account-rename-invalid-name ===</p>
+<p>=== AC account-rename-usage ===<br>Intent: A wrong argument count is a usage error with exit 2 and no standard output.<br>Requires: executable=python3; scope=test</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: rc, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, &quot;ZZAR3&quot;) assert rc == 2 assert out == &quot;&quot; === END AC account-rename-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Only the name column changes; the code, transactions, and balance are untouched.</li><li>Every input is validated before the first write.</li><li>Failures write nothing to standard output.</li></ul></article>
+</main>
+</body>
+</html>

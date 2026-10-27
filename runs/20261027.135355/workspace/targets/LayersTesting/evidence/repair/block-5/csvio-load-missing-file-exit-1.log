@@ -1,0 +1,11 @@
+
+
+--- stderr ---
+--- drydock: values at failure ---
+  code = 2
+--- drydock: end values ---
+Traceback (most recent call last):
+  File "csvio-load-missing-file-exit-1.py", line 11, in <module>
+    assert code == 1
+           ^^^^^^^^^
+AssertionError

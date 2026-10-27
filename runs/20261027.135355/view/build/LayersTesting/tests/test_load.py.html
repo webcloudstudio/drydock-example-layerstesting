@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_load.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_load.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_load.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger load accounts`` and ``ledger load categories``: all-or-nothing bulk loads with read-back.&quot;&quot;&quot;
+
+import csv
+import io
+
+import pytest
+
+from cli.testing import cli_runner
+from persistence import db as persistence_db
+from persistence import PersistenceError
+
+ACCOUNT_HEADER = [&quot;account&quot;, &quot;name&quot;]
+CATEGORY_HEADER = [&quot;category&quot;, &quot;description&quot;]
+
+
+def _write(path, header, rows) -&gt; str:
+    with open(path, &quot;w&quot;, newline=&quot;&quot;, encoding=&quot;utf-8&quot;) as fh:
+        writer = csv.writer(fh, lineterminator=&quot;\n&quot;)
+        writer.writerow(header)
+        writer.writerows(rows)
+    return str(path)
+
+
+def _rows(out: str) -&gt; list[list[str]]:
+    return list(csv.reader(io.StringIO(out)))
+
+
+def _accounts(store_open, path):
+    with store_open(path) as db:
+        return {row.account: row.name for row in db.accounts.list()}
+
+
+def _categories(store_open, path):
+    with store_open(path) as db:
+        return {row.category: row.description for row in db.categories.list()}
+
+
+# ── accounts ──────────────────────────────────────────────────────────────────────────────
+
+
+def test_accounts_load_reports_count_and_reads_back(ledger_store, store_open, tmp_path):
+    rows = [[&quot;ZLA1&quot;, &quot;Load One&quot;], [&quot;ZLA2&quot;, &quot;Load Two&quot;], [&quot;ZLA3&quot;, &quot;Load Three&quot;]]
+    path = _write(tmp_path / &quot;accounts.csv&quot;, ACCOUNT_HEADER, rows)
+    code, out, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path)
+    assert code == 0, err
+    assert _rows(out) == [[&quot;table&quot;, &quot;loaded&quot;], [&quot;accounts&quot;, &quot;3&quot;]]
+    assert _accounts(store_open, ledger_store) == {acct: name for acct, name in rows}
+
+
+def test_accounts_header_only_loads_zero_rows(ledger_store, tmp_path):
+    path = _write(tmp_path / &quot;accounts.csv&quot;, ACCOUNT_HEADER, [])
+    code, out, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path)
+    assert code == 0, err
+    assert _rows(out) == [[&quot;table&quot;, &quot;loaded&quot;], [&quot;accounts&quot;, &quot;0&quot;]]
+
+
+def test_accounts_load_accepts_largest_code_and_name(ledger_store, store_open, tmp_path):
+    rows = [[&quot;Z&quot; * 12, &quot;n&quot; * 40]]
+    path = _write(tmp_path / &quot;accounts.csv&quot;, ACCOUNT_HEADER, rows)
+    code, _, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path)
+    assert code == 0, err
+    assert _accounts(store_open, ledger_store) == {&quot;Z&quot; * 12: &quot;n&quot; * 40}
+
+
+@pytest.mark.parametrize(
+    &quot;bad&quot;,
+    [
+        [&quot;zzlc1&quot;, &quot;Lowercase Code&quot;],
+        [&quot;ABCDEFGHIJKLM&quot;, &quot;Code Too Long&quot;],
+        [&quot;ZZ-1&quot;, &quot;Bad Character&quot;],
+        [&quot;&quot;, &quot;Empty Code&quot;],
+        [&quot;ZZL9&quot;, &quot;&quot;],
+        [&quot;ZZL9&quot;, &quot;x&quot; * 41],
+        [&quot;ZZL9&quot;, &quot;has,comma&quot;],
+    ],
+)
+def test_accounts_invalid_row_stores_nothing(ledger_store, store_open, tmp_path, bad):
+    path = _write(tmp_path / &quot;accounts.csv&quot;, ACCOUNT_HEADER, [[&quot;ZZLX1&quot;, &quot;Valid First&quot;], bad])
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert _accounts(store_open, ledger_store) == {}
+
+
+def test_accounts_duplicate_within_file_stores_nothing(ledger_store, store_open, tmp_path):
+    path = _write(tmp_path / &quot;accounts.csv&quot;, ACCOUNT_HEADER, [[&quot;ZLD1&quot;, &quot;One&quot;], [&quot;ZLD2&quot;, &quot;Two&quot;], [&quot;ZLD1&quot;, &quot;Again&quot;]])
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert _accounts(store_open, ledger_store) == {}
+
+
+def test_accounts_duplicate_of_stored_code_leaves_stored_row_unchanged(ledger_store, store_open, tmp_path):
+    with store_open(ledger_store) as db:
+        db.accounts.create(account=&quot;ZLS1&quot;, name=&quot;Already Stored&quot;)
+    path = _write(tmp_path / &quot;accounts.csv&quot;, ACCOUNT_HEADER, [[&quot;ZLS2&quot;, &quot;Fresh&quot;], [&quot;ZLS1&quot;, &quot;Replacement&quot;]])
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert _accounts(store_open, ledger_store) == {&quot;ZLS1&quot;: &quot;Already Stored&quot;}
+
+
+def test_accounts_wrong_header_stores_nothing(ledger_store, store_open, tmp_path):
+    path = _write(tmp_path / &quot;accounts.csv&quot;, [&quot;code&quot;, &quot;name&quot;], [[&quot;ZLH1&quot;, &quot;Wrong Header&quot;]])
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert _accounts(store_open, ledger_store) == {}
+
+
+def test_accounts_row_with_extra_field_stores_nothing(ledger_store, store_open, tmp_path):
+    path = _write(tmp_path / &quot;accounts.csv&quot;, ACCOUNT_HEADER, [[&quot;ZLF1&quot;, &quot;Good&quot;], [&quot;ZLF2&quot;, &quot;Too&quot;, &quot;Many&quot;]])
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert _accounts(store_open, ledger_store) == {}
+
+
+def test_accounts_missing_file_exits_one_and_stores_nothing(ledger_store, store_open, tmp_path):
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;accounts&quot;, str(tmp_path / &quot;absent.csv&quot;))
+    assert code == 1
+    assert out == &quot;&quot;
+    assert _accounts(store_open, ledger_store) == {}
+
+
+def test_accounts_failing_insert_removes_rows_already_stored(ledger_store, store_open, tmp_path, monkeypatch):
+    &quot;&quot;&quot;A storage failure on the third insert removes the first two, so the file loads nothing.&quot;&quot;&quot;
+    original = persistence_db.Database.run
+    creates = []
+
+    def failing_run(self, operation, arguments):
+        if operation.identifier == &quot;FEATURE-ACCOUNT-001&quot;:
+            creates.append(arguments[&quot;account&quot;])
+            if len(creates) == 3:
+                raise PersistenceError(&quot;simulated write failure&quot;)
+        return original(self, operation, arguments)
+
+    monkeypatch.setattr(persistence_db.Database, &quot;run&quot;, failing_run)
+    path = _write(tmp_path / &quot;accounts.csv&quot;, ACCOUNT_HEADER, [[&quot;ZLW1&quot;, &quot;One&quot;], [&quot;ZLW2&quot;, &quot;Two&quot;], [&quot;ZLW3&quot;, &quot;Three&quot;]])
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path)
+    monkeypatch.undo()
+    assert code == 1
+    assert out == &quot;&quot;
+    assert _accounts(store_open, ledger_store) == {}
+
+
+def test_accounts_usage_requires_exactly_one_file(ledger_store):
+    for args in [(&quot;load&quot;, &quot;accounts&quot;), (&quot;load&quot;, &quot;accounts&quot;, &quot;a.csv&quot;, &quot;b.csv&quot;)]:
+        code, out, _ = cli_runner(*args)
+        assert code == 2
+        assert out == &quot;&quot;
+
+
+# ── categories ────────────────────────────────────────────────────────────────────────────
+
+
+def test_categories_load_reports_count_and_reads_back(ledger_store, store_open, tmp_path):
+    rows = [[&quot;ZLC1&quot;, &quot;Cat One&quot;], [&quot;ZLC2&quot;, &quot;Cat Two&quot;]]
+    path = _write(tmp_path / &quot;categories.csv&quot;, CATEGORY_HEADER, rows)
+    code, out, err = cli_runner(&quot;load&quot;, &quot;categories&quot;, path)
+    assert code == 0, err
+    assert _rows(out) == [[&quot;table&quot;, &quot;loaded&quot;], [&quot;categories&quot;, &quot;2&quot;]]
+    assert _categories(store_open, ledger_store) == {cat: text for cat, text in rows}
+
+
+def test_categories_header_only_loads_zero_rows(ledger_store, tmp_path):
+    path = _write(tmp_path / &quot;categories.csv&quot;, CATEGORY_HEADER, [])
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, path)
+    assert code == 0
+    assert _rows(out) == [[&quot;table&quot;, &quot;loaded&quot;], [&quot;categories&quot;, &quot;0&quot;]]
+
+
+@pytest.mark.parametrize(
+    &quot;bad&quot;,
+    [
+        [&quot;zlk1&quot;, &quot;Lowercase&quot;],
+        [&quot;ABCDEFGHIJKLM&quot;, &quot;Too Long Code&quot;],
+        [&quot;&quot;, &quot;Empty Code&quot;],
+        [&quot;ZLK9&quot;, &quot;&quot;],
+        [&quot;ZLK9&quot;, &quot;x&quot; * 41],
+        [&quot;ZLK9&quot;, &quot;has,comma&quot;],
+    ],
+)
+def test_categories_invalid_row_stores_nothing(ledger_store, store_open, tmp_path, bad):
+    path = _write(tmp_path / &quot;categories.csv&quot;, CATEGORY_HEADER, [[&quot;ZLKX1&quot;, &quot;Valid First&quot;], bad])
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, path)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert _categories(store_open, ledger_store) == {}
+
+
+def test_categories_duplicate_of_stored_code_is_rejected(ledger_store, store_open, tmp_path):
+    with store_open(ledger_store) as db:
+        db.categories.create(category=&quot;ZLKS&quot;, description=&quot;Already Stored&quot;)
+    path = _write(tmp_path / &quot;categories.csv&quot;, CATEGORY_HEADER, [[&quot;ZLKF&quot;, &quot;Fresh&quot;], [&quot;ZLKS&quot;, &quot;Replacement&quot;]])
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, path)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert _categories(store_open, ledger_store) == {&quot;ZLKS&quot;: &quot;Already Stored&quot;}
+
+
+def test_categories_duplicate_within_file_is_rejected(ledger_store, store_open, tmp_path):
+    path = _write(tmp_path / &quot;categories.csv&quot;, CATEGORY_HEADER, [[&quot;ZLKD&quot;, &quot;One&quot;], [&quot;ZLKD&quot;, &quot;Again&quot;]])
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, path)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert _categories(store_open, ledger_store) == {}
+
+
+def test_categories_wrong_header_is_rejected(ledger_store, tmp_path):
+    path = _write(tmp_path / &quot;categories.csv&quot;, [&quot;category&quot;, &quot;name&quot;], [[&quot;ZLKH&quot;, &quot;Wrong&quot;]])
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;, path)
+    assert code == 3
+    assert out == &quot;&quot;
+
+
+def test_categories_usage_requires_exactly_one_file(ledger_store):
+    code, out, _ = cli_runner(&quot;load&quot;, &quot;categories&quot;)
+    assert code == 2
+    assert out == &quot;&quot;
+
+</pre></article>
+</main>
+</body>
+</html>

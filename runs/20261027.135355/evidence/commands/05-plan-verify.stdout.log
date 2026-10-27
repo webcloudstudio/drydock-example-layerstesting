@@ -1,0 +1,10 @@
+Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+plan verify: LayersTesting
+  5 criteria cannot run as written
+  ✗  FEATURE-NoNegativeBalance.md [nonneg-load]: calls `cli_runner` at line(s) 42 without asserting its exit status; bind it as `code, out, err = cli_runner(...)` and assert `code` before the next call
+  ✗  FEATURE-NoNegativeBalance.md [nonneg-post]: calls `cli_runner` at line(s) 24 without asserting its exit status; bind it as `code, out, err = cli_runner(...)` and assert `code` before the next call
+  ✗  FEATURE-NoNegativeBalance.md [nonneg-amend]: calls `cli_runner` at line(s) 30 without asserting its exit status; bind it as `code, out, err = cli_runner(...)` and assert `code` before the next call
+  ✗  FEATURE-NoNegativeBalance.md [nonneg-delete]: calls `cli_runner` at line(s) 29 without asserting its exit status; bind it as `code, out, err = cli_runner(...)` and assert `code` before the next call
+  ✗  FEATURE-NoNegativeBalance.md [nonneg-transfer]: calls `cli_runner` at line(s) 33, 35 without asserting its exit status; bind it as `code, out, err = cli_runner(...)` and assert `code` before the next call
+  Run: drydock plan repair LayersTesting
+Target - committed project workspace git store

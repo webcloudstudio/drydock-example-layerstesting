@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/bin/test.sh</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/bin/test.sh</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/bin/test.sh">Raw file</a></div></header>
+<article class="doc"><pre>#!/bin/sh
+# CommandCenter Operation
+# Name: Run Test Suite
+# Type: batch
+
+# --- Standard Preamble (POSIX sh) ---
+set -eu
+SCRIPT_DIR=&quot;$(cd &quot;$(dirname &quot;$0&quot;)&quot; &amp;&amp; pwd)&quot;
+PROJECT_DIR=&quot;$(cd &quot;$SCRIPT_DIR/..&quot; &amp;&amp; pwd)&quot;
+LOG_DIR=&quot;$PROJECT_DIR/data/logs&quot;
+mkdir -p &quot;$LOG_DIR&quot;
+
+TIMESTAMP=$(date &#x27;+%Y-%m-%d_%H%M%S&#x27;)
+LOG_FILE=&quot;$LOG_DIR/test_${TIMESTAMP}.log&quot;
+STATUS_FILE=&quot;$LOG_DIR/test_${TIMESTAMP}.status&quot;
+
+echo &quot;=== test started at $(date &#x27;+%Y-%m-%d %H:%M:%S&#x27;) ===&quot; | tee &quot;$LOG_FILE&quot;
+echo &quot;Arguments: $*&quot; | tee -a &quot;$LOG_FILE&quot;
+echo &quot;Working dir: $PROJECT_DIR&quot; | tee -a &quot;$LOG_FILE&quot;
+echo &quot;---&quot; | tee -a &quot;$LOG_FILE&quot;
+
+cd &quot;$PROJECT_DIR&quot;
+
+# Create the environment from the committed lock when it is missing.
+if [ ! -f .venv/bin/activate ]; then
+    uv sync --locked 2&gt;&amp;1 | tee -a &quot;$LOG_FILE&quot;
+fi
+
+# The pytest exit status is the verdict; tee would hide it, so record it to a file.
+# shellcheck disable=SC1091
+( set +u; . .venv/bin/activate; set -u; pytest -q &quot;$@&quot;; echo $? &gt; &quot;$STATUS_FILE&quot; ) 2&gt;&amp;1 | tee -a &quot;$LOG_FILE&quot;
+status=$(cat &quot;$STATUS_FILE&quot;)
+rm -f &quot;$STATUS_FILE&quot;
+
+echo &quot;=== test finished at $(date &#x27;+%Y-%m-%d %H:%M:%S&#x27;) with exit $status ===&quot; | tee -a &quot;$LOG_FILE&quot;
+exit &quot;$status&quot;
+</pre></article>
+</main>
+</body>
+</html>

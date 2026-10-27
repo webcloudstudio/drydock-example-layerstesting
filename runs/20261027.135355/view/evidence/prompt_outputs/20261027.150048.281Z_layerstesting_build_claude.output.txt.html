@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261027.150048.281Z_layerstesting_build_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261027.150048.281Z_layerstesting_build_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261027.150048.281Z_layerstesting_build_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>I&#x27;ll start by checking the build directory and the current state of the code.The core code for both stories already exists. Next I&#x27;ll run the existing test suite to see where things stand.The existing suite passes (415 tests). Before writing the new tests, I&#x27;ll check the local test style and confirm the stories&#x27; acceptance checks run against the current code.Existing tests use `ledger_store` and `store_open` fixtures. I&#x27;ll check `tests/conftest.py` so the new tests follow the same isolation pattern.I have what I need. The implementation already covers both stories, so the remaining work is to add tests that prove each declared acceptance check. I&#x27;ll write the four `feature-command-contract` checks and the five `feature-no-negative-balance` checks as tests, keeping every assertion and expected value from the specs. The only change is setup: they use the project&#x27;s existing `ledger_store` fixture (fresh store per test) rather than `db_session`, which matches how the other command tests isolate state.Next, the no-negative-balance checks, one test per writing command plus the whole-file load case.I left an unused helper and an unused `os` import in that file. I&#x27;ll remove them before running.Now I&#x27;ll run the two new test files, verbose, to see each named check result.All 34 new checks pass. Now I&#x27;ll run the declared verification gate, `sh bin/test.sh`, over the full suite.Both stories&#x27; declared checks now run as tests and pass. The code needed no changes: the existing modules already satisfy the specs.
+
+I added two test files and changed no application code:
+
+- `tests/test_command_contract.py` covers the four `feature-command-contract` checks: usage errors exit 2, CSV format, failure exit classes with one stderr line, and rejected writes leaving counts unchanged.
+- `tests/test_no_negative_balance.py` covers the five `feature-no-negative-balance` checks: load, post, amend, delete, and transfer.
+
+Each declared assertion and its expected values are kept. I changed only the setup: the checks use the project&#x27;s `ledger_store` fixture (a fresh store per test), as the other command tests do, instead of `db_session`. Each check acts through `cli_runner` and reads state back through `count`, `get`, or the persistence interface.
+
+Verification run:
+- `pytest -v` on the two new files: 34 passed.
+- `sh bin/test.sh` (full suite): 449 passed, exit 0. This includes the 415 existing tests.
+
+I did not run `sources/run.sh`, because it is the terminal story and is not part of this block. I did not commit anything.
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- tests/test_command_contract.py
+- tests/test_no_negative_balance.py
+
+SUMMARY:
+Both stories were already implemented in `cli/`, `ledger_core/`, and `persistence/`, so this step only proves the declared checks. The new tests cover every declared acceptance check for both stories, with the expected values from the specs. Full suite via `sh bin/test.sh`: 449 passed, exit 0.
+
+BLOCKERS:
+- none</pre></article>
+</main>
+</body>
+</html>

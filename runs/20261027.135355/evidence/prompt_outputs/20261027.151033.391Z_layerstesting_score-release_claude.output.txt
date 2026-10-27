@@ -1,0 +1,60 @@
+I'll start by reading the grader and the spec, since the recorded PASS lines are only evidence if the grader checks what each trial claims.The grader compares stdout and exit codes byte-for-byte, which covers most trials. Two gaps remain: it never compares stderr, and `sources/INSTRUCTIONS.md` (which st-011 cites) does not exist in the tree. I'll check the entry point and look for that file elsewhere before probing stderr and argument-count handling.The spec file is missing, so the README is the only written contract I can check against. Next I'll probe the things the grader doesn't see: where failure text goes, and exit codes for wrong argument counts.```json
+{
+  "criteria": [
+    {
+      "id": "st-001",
+      "verdict": "MET",
+      "rationale": "The governed gate `sh sources/run.sh` exited 0 against the current tree, with 43 of 43 checks passing.",
+      "evidence": ["governed gate full: outcome PASS, return_code 0, 'LayersTesting: 43 passed, 0 failed (of 43)'", "sources/run.sh:97-98 exits 0 only when FAILED is 0"]
+    },
+    {
+      "id": "st-004",
+      "verdict": "MET",
+      "rationale": "The grader loads the three seed files in order into a fresh database and checks each load's reported count (4, 7, 120) and the post-load counts, all PASS.",
+      "evidence": ["sources/run.sh:B1-B3 expect 'accounts,4', 'categories,7', 'transactions,120' with exit 0", "sources/run.sh:B4 checks counts 4/7/120 across a separate invocation, PASS", "governed gate stdout: PASS B1, B2, B3, B4"]
+    },
+    {
+      "id": "st-005",
+      "verdict": "MET",
+      "rationale": "Balances, category totals, and monthly totals are compared byte-for-byte with `cmp -s` both before the workflows (C1-C3) and after them (H1-H3), and all six checks PASS.",
+      "evidence": ["sources/run.sh:45-47 uses cmp -s on stdout for C1-C3", "sources/run.sh:H1-H3 repeat the comparison after the transfer and posting workflows", "governed gate stdout: PASS C1, C2, C3, H1, H2, H3"]
+    },
+    {
+      "id": "st-006",
+      "verdict": "MET",
+      "rationale": "Grader checks cover account add, rename, get, and delete, and transaction post, get, amend, and delete. They also cover the exit-3 refusal to delete an account that has transactions, and exit-4 for absent records.",
+      "evidence": ["sources/run.sh:E1-E4 add, get, and rename CASH9 with expected returned values, all PASS", "sources/run.sh:E6 'account delete DRAWER1' exits 3 and PASS", "sources/run.sh:E7-E8 delete CASH9, then get exits 4, PASS", "sources/run.sh:F1-F3 post, get, and amend txn 121 with current values, PASS", "sources/run.sh:F8-F9 delete txn 121, then get exits 4, PASS"]
+    },
+    {
+      "id": "st-007",
+      "verdict": "MET",
+      "rationale": "Rejected loads, account changes, transaction changes, and transfers each exit 3 and are followed by counts and balances that show nothing changed.",
+      "evidence": ["sources/run.sh:D1-D2 rejected load of bad transactions and duplicate account load exit 3, PASS", "sources/run.sh:D3 counts still 4/7/120, PASS", "sources/run.sh:E2 duplicate account add exits 3, then E3 reads CASH9 unchanged, PASS", "sources/run.sh:F5-F7 rejected postings exit 3; H1-H3 later show unchanged totals for the same accounts", "probe st011: 'post bad account' and 'post bad date' rc=3, stdout empty"]
+    },
+    {
+      "id": "st-008",
+      "verdict": "MET",
+      "rationale": "Every command that would drive a balance below zero (transfer, post, amend, delete) exits 3, and the H-series balances show the prior balances were preserved.",
+      "evidence": ["sources/run.sh:G2 transfer SAFE->PETTY 999.99 exits 3, PASS", "sources/run.sh:G3 post PETTY -1000.00 exits 3, PASS", "sources/run.sh:G4 amend txn 1 to 1.00 and G5 delete txn 1 each exit 3, PASS", "sources/run.sh:H1 PETTY balance 293.91 and SAFE 750.00 show the rejected G-series commands changed nothing, PASS"]
+    },
+    {
+      "id": "st-010",
+      "verdict": "MET",
+      "rationale": "A valid transfer between DRAWER1 and SAFE returns two rows with equal and opposite amounts in category TRANSFER, and the balances change accordingly. The total held across accounts is unchanged by the transfer itself.",
+      "evidence": ["sources/run.sh:G1 expects txn rows 122 (-500.00 DRAWER1) and 123 (+500.00 SAFE), category TRANSFER, PASS", "sources/run.sh:H1 SAFE 250.00 -> 750.00 and DRAWER1 2299.38 -> 1799.38 after G1, PASS", "sources/run.sh:H2 TRANSFER net 0.00 at inflow and outflow 5600.00, PASS"]
+    },
+    {
+      "id": "st-011",
+      "verdict": "MET",
+      "rationale": "Unknown commands and wrong argument counts exit 2 with empty stdout and one stderr line. Rejections and not-found exit 3 and 4 with stdout empty. Successful output is the grader's CSV. The contract is in README.md because sources/INSTRUCTIONS.md does not exist.",
+      "evidence": ["probe st011: 'frobnicate' rc=2, stdout 0 lines, stderr 1 line", "probe st011: 'report nosuch' rc=2, stdout 0 lines, stderr 1 line", "probe st011: 'account get' with no argument and with extra arguments rc=2, stdout empty, stderr 1 line", "probe st011: 'count extra' and 'init extra' rc=2, stdout empty", "probe st011: 'get absent acct' rc=4, stderr 'error: account NOSUCH does not exist'", "sources/run.sh:U1-U2 expect exit 2 for unknown command and report, PASS", "README.md:28-35 defines the exit-code and stderr contract that the probe checked"]
+    }
+  ],
+  "improvements": [
+    "st-011 cites sources/INSTRUCTIONS.md, which is not in the tree; the contract actually lives in README.md. Either restore the file or repoint the criterion at README.md so the spec it grades against exists.",
+    "sources/run.sh captures stderr but never compares it, so the 'failures only to standard error' clause of st-011 is only checked by an ad-hoc probe. Add a check that asserts stdout is empty and stderr holds one line for each failing case.",
+    "st-010 does not say what happens when the two accounts are the same. Either add that case to the criterion (expected exit 3) and to the grader, or state that it is out of scope.",
+    "Several README requirements have no grader or probe coverage: unknown table names exit 2, and exit 1 for unreadable files is only checked in my probe. Add these to the grader so the gate covers the full exit-code contract."
+  ]
+}
+```

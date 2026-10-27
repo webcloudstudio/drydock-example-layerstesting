@@ -1,0 +1,977 @@
+=== BEGIN ARTIFACT ARCHITECTURE.md ===
+# ARCHITECTURE: LayersTesting
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Modules, boundaries, and technical decisions for the LayersTesting command-line cash ledger. |
+| Provides | project tree, bin/test.sh |
+
+## Questions
+
+- None.
+
+## Purpose
+
+The product is an executable named `ledger` at the application root. It keeps accounts, categories, and cash transactions in SQLite through the generated `persistence` package. Every command either completes in full or changes nothing. This file states the module layout and boundaries every other Blueprint builds into.
+
+## Technology Stack
+
+Derived from `TECHNOLOGY_STACK.md`, which remains the decision of record.
+
+| Technology | Where it applies |
+|---|---|
+| Python 3.11+ | All application code, the `ledger` launcher target, and the tests. |
+| SQLite | The only store, reached through the generated `persistence` package. |
+| CLI | The `ledger` executable and the `cli` package. |
+| pytest | Test runner behind `bin/test.sh`. |
+| POSIX sh | `bin/test.sh` and the `ledger` launcher. |
+
+## Project Tree
+
+| Path | Owner story | Purpose |
+|---|---|---|
+| `pyproject.toml`, `uv.lock` | foundation-python | Dependency manifest and committed lock. |
+| `bin/test.sh` | foundation-python | POSIX launcher: activates `.venv`, runs `pytest -q` from the application root, exits zero only when every test passes. |
+| `conftest.py` | foundation-python | Exposes the `db_session` and `cli_runner` fixtures. |
+| `ledger_core/` | foundation-python and later services | Domain logic: `config`, `errors`, then `validation`, `money`, `balances`, `csvio`, `accounts`, `transactions`, `reports` added by their own stories. |
+| `persistence/` | Drydock (generated) | Repository layer generated from `DATABASE.md`. |
+| `cli/` | foundation-cli | `main`, registry, command modules, `testing.cli_runner`. |
+| `ledger` | foundation-cli | Executable launcher at the application root. |
+| `tests/` | each story | The project's own test suite. |
+
+## Module Ownership
+
+| Boundary | Owning module | May access |
+|---|---|---|
+| Persistence | `persistence` (generated) | The SQLite driver, the only module that does. |
+| Configuration | `ledger_core.config` | `DATABASE_URL`, `DATABASE_PATH`, process environment. |
+| Domain errors | `ledger_core.errors` | Nothing external. |
+| Money and validation | `ledger_core.money`, `ledger_core.validation` | Nothing external; pure functions. |
+| Command dispatch and output | `cli` | stdout, stderr, `ledger_core`, `persistence.open_database`. |
+| File stores | none | The only files read are CSV files named on a command line, through `ledger_core.csvio`. |
+| External services | none | No network access. |
+
+No module outside `persistence` imports `sqlite3` or any other database driver. Callers use `db.<table>.<operation>(...)`.
+
+## Configuration
+
+`ledger_core.config.database_path() -> str` resolves `DATABASE_URL` first, with an optional leading `sqlite://` removed, then `DATABASE_PATH`, then `data/app.db`. An unset or empty value is skipped. A database location that cannot be opened is an operational failure: exit `1`, nothing written.
+
+## Errors and Exit Codes
+
+`ledger_core.errors` defines `LedgerError` with an integer `exit_code` attribute and three subclasses.
+
+| Class | exit_code | Meaning |
+|---|---|---|
+| `Rejected` | 3 | Invalid input, duplicate key, unknown reference, account in use, negative balance. |
+| `NotFound` | 4 | Absent account or transaction on get, rename, delete, or amend. |
+| `Operational` | 1 | Unreadable file or unopenable database. |
+
+Usage errors (exit `2`) are produced by `cli` dispatch and are not domain errors.
+
+## Money
+
+Amounts are integer cents at every layer: parsing, storage, arithmetic, and reports. Floating point is never used for money. Text is produced only at output by `ledger_core.money.format_cents`.
+
+## Atomicity
+
+Every writing command validates all inputs and rules, including the no-negative-balance rule, before its first write. A rejected command writes nothing.
+
+## Test Command
+
+`sh bin/test.sh` runs `pytest -q` and is the verification command for every behavioral story.
+
+## Programmatic Acceptance
+
+=== AC arch-project-files ===
+Intent: The project root carries the dependency manifest, lock, pytest conftest, and a test launcher that runs pytest.
+
+from pathlib import Path
+
+for name in ["pyproject.toml", "uv.lock", "conftest.py", "bin/test.sh"]:
+    assert Path(name).is_file(), name
+launcher = Path("bin/test.sh").read_text()
+assert "pytest" in launcher
+=== END AC arch-project-files ===
+
+=== AC arch-packages-import ===
+Intent: The ledger_core package and its foundation modules import.
+
+import ledger_core
+import ledger_core.config
+import ledger_core.errors
+
+assert callable(ledger_core.config.database_path)
+=== END AC arch-packages-import ===
+
+=== AC arch-config-precedence ===
+Intent: DATABASE_URL wins over DATABASE_PATH, an empty URL falls through, and with both unset the default path is used.
+
+from drydock_acceptance import database_environment
+from ledger_core.config import database_path
+
+with database_environment(url="sqlite://primary.db", path="fallback.db") as root:
+    assert str(database_path()) == str(root / "primary.db")
+with database_environment(url="plain.db", path="fallback.db") as root:
+    assert str(database_path()) == str(root / "plain.db")
+with database_environment(url="", path="fallback.db") as root:
+    assert str(database_path()) == str(root / "fallback.db")
+with database_environment(path="fallback.db") as root:
+    assert str(database_path()) == str(root / "fallback.db")
+with database_environment() as root:
+    assert str(database_path()) == "data/app.db"
+=== END AC arch-config-precedence ===
+
+=== AC arch-error-exit-codes ===
+Intent: The three domain error classes derive from LedgerError and carry the exit codes 3, 4, and 1.
+
+from ledger_core.errors import LedgerError, Rejected, NotFound, Operational
+
+expected = {Rejected: 3, NotFound: 4, Operational: 1}
+for cls, code in expected.items():
+    assert issubclass(cls, LedgerError)
+    err = cls("probe")
+    assert err.exit_code == code
+=== END AC arch-error-exit-codes ===
+
+=== AC arch-driver-boundary ===
+Intent: No application module outside the generated persistence package imports a database driver.
+
+import ast
+from pathlib import Path
+
+banned = {"sqlite3", "psycopg", "psycopg2"}
+checked = 0
+assert Path("ledger_core").is_dir()
+for root in ["ledger_core", "cli"]:
+    base = Path(root)
+    if not base.is_dir():
+        continue
+    for path in base.rglob("*.py"):
+        tree = ast.parse(path.read_text())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                names = [a.name.split(".")[0] for a in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                names = [(node.module or "").split(".")[0]]
+            else:
+                continue
+            assert not (banned & set(names)), (str(path), names)
+        checked += 1
+print(checked, "files scanned")
+assert checked >= 1
+=== END AC arch-driver-boundary ===
+
+=== AC arch-no-float ===
+Intent: Domain code contains no float call and no float literal, so money never uses floating point.
+
+import ast
+from pathlib import Path
+
+checked = 0
+for path in Path("ledger_core").rglob("*.py"):
+    tree = ast.parse(path.read_text())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+            assert node.func.id != "float", str(path)
+        if isinstance(node, ast.Constant):
+            assert not isinstance(node.value, float), str(path)
+    checked += 1
+print(checked, "files scanned")
+assert checked >= 1
+=== END AC arch-no-float ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Do not modify any file under `sources/`.
+- Application code never reads `sources/run.sh` or any seed file; seed files reach the database only through `ledger load`.
+- Do not hardcode a report row, a count, or a total; every value comes from a query.
+- Do not open a database driver outside the generated persistence package.
+- Do not use floating point for money at any layer.
+- The ledger runs without network access.
+- Diagnostics go to standard error and are never compared.
+
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-CliEntry.md ===
+# FEATURE: CLI Entry
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | The `ledger` executable, command registry, dispatch rules, and stdout/stderr/exit-code contract. |
+| Depends On | ARCHITECTURE.md, DATABASE.md |
+| Provides | ledger, cli.registry |
+| Consumes | persistence.accounts, persistence.categories, persistence.transactions |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Provide the single entry point through which every command runs. It resolves the command words, checks the argument count, opens the database, calls the handler, and turns the result into CSV on stdout or one diagnostic line on stderr with the contract exit code.
+
+## Interface
+
+- `ledger` at the application root: a POSIX launcher that activates `.venv` and calls `cli.main(sys.argv[1:])`, exiting with its return value.
+- `cli.main(argv: list[str] | None = None) -> int`.
+- `cli.testing.cli_runner(*args) -> (exit_code, stdout, stderr)`, running `main` in process.
+- `cli.registry`:
+  - `Command(handler, min_args, max_args)`, a named tuple. `max_args` is `None` when unbounded.
+  - `COMMANDS: dict[tuple[str, ...], Command]`, keyed by command words such as `("account", "add")`.
+  - `load()`, idempotent: imports every module in `cli/commands/` and adds the entries of each module's `COMMANDS` mapping. It never removes entries.
+- Handler signature: `handler(db, args: list[str]) -> list[list[str]]`, where `db` is the opened database and `args` are the words after the command words. It returns every output row, header first, as lists of text.
+
+## Dispatch Rules
+
+1. Call `registry.load()`.
+2. Match the longest command-word prefix of `argv` in `COMMANDS`. No match, an empty `argv`, or a known group word with an unknown sub-word (unknown table or report) is a usage error.
+3. An argument count outside `min_args..max_args` is a usage error.
+4. A usage error exits `2`, writes one diagnostic line to stderr, and writes nothing to stdout.
+5. Open the database with `persistence.open_database(ledger_core.config.database_path())`. A failure to open exits `1`.
+6. Call the handler. On success, write the rows to stdout as CSV: comma-separated, no quoting, no trailing spaces, `\n` line endings. Nothing is written to stdout before the handler returns.
+7. A `LedgerError` exits with its `exit_code` and one stderr line. Any other exception exits `1` with one stderr line. Stdout stays empty in both cases.
+
+Handlers validate every input and rule before their first write. Check order inside a handler: input validation (exit 3), then existence lookups (exit 4), then business rules (exit 3).
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md; this entry point only opens the database and passes it to handlers.
+
+## Programmatic Acceptance
+
+=== AC cli-registry-load ===
+Intent: Registry loading is idempotent and every key is a tuple of words.
+
+from cli import registry
+
+registry.load()
+count = len(registry.COMMANDS)
+registry.load()
+assert len(registry.COMMANDS) == count
+for words in registry.COMMANDS:
+    assert isinstance(words, tuple)
+    assert all(isinstance(w, str) for w in words)
+=== END AC cli-registry-load ===
+
+=== AC cli-unknown-command ===
+Intent: An unknown command, or no command at all, exits 2 with an empty stdout and exactly one stderr line.
+
+from cli.testing import cli_runner
+
+for args in [("zzfrobnicate",), ()]:
+    code, out, err = cli_runner(*args)
+    print(code, repr(out), repr(err))
+    assert code == 2
+    assert out == ""
+    assert len(err.strip().splitlines()) == 1
+=== END AC cli-unknown-command ===
+
+=== AC cli-dispatch-success ===
+Intent: A registered command receives its arguments and its rows print as unquoted CSV with newline endings.
+
+import csv
+import io
+from cli import registry
+from cli.testing import cli_runner
+
+arg = "alpha"
+words = ("zzgrp", "ok")
+
+def handler(db, args):
+    return [["h1", "h2"], [args[0], "v"]]
+
+registry.load()
+registry.COMMANDS[words] = registry.Command(handler, 1, 1)
+try:
+    code, out, err = cli_runner(*words, arg)
+    print(code, repr(out), repr(err))
+    assert code == 0
+    assert list(csv.reader(io.StringIO(out))) == [["h1", "h2"], [arg, "v"]]
+    assert "\r" not in out
+    assert out.endswith("\n")
+finally:
+    registry.COMMANDS.pop(words, None)
+=== END AC cli-dispatch-success ===
+
+=== AC cli-usage-errors ===
+Intent: A wrong argument count, a bare group word, and a group word with an unknown sub-word each exit 2 with empty stdout.
+
+from cli import registry
+from cli.testing import cli_runner
+
+words = ("zzgrp2", "ok")
+
+def handler(db, args):
+    return [["h"], [args[0]]]
+
+registry.load()
+registry.COMMANDS[words] = registry.Command(handler, 1, 1)
+try:
+    cases = [words, words + ("a", "b"), ("zzgrp2",), ("zzgrp2", "nosuch")]
+    for args in cases:
+        code, out, err = cli_runner(*args)
+        print(args, code, repr(out), repr(err))
+        assert code == 2
+        assert out == ""
+        assert err.strip() != ""
+finally:
+    registry.COMMANDS.pop(words, None)
+=== END AC cli-usage-errors ===
+
+=== AC cli-domain-error-codes ===
+Intent: Handlers raising Rejected, NotFound, or Operational exit 3, 4, or 1 and print nothing to stdout.
+
+from cli import registry
+from cli.testing import cli_runner
+from ledger_core.errors import Rejected, NotFound, Operational
+
+cases = {"rej": (Rejected, 3), "nf": (NotFound, 4), "op": (Operational, 1)}
+registry.load()
+added = []
+try:
+    for word, (cls, expected) in cases.items():
+        def handler(db, args, cls=cls):
+            raise cls("probe failure")
+        key = ("zzerr", word)
+        registry.COMMANDS[key] = registry.Command(handler, 0, 0)
+        added.append(key)
+        code, out, err = cli_runner(*key)
+        print(word, code, repr(out), repr(err))
+        assert code == expected
+        assert out == ""
+        assert len(err.strip().splitlines()) == 1
+finally:
+    for key in added:
+        registry.COMMANDS.pop(key, None)
+=== END AC cli-domain-error-codes ===
+
+=== AC cli-unopenable-database ===
+Intent: A database location that cannot be opened exits 1 with empty stdout.
+
+from drydock_acceptance import database_environment
+from cli import registry
+from cli.testing import cli_runner
+
+words = ("zzopen", "ok")
+
+def handler(db, args):
+    return [["h"]]
+
+registry.load()
+registry.COMMANDS[words] = registry.Command(handler, 0, 0)
+try:
+    with database_environment(url="missing/app.db"):
+        code, out, err = cli_runner(*words)
+        print(code, repr(out), repr(err))
+        assert code == 1
+        assert out == ""
+finally:
+    registry.COMMANDS.pop(words, None)
+=== END AC cli-unopenable-database ===
+
+=== AC cli-launcher ===
+Intent: The ledger launcher at the application root is executable and exits 2 for an unknown command with empty stdout.
+
+import os
+import subprocess
+
+assert os.access("ledger", os.X_OK)
+result = subprocess.run(["./ledger", "zzfrobnicate"], capture_output=True, text=True)
+print(result.stdout)
+print(result.stderr)
+assert result.returncode == 2
+assert result.stdout == ""
+=== END AC cli-launcher ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- A failing command writes nothing to stdout and exactly one diagnostic line to stderr.
+- Stdout is written only after the handler has returned successfully.
+- Output uses `\n` line endings, no quoting, and no trailing spaces.
+- Only `cli` dispatch produces exit code 2.
+
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Validation.md ===
+# FEATURE: Validation
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Pure validation of codes, names, memos, amounts, and dates, and conversion between integer cents and two-decimal text. |
+| Depends On | ARCHITECTURE.md |
+| Provides | ledger_core.validation, ledger_core.money |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Every command validates its inputs with these functions before it writes. They touch no storage and print nothing. Every violation raises `ledger_core.errors.Rejected` (exit code 3).
+
+## Interface
+
+`ledger_core.validation`, each returning the validated string unchanged:
+
+| Function | Rule |
+|---|---|
+| `validate_code(value)` | 1 to 12 characters, each in `A-Z` or `0-9`. |
+| `validate_name(value)` | 1 to 40 characters, no comma, no newline. Used for account names and category descriptions. |
+| `validate_memo(value)` | 0 to 60 characters, no comma, no newline. |
+| `validate_date(value)` | A real calendar date written `YYYY-MM-DD` with four-digit year, two-digit month and day. `2026-02-30` is rejected. |
+
+`ledger_core.money`:
+
+| Function | Rule |
+|---|---|
+| `parse_amount(text) -> int` | Input matches `-?DIGITS[.D[D]]`: at least one digit, an optional single decimal part of one or two digits, no sign other than `-`, no spaces. Returns integer cents. Zero (`0`, `0.00`, `-0`) is rejected. Three or more decimals are rejected. No floating point is used. |
+| `format_cents(cents) -> str` | Exactly two decimal places, a leading `-` when negative, no thousands separator: `-12.50`, `0.00`, `5000.00`. |
+
+## Database Interface
+
+- None — this feature is pure and reaches no repository.
+
+## Programmatic Acceptance
+
+=== AC validation-code ===
+Intent: Codes of 1 to 12 characters from A-Z and 0-9 are returned unchanged; empty, lowercase, too long, and other characters are rejected with exit code 3.
+
+from ledger_core.validation import validate_code
+from ledger_core.errors import Rejected
+
+def rejected(value):
+    try:
+        validate_code(value)
+    except Rejected as err:
+        assert err.exit_code == 3
+        return True
+    return False
+
+for good in ["DRAWER1", "A", "0", "ABCDEFGHIJKL", "Z9Z9Z9Z9Z9Z9"]:
+    assert validate_code(good) == good
+for bad in ["", "drawer1", "Drawer", "ABCDEFGHIJKLM", "AB-C", "A B", "A_B"]:
+    assert rejected(bad), bad
+=== END AC validation-code ===
+
+=== AC validation-name ===
+Intent: Names of 1 to 40 characters without comma or newline are accepted; empty, 41 characters, comma, and newline are rejected.
+
+from ledger_core.validation import validate_name
+from ledger_core.errors import Rejected
+
+def rejected(value):
+    try:
+        validate_name(value)
+    except Rejected as err:
+        assert err.exit_code == 3
+        return True
+    return False
+
+for good in ["Front Drawer", "x", "x" * 40]:
+    assert validate_name(good) == good
+for bad in ["", "x" * 41, "a,b", "a\nb"]:
+    assert rejected(bad), repr(bad)
+=== END AC validation-name ===
+
+=== AC validation-memo ===
+Intent: Memos of 0 to 60 characters without comma or newline are accepted, including the empty memo; 61 characters, comma, and newline are rejected.
+
+from ledger_core.validation import validate_memo
+from ledger_core.errors import Rejected
+
+def rejected(value):
+    try:
+        validate_memo(value)
+    except Rejected as err:
+        assert err.exit_code == 3
+        return True
+    return False
+
+for good in ["", "walk in sale", "m" * 60]:
+    assert validate_memo(good) == good
+for bad in ["m" * 61, "a,b", "a\nb"]:
+    assert rejected(bad), repr(bad)
+=== END AC validation-memo ===
+
+=== AC validation-date ===
+Intent: Real calendar dates in YYYY-MM-DD form are accepted, including a leap day; impossible dates and other layouts are rejected.
+
+from ledger_core.validation import validate_date
+from ledger_core.errors import Rejected
+
+def rejected(value):
+    try:
+        validate_date(value)
+    except Rejected as err:
+        assert err.exit_code == 3
+        return True
+    return False
+
+for good in ["2026-04-01", "2024-02-29", "2026-12-31"]:
+    assert validate_date(good) == good
+for bad in ["2026-02-30", "2026-02-29", "2026-13-01", "2026-00-10", "2026-4-1", "20260401", "", "2026-04-01x"]:
+    assert rejected(bad), bad
+=== END AC validation-date ===
+
+=== AC money-parse-valid ===
+Intent: Valid amount text parses to the integer cents it denotes, as an int and not a float.
+
+from ledger_core.money import parse_amount
+
+cases = [("45.50", 4550), ("-12.34", -1234), ("7", 700), ("1.5", 150),
+         ("0.01", 1), ("5000.00", 500000), ("-0.99", -99), ("-3", -300)]
+for text, cents in cases:
+    value = parse_amount(text)
+    assert type(value) is int, text
+    assert value == cents, text
+=== END AC money-parse-valid ===
+
+=== AC money-parse-invalid ===
+Intent: Zero, three or more decimals, and text outside -?DIGITS[.D[D]] are rejected with exit code 3.
+
+from ledger_core.money import parse_amount
+from ledger_core.errors import Rejected
+
+def rejected(value):
+    try:
+        parse_amount(value)
+    except Rejected as err:
+        assert err.exit_code == 3
+        return True
+    return False
+
+for bad in ["0", "0.00", "-0", "-0.0", "1.234", "1.000", "abc", "1.", ".5", "+5", "1,5", "", "-", "1 .5", "--5"]:
+    assert rejected(bad), repr(bad)
+=== END AC money-parse-invalid ===
+
+=== AC money-format ===
+Intent: Integer cents format with exactly two decimals, a leading minus when negative, and no thousands separator.
+
+from ledger_core.money import format_cents
+
+cases = [(-1250, "-12.50"), (0, "0.00"), (500000, "5000.00"),
+         (5, "0.05"), (-5, "-0.05"), (123456789, "1234567.89")]
+for cents, text in cases:
+    assert format_cents(cents) == text, cents
+=== END AC money-format ===
+
+=== AC money-round-trip ===
+Intent: Parsing the formatted text of any nonzero cents value returns the same cents.
+
+from ledger_core.money import parse_amount, format_cents
+
+for cents in [1, -1, 99, 100, -100, 12345, -987654, 500000]:
+    assert parse_amount(format_cents(cents)) == cents
+=== END AC money-round-trip ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- No floating point is used for money, in parsing or formatting.
+- Validation functions write nothing and read nothing from storage.
+- A violation raises `Rejected`; no other exception type signals invalid input.
+
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-BalanceRule.md ===
+# FEATURE: Balance Rule
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Checks that a proposed set of transaction changes leaves no account balance below zero before anything is written. |
+| Depends On | ARCHITECTURE.md, DATABASE.md |
+| Provides | ledger_core.balances |
+| Consumes | persistence.transactions |
+
+## Questions
+
+- None.
+
+## Purpose
+
+An account's balance is the sum of its transaction amounts in integer cents. Load, post, amend, delete, and transfer call this module before their first write. It only reads and never writes.
+
+## Interface
+
+`ledger_core.balances`:
+
+| Name | Meaning |
+|---|---|
+| `Insert(account, amount)` | A transaction to be added to `account` with `amount` cents. |
+| `Edit(txn_id, amount)` | A stored transaction whose amount becomes `amount`. |
+| `Delete(txn_id)` | A stored transaction to be removed. |
+| `current_balance(db, account) -> int` | Sum of the stored amounts of `account`; `0` when it has none. |
+| `check_no_negative(db, changes)` | Raises `Rejected` (exit 3) if any affected account's resulting balance is below zero; returns `None` otherwise. |
+
+`check_no_negative` groups all changes by account, takes each account's stored balance, applies the combined net delta (an `Edit` contributes new minus stored amount, a `Delete` contributes minus the stored amount), and rejects when any result is below zero. Changes are judged together, not one after another, so the order of changes does not matter. A resulting balance of exactly zero is allowed.
+
+## Database Interface
+
+- `FEATURE-TXN-002` — read: get a stored transaction for an edit or delete - supplies: `txn_id` - returns: `account`, `amount`
+- `FEATURE-TXN-005` — read: list an account's transactions to sum its balance - supplies: — - returns: `amount`
+
+## Programmatic Acceptance
+
+=== AC balance-current ===
+Intent: current_balance sums an account's stored amounts and is zero for an account with no transactions.
+
+from persistence.testing import db_session
+from ledger_core.balances import current_balance
+
+acct, empty, cat = "ZZBR1", "ZZBR2", "ZZBRC1"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Balance Probe")
+    db.accounts.create(account=empty, name="Empty Probe")
+    db.categories.create(category=cat, description="Balance Cat")
+    amounts = [1000, -300]
+    for offset, cents in enumerate(amounts):
+        db.transactions.create(txn_id=900100001 + offset, date="2026-05-01", account=acct,
+                               category=cat, amount=cents, memo="")
+    assert current_balance(db, acct) == sum(amounts)
+    assert current_balance(db, empty) == 0
+=== END AC balance-current ===
+
+=== AC balance-insert ===
+Intent: An insert that lands the balance at zero passes, one cent below zero is rejected with exit 3, and nothing is written either way.
+
+from persistence.testing import db_session
+from ledger_core.balances import check_no_negative, Insert
+from ledger_core.errors import Rejected
+
+acct, cat = "ZZBR3", "ZZBRC3"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Insert Probe")
+    db.categories.create(category=cat, description="Balance Cat")
+    db.transactions.create(txn_id=900100011, date="2026-05-01", account=acct, category=cat, amount=700, memo="")
+    before = len(db.transactions.list(account=acct))
+    assert check_no_negative(db, [Insert(acct, -700)]) is None
+    raised = None
+    try:
+        check_no_negative(db, [Insert(acct, -701)])
+    except Rejected as err:
+        raised = err
+    assert raised is not None
+    assert raised.exit_code == 3
+    assert len(db.transactions.list(account=acct)) == before
+=== END AC balance-insert ===
+
+=== AC balance-insert-new-account ===
+Intent: An account with no transactions accepts a positive insert and rejects a negative one.
+
+from persistence.testing import db_session
+from ledger_core.balances import check_no_negative, Insert
+from ledger_core.errors import Rejected
+
+acct = "ZZBR4"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Fresh Probe")
+    assert check_no_negative(db, [Insert(acct, 500)]) is None
+    raised = False
+    try:
+        check_no_negative(db, [Insert(acct, -1)])
+    except Rejected:
+        raised = True
+    assert raised
+=== END AC balance-insert-new-account ===
+
+=== AC balance-edit ===
+Intent: Editing the larger credit below what the debits need is rejected; editing it to exactly cover them passes.
+
+from persistence.testing import db_session
+from ledger_core.balances import check_no_negative, Edit
+from ledger_core.errors import Rejected
+
+acct, cat = "ZZBR5", "ZZBRC5"
+credit, debit = 900100021, 900100022
+with db_session() as db:
+    db.accounts.create(account=acct, name="Edit Probe")
+    db.categories.create(category=cat, description="Balance Cat")
+    db.transactions.create(txn_id=credit, date="2026-05-01", account=acct, category=cat, amount=1000, memo="")
+    db.transactions.create(txn_id=debit, date="2026-05-02", account=acct, category=cat, amount=-300, memo="")
+    assert check_no_negative(db, [Edit(credit, 300)]) is None
+    raised = None
+    try:
+        check_no_negative(db, [Edit(credit, 299)])
+    except Rejected as err:
+        raised = err
+    assert raised is not None
+    assert raised.exit_code == 3
+    stored = db.transactions.get(txn_id=credit)
+    amount = stored["amount"] if isinstance(stored, dict) else stored.amount
+    assert amount == 1000
+=== END AC balance-edit ===
+
+=== AC balance-delete ===
+Intent: Deleting the credit that funds a debit is rejected; deleting the debit passes.
+
+from persistence.testing import db_session
+from ledger_core.balances import check_no_negative, Delete
+from ledger_core.errors import Rejected
+
+acct, cat = "ZZBR6", "ZZBRC6"
+credit, debit = 900100031, 900100032
+with db_session() as db:
+    db.accounts.create(account=acct, name="Delete Probe")
+    db.categories.create(category=cat, description="Balance Cat")
+    db.transactions.create(txn_id=credit, date="2026-05-01", account=acct, category=cat, amount=1000, memo="")
+    db.transactions.create(txn_id=debit, date="2026-05-02", account=acct, category=cat, amount=-300, memo="")
+    assert check_no_negative(db, [Delete(debit)]) is None
+    raised = None
+    try:
+        check_no_negative(db, [Delete(credit)])
+    except Rejected as err:
+        raised = err
+    assert raised is not None
+    assert raised.exit_code == 3
+    assert db.transactions.get(txn_id=credit) is not None
+=== END AC balance-delete ===
+
+=== AC balance-combined ===
+Intent: Several changes to one account are judged by their net effect regardless of order; a credit and a debit that net to a non-negative balance pass in either order.
+
+from persistence.testing import db_session
+from ledger_core.balances import check_no_negative, Insert
+from ledger_core.errors import Rejected
+
+acct, cat = "ZZBR7", "ZZBRC7"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Combined Probe")
+    db.categories.create(category=cat, description="Balance Cat")
+    db.transactions.create(txn_id=900100041, date="2026-05-01", account=acct, category=cat, amount=700, memo="")
+    credit, debit = Insert(acct, 500), Insert(acct, -1100)
+    assert check_no_negative(db, [credit, debit]) is None
+    assert check_no_negative(db, [debit, credit]) is None
+    over = Insert(acct, -1300)
+    raised = False
+    try:
+        check_no_negative(db, [credit, over])
+    except Rejected:
+        raised = True
+    assert raised
+=== END AC balance-combined ===
+
+=== AC balance-multi-account ===
+Intent: When one of several affected accounts would go negative the whole set is rejected and nothing is written.
+
+from persistence.testing import db_session
+from ledger_core.balances import check_no_negative, Insert
+from ledger_core.errors import Rejected
+
+good, poor, cat = "ZZBR8", "ZZBR9", "ZZBRC8"
+with db_session() as db:
+    db.accounts.create(account=good, name="Rich Probe")
+    db.accounts.create(account=poor, name="Poor Probe")
+    db.categories.create(category=cat, description="Balance Cat")
+    db.transactions.create(txn_id=900100051, date="2026-05-01", account=good, category=cat, amount=900, memo="")
+    db.transactions.create(txn_id=900100052, date="2026-05-01", account=poor, category=cat, amount=100, memo="")
+    before = len(db.transactions.list(account=good)) + len(db.transactions.list(account=poor))
+    raised = None
+    try:
+        check_no_negative(db, [Insert(good, -900), Insert(poor, -101)])
+    except Rejected as err:
+        raised = err
+    assert raised is not None
+    assert raised.exit_code == 3
+    after = len(db.transactions.list(account=good)) + len(db.transactions.list(account=poor))
+    assert after == before
+=== END AC balance-multi-account ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- The check writes nothing; it only reads through the declared repository operations.
+- Amounts are integer cents; no floating point is used.
+- Only accounts touched by the proposed changes are judged; other accounts' balances do not affect the result.
+- Balances are computed from stored rows, never cached or hardcoded.
+
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-InitCount.md ===
+# FEATURE: Init and Count
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | The `ledger init` command that empties the ledger and the `ledger count` command that reports table row counts. |
+| Depends On | FEATURE-CliEntry.md, DATABASE.md, ARCHITECTURE.md |
+| Provides | ledger init, ledger count |
+| Consumes | ledger, cli.registry |
+
+## Questions
+
+- None.
+
+## Purpose
+
+`init` prepares an empty ledger for loading and use. `count` reports how many rows each table holds. Both are registered in `cli/commands/maintenance.py` through its `COMMANDS` mapping, with keys `("init",)` and `("count",)`, each taking no arguments.
+
+## Behavior
+
+### `ledger init`
+
+- Opens the database through the entry point; opening creates the database file and declared schema when they do not yet exist.
+- Removes every row from `transactions`, then `categories`, then `accounts` (foreign-key order).
+- Returns no rows, so nothing is written to stdout, and exits `0`.
+- Running it again on an empty ledger also exits `0`.
+
+### `ledger count`
+
+- Output is CSV: header `table,rows`, then the rows `accounts`, `categories`, `transactions` in that order, each with the number of rows stored, read from the database.
+- Counts are never embedded; they are computed from the repository `list` results.
+
+An argument given to either command is a usage error (exit 2).
+
+## Database Interface
+
+- `FEATURE-ACCOUNT-005` — read: list accounts to count them - supplies: — - returns: `account`
+- `FEATURE-CATEGORY-005` — read: list categories to count them - supplies: — - returns: `category`
+- `FEATURE-TXN-005` — read: list transactions to count them - supplies: — - returns: `txn_id`
+- `FEATURE-TXN-006` — write: remove every transaction on init - supplies: `min_txn_id` - returns: —
+- `FEATURE-CATEGORY-006` — write: remove every category on init - supplies: `min_category` - returns: —
+- `FEATURE-ACCOUNT-006` — write: remove every account on init - supplies: `min_account` - returns: —
+
+## Programmatic Acceptance
+
+=== AC count-shape ===
+Intent: count prints the header table,rows and the three tables in order, each count equal to the number of stored rows.
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("count")
+print(code, repr(out), repr(err))
+assert code == 0
+rows = list(csv.reader(io.StringIO(out)))
+assert rows[0] == ["table", "rows"]
+assert [r[0] for r in rows[1:]] == ["accounts", "categories", "transactions"]
+with db_session() as db:
+    expected = [len(db.accounts.list()), len(db.categories.list()), len(db.transactions.list())]
+assert [int(r[1]) for r in rows[1:]] == expected
+=== END AC count-shape ===
+
+=== AC count-tracks-writes ===
+Intent: After one account, one category, and one transaction are stored, each reported count rises by exactly one.
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+def counts():
+    code, out, err = cli_runner("count")
+    assert code == 0, err
+    return [int(r[1]) for r in list(csv.reader(io.StringIO(out)))[1:]]
+
+before = counts()
+with db_session() as db:
+    db.accounts.create(account="ZZCNT1", name="Count Probe")
+    db.categories.create(category="ZZCNTC", description="Count Cat")
+    db.transactions.create(txn_id=900200001, date="2026-05-01", account="ZZCNT1",
+                           category="ZZCNTC", amount=100, memo="")
+after = counts()
+assert after == [n + 1 for n in before]
+=== END AC count-tracks-writes ===
+
+=== AC init-empties-tables ===
+Intent: init exits 0 with empty stdout, removes rows in foreign-key order without error, and leaves all three tables empty.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    db.accounts.create(account="ZZINI1", name="Init Probe")
+    db.categories.create(category="ZZINIC", description="Init Cat")
+    db.transactions.create(txn_id=900200011, date="2026-05-01", account="ZZINI1",
+                           category="ZZINIC", amount=100, memo="")
+code, out, err = cli_runner("init")
+print(code, repr(out), repr(err))
+assert code == 0
+assert out == ""
+with db_session() as db:
+    assert len(db.transactions.list()) == 0
+    assert len(db.categories.list()) == 0
+    assert len(db.accounts.list()) == 0
+=== END AC init-empties-tables ===
+
+=== AC init-then-count ===
+Intent: After init, count reports zero rows for every table, and init run a second time on the empty ledger still exits 0.
+
+import csv
+import io
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("init")
+assert code == 0, err
+code, out, err = cli_runner("init")
+assert code == 0, err
+assert out == ""
+code, out, err = cli_runner("count")
+assert code == 0, err
+rows = list(csv.reader(io.StringIO(out)))
+assert rows[0] == ["table", "rows"]
+assert [r[0] for r in rows[1:]] == ["accounts", "categories", "transactions"]
+assert [int(r[1]) for r in rows[1:]] == [0, 0, 0]
+=== END AC init-then-count ===
+
+=== AC init-fresh-database ===
+Intent: init against a database path that does not yet exist creates the file, exits 0, and count then reports zero rows.
+
+import csv
+import io
+import os
+from drydock_acceptance import database_environment
+from cli.testing import cli_runner
+
+with database_environment(url="fresh.db") as root:
+    assert not os.path.exists(root / "fresh.db")
+    code, out, err = cli_runner("init")
+    print(code, repr(out), repr(err))
+    assert code == 0
+    assert os.path.exists(root / "fresh.db")
+    code, out, err = cli_runner("count")
+    assert code == 0, err
+    rows = list(csv.reader(io.StringIO(out)))
+    assert [int(r[1]) for r in rows[1:]] == [0, 0, 0]
+=== END AC init-fresh-database ===
+
+=== AC init-count-usage ===
+Intent: init and count with an extra argument are usage errors that exit 2 with empty stdout.
+
+from cli.testing import cli_runner
+
+for args in [("init", "extra"), ("count", "extra")]:
+    code, out, err = cli_runner(*args)
+    print(args, code, repr(out), repr(err))
+    assert code == 2
+    assert out == ""
+=== END AC init-count-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- `init` writes nothing to standard output.
+- Counts are read from the database on every run and are never embedded.
+- `init` removes rows in foreign-key order: transactions, then categories, then accounts.
+- Amounts and counts use no floating point.
+
+=== END ARTIFACT ===

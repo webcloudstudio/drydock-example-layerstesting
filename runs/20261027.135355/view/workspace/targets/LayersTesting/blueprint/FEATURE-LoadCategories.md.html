@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-LoadCategories.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-LoadCategories.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-LoadCategories.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Load Categories</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger load categories &lt;csv&gt;</code> as an all-or-nothing bulk load.</td></tr><tr><td>Depends On</td><td>FEATURE-LoadCsvReader.md, FEATURE-Validation.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger load categories</td></tr><tr><td>Consumes</td><td>ledger_core.csvio, ledger_core.validation, cli.registry</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Load categories from a CSV file whose header is <code>category,description</code>, applying the same validate-everything-then-write rule as the accounts load.</p>
+<h2>Behavior</h2>
+<ol><li><code>ledger load categories &lt;csv&gt;</code> takes exactly one file argument; other counts exit 2.</li><li>Read the file with <code>ledger_core.csvio.read_rows(path, (&quot;category&quot;, &quot;description&quot;))</code>. An</li></ol>
+<p>unreadable file exits 1; a wrong header or wrong field count exits 3.</p>
+<ol><li>Validate every row before any write: the code is 1 to 12 characters of <code>A-Z0-9</code>, the description</li></ol>
+<p>is 1 to 40 characters with no comma or newline, the code does not repeat within the file, and the code is not already stored.</p>
+<ol><li>Insert every row in one atomic unit; a rejection stores none of them.</li><li>Print <code>table,loaded</code> then <code>categories,&lt;rows&gt;</code>.</li><li>Any rejection exits 3 with nothing on standard output and one diagnostic line on standard error.</li></ol>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-CATEGORY-005</code> — read: list stored categories to detect duplicate keys - supplies: — - returns: <code>category</code>, <code>description</code></li><li><code>FEATURE-CATEGORY-001</code> — write: create a category - supplies: <code>category</code>, <code>description</code> - returns: <code>category</code>, <code>description</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC load-categories-success ===<br>Intent: a valid categories file loads every row, prints the declared two CSV rows with the loaded count, and the rows are readable afterward.<br>Requires: executable=python3; scope=test</p>
+<p>import csv import io import os import tempfile from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>rows = [[&quot;ZZKA1&quot;, &quot;Cat One&quot;], [&quot;ZZKA2&quot;, &quot;Cat Two&quot;], [&quot;ZZKA3&quot;, &quot;Cat Three&quot;]] with tempfile.TemporaryDirectory() as d: path = os.path.join(d, &quot;categories.csv&quot;) with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh: w = csv.writer(fh, lineterminator=&quot;\n&quot;) w.writerow([&quot;category&quot;, &quot;description&quot;]) w.writerows(rows) with db_session() as db: code, out, err = cli_runner(&quot;load&quot;, &quot;categories&quot;, path) print(out, err) assert code == 0 parsed = list(csv.reader(io.StringIO(out))) assert parsed == [[&quot;table&quot;, &quot;loaded&quot;], [&quot;categories&quot;, str(len(rows))]] for cat, text in rows: row = db.categories.get(category=cat) assert row is not None got = row[&quot;description&quot;] if isinstance(row, dict) else row.description assert got == text === END AC load-categories-success ===</p>
+<p>=== AC load-categories-rejected-row-stores-nothing ===<br>Intent: when a later row is invalid, exit 3 is returned, stdout is empty, and none of the earlier valid rows is stored.<br>Requires: executable=python3; scope=test</p>
+<p>import csv import os import tempfile from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>good = [[&quot;ZZKB%d&quot; % i, &quot;Good %d&quot; % i] for i in range(1, 6)] bad = [&quot;ZZKBBAD&quot;, &quot;x&quot; * 41] with tempfile.TemporaryDirectory() as d: path = os.path.join(d, &quot;categories.csv&quot;) with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh: w = csv.writer(fh, lineterminator=&quot;\n&quot;) w.writerow([&quot;category&quot;, &quot;description&quot;]) w.writerows(good) w.writerow(bad) with db_session() as db: before = len(db.categories.list()) code, out, err = cli_runner(&quot;load&quot;, &quot;categories&quot;, path) assert code == 3 assert out == &quot;&quot; assert len(db.categories.list()) == before for cat, _ in good: assert db.categories.get(category=cat) is None === END AC load-categories-rejected-row-stores-nothing ===</p>
+<p>=== AC load-categories-invalid-fields ===<br>Intent: each invalid code or description (bad characters, empty, over length, comma) rejects the whole file with exit 3 and stores no row.<br>Requires: executable=python3; scope=test</p>
+<p>import csv import os import tempfile from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>first = [&quot;ZZKCOK&quot;, &quot;Valid First&quot;] bad_rows = [ [&quot;zzkc1&quot;, &quot;Lowercase&quot;], [&quot;ABCDEFGHIJKLM&quot;, &quot;Too Long Code&quot;], [&quot;&quot;, &quot;Empty Code&quot;], [&quot;ZZKC2&quot;, &quot;&quot;], [&quot;ZZKC3&quot;, &quot;has,comma&quot;], ] with tempfile.TemporaryDirectory() as d: with db_session() as db: for i, bad in enumerate(bad_rows): path = os.path.join(d, &quot;c%d.csv&quot; % i) with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh: w = csv.writer(fh, lineterminator=&quot;\n&quot;) w.writerow([&quot;category&quot;, &quot;description&quot;]) w.writerow(first) w.writerow(bad) code, out, err = cli_runner(&quot;load&quot;, &quot;categories&quot;, path) assert code == 3, bad assert out == &quot;&quot; assert db.categories.get(category=first[0]) is None === END AC load-categories-invalid-fields ===</p>
+<p>=== AC load-categories-duplicates-rejected ===<br>Intent: a code repeated inside the file, and a code already stored, each reject the whole file with exit 3 and leave the stored row unchanged.<br>Requires: executable=python3; scope=test</p>
+<p>import csv import os import tempfile from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>def write(path, rows): with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh: w = csv.writer(fh, lineterminator=&quot;\n&quot;) w.writerow([&quot;category&quot;, &quot;description&quot;]) w.writerows(rows)</p>
+<p>with tempfile.TemporaryDirectory() as d: with db_session() as db: p1 = os.path.join(d, &quot;dup_in_file.csv&quot;) write(p1, [[&quot;ZZKD1&quot;, &quot;One&quot;], [&quot;ZZKD1&quot;, &quot;One Again&quot;]]) code, out, err = cli_runner(&quot;load&quot;, &quot;categories&quot;, p1) assert code == 3 assert out == &quot;&quot; assert db.categories.get(category=&quot;ZZKD1&quot;) is None</p>
+<p>stored = &quot;ZZKD2&quot; stored_text = &quot;Already Stored&quot; db.categories.create(category=stored, description=stored_text) p2 = os.path.join(d, &quot;dup_stored.csv&quot;) write(p2, [[&quot;ZZKD3&quot;, &quot;Fresh&quot;], [stored, &quot;Replacement&quot;]]) code, out, err = cli_runner(&quot;load&quot;, &quot;categories&quot;, p2) assert code == 3 assert out == &quot;&quot; assert db.categories.get(category=&quot;ZZKD3&quot;) is None row = db.categories.get(category=stored) got = row[&quot;description&quot;] if isinstance(row, dict) else row.description assert got == stored_text === END AC load-categories-duplicates-rejected ===</p>
+<p>=== AC load-categories-header-and-usage ===<br>Intent: a wrong header exits 3 with nothing stored, and a missing file argument is a usage error with exit 2.<br>Requires: executable=python3; scope=test</p>
+<p>import csv import os import tempfile from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with tempfile.TemporaryDirectory() as d: path = os.path.join(d, &quot;wrong_header.csv&quot;) with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh: w = csv.writer(fh, lineterminator=&quot;\n&quot;) w.writerow([&quot;category&quot;, &quot;name&quot;]) w.writerow([&quot;ZZKE1&quot;, &quot;Wrong Header&quot;]) with db_session() as db: code, out, err = cli_runner(&quot;load&quot;, &quot;categories&quot;, path) assert code == 3 assert out == &quot;&quot; assert db.categories.get(category=&quot;ZZKE1&quot;) is None code, out, err = cli_runner(&quot;load&quot;, &quot;categories&quot;) assert code == 2 assert out == &quot;&quot; === END AC load-categories-header-and-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>No row is written until every row in the file has been validated.</li><li>Seed files are never read by application code; the file path comes only from the command line.</li><li>A failing command writes nothing to standard output.</li></ul></article>
+</main>
+</body>
+</html>

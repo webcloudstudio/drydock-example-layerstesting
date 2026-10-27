@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Verification.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Verification.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Verification.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Verification</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Terminal gate that runs the supplied end-to-end grader and the project&#x27;s own test suite.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-CommandContract.md, FEATURE-NoNegativeBalance.md</td></tr><tr><td>Provides</td><td>—</td></tr><tr><td>Consumes</td><td>ledger</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Terminal story. After every other story has closed, run <code>sh sources/run.sh</code> and <code>sh bin/test.sh</code>, each of which must exit zero. Nothing under <code>sources/</code> is modified. Failures are fixed in the owning module, never by editing the grader or its seed files.</p>
+<p>The grader creates its own temporary SQLite database and runs <code>ledger init</code>, which empties the database. The criterion therefore removes <code>DATABASE_URL</code> and <code>DATABASE_PATH</code> from the otherwise inherited environment so the managed store is never touched by a child process.</p>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC verification-full-suite ===<br>Intent: The supplied grader and the project&#x27;s own test suite both exit zero when run from the application root against their own temporary databases.<br>Suite: full<br>Requires: executable=sh; scope=test</p>
+<p>import os import subprocess import sys</p>
+<p>env = {k: v for k, v in os.environ.items() if k not in (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;)}</p>
+<p>grader = subprocess.run([&quot;sh&quot;, &quot;sources/run.sh&quot;], capture_output=True, text=True, env=env) print(grader.stdout) print(grader.stderr, file=sys.stderr) assert grader.returncode == 0</p>
+<p>suite = subprocess.run([&quot;sh&quot;, &quot;bin/test.sh&quot;], capture_output=True, text=True, env=env) print(suite.stdout) print(suite.stderr, file=sys.stderr) assert suite.returncode == 0 === END AC verification-full-suite ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Do not modify, rewrite, regenerate, or substitute anything under <code>sources/</code>.</li><li>Application code never reads <code>sources/run.sh</code> or any seed file.</li><li>Child processes never receive the managed store&#x27;s <code>DATABASE_URL</code> or <code>DATABASE_PATH</code>.</li></ul></article>
+</main>
+</body>
+</html>

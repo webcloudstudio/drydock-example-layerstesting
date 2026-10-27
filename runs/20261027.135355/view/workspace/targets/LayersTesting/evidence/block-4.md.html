@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-4.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-4.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-4.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 4 · Service (block-4)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-27</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 11123</li><li>execution id: 20261027.142630.745Z-f0980b95</li></ul>
+<h2>Stories built</h2>
+<ul><li>Validate codes, names, memos, amounts, and dates, and format integer cents as two-decimal text. (feature-validation) [story]</li><li>Check that a proposed set of transaction changes leaves no account balance below zero before any write. (feature-balance-rule) [story]</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 921)</li><li>compass: COMPASS.md (SP 1134)</li><li>implements: FEATURE-Validation.md (SP 2392)</li><li>context: ARCHITECTURE_compact.md (SP 332)</li><li>context: DATABASE_compact.md (SP 884)</li><li>stack: common_compact.md (SP 1653)</li><li>implements: FEATURE-BalanceRule.md (SP 3464)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>data/app.db-shm</li><li>data/app.db-wal</li><li>data/logs/test_2026-10-27_102741.log</li><li>ledger_core/balances.py</li><li>ledger_core/money.py</li><li>ledger_core/validation.py</li><li>tests/test_balances.py</li><li>tests/test_money.py</li><li>tests/test_validation.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>RED: validation-code (FEATURE-Validation.md)</li></ul>
+<p>intent: Codes of 1 to 12 characters from A-Z and 0-9 are returned unchanged; empty, lowercase, too long, and other characters are rejected with exit code 3. return code: 1 stderr: Traceback (most recent call last): File &quot;validation-code.py&quot;, line 1, in &lt;module&gt; from ledger_core.validation import validate_code<br>ModuleNotFoundError: No module named &#x27;ledger_core.validation&#x27;</p>
+<ul><li>RED: validation-name (FEATURE-Validation.md)</li></ul>
+<p>intent: Names of 1 to 40 characters without comma or newline are accepted; empty, 41 characters, comma, and newline are rejected. return code: 1 stderr: Traceback (most recent call last): File &quot;validation-name.py&quot;, line 1, in &lt;module&gt; from ledger_core.validation import validate_name<br>ModuleNotFoundError: No module named &#x27;ledger_core.validation&#x27;</p>
+<ul><li>RED: validation-memo (FEATURE-Validation.md)</li></ul>
+<p>intent: Memos of 0 to 60 characters without comma or newline are accepted, including the empty memo; 61 characters, comma, and newline are rejected. return code: 1 stderr: Traceback (most recent call last): File &quot;validation-memo.py&quot;, line 1, in &lt;module&gt; from ledger_core.validation import validate_memo<br>ModuleNotFoundError: No module named &#x27;ledger_core.validation&#x27;</p>
+<ul><li>RED: validation-date (FEATURE-Validation.md)</li></ul>
+<p>intent: Real calendar dates in YYYY-MM-DD form are accepted, including a leap day; impossible dates and other layouts are rejected. return code: 1 stderr: Traceback (most recent call last): File &quot;validation-date.py&quot;, line 1, in &lt;module&gt; from ledger_core.validation import validate_date<br>ModuleNotFoundError: No module named &#x27;ledger_core.validation&#x27;</p>
+<ul><li>RED: money-parse-valid (FEATURE-Validation.md)</li></ul>
+<p>intent: Valid amount text parses to the integer cents it denotes, as an int and not a float. return code: 1 stderr: Traceback (most recent call last): File &quot;money-parse-valid.py&quot;, line 1, in &lt;module&gt; from ledger_core.money import parse_amount<br>ModuleNotFoundError: No module named &#x27;ledger_core.money&#x27;</p>
+<ul><li>RED: money-parse-invalid (FEATURE-Validation.md)</li></ul>
+<p>intent: Zero, three or more decimals, and text outside -?DIGITS[.D[D]] are rejected with exit code 3. return code: 1 stderr: Traceback (most recent call last): File &quot;money-parse-invalid.py&quot;, line 1, in &lt;module&gt; from ledger_core.money import parse_amount<br>ModuleNotFoundError: No module named &#x27;ledger_core.money&#x27;</p>
+<ul><li>RED: money-format (FEATURE-Validation.md)</li></ul>
+<p>intent: Integer cents format with exactly two decimals, a leading minus when negative, and no thousands separator. return code: 1 stderr: Traceback (most recent call last): File &quot;money-format.py&quot;, line 1, in &lt;module&gt; from ledger_core.money import format_cents<br>ModuleNotFoundError: No module named &#x27;ledger_core.money&#x27;</p>
+<ul><li>RED: money-round-trip (FEATURE-Validation.md)</li></ul>
+<p>intent: Parsing the formatted text of any nonzero cents value returns the same cents. return code: 1 stderr: Traceback (most recent call last): File &quot;money-round-trip.py&quot;, line 1, in &lt;module&gt; from ledger_core.money import parse_amount, format_cents<br>ModuleNotFoundError: No module named &#x27;ledger_core.money&#x27;</p>
+<ul><li>RED: balance-current (FEATURE-BalanceRule.md)</li></ul>
+<p>intent: current_balance sums an account&#x27;s stored amounts and is zero for an account with no transactions. return code: 1 stderr: Traceback (most recent call last): File &quot;balance-current.py&quot;, line 2, in &lt;module&gt; from ledger_core.balances import current_balance<br>ModuleNotFoundError: No module named &#x27;ledger_core.balances&#x27;</p>
+<ul><li>RED: balance-insert (FEATURE-BalanceRule.md)</li></ul>
+<p>intent: An insert that lands the balance at zero passes, one cent below zero is rejected with exit 3, and nothing is written either way. return code: 1 stderr: Traceback (most recent call last): File &quot;balance-insert.py&quot;, line 2, in &lt;module&gt; from ledger_core.balances import check_no_negative, Insert<br>ModuleNotFoundError: No module named &#x27;ledger_core.balances&#x27;</p>
+<ul><li>RED: balance-insert-new-account (FEATURE-BalanceRule.md)</li></ul>
+<p>intent: An account with no transactions accepts a positive insert and rejects a negative one. return code: 1 stderr: Traceback (most recent call last): File &quot;balance-insert-new-account.py&quot;, line 2, in &lt;module&gt; from ledger_core.balances import check_no_negative, Insert<br>ModuleNotFoundError: No module named &#x27;ledger_core.balances&#x27;</p>
+<ul><li>RED: balance-edit (FEATURE-BalanceRule.md)</li></ul>
+<p>intent: Editing the larger credit below what the debits need is rejected; editing it to exactly cover them passes. return code: 1 stderr: Traceback (most recent call last): File &quot;balance-edit.py&quot;, line 2, in &lt;module&gt; from ledger_core.balances import check_no_negative, Edit<br>ModuleNotFoundError: No module named &#x27;ledger_core.balances&#x27;</p>
+<ul><li>RED: balance-delete (FEATURE-BalanceRule.md)</li></ul>
+<p>intent: Deleting the credit that funds a debit is rejected; deleting the debit passes. return code: 1 stderr: Traceback (most recent call last): File &quot;balance-delete.py&quot;, line 2, in &lt;module&gt; from ledger_core.balances import check_no_negative, Delete<br>ModuleNotFoundError: No module named &#x27;ledger_core.balances&#x27;</p>
+<ul><li>RED: balance-combined (FEATURE-BalanceRule.md)</li></ul>
+<p>intent: Several changes to one account are judged by their net effect regardless of order; a credit and a debit that net to a non-negative balance pass in either order. return code: 1 stderr: Traceback (most recent call last): File &quot;balance-combined.py&quot;, line 2, in &lt;module&gt; from ledger_core.balances import check_no_negative, Insert<br>ModuleNotFoundError: No module named &#x27;ledger_core.balances&#x27;</p>
+<ul><li>RED: balance-multi-account (FEATURE-BalanceRule.md)</li></ul>
+<p>intent: When one of several affected accounts would go negative the whole set is rejected and nothing is written. return code: 1 stderr: Traceback (most recent call last): File &quot;balance-multi-account.py&quot;, line 2, in &lt;module&gt; from ledger_core.balances import check_no_negative, Insert<br>ModuleNotFoundError: No module named &#x27;ledger_core.balances&#x27;</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: validation-code (FEATURE-Validation.md)</li></ul>
+<p>intent: Codes of 1 to 12 characters from A-Z and 0-9 are returned unchanged; empty, lowercase, too long, and other characters are rejected with exit code 3. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: validation-name (FEATURE-Validation.md)</li></ul>
+<p>intent: Names of 1 to 40 characters without comma or newline are accepted; empty, 41 characters, comma, and newline are rejected. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: validation-memo (FEATURE-Validation.md)</li></ul>
+<p>intent: Memos of 0 to 60 characters without comma or newline are accepted, including the empty memo; 61 characters, comma, and newline are rejected. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: validation-date (FEATURE-Validation.md)</li></ul>
+<p>intent: Real calendar dates in YYYY-MM-DD form are accepted, including a leap day; impossible dates and other layouts are rejected. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: money-parse-valid (FEATURE-Validation.md)</li></ul>
+<p>intent: Valid amount text parses to the integer cents it denotes, as an int and not a float. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: money-parse-invalid (FEATURE-Validation.md)</li></ul>
+<p>intent: Zero, three or more decimals, and text outside -?DIGITS[.D[D]] are rejected with exit code 3. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: money-format (FEATURE-Validation.md)</li></ul>
+<p>intent: Integer cents format with exactly two decimals, a leading minus when negative, and no thousands separator. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: money-round-trip (FEATURE-Validation.md)</li></ul>
+<p>intent: Parsing the formatted text of any nonzero cents value returns the same cents. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: balance-current (FEATURE-BalanceRule.md)</li></ul>
+<p>intent: current_balance sums an account&#x27;s stored amounts and is zero for an account with no transactions. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: balance-insert (FEATURE-BalanceRule.md)</li></ul>
+<p>intent: An insert that lands the balance at zero passes, one cent below zero is rejected with exit 3, and nothing is written either way. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: balance-insert-new-account (FEATURE-BalanceRule.md)</li></ul>
+<p>intent: An account with no transactions accepts a positive insert and rejects a negative one. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: balance-edit (FEATURE-BalanceRule.md)</li></ul>
+<p>intent: Editing the larger credit below what the debits need is rejected; editing it to exactly cover them passes. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: balance-delete (FEATURE-BalanceRule.md)</li></ul>
+<p>intent: Deleting the credit that funds a debit is rejected; deleting the debit passes. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: balance-combined (FEATURE-BalanceRule.md)</li></ul>
+<p>intent: Several changes to one account are judged by their net effect regardless of order; a credit and a debit that net to a non-negative balance pass in either order. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<ul><li>PASS: balance-multi-account (FEATURE-BalanceRule.md)</li></ul>
+<p>intent: When one of several affected accounts would go negative the whole set is rejected and nothing is written. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0</p>
+<h2>Build summary</h2>
+<p>I&#x27;ll start by inspecting the build directory and the existing files.The <code>ledger_core</code> package exists, so I&#x27;ll add <code>validation.py</code>, <code>money.py</code>, and <code>balances.py</code> alongside it. Next I need the persistence row shape and the test-isolation fixture.Rows come back as dataclasses, so balance code should read attributes such as <code>.amount</code>. Before writing tests, I&#x27;ll check how existing tests use the <code>db_session</code> fixture and the rollback context.I have what I need. I&#x27;ll write the three domain modules first, then tests. Validation comes first.Next, the money module: integer-only parsing and formatting.The <code>or &quot;0&quot;</code> in the fraction expression is dead code, since <code>&quot;&quot;.ljust(2, &quot;0&quot;)</code> is already <code>&quot;00&quot;</code>. I&#x27;ll remove it.Now the balance rule. Edits and deletes take their account and stored amount from the database, so the check judges the net effect per account.Now the tests. I&#x27;ll start with validation, covering the declared boundaries and the rejection paths.Balance tests follow. They use the rollback session from <code>persistence.testing</code>, as the acceptance criteria do, and check results by reading the store back.One test has a sloppy argument (<code>0 + 1</code>) and doesn&#x27;t cover what its name claims. I&#x27;ll make it deliberately net to zero for its own account while another account is already negative.Next I&#x27;ll run the project&#x27;s declared test command, <code>bin/test.sh</code>, which runs the whole suite.All 155 tests pass. I&#x27;ll confirm the set of files I changed in the working tree, and check the <code>ledger_core</code> boundary rules are covered by the passing foundation tests.The Validation and Balance Rule stories are built, and the project suite passes: 155 tests, exit 0, run with <code>sh bin/test.sh</code>.</p>
+<ul><li><strong>Validation:</strong> codes, names, memos, dates, and amounts are checked as specified, and cents are formatted as two-decimal text. Money uses integer arithmetic only, so the foundation&#x27;s no-float scan still passes.</li><li><strong>Balance rule:</strong> <code>check_no_negative</code> nets the changes per account and rejects any account that would go below zero, before anything is written.</li><li><strong>Tests:</strong> new tests cover every declared assertion&#x27;s cases plus boundaries and rejection paths. Balance tests use the rollback session and read state back through the persistence interface.</li></ul>
+<p>I did not run the spec&#x27;s acceptance blocks verbatim. The new tests cover the same cases, so Drydock&#x27;s run is the check on the declared text. Nothing is committed.</p>
+<pre><code>&lt;blueprint-decisions&gt;
+[{&quot;spec&quot;:&quot;FEATURE-BalanceRule.md&quot;,&quot;severity&quot;:&quot;Low&quot;,&quot;subject&quot;:&quot;Edit or Delete of a missing transaction&quot;,&quot;decision&quot;:&quot;The spec does not say what happens when txn_id is absent. I raise NotFound (exit 4), matching the CLI error table for absent transactions on amend and delete. Is that acceptable?&quot;},{&quot;spec&quot;:&quot;FEATURE-Validation.md&quot;,&quot;severity&quot;:&quot;Low&quot;,&quot;subject&quot;:&quot;Carriage return in names and memos&quot;,&quot;decision&quot;:&quot;The spec forbids only comma and newline. I also reject carriage return (\\r), because it would break the CSV output. Is that acceptable?&quot;}]
+&lt;/blueprint-decisions&gt;</code></pre>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>ledger_core/validation.py</li><li>ledger_core/money.py</li><li>ledger_core/balances.py</li><li>tests/test_validation.py</li><li>tests/test_money.py</li><li>tests/test_balances.py</li></ul>
+<p>SUMMARY: Implemented <code>validate_code</code>, <code>validate_name</code>, <code>validate_memo</code>, <code>validate_date</code>, <code>parse_amount</code>, and <code>format_cents</code> in <code>ledger_core</code>, plus <code>Insert</code>/<code>Edit</code>/<code>Delete</code>, <code>current_balance</code>, and <code>check_no_negative</code> in <code>ledger_core/balances.py</code>. Violations raise <code>Rejected</code> (exit 3). Missing transactions on Edit/Delete raise <code>NotFound</code> (exit 4). Checks were run with <code>sh bin/test.sh</code>: 155 passed, exit 0. The new tests mirror the declared acceptance cases and add boundary and negative-path coverage. The spec&#x27;s acceptance blocks were not run verbatim.</p>
+<p>BLOCKERS:</p>
+<ul><li>None.</li></ul></article>
+</main>
+</body>
+</html>

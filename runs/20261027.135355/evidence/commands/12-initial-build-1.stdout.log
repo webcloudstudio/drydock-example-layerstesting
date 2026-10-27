@@ -1,0 +1,314 @@
+Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Build: LayersTesting
+scope: entire project
+frontier: foundation-python
+git: baseline LayersTesting ddffe37092f3
+git: baseline LayersTesting 868bf2271f03
+
+BLOCK block-1  name="Block 1 · Foundational"  calls_max=7
+  story=foundation-python  "Stand up the Python project tree, environment, dependency manifest, pytest runner, and bin/test.sh."
+
+  [call 1/7]  kind=initial  llm=claude/claude-haiku-5-5
+    result=ok  rc=0  execution=20261027.141932.766Z-ce53d811
+    status  6/6 checks passed
+      story=foundation-python  6/6 checks passed
+        check=arch-project-files  PASS
+        check=arch-packages-import  PASS
+        check=arch-config-precedence  PASS
+        check=arch-error-exit-codes  PASS
+        check=arch-driver-boundary  PASS
+        check=arch-no-float  PASS
+git: block-1 | python.md, ARCHITECTURE.md | call=1 | app=e9c83b613be6 target=0fd62f43dc35
+
+  DONE  story=foundation-python  state=closed/implemented  execution=20261027.141932.766Z-ce53d811  elapsed=2m48s
+git: block-1 | python.md, ARCHITECTURE.md | step_completed | app=unchanged target=c5ee7409b863
+
+  DONE  story=foundation-database  state=closed/implemented  elapsed=22.2s
+git: block-2 | DATABASE.md | step_completed | app=78fa56966ffb target=bb6f926ccbe9
+
+BLOCK block-3  name="Block 3 · Foundational"  calls_max=7
+  story=foundation-cli  "Provide the `ledger` executable at the application root with a command registry, usage-error handling, and the stdout/stderr contract."
+
+  [call 1/7]  kind=initial  llm=claude/claude-haiku-5-5
+    result=ok  rc=0  execution=20261027.142255.936Z-95bffe2d
+    status  7/7 checks passed
+      story=foundation-cli  7/7 checks passed
+        check=cli-registry-load  PASS
+        check=cli-unknown-command  PASS
+        check=cli-dispatch-success  PASS
+        check=cli-usage-errors  PASS
+        check=cli-domain-error-codes  PASS
+        check=cli-unopenable-database  PASS
+        check=cli-launcher  PASS
+git: block-3 | FEATURE-CliEntry.md | call=1 | app=f1f7b3872d11 target=091a5e6afe9f
+
+  DONE  story=foundation-cli  state=closed/implemented  execution=20261027.142255.936Z-95bffe2d  elapsed=3m27s
+git: block-3 | FEATURE-CliEntry.md | step_completed | app=unchanged target=ee344256ae28
+
+BLOCK block-4  name="Block 4 · Service"  calls_max=7
+  story=feature-validation  "Validate codes, names, memos, amounts, and dates, and format integer cents as two-decimal text."
+  story=feature-balance-rule  "Check that a proposed set of transaction changes leaves no account balance below zero before any write."
+
+  [call 1/7]  kind=initial  llm=claude/claude-haiku-5-5
+    result=ok  rc=0  execution=20261027.142630.745Z-f0980b95
+    status  15/15 checks passed
+      story=feature-validation  8/8 checks passed
+        check=validation-code  PASS
+        check=validation-name  PASS
+        check=validation-memo  PASS
+        check=validation-date  PASS
+        check=money-parse-valid  PASS
+        check=money-parse-invalid  PASS
+        check=money-format  PASS
+        check=money-round-trip  PASS
+      story=feature-balance-rule  7/7 checks passed
+        check=balance-current  PASS
+        check=balance-insert  PASS
+        check=balance-insert-new-account  PASS
+        check=balance-edit  PASS
+        check=balance-delete  PASS
+        check=balance-combined  PASS
+        check=balance-multi-account  PASS
+git: block-4 | FEATURE-Validation.md, FEATURE-BalanceRule.md | call=1 | app=2cc27dcf7bfb target=560a6ffe59b7
+
+  DONE  story=feature-validation  state=closed/implemented  execution=20261027.142630.745Z-f0980b95  elapsed=2m19s
+git: block-4 | FEATURE-Validation.md, FEATURE-BalanceRule.md | step_completed | app=unchanged target=b4f945194a79
+
+BLOCK block-5  name="Block 5 · Service"  calls_max=7
+  story=feature-init-count  "Implement `ledger init` and `ledger count`."
+  story=feature-load-csv-reader  "Read and header-check a CSV file named on the command line, exiting 1 when it cannot be read."
+  story=feature-account-add  "Implement `ledger account add <code> <name>`."
+  story=feature-txn-post  "Implement `ledger txn post <account> <category> <amount> <date> [<memo>]`."
+
+  [call 1/7]  kind=initial  llm=claude/claude-haiku-5-5
+    result=ok  rc=0  execution=20261027.142853.523Z-2dda1ec4
+    status  23/25 checks passed
+      story=feature-init-count  5/6 checks passed
+        check=count-shape  PASS
+        check=count-tracks-writes  PASS
+        check=init-empties-tables  PASS
+        check=init-then-count  PASS
+        check=init-fresh-database  FAIL
+        check=init-count-usage  PASS
+      story=feature-load-csv-reader  5/6 checks passed
+        check=csvio-reads-numbered-rows  PASS
+        check=csvio-header-only-is-empty  PASS
+        check=csvio-missing-file-operational  PASS
+        check=csvio-bad-header-rejected  PASS
+        check=csvio-wrong-field-count-rejected  PASS
+        check=csvio-load-missing-file-exit-1  FAIL
+      story=feature-account-add  7/7 checks passed
+        check=account-add-success  PASS
+        check=account-add-duplicate-rejected  PASS
+        check=account-add-invalid-code  PASS
+        check=account-add-invalid-name  PASS
+        check=account-add-boundary-lengths  PASS
+        check=account-add-usage-errors  PASS
+        check=account-row-helper  PASS
+      story=feature-txn-post  6/6 checks passed
+        check=txn-post-success  PASS
+        check=txn-post-default-memo  PASS
+        check=txn-post-next-id  PASS
+        check=txn-post-rejections  PASS
+        check=txn-post-negative-balance  PASS
+        check=txn-post-usage  PASS
+git: block-5 | FEATURE-InitCount.md, FEATURE-LoadCsvReader.md, FEATURE-AccountAdd.md, FEATURE-TxnPost.md | call=1 | app=5d49e3fe4394 target=1b63f7a2ba24
+
+  [call 2/7]  kind=repair(1/6)  llm=claude/claude-haiku-5-5
+    result=ok  rc=0  execution=20261027.143249.759Z-c7291fde  upgraded=prompt_limit claude-haiku-5-5->sonnet (123,131 > 98% of 100,000)
+    status  25/25 checks passed
+      story=feature-init-count  6/6 checks passed
+        check=count-shape  PASS
+        check=count-tracks-writes  PASS
+        check=init-empties-tables  PASS
+        check=init-then-count  PASS
+        check=init-fresh-database  PASS
+        check=init-count-usage  PASS
+      story=feature-load-csv-reader  6/6 checks passed
+        check=csvio-reads-numbered-rows  PASS
+        check=csvio-header-only-is-empty  PASS
+        check=csvio-missing-file-operational  PASS
+        check=csvio-bad-header-rejected  PASS
+        check=csvio-wrong-field-count-rejected  PASS
+        check=csvio-load-missing-file-exit-1  PASS
+      story=feature-account-add  7/7 checks passed
+        check=account-add-success  PASS
+        check=account-add-duplicate-rejected  PASS
+        check=account-add-invalid-code  PASS
+        check=account-add-invalid-name  PASS
+        check=account-add-boundary-lengths  PASS
+        check=account-add-usage-errors  PASS
+        check=account-row-helper  PASS
+      story=feature-txn-post  6/6 checks passed
+        check=txn-post-success  PASS
+        check=txn-post-default-memo  PASS
+        check=txn-post-next-id  PASS
+        check=txn-post-rejections  PASS
+        check=txn-post-negative-balance  PASS
+        check=txn-post-usage  PASS
+git: block-5 | FEATURE-InitCount.md, FEATURE-LoadCsvReader.md, FEATURE-AccountAdd.md, FEATURE-TxnPost.md | call=2 | app=9d2ab73f3023 target=857b1ea6e899
+
+  DONE  story=feature-init-count  state=closed/implemented  execution=20261027.143249.759Z-c7291fde  elapsed=17m00s
+git: block-5 | FEATURE-InitCount.md, FEATURE-LoadCsvReader.md, FEATURE-AccountAdd.md, FEATURE-TxnPost.md | step_completed | app=unchanged target=c3c6dedc7755
+
+BLOCK block-6  name="Block 6 · Service"  calls_max=7
+  story=feature-load-accounts  "Implement `ledger load accounts <csv>` as an all-or-nothing load."
+  story=feature-account-delete  "Implement `ledger account delete <code>`."
+  story=feature-txn-get  "Implement `ledger txn get <id>`."
+  story=feature-account-rename  "Implement `ledger account rename <code> <name>`."
+  story=feature-account-get  "Implement `ledger account get <code>`."
+  story=feature-txn-delete  "Implement `ledger txn delete <id>`."
+  story=feature-txn-amend  "Implement `ledger txn amend <id> <amount>`."
+  story=feature-load-categories  "Implement `ledger load categories <csv>` as an all-or-nothing load."
+  story=feature-transfer  "Implement `ledger transfer <from> <to> <amount> <date>` as an atomic two-row write."
+
+  [call 1/7]  kind=initial  llm=claude/claude-haiku-5-5
+    result=ok  rc=0  execution=20261027.144606.714Z-909a9d30
+    status  42/42 checks passed
+      story=feature-load-accounts  5/5 checks passed
+        check=load-accounts-success  PASS
+        check=load-accounts-rejected-row-stores-nothing  PASS
+        check=load-accounts-invalid-fields  PASS
+        check=load-accounts-duplicates-rejected  PASS
+        check=load-accounts-header-and-usage  PASS
+      story=feature-account-delete  4/4 checks passed
+        check=account-delete-success  PASS
+        check=account-delete-in-use  PASS
+        check=account-delete-absent  PASS
+        check=account-delete-usage  PASS
+      story=feature-txn-get  4/4 checks passed
+        check=txn-get-existing  PASS
+        check=txn-get-negative-amount  PASS
+        check=txn-get-absent  PASS
+        check=txn-get-bad-id  PASS
+      story=feature-account-rename  4/4 checks passed
+        check=account-rename-success  PASS
+        check=account-rename-absent  PASS
+        check=account-rename-invalid-name  PASS
+        check=account-rename-usage  PASS
+      story=feature-account-get  4/4 checks passed
+        check=account-get-existing  PASS
+        check=account-get-empty-account  PASS
+        check=account-get-absent  PASS
+        check=account-get-usage  PASS
+      story=feature-txn-delete  5/5 checks passed
+        check=txn-delete-success  PASS
+        check=txn-delete-absent  PASS
+        check=txn-delete-negative-balance  PASS
+        check=txn-delete-bad-id  PASS
+        check=txn-delete-usage  PASS
+      story=feature-txn-amend  6/6 checks passed
+        check=txn-amend-success  PASS
+        check=txn-amend-only-amount  PASS
+        check=txn-amend-absent  PASS
+        check=txn-amend-negative-balance  PASS
+        check=txn-amend-invalid-amount  PASS
+        check=txn-amend-usage  PASS
+      story=feature-load-categories  5/5 checks passed
+        check=load-categories-success  PASS
+        check=load-categories-rejected-row-stores-nothing  PASS
+        check=load-categories-invalid-fields  PASS
+        check=load-categories-duplicates-rejected  PASS
+        check=load-categories-header-and-usage  PASS
+      story=feature-transfer  5/5 checks passed
+        check=transfer-success  PASS
+        check=transfer-conserves-cash  PASS
+        check=transfer-insufficient-funds  PASS
+        check=transfer-rejections  PASS
+        check=transfer-usage  PASS
+git: block-6 | FEATURE-LoadAccounts.md, FEATURE-AccountDelete.md, FEATURE-TxnGet.md, FEATURE-AccountRename.md, FEATURE-AccountGet.md, FEATURE-TxnDelete.md, FEATURE-TxnAmend.md, FEATURE-LoadCategories.md, FEATURE-Transfer.md | call=1 | app=3e13c9147f87 target=4935a4878b5d
+
+  DONE  story=feature-load-accounts  state=closed/implemented  execution=20261027.144606.714Z-909a9d30  elapsed=7m11s
+git: block-6 | FEATURE-LoadAccounts.md, FEATURE-AccountDelete.md, FEATURE-TxnGet.md, FEATURE-AccountRename.md, FEATURE-AccountGet.md, FEATURE-TxnDelete.md, FEATURE-TxnAmend.md, FEATURE-LoadCategories.md, FEATURE-Transfer.md | step_completed | app=unchanged target=50cf94fbdcde
+
+BLOCK block-7  name="Block 7 · Service"  calls_max=7
+  story=feature-load-transactions  "Implement `ledger load transactions <csv>` with foreign-key, date, amount, and balance validation before any write."
+
+  [call 1/7]  kind=initial  llm=claude/claude-haiku-5-5
+    result=ok  rc=0  execution=20261027.145304.850Z-9dffce8d
+    status  7/7 checks passed
+      story=feature-load-transactions  7/7 checks passed
+        check=load-transactions-success  PASS
+        check=load-transactions-unknown-reference-stores-nothing  PASS
+        check=load-transactions-invalid-fields  PASS
+        check=load-transactions-duplicate-ids-rejected  PASS
+        check=load-transactions-negative-balance-rejected  PASS
+        check=load-transactions-balance-considers-whole-file  PASS
+        check=load-transactions-header-and-usage  PASS
+git: block-7 | FEATURE-LoadTransactions.md | call=1 | app=1492372118c0 target=72a105a5e994
+
+  DONE  story=feature-load-transactions  state=closed/implemented  execution=20261027.145304.850Z-9dffce8d  elapsed=4m20s
+git: block-7 | FEATURE-LoadTransactions.md | step_completed | app=unchanged target=ddff40551995
+
+BLOCK block-8  name="Block 8 · Service"  calls_max=7
+  story=feature-report-balances  "Implement `ledger report balances`."
+  story=feature-report-monthly  "Implement `ledger report monthly`."
+  story=feature-report-categories  "Implement `ledger report categories`."
+
+  [call 1/7]  kind=initial  llm=claude/claude-haiku-5-5
+    result=ok  rc=0  execution=20261027.145729.992Z-56573846
+    status  14/14 checks passed
+      story=feature-report-balances  5/5 checks passed
+        check=report-balances-values  PASS
+        check=report-balances-order-and-empty  PASS
+        check=report-balances-total-consistency  PASS
+        check=report-balances-format  PASS
+        check=report-balances-usage  PASS
+      story=feature-report-monthly  3/3 checks passed
+        check=report-monthly-rows  PASS
+        check=report-monthly-usage  PASS
+        check=report-monthly-reflects-changes  PASS
+      story=feature-report-categories  6/6 checks passed
+        check=report-categories-values  PASS
+        check=report-categories-empty  PASS
+        check=report-categories-order  PASS
+        check=report-categories-net-identity  PASS
+        check=report-categories-format  PASS
+        check=report-categories-usage  PASS
+git: block-8 | FEATURE-ReportBalances.md, FEATURE-ReportMonthly.md, FEATURE-ReportCategories.md | call=1 | app=a5481362e319 target=43b46d5388ef
+
+  DONE  story=feature-report-balances  state=closed/implemented  execution=20261027.145729.992Z-56573846  elapsed=3m18s
+git: block-8 | FEATURE-ReportBalances.md, FEATURE-ReportMonthly.md, FEATURE-ReportCategories.md | step_completed | app=unchanged target=5d08aa65a4d3
+
+BLOCK block-9  name="Block 9 · Feature"  calls_max=7
+  story=feature-command-contract  "Assemble and verify the CSV output contract and exit codes across every command."
+  story=feature-no-negative-balance  "Assemble and verify that every writing command enforces the no-negative-balance rule atomically."
+
+  [call 1/7]  kind=initial  llm=claude/claude-haiku-5-5
+    result=ok  rc=0  execution=20261027.150048.281Z-aa862c27
+    status  9/9 checks passed
+      story=feature-command-contract  4/4 checks passed
+        check=contract-usage-errors  PASS
+        check=contract-csv-format  PASS
+        check=contract-failures-silent-stdout  PASS
+        check=contract-rejected-writes-change-nothing  PASS
+      story=feature-no-negative-balance  5/5 checks passed
+        check=nonneg-load  PASS
+        check=nonneg-post  PASS
+        check=nonneg-amend  PASS
+        check=nonneg-delete  PASS
+        check=nonneg-transfer  PASS
+git: block-9 | FEATURE-CommandContract.md, FEATURE-NoNegativeBalance.md | call=1 | app=d457fb1888f5 target=b96692193a5a
+
+  DONE  story=feature-command-contract  state=closed/implemented  execution=20261027.150048.281Z-aa862c27  elapsed=3m46s
+git: block-9 | FEATURE-CommandContract.md, FEATURE-NoNegativeBalance.md | step_completed | app=unchanged target=3c2e4c3cac9e
+
+BLOCK block-10  name="Block 10 · Feature"  calls_max=7
+  story=feature-verification  "Terminal gate: run the supplied grader and the full project test suite."
+
+  [call 1/7]  kind=initial  llm=claude/claude-haiku-5-5
+    result=ok  rc=0  execution=20261027.150502.024Z-a09c9eac
+    status  1/1 checks passed
+      story=feature-verification  1/1 checks passed
+        check=verification-full-suite  PASS  cases=43/43 passed
+      Case counts are per check; scopes may overlap and are not additive.
+git: block-10 | FEATURE-Verification.md | call=1 | app=unchanged target=f2bada84a3e8
+
+  DONE  story=feature-verification  state=closed/implemented  execution=20261027.150502.024Z-a09c9eac  elapsed=3m23s
+git: block-10 | FEATURE-Verification.md | step_completed | app=unchanged target=5c3aaef39240
+git: build complete LayersTesting 228eaece43d7
+git: build complete LayersTesting 07bd250c66e1
+
+result: 25 built, 0 failed, 0 unchanged
+elapsed: 50 minutes 19 seconds
+Target - committed project workspace git store

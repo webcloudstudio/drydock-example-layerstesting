@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_transfer.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_transfer.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_transfer.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger transfer``: two linked rows stored together or not at all, against a fresh store per test.&quot;&quot;&quot;
+
+import csv
+import io
+
+import pytest
+
+from cli.testing import cli_runner
+
+TXN_HEADER = [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;]
+TRANSFER = &quot;TRANSFER&quot;
+
+
+@pytest.fixture
+def transfer_store(ledger_store, store_open):
+    &quot;&quot;&quot;Two accounts, the TRANSFER category, and a funded source account.&quot;&quot;&quot;
+    with store_open(ledger_store) as db:
+        db.accounts.create(account=&quot;ZTFS&quot;, name=&quot;Source Account&quot;)
+        db.accounts.create(account=&quot;ZTFD&quot;, name=&quot;Dest Account&quot;)
+        db.categories.create(category=TRANSFER, description=&quot;Internal transfer&quot;)
+        db.transactions.create(txn_id=1, date=&quot;2026-05-01&quot;, account=&quot;ZTFS&quot;, category=TRANSFER, amount=100000, memo=&quot;funding&quot;)
+    return ledger_store
+
+
+def _rows(out: str) -&gt; list[list[str]]:
+    return list(csv.reader(io.StringIO(out)))
+
+
+def _all(store_open, path):
+    with store_open(path) as db:
+        return db.transactions.list()
+
+
+def _balance(store_open, path, account):
+    with store_open(path) as db:
+        return sum(row.amount for row in db.transactions.list(account=account))
+
+
+def test_transfer_prints_two_rows_with_consecutive_ids(transfer_store, store_open):
+    code, out, err = cli_runner(&quot;transfer&quot;, &quot;ZTFS&quot;, &quot;ZTFD&quot;, &quot;250.00&quot;, &quot;2026-05-10&quot;)
+    assert code == 0, err
+    assert _rows(out) == [
+        TXN_HEADER,
+        [&quot;2&quot;, &quot;2026-05-10&quot;, &quot;ZTFS&quot;, TRANSFER, &quot;-250.00&quot;, &quot;transfer to ZTFD&quot;],
+        [&quot;3&quot;, &quot;2026-05-10&quot;, &quot;ZTFD&quot;, TRANSFER, &quot;250.00&quot;, &quot;transfer from ZTFS&quot;],
+    ]
+
+
+def test_transfer_rows_read_back_from_the_store(transfer_store, store_open):
+    cli_runner(&quot;transfer&quot;, &quot;ZTFS&quot;, &quot;ZTFD&quot;, &quot;250.00&quot;, &quot;2026-05-10&quot;)
+    with store_open(transfer_store) as db:
+        outgoing = db.transactions.get(txn_id=2)
+        incoming = db.transactions.get(txn_id=3)
+    assert outgoing.amount == -25000 and outgoing.account == &quot;ZTFS&quot;
+    assert incoming.amount == 25000 and incoming.account == &quot;ZTFD&quot;
+    assert outgoing.category == incoming.category == TRANSFER
+
+
+def test_transfer_conserves_cash_across_the_two_accounts(transfer_store, store_open):
+    before = _balance(store_open, transfer_store, &quot;ZTFS&quot;) + _balance(store_open, transfer_store, &quot;ZTFD&quot;)
+    assert cli_runner(&quot;transfer&quot;, &quot;ZTFS&quot;, &quot;ZTFD&quot;, &quot;123.45&quot;, &quot;2026-05-11&quot;)[0] == 0
+    after = _balance(store_open, transfer_store, &quot;ZTFS&quot;) + _balance(store_open, transfer_store, &quot;ZTFD&quot;)
+    assert after == before
+    assert _balance(store_open, transfer_store, &quot;ZTFS&quot;) == 100000 - 12345
+    assert _balance(store_open, transfer_store, &quot;ZTFD&quot;) == 12345
+
+
+def test_transfer_ids_follow_largest_stored_id_not_row_count(transfer_store, store_open):
+    with store_open(transfer_store) as db:
+        db.transactions.create(txn_id=50, date=&quot;2026-05-01&quot;, account=&quot;ZTFD&quot;, category=TRANSFER, amount=100, memo=&quot;&quot;)
+    code, out, _ = cli_runner(&quot;transfer&quot;, &quot;ZTFS&quot;, &quot;ZTFD&quot;, &quot;1.00&quot;, &quot;2026-05-12&quot;)
+    assert code == 0
+    assert [row[0] for row in _rows(out)[1:]] == [&quot;51&quot;, &quot;52&quot;]
+
+
+def test_transfer_of_exact_balance_leaves_source_at_zero(transfer_store, store_open):
+    code, _, err = cli_runner(&quot;transfer&quot;, &quot;ZTFS&quot;, &quot;ZTFD&quot;, &quot;1000.00&quot;, &quot;2026-05-12&quot;)
+    assert code == 0, err
+    assert _balance(store_open, transfer_store, &quot;ZTFS&quot;) == 0
+
+
+def test_transfer_one_cent_over_balance_exits_three_and_stores_neither_row(transfer_store, store_open):
+    before = len(_all(store_open, transfer_store))
+    code, out, _ = cli_runner(&quot;transfer&quot;, &quot;ZTFS&quot;, &quot;ZTFD&quot;, &quot;1000.01&quot;, &quot;2026-05-12&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert len(_all(store_open, transfer_store)) == before
+    assert _balance(store_open, transfer_store, &quot;ZTFD&quot;) == 0
+
+
+@pytest.mark.parametrize(
+    &quot;args&quot;,
+    [
+        (&quot;ZTFS&quot;, &quot;ZTFS&quot;, &quot;5.00&quot;, &quot;2026-05-13&quot;),
+        (&quot;ZTFS&quot;, &quot;ZTFD&quot;, &quot;0&quot;, &quot;2026-05-13&quot;),
+        (&quot;ZTFS&quot;, &quot;ZTFD&quot;, &quot;-5.00&quot;, &quot;2026-05-13&quot;),
+        (&quot;ZTFS&quot;, &quot;ZTFD&quot;, &quot;5.001&quot;, &quot;2026-05-13&quot;),
+        (&quot;ZTFS&quot;, &quot;ZTFD&quot;, &quot;5&quot;, &quot;2026-02-30&quot;),
+        (&quot;ZTFS&quot;, &quot;ZTFD&quot;, &quot;5.00&quot;, &quot;13/05/2026&quot;),
+        (&quot;ZTFS&quot;, &quot;ZTFNONE&quot;, &quot;5.00&quot;, &quot;2026-05-13&quot;),
+        (&quot;ZTFNONE&quot;, &quot;ZTFD&quot;, &quot;5.00&quot;, &quot;2026-05-13&quot;),
+    ],
+)
+def test_rejected_transfer_exits_three_with_no_output_and_no_rows(transfer_store, store_open, args):
+    before = len(_all(store_open, transfer_store))
+    code, out, _ = cli_runner(&quot;transfer&quot;, *args)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert len(_all(store_open, transfer_store)) == before
+
+
+def test_transfer_without_transfer_category_is_rejected(ledger_store, store_open):
+    with store_open(ledger_store) as db:
+        db.accounts.create(account=&quot;ZTNS&quot;, name=&quot;Source&quot;)
+        db.accounts.create(account=&quot;ZTND&quot;, name=&quot;Dest&quot;)
+        db.categories.create(category=&quot;ZTNC&quot;, description=&quot;Other&quot;)
+        db.transactions.create(txn_id=1, date=&quot;2026-05-01&quot;, account=&quot;ZTNS&quot;, category=&quot;ZTNC&quot;, amount=900, memo=&quot;&quot;)
+    code, out, _ = cli_runner(&quot;transfer&quot;, &quot;ZTNS&quot;, &quot;ZTND&quot;, &quot;1.00&quot;, &quot;2026-05-02&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+    with store_open(ledger_store) as db:
+        assert db.transactions.list(account=&quot;ZTND&quot;) == []
+
+
+@pytest.mark.parametrize(
+    &quot;args&quot;,
+    [(&quot;transfer&quot;,), (&quot;transfer&quot;, &quot;A&quot;, &quot;B&quot;, &quot;1.00&quot;), (&quot;transfer&quot;, &quot;A&quot;, &quot;B&quot;, &quot;1.00&quot;, &quot;2026-05-01&quot;, &quot;extra&quot;)],
+)
+def test_transfer_wrong_argument_count_is_usage_error(transfer_store, args):
+    code, out, _ = cli_runner(*args)
+    assert code == 2
+    assert out == &quot;&quot;
+</pre></article>
+</main>
+</body>
+</html>

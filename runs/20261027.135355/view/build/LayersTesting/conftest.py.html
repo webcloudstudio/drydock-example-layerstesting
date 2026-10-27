@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/conftest.py</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/conftest.py</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../build/LayersTesting/conftest.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Shared pytest fixtures for the ledger test suite.
+
+The ``db_session`` and ``cli_runner`` fixtures delegate to helpers owned by the
+generated ``persistence`` package and the ``cli`` package. Those packages arrive
+with their own stories, so the imports stay inside the fixtures until then.
+&quot;&quot;&quot;
+
+import pytest
+
+
+@pytest.fixture
+def db_session():
+    &quot;&quot;&quot;Provisioned application store, supplied by ``persistence.testing``.&quot;&quot;&quot;
+    from persistence.testing import db_session as provision
+
+    return provision()
+
+
+@pytest.fixture
+def cli_runner():
+    &quot;&quot;&quot;Command runner that invokes the ``ledger`` CLI, supplied by ``cli.testing``.&quot;&quot;&quot;
+    from cli.testing import cli_runner as provision
+
+    return provision()
+</pre></article>
+</main>
+</body>
+</html>

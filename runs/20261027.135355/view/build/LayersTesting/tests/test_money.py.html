@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_money.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_money.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_money.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Amount text to integer cents, and integer cents to two-decimal text.&quot;&quot;&quot;
+
+import pytest
+
+from ledger_core.errors import Rejected
+from ledger_core.money import format_cents, parse_amount
+
+
+@pytest.mark.parametrize(
+    (&quot;text&quot;, &quot;cents&quot;),
+    [(&quot;45.50&quot;, 4550), (&quot;-12.34&quot;, -1234), (&quot;7&quot;, 700), (&quot;1.5&quot;, 150), (&quot;0.01&quot;, 1),
+     (&quot;5000.00&quot;, 500000), (&quot;-0.99&quot;, -99), (&quot;-3&quot;, -300)],
+)
+def test_parse_returns_integer_cents(text, cents):
+    value = parse_amount(text)
+    assert type(value) is int
+    assert value == cents
+
+
+@pytest.mark.parametrize(
+    &quot;text&quot;,
+    [&quot;0&quot;, &quot;0.00&quot;, &quot;-0&quot;, &quot;-0.0&quot;, &quot;1.234&quot;, &quot;1.000&quot;, &quot;abc&quot;, &quot;1.&quot;, &quot;.5&quot;, &quot;+5&quot;, &quot;1,5&quot;, &quot;&quot;, &quot;-&quot;, &quot;1 .5&quot;, &quot;--5&quot;, &quot; 5&quot;, &quot;5 &quot;],
+)
+def test_parse_rejects_invalid_text_with_exit_three(text):
+    with pytest.raises(Rejected) as info:
+        parse_amount(text)
+    assert info.value.exit_code == 3
+
+
+def test_parse_rejects_non_text():
+    with pytest.raises(Rejected):
+        parse_amount(5)
+
+
+@pytest.mark.parametrize(
+    (&quot;cents&quot;, &quot;text&quot;),
+    [(-1250, &quot;-12.50&quot;), (0, &quot;0.00&quot;), (500000, &quot;5000.00&quot;), (5, &quot;0.05&quot;), (-5, &quot;-0.05&quot;), (123456789, &quot;1234567.89&quot;)],
+)
+def test_format_writes_two_decimals_without_separator(cents, text):
+    assert format_cents(cents) == text
+
+
+@pytest.mark.parametrize(&quot;cents&quot;, [1, -1, 99, 100, -100, 12345, -987654, 500000])
+def test_parse_of_formatted_cents_round_trips(cents):
+    assert parse_amount(format_cents(cents)) == cents
+
+
+def test_format_rejects_non_integer_cents():
+    with pytest.raises(Rejected):
+        format_cents(&quot;12.50&quot;)
+    with pytest.raises(Rejected):
+        format_cents(True)
+</pre></article>
+</main>
+</body>
+</html>

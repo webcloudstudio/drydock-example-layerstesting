@@ -1,0 +1,37 @@
+I'll start by inspecting the build directory and the files this block depends on.The `report` command group doesn't exist yet, and `ledger_core` already has the money and transaction helpers I need. I'll check the existing CLI test conventions before writing anything.I have what I need. The plan:
+
+- `ledger_core/reports.py`: pure integer-cent aggregation (count, inflow, outflow, net), with no storage access.
+- `cli/commands/reports.py`: the three `report` handlers, registered as `("report", "balances")`, `("report", "monthly")`, and `("report", "categories")`. Each reads its rows through `db.<table>.list()`.
+- `tests/test_reports.py`: behavioral tests on a fresh store per test, reading results back as CSV.
+
+I'll write the aggregation module first.Now the command module. Each handler reads the rows, groups them in integer cents, and returns CSV rows.Next, the tests. I'm using a fixed dataset whose expected report values I worked out by hand in integer cents, so the expectations aren't computed by the code under test. Each test gets a fresh store.Now I'll run the new test file on its own, then the full suite through the declared `bin/test.sh`.The full suite passes: 415 tests, exit 0. As a last check I'll run the real `./ledger` launcher against a throwaway store, since the tests go through `cli_runner` and not the shell.`report balances`, `report monthly`, and `report categories` are implemented. The full suite passes (415 tests) and the real launcher output matches the seed-data expectations in `sources/run.sh` for C1–C3.
+
+I did not run `sources/run.sh` itself. This block doesn't declare it, and the terminal-story check belongs to a later step.
+
+- **`ledger_core/reports.py`** (new): integer-cent aggregation of count, inflow, outflow, and net. No storage access and no floats.
+- **`cli/commands/reports.py`** (new): the three report handlers. Each reads rows through `db.<table>.list()`, groups them in cents, and formats with `format_cents`. Nothing is hardcoded and nothing is written.
+- **`tests/test_reports.py`** (new): 24 tests on a fresh store each. Expected values are hand-computed from a fixed dataset, and results are read back by parsing CSV. They cover values, ordering, zero-count and empty-ledger cases, TOTAL rows, newline/trailing-space format, a monthly change after a new posting, and usage errors with exit 2.
+
+Verification:
+- `pytest -q tests/test_reports.py`: 24 passed.
+- `sh bin/test.sh`: 415 passed, exit 0.
+- Manual run of `./ledger` against a throwaway store loaded with the seed files: all three reports print the expected rows, and `report balances extra` and bare `report` both exit 2.
+
+Choices I made that you can redirect:
+- The aggregation lives in `ledger_core/reports.py`, not inside the command module, so it can be tested without the CLI.
+- Accounts, categories, and months are sorted explicitly in Python rather than relying on the order the persistence layer returns.
+
+No files were committed.
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- ledger_core/reports.py
+- cli/commands/reports.py
+- tests/test_reports.py
+
+SUMMARY:
+Implemented `ledger report balances`, `ledger report monthly`, and `ledger report categories` as integer-cent computations over stored transactions and accounts/categories. Added 24 behavioral tests in `tests/test_reports.py`. `sh bin/test.sh` passes with 415 tests and exit 0. Smoke-tested `./ledger` on the seed data; the output matches `sources/run.sh` checks C1–C3. I did not run `sources/run.sh` itself, since this block does not declare it.
+
+BLOCKERS:
+- None

@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-ReportMonthly.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-ReportMonthly.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-ReportMonthly.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Report Monthly</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger report monthly</code>, the per-month transaction, inflow, outflow, and net totals computed from stored transactions.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md, FEATURE-CliEntry.md, FEATURE-Validation.md</td></tr><tr><td>Provides</td><td>ledger report monthly</td></tr><tr><td>Consumes</td><td>ledger_core.money, cli.registry</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Give the shop a report of cash movement by calendar month. Every value is computed from the database at call time; no total is embedded.</p>
+<h2>Interface</h2>
+<p><code>ledger report monthly</code> takes no further arguments. Extra arguments are a usage error (exit 2).</p>
+<p>Output on success (CSV, <code>\n</code> endings, no quoting, no trailing spaces):</p>
+<ul><li>Header: <code>month,transactions,inflow,outflow,net</code></li><li>One row per <code>YYYY-MM</code> that has at least one transaction, ascending by month. The month is the</li></ul>
+<p>first seven characters of the stored date.</p>
+<ul><li><code>transactions</code> is the count of that month&#x27;s transactions.</li><li><code>inflow</code> is the sum of positive amounts, <code>outflow</code> the sum of the absolute values of negative</li></ul>
+<p>amounts (written positive), <code>net</code> is <code>inflow - outflow</code>.</p>
+<ul><li>Final row <code>TOTAL,&lt;count&gt;,&lt;inflow&gt;,&lt;outflow&gt;,&lt;net&gt;</code> over all transactions.</li><li>Amounts are computed in integer cents and written with exactly two decimals via <code>ledger_core.money</code>.</li></ul>
+<p>A month with no transactions is absent. An empty ledger prints the header and a TOTAL row of zeros.</p>
+<h2>Behavior</h2>
+<ol><li>Read all transactions with <code>db.transactions.list(...)</code>.</li><li>Group by the first seven characters of <code>date</code> in integer cents; never use floating point.</li><li>Emit rows in ascending month order, then the TOTAL row.</li></ol>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-TXN-005</code> — read: list transactions for aggregation - supplies: — - returns: <code>date</code>, <code>amount</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC report-monthly-rows ===<br>Intent: Monthly rows, ordering, and the TOTAL row are computed from posted transactions; expected counts and sums are derived from the supplied amounts with Decimal.</p>
+<p>import csv import io from decimal import Decimal from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>def parse(out): return list(csv.reader(io.StringIO(out)))</p>
+<p>acct = &quot;ZZRM1&quot; cat = &quot;ZZRMC&quot; with db_session() as db: if db.categories.get(category=cat) is None: db.categories.create(category=cat, description=&quot;Monthly Probe&quot;) code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Monthly Probe&quot;) print(out, err) assert code == 0 postings = [(&quot;2099-01-05&quot;, &quot;100.50&quot;), (&quot;2099-01-20&quot;, &quot;40.25&quot;), (&quot;2099-01-21&quot;, &quot;-30.10&quot;), (&quot;2099-03-02&quot;, &quot;10.00&quot;)] for day, amount in postings: code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, amount, day, &quot;m&quot;) print(out, err) assert code == 0</p>
+<p>code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;) print(out, err) assert code == 0 table = parse(out) assert table[0] == [&quot;month&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;] body = table[1:-1] months = [r[0] for r in body] assert months == sorted(months) by_month = {r[0]: r for r in body} assert &quot;2099-02&quot; not in by_month for month in (&quot;2099-01&quot;, &quot;2099-03&quot;): amounts = [Decimal(a) for d, a in postings if d[:7] == month] inflow = sum((a for a in amounts if a &gt; 0), Decimal(0)) outflow = sum((-a for a in amounts if a &lt; 0), Decimal(0)) row = by_month[month] assert int(row[1]) == len(amounts) assert Decimal(row[2]) == inflow assert Decimal(row[3]) == outflow assert Decimal(row[4]) == inflow - outflow for cell in row[2:]: assert len(cell.split(&quot;.&quot;)[1]) == 2 total = table[-1] assert total[0] == &quot;TOTAL&quot; and len(total) == 5 assert int(total[1]) == sum(int(r[1]) for r in body) assert Decimal(total[2]) == sum(Decimal(r[2]) for r in body) assert Decimal(total[3]) == sum(Decimal(r[3]) for r in body) assert Decimal(total[4]) == Decimal(total[2]) - Decimal(total[3]) === END AC report-monthly-rows ===</p>
+<p>=== AC report-monthly-usage ===<br>Intent: Extra arguments to report monthly are a usage error with exit 2 and nothing on standard output.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;, &quot;extra&quot;) print(out, err) assert code == 2 assert out == &quot;&quot; === END AC report-monthly-usage ===</p>
+<p>=== AC report-monthly-reflects-changes ===<br>Intent: The report is recomputed from the database: posting one more transaction in a new month adds exactly one month row with the posted amount as inflow.</p>
+<p>import csv import io from decimal import Decimal from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>def parse(out): return list(csv.reader(io.StringIO(out)))</p>
+<p>acct = &quot;ZZRM2&quot; cat = &quot;ZZRMD&quot; month = &quot;2098-07&quot; amount = &quot;12.34&quot; with db_session() as db: if db.categories.get(category=cat) is None: db.categories.create(category=cat, description=&quot;Monthly Probe&quot;) code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Monthly Probe 2&quot;) assert code == 0 code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;) assert code == 0 before = {r[0] for r in parse(out)[1:-1]} assert month not in before code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, amount, month + &quot;-10&quot;, &quot;m&quot;) print(out, err) assert code == 0 code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;) assert code == 0 rows = {r[0]: r for r in parse(out)[1:-1]} assert set(rows) == before | {month} assert int(rows[month][1]) == 1 assert Decimal(rows[month][2]) == Decimal(amount) assert Decimal(rows[month][3]) == Decimal(0) === END AC report-monthly-reflects-changes ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Every value comes from a database query; no row, count, or total is hardcoded.</li><li>Money is integer cents at every layer; floating point is never used.</li><li>A failing command writes nothing to standard output.</li></ul></article>
+</main>
+</body>
+</html>

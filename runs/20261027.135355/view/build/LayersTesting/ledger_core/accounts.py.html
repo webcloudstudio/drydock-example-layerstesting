@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/ledger_core/accounts.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/ledger_core/accounts.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/ledger_core/accounts.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Account rows: the stored account and the live figures the account commands report.
+
+``account_row`` computes the transaction count and the integer-cent balance from the database on
+every call, so neither figure is stored or embedded.
+&quot;&quot;&quot;
+
+from persistence import Database
+
+AccountRow = tuple[str, str, int, int]
+
+
+def account_row(db: Database, code: str) -&gt; AccountRow | None:
+    &quot;&quot;&quot;Return ``(account, name, transactions, balance_cents)``, or ``None`` when the account is absent.&quot;&quot;&quot;
+    account = db.accounts.get(account=code)
+    if account is None:
+        return None
+    posted = db.transactions.list(account=code)
+    return (account.account, account.name, len(posted), sum(txn.amount for txn in posted))
+</pre></article>
+</main>
+</body>
+</html>

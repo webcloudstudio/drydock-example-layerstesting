@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_txn_manage.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_txn_manage.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_txn_manage.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger txn get``, ``delete``, and ``amend``, against a fresh store per test.&quot;&quot;&quot;
+
+import csv
+import io
+
+import pytest
+
+from cli.testing import cli_runner
+
+TXN_HEADER = [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;]
+ACCOUNT = &quot;ZTA1&quot;
+CATEGORY = &quot;ZTC1&quot;
+
+
+def _rows(out: str) -&gt; list[list[str]]:
+    return list(csv.reader(io.StringIO(out)))
+
+
+@pytest.fixture
+def txn_store(ledger_store, store_open):
+    with store_open(ledger_store) as db:
+        db.accounts.create(account=ACCOUNT, name=&quot;Txn Probe&quot;)
+        db.categories.create(category=CATEGORY, description=&quot;Txn Category&quot;)
+    return ledger_store
+
+
+def _add(store_open, path, txn_id, amount, date=&quot;2026-04-01&quot;, memo=&quot;&quot;):
+    with store_open(path) as db:
+        db.transactions.create(txn_id=txn_id, date=date, account=ACCOUNT, category=CATEGORY, amount=amount, memo=memo)
+
+
+def _stored(store_open, path, txn_id):
+    with store_open(path) as db:
+        return db.transactions.get(txn_id=txn_id)
+
+
+# ── get ───────────────────────────────────────────────────────────────────────────────────
+
+
+def test_get_prints_every_column_with_two_decimal_amount(txn_store, store_open):
+    _add(store_open, txn_store, 101, 1234, date=&quot;2026-04-05&quot;, memo=&quot;get probe&quot;)
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;101&quot;)
+    assert code == 0, err
+    assert _rows(out) == [TXN_HEADER, [&quot;101&quot;, &quot;2026-04-05&quot;, ACCOUNT, CATEGORY, &quot;12.34&quot;, &quot;get probe&quot;]]
+
+
+def test_get_negative_amount_has_leading_minus(txn_store, store_open):
+    _add(store_open, txn_store, 102, -1250)
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;102&quot;)
+    assert code == 0
+    assert _rows(out)[1][4] == &quot;-12.50&quot;
+
+
+def test_get_whole_amount_has_two_decimals(txn_store, store_open):
+    _add(store_open, txn_store, 103, 500)
+    assert _rows(cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;103&quot;)[1])[1][4] == &quot;5.00&quot;
+
+
+def test_get_is_read_only(txn_store, store_open):
+    _add(store_open, txn_store, 104, 700)
+    cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;104&quot;)
+    stored = _stored(store_open, txn_store, 104)
+    assert stored.amount == 700
+    with store_open(txn_store) as db:
+        assert len(db.transactions.list()) == 1
+
+
+def test_get_absent_exits_four_with_no_stdout(txn_store):
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;get&quot;, &quot;999999991&quot;)
+    assert code == 4
+    assert out == &quot;&quot;
+
+
+@pytest.mark.parametrize(&quot;bad&quot;, [&quot;abc&quot;, &quot;1.5&quot;, &quot;&quot;, &quot;12 3&quot;])
+def test_get_non_integer_id_exits_three(txn_store, bad):
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;get&quot;, bad)
+    assert code == 3
+    assert out == &quot;&quot;
+
+
+@pytest.mark.parametrize(&quot;args&quot;, [(&quot;txn&quot;, &quot;get&quot;), (&quot;txn&quot;, &quot;get&quot;, &quot;1&quot;, &quot;2&quot;)])
+def test_get_wrong_argument_count_is_usage_error(txn_store, args):
+    code, out, _ = cli_runner(*args)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+# ── delete ────────────────────────────────────────────────────────────────────────────────
+
+
+def test_delete_prints_confirmation_and_removes_row(txn_store, store_open):
+    _add(store_open, txn_store, 201, -500)
+    _add(store_open, txn_store, 202, 9000)
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;201&quot;)
+    assert code == 0, err
+    assert _rows(out) == [[&quot;deleted&quot;], [&quot;201&quot;]]
+    assert _stored(store_open, txn_store, 201) is None
+    assert _stored(store_open, txn_store, 202).amount == 9000
+
+
+def test_delete_of_deposit_is_refused_when_payment_would_overdraw(txn_store, store_open):
+    _add(store_open, txn_store, 203, 10000)
+    _add(store_open, txn_store, 204, -4000)
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;203&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert _stored(store_open, txn_store, 203).amount == 10000
+
+
+def test_delete_of_payment_that_leaves_balance_positive_succeeds(txn_store, store_open):
+    _add(store_open, txn_store, 205, 10000)
+    _add(store_open, txn_store, 206, -4000)
+    assert cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;206&quot;)[0] == 0
+    assert _stored(store_open, txn_store, 206) is None
+
+
+def test_delete_leaving_exactly_zero_is_allowed(txn_store, store_open):
+    _add(store_open, txn_store, 207, 5000)
+    _add(store_open, txn_store, 208, 1000)
+    _add(store_open, txn_store, 209, -1000)
+    assert cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;207&quot;)[0] == 0
+    assert _stored(store_open, txn_store, 207) is None
+
+
+def test_delete_absent_exits_four_with_no_stdout(txn_store):
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;999999992&quot;)
+    assert code == 4
+    assert out == &quot;&quot;
+
+
+def test_delete_twice_second_attempt_exits_four(txn_store, store_open):
+    _add(store_open, txn_store, 209, 300)
+    assert cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;209&quot;)[0] == 0
+    assert cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;209&quot;)[0] == 4
+
+
+@pytest.mark.parametrize(&quot;bad&quot;, [&quot;abc&quot;, &quot;2.5&quot;])
+def test_delete_non_integer_id_exits_three(txn_store, bad):
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;delete&quot;, bad)
+    assert code == 3
+    assert out == &quot;&quot;
+
+
+@pytest.mark.parametrize(&quot;args&quot;, [(&quot;txn&quot;, &quot;delete&quot;), (&quot;txn&quot;, &quot;delete&quot;, &quot;1&quot;, &quot;2&quot;)])
+def test_delete_wrong_argument_count_is_usage_error(txn_store, args):
+    code, out, _ = cli_runner(*args)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+# ── amend ─────────────────────────────────────────────────────────────────────────────────
+
+
+def test_amend_prints_updated_row_and_persists_new_amount(txn_store, store_open):
+    _add(store_open, txn_store, 301, 10000, memo=&quot;amend probe&quot;)
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;301&quot;, &quot;50.00&quot;)
+    assert code == 0, err
+    assert _rows(out) == [TXN_HEADER, [&quot;301&quot;, &quot;2026-04-01&quot;, ACCOUNT, CATEGORY, &quot;50.00&quot;, &quot;amend probe&quot;]]
+    assert _stored(store_open, txn_store, 301).amount == 5000
+
+
+def test_amend_changes_only_the_amount(txn_store, store_open):
+    _add(store_open, txn_store, 302, 2000, date=&quot;2026-05-02&quot;, memo=&quot;keep this memo&quot;)
+    assert cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;302&quot;, &quot;35.50&quot;)[0] == 0
+    back = _stored(store_open, txn_store, 302)
+    assert back.date == &quot;2026-05-02&quot;
+    assert back.account == ACCOUNT
+    assert back.category == CATEGORY
+    assert back.memo == &quot;keep this memo&quot;
+    assert back.amount == 3550
+
+
+def test_amend_to_negative_amount_is_accepted_when_balance_allows(txn_store, store_open):
+    _add(store_open, txn_store, 303, 10000)
+    _add(store_open, txn_store, 304, 5000)
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;303&quot;, &quot;-10.00&quot;)
+    assert code == 0, err
+    assert _rows(out)[1][4] == &quot;-10.00&quot;
+
+
+def test_amend_that_overdraws_exits_three_and_keeps_amount(txn_store, store_open):
+    _add(store_open, txn_store, 305, 10000)
+    _add(store_open, txn_store, 306, -4000)
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;305&quot;, &quot;30.00&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert _stored(store_open, txn_store, 305).amount == 10000
+
+
+def test_amend_landing_exactly_on_zero_succeeds(txn_store, store_open):
+    _add(store_open, txn_store, 307, 10000)
+    _add(store_open, txn_store, 308, -4000)
+    assert cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;307&quot;, &quot;40.00&quot;)[0] == 0
+    assert _stored(store_open, txn_store, 307).amount == 4000
+
+
+def test_amend_absent_exits_four_and_creates_nothing(txn_store, store_open):
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;999999993&quot;, &quot;5.00&quot;)
+    assert code == 4
+    assert out == &quot;&quot;
+    assert _stored(store_open, txn_store, 999999993) is None
+
+
+@pytest.mark.parametrize(&quot;bad&quot;, [&quot;1.234&quot;, &quot;0&quot;, &quot;0.00&quot;, &quot;abc&quot;, &quot;5.&quot;, &quot;&quot;])
+def test_amend_invalid_amount_exits_three_and_keeps_amount(txn_store, store_open, bad):
+    _add(store_open, txn_store, 309, 10000)
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;309&quot;, bad)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert _stored(store_open, txn_store, 309).amount == 10000
+
+
+def test_amend_non_integer_id_exits_three(txn_store):
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;amend&quot;, &quot;abc&quot;, &quot;5.00&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+
+
+@pytest.mark.parametrize(&quot;args&quot;, [(&quot;txn&quot;, &quot;amend&quot;), (&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;), (&quot;txn&quot;, &quot;amend&quot;, &quot;1&quot;, &quot;2.00&quot;, &quot;x&quot;)])
+def test_amend_wrong_argument_count_is_usage_error(txn_store, args):
+    code, out, _ = cli_runner(*args)
+    assert code == 2
+    assert out == &quot;&quot;
+</pre></article>
+</main>
+</body>
+</html>

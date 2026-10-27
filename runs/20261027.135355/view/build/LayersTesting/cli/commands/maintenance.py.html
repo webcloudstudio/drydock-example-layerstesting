@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/commands/maintenance.py</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/commands/maintenance.py</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../build/LayersTesting/cli/commands/maintenance.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Maintenance commands: ``ledger init`` empties the ledger, ``ledger count`` reports table row counts.&quot;&quot;&quot;
+
+from pathlib import Path
+
+from cli.registry import Command
+from ledger_core.config import database_path
+from persistence import PersistenceError, open_database
+from persistence import db as persistence_db
+
+SCHEMA_SQL = Path(__file__).resolve().parents[2] / &quot;schema.sql&quot;
+
+
+def _ensure_schema() -&gt; None:
+    &quot;&quot;&quot;Create the declared tables when the configured store has none. A provisioned store is left alone.
+
+    This runs on its own connection, before the command&#x27;s connection first reads. Inside the
+    acceptance harness the command&#x27;s connection is joined to the harness transaction, which forbids
+    schema SQL and would keep a pre-schema snapshot, so the harness is detached only while the
+    standalone connection is opened. Nothing is written when the tables already exist.
+    &quot;&quot;&quot;
+    harness = persistence_db._harness
+    persistence_db._harness = None
+    try:
+        bootstrap = open_database(database_path())
+    finally:
+        persistence_db._harness = harness
+    try:
+        try:
+            bootstrap.transactions.list()
+        except PersistenceError:
+            bootstrap.execute_script(SCHEMA_SQL.read_text(encoding=&quot;utf-8&quot;))
+    finally:
+        bootstrap.close()
+
+
+def init(db, args: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Remove every transaction, then category, then account, in foreign-key order. Prints nothing.&quot;&quot;&quot;
+    _ensure_schema()
+    db.transactions.clear(min_txn_id=0)
+    db.categories.clear(min_category=&quot;&quot;)
+    db.accounts.clear(min_account=&quot;&quot;)
+    return []
+
+
+def count(db, args: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Report the stored row count of each table, read from the database on every run.&quot;&quot;&quot;
+    return [
+        [&quot;table&quot;, &quot;rows&quot;],
+        [&quot;accounts&quot;, str(len(db.accounts.list()))],
+        [&quot;categories&quot;, str(len(db.categories.list()))],
+        [&quot;transactions&quot;, str(len(db.transactions.list()))],
+    ]
+
+
+COMMANDS = {
+    (&quot;init&quot;,): Command(init, 0, 0),
+    (&quot;count&quot;,): Command(count, 0, 0),
+}
+</pre></article>
+</main>
+</body>
+</html>

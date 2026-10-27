@@ -1,0 +1,31 @@
+<requirement name="seed-categories-data" stories="feature-load-categories,feature-load-csv-reader,foundation-database,feature-validation">
+category,description
+OPENING,Opening balance
+PAYROLL,Payroll
+REFUND,Customer refunds
+RENT,Rent
+SALES,Sales receipts
+SUPPLY,Supplies
+TRANSFER,Internal transfer
+</requirement>
+<unattached story="foundation-python"/>
+<unattached story="foundation-cli"/>
+<unattached story="feature-balance-rule"/>
+<unattached story="feature-init-count"/>
+<unattached story="feature-account-add"/>
+<unattached story="feature-txn-post"/>
+<unattached story="feature-load-accounts"/>
+<unattached story="feature-account-delete"/>
+<unattached story="feature-txn-get"/>
+<unattached story="feature-account-rename"/>
+<unattached story="feature-account-get"/>
+<unattached story="feature-txn-delete"/>
+<unattached story="feature-txn-amend"/>
+<unattached story="feature-transfer"/>
+<unattached story="feature-load-transactions"/>
+<unattached story="feature-report-balances"/>
+<unattached story="feature-report-monthly"/>
+<unattached story="feature-report-categories"/>
+<unattached story="feature-command-contract"/>
+<unattached story="feature-no-negative-balance"/>
+<unattached story="feature-verification"/>

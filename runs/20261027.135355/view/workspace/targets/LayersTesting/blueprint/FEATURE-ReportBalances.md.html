@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-ReportBalances.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-ReportBalances.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-ReportBalances.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Report Balances</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger report balances</code>, a per-account count and balance report with a total row, computed from stored data.</td></tr><tr><td>Depends On</td><td>FEATURE-CliEntry.md, FEATURE-Validation.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger report balances</td></tr><tr><td>Consumes</td><td>ledger_core.money, cli.registry</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Report each account&#x27;s transaction count and balance. Every value is computed from queries over stored rows; none is embedded. Persistence is reached only through the generated <code>persistence</code> package via <code>ledger_core</code>.</p>
+<h2>Behavior</h2>
+<ol><li>Header <code>account,name,transactions,balance</code>.</li><li>One row per account ordered by account code; accounts without transactions appear with count 0 and balance <code>0.00</code>.</li><li>A final row <code>TOTAL,,&lt;count&gt;,&lt;sum&gt;</code> where count is the number of all transactions and sum is the sum of all amounts.</li><li>Balances are integer-cent sums formatted with exactly two decimals, a leading <code>-</code> when negative, and no thousands separator.</li><li>Extra arguments exit 2. Output uses <code>\n</code> endings, no quoting, and no trailing spaces.</li></ol>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md and reached through <code>ledger_core</code>.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC report-balances-values ===<br>Intent: Each account row carries the count and formatted balance derived from stored transactions, and the TOTAL row carries the overall count and sum; expectations are computed from the stored rows.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session import csv import io</p>
+<p>def f(row, name): return row[name] if isinstance(row, dict) else getattr(row, name)</p>
+<p>def fmt(c): sign = &quot;-&quot; if c &lt; 0 else &quot;&quot; q, r = divmod(abs(c), 100) return f&quot;{sign}{q}.{r:02d}&quot;</p>
+<p>a1, a2, cat = &quot;ZZRB1&quot;, &quot;ZZRB2&quot;, &quot;ZZRBC1&quot; with db_session() as db: db.accounts.create(account=a1, name=&quot;Report One&quot;) db.accounts.create(account=a2, name=&quot;Report Two&quot;) db.categories.create(category=cat, description=&quot;Report Category&quot;) db.transactions.create(txn_id=900400001, date=&quot;2026-05-01&quot;, account=a1, category=cat, amount=123456, memo=&quot;&quot;) db.transactions.create(txn_id=900400002, date=&quot;2026-05-02&quot;, account=a1, category=cat, amount=-2345, memo=&quot;&quot;) db.transactions.create(txn_id=900400003, date=&quot;2026-05-03&quot;, account=a2, category=cat, amount=5, memo=&quot;&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;] txns = db.transactions.list() expected = [] for acc in sorted(db.accounts.list(), key=lambda r: f(r, &quot;account&quot;)): mine = [f(t, &quot;amount&quot;) for t in txns if f(t, &quot;account&quot;) == f(acc, &quot;account&quot;)] expected.append([f(acc, &quot;account&quot;), f(acc, &quot;name&quot;), str(len(mine)), fmt(sum(mine))]) expected.append([&quot;TOTAL&quot;, &quot;&quot;, str(len(txns)), fmt(sum(f(t, &quot;amount&quot;) for t in txns))]) assert rows[1:] == expected === END AC report-balances-values ===</p>
+<p>=== AC report-balances-order-and-empty ===<br>Intent: Accounts are ordered by code regardless of creation order, and an account with no transactions still appears with count 0 and a zero balance.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session import csv import io</p>
+<p>def fmt(c): sign = &quot;-&quot; if c &lt; 0 else &quot;&quot; q, r = divmod(abs(c), 100) return f&quot;{sign}{q}.{r:02d}&quot;</p>
+<p>codes = [&quot;ZZRB4&quot;, &quot;ZZRB3&quot;] with db_session() as db: for c in codes: db.accounts.create(account=c, name=&quot;Empty &quot; + c) code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out)))[1:-1] seen = [r[0] for r in rows] assert seen == sorted(seen) for c in codes: row = [r for r in rows if r[0] == c][0] assert row[2] == &quot;0&quot; assert row[3] == fmt(0) === END AC report-balances-order-and-empty ===</p>
+<p>=== AC report-balances-total-consistency ===<br>Intent: The TOTAL row equals the sum of the per-account rows, including negative-free cent arithmetic across accounts.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session import csv import io</p>
+<p>def cents(text): neg = text.startswith(&quot;-&quot;) whole, frac = text.lstrip(&quot;-&quot;).split(&quot;.&quot;) v = int(whole) * 100 + int(frac) return -v if neg else v</p>
+<p>a1, a2, cat = &quot;ZZRB5&quot;, &quot;ZZRB6&quot;, &quot;ZZRBC2&quot; with db_session() as db: db.accounts.create(account=a1, name=&quot;Total One&quot;) db.accounts.create(account=a2, name=&quot;Total Two&quot;) db.categories.create(category=cat, description=&quot;Report Category&quot;) db.transactions.create(txn_id=900400010, date=&quot;2026-05-01&quot;, account=a1, category=cat, amount=70001, memo=&quot;&quot;) db.transactions.create(txn_id=900400011, date=&quot;2026-05-01&quot;, account=a2, category=cat, amount=30002, memo=&quot;&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) body, total = rows[1:-1], rows[-1] assert total[0] == &quot;TOTAL&quot; and total[1] == &quot;&quot; assert int(total[2]) == sum(int(r[2]) for r in body) assert cents(total[3]) == sum(cents(r[3]) for r in body) === END AC report-balances-total-consistency ===</p>
+<p>=== AC report-balances-format ===<br>Intent: Output uses newline endings only, ends with a newline, and no line carries trailing spaces.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;) print(out) print(err) assert code == 0 assert out.endswith(&quot;\n&quot;) assert &quot;\r&quot; not in out assert all(line == line.rstrip(&quot; &quot;) for line in out.split(&quot;\n&quot;)) === END AC report-balances-format ===</p>
+<p>=== AC report-balances-usage ===<br>Intent: Extra arguments and an unknown report name exit 2 with nothing on stdout.</p>
+<p>from cli.testing import cli_runner</p>
+<p>for args in [(&quot;report&quot;, &quot;balances&quot;, &quot;extra&quot;), (&quot;report&quot;, &quot;nosuchreport&quot;), (&quot;report&quot;,)]: code, out, err = cli_runner(*args) print(out) print(err) assert code == 2 assert out == &quot;&quot; === END AC report-balances-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>No report row, count, or total is hardcoded; every value comes from a query.</li><li>Money is integer cents until formatting; floating point is never used.</li><li>The command writes nothing to the database.</li></ul></article>
+</main>
+</body>
+</html>

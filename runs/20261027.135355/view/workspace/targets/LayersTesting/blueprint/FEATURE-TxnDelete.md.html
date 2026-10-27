@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-TxnDelete.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-TxnDelete.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-TxnDelete.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Transaction Delete</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger txn delete &lt;id&gt;</code>, which removes a transaction unless its account balance would go below zero.</td></tr><tr><td>Depends On</td><td>FEATURE-TxnPost.md, FEATURE-BalanceRule.md, FEATURE-CliEntry.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger txn delete</td></tr><tr><td>Consumes</td><td>ledger_core.transactions, ledger_core.balances, cli.registry</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Delete one transaction by id. Persistence is reached only through <code>ledger_core.transactions</code>, which calls the generated <code>persistence</code> package.</p>
+<h2>Behavior</h2>
+<ol><li>Argument count other than one after <code>txn delete</code> exits 2.</li><li>A non-integer id exits 3.</li><li>An absent id exits 4.</li><li>The account&#x27;s balance after removal is the stored balance minus the transaction&#x27;s amount, in integer cents through <code>ledger_core.balances</code>. A negative result exits 3 and the row is kept.</li><li>Otherwise the row is deleted and the command prints two lines: <code>deleted</code> and the id.</li><li>A failing command writes nothing to standard output and one diagnostic line to standard error.</li></ol>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md and reached through <code>ledger_core.transactions</code>.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC txn-delete-success ===<br>Intent: Deleting an existing transaction exits 0, prints <code>deleted</code> then the id, and a separate read finds no row.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session import csv import io</p>
+<p>acct, cat, tid = &quot;ZZDL1&quot;, &quot;ZZDLC1&quot;, 900200001 with db_session() as db: db.accounts.create(account=acct, name=&quot;Delete Account&quot;) db.categories.create(category=cat, description=&quot;Delete Category&quot;) db.transactions.create(txn_id=tid, date=&quot;2026-05-01&quot;, account=acct, category=cat, amount=-500, memo=&quot;&quot;) db.transactions.create(txn_id=tid + 1, date=&quot;2026-05-01&quot;, account=acct, category=cat, amount=9000, memo=&quot;&quot;) code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, str(tid)) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert len(rows) == 2 assert rows[1] == [str(tid)] assert rows[0] == [&quot;deleted&quot;] assert db.transactions.get(txn_id=tid) is None assert db.transactions.get(txn_id=tid + 1) is not None === END AC txn-delete-success ===</p>
+<p>=== AC txn-delete-absent ===<br>Intent: Deleting an id that does not exist exits 4 with nothing on stdout.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>tid = 900299999 with db_session() as db: assert db.transactions.get(txn_id=tid) is None code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, str(tid)) print(out) print(err) assert code == 4 assert out == &quot;&quot; === END AC txn-delete-absent ===</p>
+<p>=== AC txn-delete-negative-balance ===<br>Intent: Deleting a +10000 deposit while a -4000 payment remains would leave -4000, so exit 3 and the row stays; deleting the payment instead leaves a positive balance and succeeds.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>def f(row, name): return row[name] if isinstance(row, dict) else getattr(row, name)</p>
+<p>acct, cat = &quot;ZZDL2&quot;, &quot;ZZDLC2&quot; tid_in, tid_out = 900200002, 900200003 amount_in = 10000 with db_session() as db: db.accounts.create(account=acct, name=&quot;Delete Account&quot;) db.categories.create(category=cat, description=&quot;Delete Category&quot;) db.transactions.create(txn_id=tid_in, date=&quot;2026-05-02&quot;, account=acct, category=cat, amount=amount_in, memo=&quot;&quot;) db.transactions.create(txn_id=tid_out, date=&quot;2026-05-02&quot;, account=acct, category=cat, amount=-4000, memo=&quot;&quot;) code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, str(tid_in)) print(out) print(err) assert code == 3 assert out == &quot;&quot; kept = db.transactions.get(txn_id=tid_in) assert kept is not None assert f(kept, &quot;amount&quot;) == amount_in code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, str(tid_out)) print(out) print(err) assert code == 0 assert db.transactions.get(txn_id=tid_out) is None === END AC txn-delete-negative-balance ===</p>
+<p>=== AC txn-delete-bad-id ===<br>Intent: A non-integer id is rejected with exit 3 and nothing on stdout.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, &quot;abc&quot;) print(out) print(err) assert code == 3 assert out == &quot;&quot; === END AC txn-delete-bad-id ===</p>
+<p>=== AC txn-delete-usage ===<br>Intent: A wrong argument count for txn delete exits 2 with nothing on stdout.</p>
+<p>from cli.testing import cli_runner</p>
+<p>for args in [(&quot;txn&quot;, &quot;delete&quot;), (&quot;txn&quot;, &quot;delete&quot;, &quot;1&quot;, &quot;2&quot;)]: code, out, err = cli_runner(*args) print(out) print(err) assert code == 2 assert out == &quot;&quot; === END AC txn-delete-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The balance check runs before the delete, so a rejected delete writes nothing.</li><li>Standard output stays empty on any failure; the diagnostic goes to standard error.</li><li>Amounts are integer cents; floating point is never used for money.</li></ul></article>
+</main>
+</body>
+</html>

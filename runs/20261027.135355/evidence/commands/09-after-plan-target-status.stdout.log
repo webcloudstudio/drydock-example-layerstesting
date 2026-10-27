@@ -1,0 +1,22 @@
+Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Drydock status
+
+  Target          /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting
+  Name            drydock Layers Testing Uat Case
+  Description     Drydock uat - LayersTesting exercises the language and persistence layers. The source is an original
+                  brief for a command-line cash ledger with three tables (accounts, categories, transactions) reached…
+  Phase           Implement
+  State           25 pending
+  Metadata        planned · approved
+  Sources         6 imported · 25 authored blueprint files
+  Analysis        Ready · 15 stories · 0 questions · 0 blockers
+  Blueprint       ✓  0 errors · 0 warnings
+  Plan            25 pending
+  Frontier        foundation-python: Stand up the Python project tree, environment, dependency manifest, pytest runner, and bin/test.sh.
+  Workflow        5 steps
+                  Initialize         complete at 2026-10-27T13:53:58.542+00:00
+                  Import             complete at 2026-10-27T13:54:05.783+00:00
+                  Analyze            complete at 2026-10-27T13:54:40.085+00:00
+                  Plan               failed at 2026-10-27T14:11:37.239+00:00
+                  Plan repair        complete at 2026-10-27T14:15:34.821+00:00
+  Next step       drydock build LayersTesting  (frontier: Stand up the Python project tree, environment, dependency manifest, pytest runner, and bin/test.sh.)

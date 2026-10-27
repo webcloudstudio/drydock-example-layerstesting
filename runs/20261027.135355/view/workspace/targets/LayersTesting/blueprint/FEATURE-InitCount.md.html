@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-InitCount.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-InitCount.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-InitCount.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Init and Count</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>The <code>ledger init</code> command that empties the ledger and the <code>ledger count</code> command that reports table row counts.</td></tr><tr><td>Depends On</td><td>FEATURE-CliEntry.md, DATABASE.md, ARCHITECTURE.md</td></tr><tr><td>Provides</td><td>ledger init, ledger count</td></tr><tr><td>Consumes</td><td>ledger, cli.registry</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p><code>init</code> prepares an empty ledger for loading and use. <code>count</code> reports how many rows each table holds. Both are registered in <code>cli/commands/maintenance.py</code> through its <code>COMMANDS</code> mapping, with keys <code>(&quot;init&quot;,)</code> and <code>(&quot;count&quot;,)</code>, each taking no arguments.</p>
+<h2>Behavior</h2>
+<h3><code>ledger init</code></h3>
+<ul><li>Opens the database through the entry point; opening creates the database file and declared schema when they do not yet exist.</li><li>Removes every row from <code>transactions</code>, then <code>categories</code>, then <code>accounts</code> (foreign-key order).</li><li>Returns no rows, so nothing is written to stdout, and exits <code>0</code>.</li><li>Running it again on an empty ledger also exits <code>0</code>.</li></ul>
+<h3><code>ledger count</code></h3>
+<ul><li>Output is CSV: header <code>table,rows</code>, then the rows <code>accounts</code>, <code>categories</code>, <code>transactions</code> in that order, each with the number of rows stored, read from the database.</li><li>Counts are never embedded; they are computed from the repository <code>list</code> results.</li></ul>
+<p>An argument given to either command is a usage error (exit 2).</p>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNT-005</code> — read: list accounts to count them - supplies: — - returns: <code>account</code></li><li><code>FEATURE-CATEGORY-005</code> — read: list categories to count them - supplies: — - returns: <code>category</code></li><li><code>FEATURE-TXN-005</code> — read: list transactions to count them - supplies: — - returns: <code>txn_id</code></li><li><code>FEATURE-TXN-006</code> — write: remove every transaction on init - supplies: <code>min_txn_id</code> - returns: —</li><li><code>FEATURE-CATEGORY-006</code> — write: remove every category on init - supplies: <code>min_category</code> - returns: —</li><li><code>FEATURE-ACCOUNT-006</code> — write: remove every account on init - supplies: <code>min_account</code> - returns: —</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC count-shape ===<br>Intent: count prints the header table,rows and the three tables in order, each count equal to the number of stored rows.</p>
+<p>import csv import io from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;count&quot;) print(code, repr(out), repr(err)) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;table&quot;, &quot;rows&quot;] assert [r[0] for r in rows[1:]] == [&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;] with db_session() as db: expected = [len(db.accounts.list()), len(db.categories.list()), len(db.transactions.list())] assert [int(r[1]) for r in rows[1:]] == expected === END AC count-shape ===</p>
+<p>=== AC count-tracks-writes ===<br>Intent: After one account, one category, and one transaction are stored, each reported count rises by exactly one.</p>
+<p>import csv import io from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>def counts(): code, out, err = cli_runner(&quot;count&quot;) assert code == 0, err return [int(r[1]) for r in list(csv.reader(io.StringIO(out)))[1:]]</p>
+<p>before = counts() with db_session() as db: db.accounts.create(account=&quot;ZZCNT1&quot;, name=&quot;Count Probe&quot;) db.categories.create(category=&quot;ZZCNTC&quot;, description=&quot;Count Cat&quot;) db.transactions.create(txn_id=900200001, date=&quot;2026-05-01&quot;, account=&quot;ZZCNT1&quot;, category=&quot;ZZCNTC&quot;, amount=100, memo=&quot;&quot;) after = counts() assert after == [n + 1 for n in before] === END AC count-tracks-writes ===</p>
+<p>=== AC init-empties-tables ===<br>Intent: init exits 0 with empty stdout, removes rows in foreign-key order without error, and leaves all three tables empty.</p>
+<p>from persistence.testing import db_session from cli.testing import cli_runner</p>
+<p>with db_session() as db: db.accounts.create(account=&quot;ZZINI1&quot;, name=&quot;Init Probe&quot;) db.categories.create(category=&quot;ZZINIC&quot;, description=&quot;Init Cat&quot;) db.transactions.create(txn_id=900200011, date=&quot;2026-05-01&quot;, account=&quot;ZZINI1&quot;, category=&quot;ZZINIC&quot;, amount=100, memo=&quot;&quot;) code, out, err = cli_runner(&quot;init&quot;) print(code, repr(out), repr(err)) assert code == 0 assert out == &quot;&quot; with db_session() as db: assert len(db.transactions.list()) == 0 assert len(db.categories.list()) == 0 assert len(db.accounts.list()) == 0 === END AC init-empties-tables ===</p>
+<p>=== AC init-then-count ===<br>Intent: After init, count reports zero rows for every table, and init run a second time on the empty ledger still exits 0.</p>
+<p>import csv import io from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;init&quot;) assert code == 0, err code, out, err = cli_runner(&quot;init&quot;) assert code == 0, err assert out == &quot;&quot; code, out, err = cli_runner(&quot;count&quot;) assert code == 0, err rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;table&quot;, &quot;rows&quot;] assert [r[0] for r in rows[1:]] == [&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;] assert [int(r[1]) for r in rows[1:]] == [0, 0, 0] === END AC init-then-count ===</p>
+<p>=== AC init-fresh-database ===<br>Intent: init against a database path that does not yet exist creates the file, exits 0, and count then reports zero rows.</p>
+<p>import csv import io import os from drydock_acceptance import database_environment from cli.testing import cli_runner</p>
+<p>with database_environment(url=&quot;fresh.db&quot;) as root: assert not os.path.exists(root / &quot;fresh.db&quot;) code, out, err = cli_runner(&quot;init&quot;) print(code, repr(out), repr(err)) assert code == 0 assert os.path.exists(root / &quot;fresh.db&quot;) code, out, err = cli_runner(&quot;count&quot;) assert code == 0, err rows = list(csv.reader(io.StringIO(out))) assert [int(r[1]) for r in rows[1:]] == [0, 0, 0] === END AC init-fresh-database ===</p>
+<p>=== AC init-count-usage ===<br>Intent: init and count with an extra argument are usage errors that exit 2 with empty stdout.</p>
+<p>from cli.testing import cli_runner</p>
+<p>for args in [(&quot;init&quot;, &quot;extra&quot;), (&quot;count&quot;, &quot;extra&quot;)]: code, out, err = cli_runner(*args) print(args, code, repr(out), repr(err)) assert code == 2 assert out == &quot;&quot; === END AC init-count-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li><code>init</code> writes nothing to standard output.</li><li>Counts are read from the database on every run and are never embedded.</li><li><code>init</code> removes rows in foreign-key order: transactions, then categories, then accounts.</li><li>Amounts and counts use no floating point.</li></ul></article>
+</main>
+</body>
+</html>

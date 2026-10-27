@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/evidence/block-9.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/evidence/block-9.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/evidence/block-9.md">Raw file</a></div></header>
+<article class="doc"><h1>Evidence: Block 9 · Feature (block-9)</h1>
+<ul><li>block type: block</li><li>date: 2026-10-27</li><li>resulting state: closed/verified</li><li>story points (combined assembled cost): 13405</li><li>execution id: 20261027.150048.281Z-aa862c27</li></ul>
+<h2>Stories built</h2>
+<ul><li>Assemble and verify the CSV output contract and exit codes across every command. (feature-command-contract) [story]</li><li>Assemble and verify that every writing command enforces the no-negative-balance rule atomically. (feature-no-negative-balance) [story]</li></ul>
+<h2>Stacked context</h2>
+<ul><li>stack: python_compact.md (SP 921)</li><li>compass: COMPASS.md (SP 1134)</li><li>implements: FEATURE-CommandContract.md (SP 2535)</li><li>context: ARCHITECTURE_compact.md (SP 332)</li><li>context: DATABASE_compact.md (SP 884)</li><li>stack: common_compact.md (SP 1653)</li><li>stack: cli.md (SP 2689)</li><li>implements: FEATURE-NoNegativeBalance.md (SP 2978)</li></ul>
+<h2>Build directory changes</h2>
+<ul><li>data/app.db-shm</li><li>data/app.db-wal</li><li>data/logs/test_2026-10-27_110228.log</li><li>tests/test_command_contract.py</li><li>tests/test_no_negative_balance.py</li></ul>
+<h2>Pre-build acceptance observation</h2>
+<ul><li>GREEN (prepassed): contract-usage-errors (FEATURE-CommandContract.md)</li></ul>
+<p>intent: Unknown commands, unknown tables or reports, and wrong argument counts all exit 2 with empty standard output. return code: 0 stdout: (&#x27;frobnicate&#x27;,) 2 usage: unknown command &#x27;frobnicate&#x27;</p>
+<p>(&#x27;report&#x27;, &#x27;nosuch&#x27;) 2 usage: unknown command &#x27;report nosuch&#x27;</p>
+<p>(&#x27;report&#x27;,) 2 usage: unknown command &#x27;report&#x27;</p>
+<p>(&#x27;load&#x27;, &#x27;nosuch&#x27;, &#x27;x.csv&#x27;) 2 usage: unknown command &#x27;load nosuch x.csv&#x27;</p>
+<p>(&#x27;account&#x27;,) 2 usage: unknown command &#x27;account&#x27;</p>
+<p>(&#x27;account&#x27;, &#x27;get&#x27;) 2 usage: wrong number of arguments for &#x27;account get&#x27;</p>
+<p>(&#x27;txn&#x27;, &#x27;post&#x27;, &#x27;A&#x27;) 2 usage: wrong number of arguments for &#x27;txn post&#x27;</p>
+<p>(&#x27;transfer&#x27;, &#x27;A&#x27;, &#x27;B&#x27;) 2 usage: wrong number of arguments for &#x27;transfer&#x27;</p>
+<p>(&#x27;count&#x27;, &#x27;extra&#x27;) 2 usage: wrong number of arguments for &#x27;count&#x27;</p>
+<ul><li>GREEN (prepassed): contract-csv-format (FEATURE-CommandContract.md)</li></ul>
+<p>intent: Successful commands emit the declared headers, newline-only endings, no trailing spaces, and amounts with exactly two decimals. return code: 0 stdout: txn_id,date,account,category,amount,memo 1,2099-05-05,ZZCF1,ZZCFC,7.50,fmt</p>
+<ul><li>GREEN (prepassed): contract-failures-silent-stdout (FEATURE-CommandContract.md)</li></ul>
+<p>intent: Failing commands write nothing to standard output and exactly one diagnostic line to standard error, with the documented exit code for each failure class. return code: 0 stdout: (&#x27;account&#x27;, &#x27;get&#x27;, &#x27;ZZNOSUCH9&#x27;) 4 error: account ZZNOSUCH9 does not exist</p>
+<p>(&#x27;account&#x27;, &#x27;add&#x27;, &#x27;lower&#x27;, &#x27;Bad Code&#x27;) 3 error: code must be 1 to 12 characters from A-Z and 0-9</p>
+<p>(&#x27;txn&#x27;, &#x27;get&#x27;, &#x27;999999999&#x27;) 4 error: transaction 999999999 does not exist</p>
+<p>(&#x27;txn&#x27;, &#x27;post&#x27;, &#x27;ZZNOSUCH9&#x27;, &#x27;ZZNOCAT9&#x27;, &#x27;1.00&#x27;, &#x27;2099-01-01&#x27;) 3 error: account ZZNOSUCH9 does not exist</p>
+<p>(&#x27;load&#x27;, &#x27;accounts&#x27;, &#x27;/nonexistent-dir/zz-missing.csv&#x27;) 1 error: cannot read /nonexistent-dir/zz-missing.csv: No such file or directory</p>
+<ul><li>GREEN (prepassed): contract-rejected-writes-change-nothing (FEATURE-CommandContract.md)</li></ul>
+<p>intent: Rejected writing commands exit 3 and leave the counts of all three tables unchanged. return code: 0 stdout: (&#x27;account&#x27;, &#x27;add&#x27;, &#x27;ZZCR1&#x27;, &#x27;Duplicate&#x27;) 3 error: account ZZCR1 already exists</p>
+<p>(&#x27;account&#x27;, &#x27;add&#x27;, &#x27;bad code&#x27;, &#x27;Name&#x27;) 3 error: code must be 1 to 12 characters from A-Z and 0-9</p>
+<p>(&#x27;account&#x27;, &#x27;delete&#x27;, &#x27;ZZCR1&#x27;) 3 error: account ZZCR1 has transactions and cannot be deleted</p>
+<p>(&#x27;txn&#x27;, &#x27;post&#x27;, &#x27;ZZCR1&#x27;, &#x27;ZZCRC&#x27;, &#x27;1.234&#x27;, &#x27;2099-02-03&#x27;) 3 error: amount must look like -12.50 with at most two decimals: &#x27;1.234&#x27;</p>
+<p>(&#x27;txn&#x27;, &#x27;post&#x27;, &#x27;ZZCR1&#x27;, &#x27;ZZCRC&#x27;, &#x27;1.00&#x27;, &#x27;2026-02-30&#x27;) 3 error: date is not a real calendar date: 2026-02-30</p>
+<p>(&#x27;txn&#x27;, &#x27;post&#x27;, &#x27;ZZCR1&#x27;, &#x27;ZZNOCAT9&#x27;, &#x27;1.00&#x27;, &#x27;2099-02-03&#x27;) 3 error: category ZZNOCAT9 does not exist</p>
+<p>(&#x27;txn&#x27;, &#x27;post&#x27;, &#x27;ZZCR1&#x27;, &#x27;ZZCRC&#x27;, &#x27;0&#x27;, &#x27;2099-02-03&#x27;) 3 error: amount must not be zero</p>
+<p>(&#x27;transfer&#x27;, &#x27;ZZCR1&#x27;, &#x27;ZZCR1&#x27;, &#x27;1.00&#x27;, &#x27;2099-02-03&#x27;) 3 error: transfer needs two different accounts</p>
+<p>(&#x27;transfer&#x27;, &#x27;ZZCR1&#x27;, &#x27;ZZCR2&#x27;, &#x27;0.50&#x27;, &#x27;2099-02-30&#x27;) 3 error: date is not a real calendar date: 2099-02-30</p>
+<ul><li>GREEN (prepassed): nonneg-load (FEATURE-NoNegativeBalance.md)</li></ul>
+<p>intent: A transactions load whose earlier rows are individually valid but whose combined effect makes the balance negative is rejected whole with exit 3 and stores none of its rows. return code: 0 stdout: error: account ZZNL1 would be overdrawn by 1000 cents</p>
+<ul><li>GREEN (prepassed): nonneg-post (FEATURE-NoNegativeBalance.md)</li></ul>
+<p>intent: Posting an outflow larger than the balance exits 3 and leaves the balance and transaction count unchanged. return code: 0 stdout: error: account ZZNP1 would be overdrawn by 1 cents</p>
+<ul><li>GREEN (prepassed): nonneg-amend (FEATURE-NoNegativeBalance.md)</li></ul>
+<p>intent: Amending a deposit down so the account would go negative exits 3 and the original amount remains. return code: 0 stdout: error: account ZZNA1 would be overdrawn by 1000 cents</p>
+<ul><li>GREEN (prepassed): nonneg-delete (FEATURE-NoNegativeBalance.md)</li></ul>
+<p>intent: Deleting a deposit that funds a later outflow exits 3, keeps the row, and leaves the balance unchanged. return code: 0 stdout: error: account ZZND1 would be overdrawn by 6000 cents</p>
+<ul><li>GREEN (prepassed): nonneg-transfer (FEATURE-NoNegativeBalance.md)</li></ul>
+<p>intent: A transfer larger than the source balance exits 3 and stores neither row; both balances and the table count are unchanged. return code: 0 stdout: error: account ZZNT1 would be overdrawn by 1 cents</p>
+<h2>Post-build programmatic acceptance</h2>
+<ul><li>PASS: contract-usage-errors (FEATURE-CommandContract.md)</li></ul>
+<p>intent: Unknown commands, unknown tables or reports, and wrong argument counts all exit 2 with empty standard output. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: (&#x27;frobnicate&#x27;,) 2 usage: unknown command &#x27;frobnicate&#x27;</p>
+<p>(&#x27;report&#x27;, &#x27;nosuch&#x27;) 2 usage: unknown command &#x27;report nosuch&#x27;</p>
+<p>(&#x27;report&#x27;,) 2 usage: unknown command &#x27;report&#x27;</p>
+<p>(&#x27;load&#x27;, &#x27;nosuch&#x27;, &#x27;x.csv&#x27;) 2 usage: unknown command &#x27;load nosuch x.csv&#x27;</p>
+<p>(&#x27;account&#x27;,) 2 usage: unknown command &#x27;account&#x27;</p>
+<p>(&#x27;account&#x27;, &#x27;get&#x27;) 2 usage: wrong number of arguments for &#x27;account get&#x27;</p>
+<p>(&#x27;txn&#x27;, &#x27;post&#x27;, &#x27;A&#x27;) 2 usage: wrong number of arguments for &#x27;txn post&#x27;</p>
+<p>(&#x27;transfer&#x27;, &#x27;A&#x27;, &#x27;B&#x27;) 2 usage: wrong number of arguments for &#x27;transfer&#x27;</p>
+<p>(&#x27;count&#x27;, &#x27;extra&#x27;) 2 usage: wrong number of arguments for &#x27;count&#x27;</p>
+<ul><li>PASS: contract-csv-format (FEATURE-CommandContract.md)</li></ul>
+<p>intent: Successful commands emit the declared headers, newline-only endings, no trailing spaces, and amounts with exactly two decimals. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: txn_id,date,account,category,amount,memo 1,2099-05-05,ZZCF1,ZZCFC,7.50,fmt</p>
+<ul><li>PASS: contract-failures-silent-stdout (FEATURE-CommandContract.md)</li></ul>
+<p>intent: Failing commands write nothing to standard output and exactly one diagnostic line to standard error, with the documented exit code for each failure class. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: (&#x27;account&#x27;, &#x27;get&#x27;, &#x27;ZZNOSUCH9&#x27;) 4 error: account ZZNOSUCH9 does not exist</p>
+<p>(&#x27;account&#x27;, &#x27;add&#x27;, &#x27;lower&#x27;, &#x27;Bad Code&#x27;) 3 error: code must be 1 to 12 characters from A-Z and 0-9</p>
+<p>(&#x27;txn&#x27;, &#x27;get&#x27;, &#x27;999999999&#x27;) 4 error: transaction 999999999 does not exist</p>
+<p>(&#x27;txn&#x27;, &#x27;post&#x27;, &#x27;ZZNOSUCH9&#x27;, &#x27;ZZNOCAT9&#x27;, &#x27;1.00&#x27;, &#x27;2099-01-01&#x27;) 3 error: account ZZNOSUCH9 does not exist</p>
+<p>(&#x27;load&#x27;, &#x27;accounts&#x27;, &#x27;/nonexistent-dir/zz-missing.csv&#x27;) 1 error: cannot read /nonexistent-dir/zz-missing.csv: No such file or directory</p>
+<ul><li>PASS: contract-rejected-writes-change-nothing (FEATURE-CommandContract.md)</li></ul>
+<p>intent: Rejected writing commands exit 3 and leave the counts of all three tables unchanged. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: (&#x27;account&#x27;, &#x27;add&#x27;, &#x27;ZZCR1&#x27;, &#x27;Duplicate&#x27;) 3 error: account ZZCR1 already exists</p>
+<p>(&#x27;account&#x27;, &#x27;add&#x27;, &#x27;bad code&#x27;, &#x27;Name&#x27;) 3 error: code must be 1 to 12 characters from A-Z and 0-9</p>
+<p>(&#x27;account&#x27;, &#x27;delete&#x27;, &#x27;ZZCR1&#x27;) 3 error: account ZZCR1 has transactions and cannot be deleted</p>
+<p>(&#x27;txn&#x27;, &#x27;post&#x27;, &#x27;ZZCR1&#x27;, &#x27;ZZCRC&#x27;, &#x27;1.234&#x27;, &#x27;2099-02-03&#x27;) 3 error: amount must look like -12.50 with at most two decimals: &#x27;1.234&#x27;</p>
+<p>(&#x27;txn&#x27;, &#x27;post&#x27;, &#x27;ZZCR1&#x27;, &#x27;ZZCRC&#x27;, &#x27;1.00&#x27;, &#x27;2026-02-30&#x27;) 3 error: date is not a real calendar date: 2026-02-30</p>
+<p>(&#x27;txn&#x27;, &#x27;post&#x27;, &#x27;ZZCR1&#x27;, &#x27;ZZNOCAT9&#x27;, &#x27;1.00&#x27;, &#x27;2099-02-03&#x27;) 3 error: category ZZNOCAT9 does not exist</p>
+<p>(&#x27;txn&#x27;, &#x27;post&#x27;, &#x27;ZZCR1&#x27;, &#x27;ZZCRC&#x27;, &#x27;0&#x27;, &#x27;2099-02-03&#x27;) 3 error: amount must not be zero</p>
+<p>(&#x27;transfer&#x27;, &#x27;ZZCR1&#x27;, &#x27;ZZCR1&#x27;, &#x27;1.00&#x27;, &#x27;2099-02-03&#x27;) 3 error: transfer needs two different accounts</p>
+<p>(&#x27;transfer&#x27;, &#x27;ZZCR1&#x27;, &#x27;ZZCR2&#x27;, &#x27;0.50&#x27;, &#x27;2099-02-30&#x27;) 3 error: date is not a real calendar date: 2099-02-30</p>
+<ul><li>PASS: nonneg-load (FEATURE-NoNegativeBalance.md)</li></ul>
+<p>intent: A transactions load whose earlier rows are individually valid but whose combined effect makes the balance negative is rejected whole with exit 3 and stores none of its rows. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: error: account ZZNL1 would be overdrawn by 1000 cents</p>
+<ul><li>PASS: nonneg-post (FEATURE-NoNegativeBalance.md)</li></ul>
+<p>intent: Posting an outflow larger than the balance exits 3 and leaves the balance and transaction count unchanged. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: error: account ZZNP1 would be overdrawn by 1 cents</p>
+<ul><li>PASS: nonneg-amend (FEATURE-NoNegativeBalance.md)</li></ul>
+<p>intent: Amending a deposit down so the account would go negative exits 3 and the original amount remains. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: error: account ZZNA1 would be overdrawn by 1000 cents</p>
+<ul><li>PASS: nonneg-delete (FEATURE-NoNegativeBalance.md)</li></ul>
+<p>intent: Deleting a deposit that funds a later outflow exits 3, keeps the row, and leaves the balance unchanged. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: error: account ZZND1 would be overdrawn by 6000 cents</p>
+<ul><li>PASS: nonneg-transfer (FEATURE-NoNegativeBalance.md)</li></ul>
+<p>intent: A transfer larger than the source balance exits 3 and stores neither row; both balances and the table count are unchanged. target interpreter: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/.venv/bin/python provisioning: not required return code: 0 stdout: error: account ZZNT1 would be overdrawn by 1 cents</p>
+<h2>Build summary</h2>
+<p>I&#x27;ll start by checking the build directory and the current state of the code.The core code for both stories already exists. Next I&#x27;ll run the existing test suite to see where things stand.The existing suite passes (415 tests). Before writing the new tests, I&#x27;ll check the local test style and confirm the stories&#x27; acceptance checks run against the current code.Existing tests use <code>ledger_store</code> and <code>store_open</code> fixtures. I&#x27;ll check <code>tests/conftest.py</code> so the new tests follow the same isolation pattern.I have what I need. The implementation already covers both stories, so the remaining work is to add tests that prove each declared acceptance check. I&#x27;ll write the four <code>feature-command-contract</code> checks and the five <code>feature-no-negative-balance</code> checks as tests, keeping every assertion and expected value from the specs. The only change is setup: they use the project&#x27;s existing <code>ledger_store</code> fixture (fresh store per test) rather than <code>db_session</code>, which matches how the other command tests isolate state.Next, the no-negative-balance checks, one test per writing command plus the whole-file load case.I left an unused helper and an unused <code>os</code> import in that file. I&#x27;ll remove them before running.Now I&#x27;ll run the two new test files, verbose, to see each named check result.All 34 new checks pass. Now I&#x27;ll run the declared verification gate, <code>sh bin/test.sh</code>, over the full suite.Both stories&#x27; declared checks now run as tests and pass. The code needed no changes: the existing modules already satisfy the specs.</p>
+<p>I added two test files and changed no application code:</p>
+<ul><li><code>tests/test_command_contract.py</code> covers the four <code>feature-command-contract</code> checks: usage errors exit 2, CSV format, failure exit classes with one stderr line, and rejected writes leaving counts unchanged.</li><li><code>tests/test_no_negative_balance.py</code> covers the five <code>feature-no-negative-balance</code> checks: load, post, amend, delete, and transfer.</li></ul>
+<p>Each declared assertion and its expected values are kept. I changed only the setup: the checks use the project&#x27;s <code>ledger_store</code> fixture (a fresh store per test), as the other command tests do, instead of <code>db_session</code>. Each check acts through <code>cli_runner</code> and reads state back through <code>count</code>, <code>get</code>, or the persistence interface.</p>
+<p>Verification run:</p>
+<ul><li><code>pytest -v</code> on the two new files: 34 passed.</li><li><code>sh bin/test.sh</code> (full suite): 449 passed, exit 0. This includes the 415 existing tests.</li></ul>
+<p>I did not run <code>sources/run.sh</code>, because it is the terminal story and is not part of this block. I did not commit anything.</p>
+<p>RESULT: SUCCESS</p>
+<p>FILES CHANGED:</p>
+<ul><li>tests/test_command_contract.py</li><li>tests/test_no_negative_balance.py</li></ul>
+<p>SUMMARY: Both stories were already implemented in <code>cli/</code>, <code>ledger_core/</code>, and <code>persistence/</code>, so this step only proves the declared checks. The new tests cover every declared acceptance check for both stories, with the expected values from the specs. Full suite via <code>sh bin/test.sh</code>: 449 passed, exit 0.</p>
+<p>BLOCKERS:</p>
+<ul><li>none</li></ul></article>
+</main>
+</body>
+</html>

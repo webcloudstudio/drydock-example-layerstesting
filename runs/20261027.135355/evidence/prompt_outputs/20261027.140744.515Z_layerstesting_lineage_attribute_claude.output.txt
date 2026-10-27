@@ -1,0 +1,30 @@
+<requirement name="load-transactions-csv" stories="feature-load-csv-reader,feature-load-transactions,feature-validation,foundation-database">
+txn_id,date,account,category,amount,memo
+1,2026-01-01,SAFE,OPENING,5000.00,opening float
+2,2026-01-01,PETTY,OPENING,200.00,opening float
+3,2026-01-02,DRAWER1,SALES,155.26,sales day 1
+</requirement>
+<requirement name="paired-transfer-rows" stories="feature-transfer">
+27,2026-01-14,DRAWER1,TRANSFER,-1000.00,transfer to SAFE
+28,2026-01-14,SAFE,TRANSFER,1000.00,transfer from DRAWER1
+</requirement>
+<unattached story="foundation-python"/>
+<unattached story="foundation-cli"/>
+<unattached story="feature-balance-rule"/>
+<unattached story="feature-init-count"/>
+<unattached story="feature-account-add"/>
+<unattached story="feature-txn-post"/>
+<unattached story="feature-load-accounts"/>
+<unattached story="feature-account-delete"/>
+<unattached story="feature-txn-get"/>
+<unattached story="feature-account-rename"/>
+<unattached story="feature-account-get"/>
+<unattached story="feature-txn-delete"/>
+<unattached story="feature-txn-amend"/>
+<unattached story="feature-load-categories"/>
+<unattached story="feature-report-balances"/>
+<unattached story="feature-report-monthly"/>
+<unattached story="feature-report-categories"/>
+<unattached story="feature-command-contract"/>
+<unattached story="feature-no-negative-balance"/>
+<unattached story="feature-verification"/>

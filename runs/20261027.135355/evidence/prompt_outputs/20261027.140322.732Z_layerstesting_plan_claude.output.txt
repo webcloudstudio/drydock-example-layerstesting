@@ -1,0 +1,886 @@
+=== BEGIN ARTIFACT FEATURE-TxnAmend.md ===
+# FEATURE: Transaction Amend
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger txn amend <id> <amount>`, which changes only a transaction's amount without leaving any account balance below zero. |
+| Depends On | FEATURE-TxnPost.md, FEATURE-Validation.md, FEATURE-BalanceRule.md, FEATURE-CliEntry.md, DATABASE.md |
+| Provides | ledger txn amend |
+| Consumes | ledger_core.transactions, ledger_core.validation, ledger_core.balances, cli.registry |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Amend the amount of an existing transaction. Only the amount changes; date, account, category, and memo are untouched. Persistence is reached only through `ledger_core.transactions`, which calls the generated `persistence` package.
+
+## Behavior
+
+1. Argument count other than two after `txn amend` exits 2.
+2. The id must be an integer; otherwise exit 3.
+3. The amount is validated with `ledger_core.validation` (`-?DIGITS[.D[D]]`, at most two decimals, never zero); a violation exits 3.
+4. An absent id exits 4.
+5. The resulting balance of the transaction's account is the stored balance minus the old amount plus the new amount, computed in integer cents through `ledger_core.balances`. A negative result exits 3 and nothing is written.
+6. Otherwise only the amount is updated and the updated row is printed as `txn_id,date,account,category,amount,memo` with a two-decimal amount.
+7. A failing command writes nothing to standard output and one diagnostic line to standard error.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md and reached through `ledger_core.transactions`.
+
+## Programmatic Acceptance
+
+=== AC txn-amend-success ===
+Intent: Amending an existing transaction exits 0, prints the updated row with the supplied amount text, and a separate read shows the new integer cents.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+import csv
+import io
+
+def f(row, name):
+    return row[name] if isinstance(row, dict) else getattr(row, name)
+
+acct, cat, tid = "ZZAM1", "ZZAMC1", 900100001
+day = "2026-05-01"
+newtext = "50.00"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Amend Account")
+    db.categories.create(category=cat, description="Amend Category")
+    db.transactions.create(txn_id=tid, date=day, account=acct, category=cat, amount=10000, memo="amend probe")
+    code, out, err = cli_runner("txn", "amend", str(tid), newtext)
+    print(out)
+    print(err)
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert len(rows) == 2
+    assert rows[1][0] == str(tid)
+    assert rows[1][1] == day
+    assert rows[1][4] == newtext
+    assert f(db.transactions.get(txn_id=tid), "amount") == int(newtext.replace(".", ""))
+=== END AC txn-amend-success ===
+
+=== AC txn-amend-only-amount ===
+Intent: Amend changes only the amount; date, account, category, and memo read back exactly as they were created.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def f(row, name):
+    return row[name] if isinstance(row, dict) else getattr(row, name)
+
+acct, cat, tid = "ZZAM2", "ZZAMC2", 900100002
+day = "2026-05-02"
+note = "keep this memo"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Amend Account")
+    db.categories.create(category=cat, description="Amend Category")
+    db.transactions.create(txn_id=tid, date=day, account=acct, category=cat, amount=2000, memo=note)
+    code, out, err = cli_runner("txn", "amend", str(tid), "35.50")
+    print(out)
+    print(err)
+    assert code == 0
+    back = db.transactions.get(txn_id=tid)
+    assert f(back, "date") == day
+    assert f(back, "account") == acct
+    assert f(back, "category") == cat
+    assert f(back, "memo") == note
+=== END AC txn-amend-only-amount ===
+
+=== AC txn-amend-absent ===
+Intent: Amending an id that does not exist exits 4, prints nothing to stdout, and creates no row.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+tid = 900199999
+with db_session() as db:
+    assert db.transactions.get(txn_id=tid) is None
+    code, out, err = cli_runner("txn", "amend", str(tid), "5.00")
+    print(out)
+    print(err)
+    assert code == 4
+    assert out == ""
+    assert db.transactions.get(txn_id=tid) is None
+=== END AC txn-amend-absent ===
+
+=== AC txn-amend-negative-balance ===
+Intent: An amend that would leave the account balance below zero exits 3 and keeps the original amount, while an amend landing exactly on zero succeeds. The account holds +10000 and -4000 cents, so lowering the first to 3000 gives -1000 and lowering it to 4000 gives 0.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def f(row, name):
+    return row[name] if isinstance(row, dict) else getattr(row, name)
+
+acct, cat = "ZZAM3", "ZZAMC3"
+tid_in, tid_out = 900100003, 900100004
+too_low, exact = "30.00", "40.00"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Amend Account")
+    db.categories.create(category=cat, description="Amend Category")
+    db.transactions.create(txn_id=tid_in, date="2026-05-03", account=acct, category=cat, amount=10000, memo="")
+    db.transactions.create(txn_id=tid_out, date="2026-05-03", account=acct, category=cat, amount=-4000, memo="")
+    code, out, err = cli_runner("txn", "amend", str(tid_in), too_low)
+    print(out)
+    print(err)
+    assert code == 3
+    assert out == ""
+    assert f(db.transactions.get(txn_id=tid_in), "amount") == 10000
+    code, out, err = cli_runner("txn", "amend", str(tid_in), exact)
+    print(out)
+    print(err)
+    assert code == 0
+    assert f(db.transactions.get(txn_id=tid_in), "amount") == int(exact.replace(".", ""))
+=== END AC txn-amend-negative-balance ===
+
+=== AC txn-amend-invalid-amount ===
+Intent: Amounts with three decimals, a zero amount, and a non-numeric amount are rejected with exit 3 and the stored amount is unchanged.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def f(row, name):
+    return row[name] if isinstance(row, dict) else getattr(row, name)
+
+acct, cat, tid = "ZZAM4", "ZZAMC4", 900100005
+original = 10000
+with db_session() as db:
+    db.accounts.create(account=acct, name="Amend Account")
+    db.categories.create(category=cat, description="Amend Category")
+    db.transactions.create(txn_id=tid, date="2026-05-04", account=acct, category=cat, amount=original, memo="")
+    for bad in ["1.234", "0", "0.00", "abc"]:
+        code, out, err = cli_runner("txn", "amend", str(tid), bad)
+        print(out)
+        print(err)
+        assert code == 3
+        assert out == ""
+        assert f(db.transactions.get(txn_id=tid), "amount") == original
+=== END AC txn-amend-invalid-amount ===
+
+=== AC txn-amend-usage ===
+Intent: A wrong argument count for txn amend exits 2 with nothing on stdout.
+
+from cli.testing import cli_runner
+
+for args in [("txn", "amend"), ("txn", "amend", "1"), ("txn", "amend", "1", "2.00", "extra")]:
+    code, out, err = cli_runner(*args)
+    print(out)
+    print(err)
+    assert code == 2
+    assert out == ""
+=== END AC txn-amend-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Amounts are integer cents in every layer; floating point is never used for money.
+- The balance check runs before the update, so a rejected amend writes nothing.
+- Only the amount column changes; no other column is ever written by this command.
+- Standard output stays empty on any failure; the diagnostic goes to standard error.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-TxnDelete.md ===
+# FEATURE: Transaction Delete
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger txn delete <id>`, which removes a transaction unless its account balance would go below zero. |
+| Depends On | FEATURE-TxnPost.md, FEATURE-BalanceRule.md, FEATURE-CliEntry.md, DATABASE.md |
+| Provides | ledger txn delete |
+| Consumes | ledger_core.transactions, ledger_core.balances, cli.registry |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Delete one transaction by id. Persistence is reached only through `ledger_core.transactions`, which calls the generated `persistence` package.
+
+## Behavior
+
+1. Argument count other than one after `txn delete` exits 2.
+2. A non-integer id exits 3.
+3. An absent id exits 4.
+4. The account's balance after removal is the stored balance minus the transaction's amount, in integer cents through `ledger_core.balances`. A negative result exits 3 and the row is kept.
+5. Otherwise the row is deleted and the command prints two lines: `deleted` and the id.
+6. A failing command writes nothing to standard output and one diagnostic line to standard error.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md and reached through `ledger_core.transactions`.
+
+## Programmatic Acceptance
+
+=== AC txn-delete-success ===
+Intent: Deleting an existing transaction exits 0, prints `deleted` then the id, and a separate read finds no row.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+import csv
+import io
+
+acct, cat, tid = "ZZDL1", "ZZDLC1", 900200001
+with db_session() as db:
+    db.accounts.create(account=acct, name="Delete Account")
+    db.categories.create(category=cat, description="Delete Category")
+    db.transactions.create(txn_id=tid, date="2026-05-01", account=acct, category=cat, amount=-500, memo="")
+    db.transactions.create(txn_id=tid + 1, date="2026-05-01", account=acct, category=cat, amount=9000, memo="")
+    code, out, err = cli_runner("txn", "delete", str(tid))
+    print(out)
+    print(err)
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert len(rows) == 2
+    assert rows[1] == [str(tid)]
+    assert rows[0] == ["deleted"]
+    assert db.transactions.get(txn_id=tid) is None
+    assert db.transactions.get(txn_id=tid + 1) is not None
+=== END AC txn-delete-success ===
+
+=== AC txn-delete-absent ===
+Intent: Deleting an id that does not exist exits 4 with nothing on stdout.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+tid = 900299999
+with db_session() as db:
+    assert db.transactions.get(txn_id=tid) is None
+    code, out, err = cli_runner("txn", "delete", str(tid))
+    print(out)
+    print(err)
+    assert code == 4
+    assert out == ""
+=== END AC txn-delete-absent ===
+
+=== AC txn-delete-negative-balance ===
+Intent: Deleting a +10000 deposit while a -4000 payment remains would leave -4000, so exit 3 and the row stays; deleting the payment instead leaves a positive balance and succeeds.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def f(row, name):
+    return row[name] if isinstance(row, dict) else getattr(row, name)
+
+acct, cat = "ZZDL2", "ZZDLC2"
+tid_in, tid_out = 900200002, 900200003
+amount_in = 10000
+with db_session() as db:
+    db.accounts.create(account=acct, name="Delete Account")
+    db.categories.create(category=cat, description="Delete Category")
+    db.transactions.create(txn_id=tid_in, date="2026-05-02", account=acct, category=cat, amount=amount_in, memo="")
+    db.transactions.create(txn_id=tid_out, date="2026-05-02", account=acct, category=cat, amount=-4000, memo="")
+    code, out, err = cli_runner("txn", "delete", str(tid_in))
+    print(out)
+    print(err)
+    assert code == 3
+    assert out == ""
+    kept = db.transactions.get(txn_id=tid_in)
+    assert kept is not None
+    assert f(kept, "amount") == amount_in
+    code, out, err = cli_runner("txn", "delete", str(tid_out))
+    print(out)
+    print(err)
+    assert code == 0
+    assert db.transactions.get(txn_id=tid_out) is None
+=== END AC txn-delete-negative-balance ===
+
+=== AC txn-delete-bad-id ===
+Intent: A non-integer id is rejected with exit 3 and nothing on stdout.
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("txn", "delete", "abc")
+print(out)
+print(err)
+assert code == 3
+assert out == ""
+=== END AC txn-delete-bad-id ===
+
+=== AC txn-delete-usage ===
+Intent: A wrong argument count for txn delete exits 2 with nothing on stdout.
+
+from cli.testing import cli_runner
+
+for args in [("txn", "delete"), ("txn", "delete", "1", "2")]:
+    code, out, err = cli_runner(*args)
+    print(out)
+    print(err)
+    assert code == 2
+    assert out == ""
+=== END AC txn-delete-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- The balance check runs before the delete, so a rejected delete writes nothing.
+- Standard output stays empty on any failure; the diagnostic goes to standard error.
+- Amounts are integer cents; floating point is never used for money.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Transfer.md ===
+# FEATURE: Transfer
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger transfer <from> <to> <amount> <date>`, an atomic two-row move of cash between distinct accounts in category TRANSFER. |
+| Depends On | FEATURE-TxnPost.md, FEATURE-Validation.md, FEATURE-BalanceRule.md, FEATURE-CliEntry.md, DATABASE.md |
+| Provides | ledger transfer |
+| Consumes | ledger_core.transactions, ledger_core.validation, ledger_core.balances, cli.registry |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Move cash between two accounts as two transaction rows that are stored together or not at all. Persistence is reached only through `ledger_core.transactions`, which calls the generated `persistence` package.
+
+## Behavior
+
+1. Argument count other than four after `transfer` exits 2.
+2. Validate before any write: the amount is positive with at most two decimals, the date is a real `YYYY-MM-DD` date, both accounts exist, they differ, and category `TRANSFER` exists. Any violation exits 3.
+3. The source balance after the debit must not be below zero, checked through `ledger_core.balances`; otherwise exit 3.
+4. The outgoing row takes id max(txn_id)+1 (or 1 when empty): amount `-amount`, account `<from>`, category `TRANSFER`, memo `transfer to <to>`. The incoming row takes the next id: amount `+amount`, account `<to>`, memo `transfer from <from>`.
+5. Both rows are inserted atomically and printed under the header `txn_id,date,account,category,amount,memo`.
+6. A failing command writes nothing to standard output and stores neither row.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md and reached through `ledger_core.transactions`.
+
+## Programmatic Acceptance
+
+=== AC transfer-success ===
+Intent: A valid transfer exits 0 and prints two rows with consecutive ids starting at the previous maximum plus one, category TRANSFER, the signed amounts, and the specified memos; a separate read shows both stored.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+import csv
+import io
+
+def f(row, name):
+    return row[name] if isinstance(row, dict) else getattr(row, name)
+
+src, dst, cat = "ZZTF1", "ZZTF2", "TRANSFER"
+day = "2026-05-10"
+amount_text = "250.00"
+cents = int(amount_text.replace(".", ""))
+with db_session() as db:
+    db.accounts.create(account=src, name="Source Account")
+    db.accounts.create(account=dst, name="Dest Account")
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description="Internal transfer")
+    db.transactions.create(txn_id=900300001, date="2026-05-01", account=src, category=cat, amount=100000, memo="funding")
+    before_max = max(f(r, "txn_id") for r in db.transactions.list())
+    code, out, err = cli_runner("transfer", src, dst, amount_text, day)
+    print(out)
+    print(err)
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert len(rows) == 3
+    out_row, in_row = rows[1], rows[2]
+    assert int(out_row[0]) == before_max + 1
+    assert int(in_row[0]) == int(out_row[0]) + 1
+    assert out_row[1] == day and in_row[1] == day
+    assert out_row[2] == src and in_row[2] == dst
+    assert out_row[3] == cat and in_row[3] == cat
+    assert out_row[4] == "-" + amount_text
+    assert in_row[4] == amount_text
+    assert out_row[5] == "transfer to " + dst
+    assert in_row[5] == "transfer from " + src
+    assert f(db.transactions.get(txn_id=int(out_row[0])), "amount") == -cents
+    assert f(db.transactions.get(txn_id=int(in_row[0])), "amount") == cents
+=== END AC transfer-success ===
+
+=== AC transfer-conserves-cash ===
+Intent: A valid transfer moves cash without changing the total held by the two accounts, computed from stored rows before and after.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def f(row, name):
+    return row[name] if isinstance(row, dict) else getattr(row, name)
+
+src, dst, cat = "ZZTF3", "ZZTF4", "TRANSFER"
+with db_session() as db:
+    db.accounts.create(account=src, name="Source Account")
+    db.accounts.create(account=dst, name="Dest Account")
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description="Internal transfer")
+    db.transactions.create(txn_id=900300010, date="2026-05-01", account=src, category=cat, amount=50000, memo="funding")
+
+    def balance(code_):
+        return sum(f(r, "amount") for r in db.transactions.list(account=code_))
+
+    src_before, dst_before = balance(src), balance(dst)
+    code, out, err = cli_runner("transfer", src, dst, "123.45", "2026-05-11")
+    print(out)
+    print(err)
+    assert code == 0
+    assert balance(src) + balance(dst) == src_before + dst_before
+    assert balance(src) == src_before - 12345
+    assert balance(dst) == dst_before + 12345
+=== END AC transfer-conserves-cash ===
+
+=== AC transfer-insufficient-funds ===
+Intent: A transfer exceeding the source balance by one cent exits 3 and stores neither row; a transfer of exactly the balance then succeeds and leaves the source at zero.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def f(row, name):
+    return row[name] if isinstance(row, dict) else getattr(row, name)
+
+src, dst, cat = "ZZTF5", "ZZTF6", "TRANSFER"
+with db_session() as db:
+    db.accounts.create(account=src, name="Source Account")
+    db.accounts.create(account=dst, name="Dest Account")
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description="Internal transfer")
+    db.transactions.create(txn_id=900300020, date="2026-05-01", account=src, category=cat, amount=10000, memo="funding")
+    total_before = len(db.transactions.list())
+    code, out, err = cli_runner("transfer", src, dst, "100.01", "2026-05-12")
+    print(out)
+    print(err)
+    assert code == 3
+    assert out == ""
+    assert len(db.transactions.list()) == total_before
+    assert db.transactions.list(account=dst) == []
+    code, out, err = cli_runner("transfer", src, dst, "100.00", "2026-05-12")
+    print(out)
+    print(err)
+    assert code == 0
+    assert sum(f(r, "amount") for r in db.transactions.list(account=src)) == 0
+=== END AC transfer-insufficient-funds ===
+
+=== AC transfer-rejections ===
+Intent: Same source and destination, zero or negative amounts, three decimals, an impossible date, and an unknown account are each rejected with exit 3, with empty stdout and no new rows.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+src, dst, cat = "ZZTF7", "ZZTF8", "TRANSFER"
+missing = "ZZTFNONE"
+with db_session() as db:
+    db.accounts.create(account=src, name="Source Account")
+    db.accounts.create(account=dst, name="Dest Account")
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description="Internal transfer")
+    db.transactions.create(txn_id=900300030, date="2026-05-01", account=src, category=cat, amount=100000, memo="funding")
+    assert db.accounts.get(account=missing) is None
+    total_before = len(db.transactions.list())
+    cases = [
+        (src, src, "5.00", "2026-05-13"),
+        (src, dst, "0", "2026-05-13"),
+        (src, dst, "-5.00", "2026-05-13"),
+        (src, dst, "5.001", "2026-05-13"),
+        (src, dst, "5.00", "2026-02-30"),
+        (src, missing, "5.00", "2026-05-13"),
+        (missing, dst, "5.00", "2026-05-13"),
+    ]
+    for args in cases:
+        code, out, err = cli_runner("transfer", *args)
+        print(args, code, out, err)
+        assert code == 3
+        assert out == ""
+        assert len(db.transactions.list()) == total_before
+=== END AC transfer-rejections ===
+
+=== AC transfer-usage ===
+Intent: A wrong argument count for transfer exits 2 with nothing on stdout.
+
+from cli.testing import cli_runner
+
+for args in [("transfer",), ("transfer", "A", "B", "1.00"), ("transfer", "A", "B", "1.00", "2026-05-01", "extra")]:
+    code, out, err = cli_runner(*args)
+    print(out)
+    print(err)
+    assert code == 2
+    assert out == ""
+=== END AC transfer-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Both rows are written together or neither is; every check runs before the first write.
+- Amounts are integer cents; floating point is never used for money.
+- Standard output stays empty on any failure; the diagnostic goes to standard error.
+- Ids are never hardcoded; they derive from the largest stored `txn_id`.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-ReportBalances.md ===
+# FEATURE: Report Balances
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger report balances`, a per-account count and balance report with a total row, computed from stored data. |
+| Depends On | FEATURE-CliEntry.md, FEATURE-Validation.md, DATABASE.md |
+| Provides | ledger report balances |
+| Consumes | ledger_core.money, cli.registry |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Report each account's transaction count and balance. Every value is computed from queries over stored rows; none is embedded. Persistence is reached only through the generated `persistence` package via `ledger_core`.
+
+## Behavior
+
+1. Header `account,name,transactions,balance`.
+2. One row per account ordered by account code; accounts without transactions appear with count 0 and balance `0.00`.
+3. A final row `TOTAL,,<count>,<sum>` where count is the number of all transactions and sum is the sum of all amounts.
+4. Balances are integer-cent sums formatted with exactly two decimals, a leading `-` when negative, and no thousands separator.
+5. Extra arguments exit 2. Output uses `\n` endings, no quoting, and no trailing spaces.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md and reached through `ledger_core`.
+
+## Programmatic Acceptance
+
+=== AC report-balances-values ===
+Intent: Each account row carries the count and formatted balance derived from stored transactions, and the TOTAL row carries the overall count and sum; expectations are computed from the stored rows.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+import csv
+import io
+
+def f(row, name):
+    return row[name] if isinstance(row, dict) else getattr(row, name)
+
+def fmt(c):
+    sign = "-" if c < 0 else ""
+    q, r = divmod(abs(c), 100)
+    return f"{sign}{q}.{r:02d}"
+
+a1, a2, cat = "ZZRB1", "ZZRB2", "ZZRBC1"
+with db_session() as db:
+    db.accounts.create(account=a1, name="Report One")
+    db.accounts.create(account=a2, name="Report Two")
+    db.categories.create(category=cat, description="Report Category")
+    db.transactions.create(txn_id=900400001, date="2026-05-01", account=a1, category=cat, amount=123456, memo="")
+    db.transactions.create(txn_id=900400002, date="2026-05-02", account=a1, category=cat, amount=-2345, memo="")
+    db.transactions.create(txn_id=900400003, date="2026-05-03", account=a2, category=cat, amount=5, memo="")
+    code, out, err = cli_runner("report", "balances")
+    print(out)
+    print(err)
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[0] == ["account", "name", "transactions", "balance"]
+    txns = db.transactions.list()
+    expected = []
+    for acc in sorted(db.accounts.list(), key=lambda r: f(r, "account")):
+        mine = [f(t, "amount") for t in txns if f(t, "account") == f(acc, "account")]
+        expected.append([f(acc, "account"), f(acc, "name"), str(len(mine)), fmt(sum(mine))])
+    expected.append(["TOTAL", "", str(len(txns)), fmt(sum(f(t, "amount") for t in txns))])
+    assert rows[1:] == expected
+=== END AC report-balances-values ===
+
+=== AC report-balances-order-and-empty ===
+Intent: Accounts are ordered by code regardless of creation order, and an account with no transactions still appears with count 0 and a zero balance.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+import csv
+import io
+
+def fmt(c):
+    sign = "-" if c < 0 else ""
+    q, r = divmod(abs(c), 100)
+    return f"{sign}{q}.{r:02d}"
+
+codes = ["ZZRB4", "ZZRB3"]
+with db_session() as db:
+    for c in codes:
+        db.accounts.create(account=c, name="Empty " + c)
+    code, out, err = cli_runner("report", "balances")
+    print(out)
+    print(err)
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))[1:-1]
+    seen = [r[0] for r in rows]
+    assert seen == sorted(seen)
+    for c in codes:
+        row = [r for r in rows if r[0] == c][0]
+        assert row[2] == "0"
+        assert row[3] == fmt(0)
+=== END AC report-balances-order-and-empty ===
+
+=== AC report-balances-total-consistency ===
+Intent: The TOTAL row equals the sum of the per-account rows, including negative-free cent arithmetic across accounts.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+import csv
+import io
+
+def cents(text):
+    neg = text.startswith("-")
+    whole, frac = text.lstrip("-").split(".")
+    v = int(whole) * 100 + int(frac)
+    return -v if neg else v
+
+a1, a2, cat = "ZZRB5", "ZZRB6", "ZZRBC2"
+with db_session() as db:
+    db.accounts.create(account=a1, name="Total One")
+    db.accounts.create(account=a2, name="Total Two")
+    db.categories.create(category=cat, description="Report Category")
+    db.transactions.create(txn_id=900400010, date="2026-05-01", account=a1, category=cat, amount=70001, memo="")
+    db.transactions.create(txn_id=900400011, date="2026-05-01", account=a2, category=cat, amount=30002, memo="")
+    code, out, err = cli_runner("report", "balances")
+    print(out)
+    print(err)
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    body, total = rows[1:-1], rows[-1]
+    assert total[0] == "TOTAL" and total[1] == ""
+    assert int(total[2]) == sum(int(r[2]) for r in body)
+    assert cents(total[3]) == sum(cents(r[3]) for r in body)
+=== END AC report-balances-total-consistency ===
+
+=== AC report-balances-format ===
+Intent: Output uses newline endings only, ends with a newline, and no line carries trailing spaces.
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("report", "balances")
+print(out)
+print(err)
+assert code == 0
+assert out.endswith("\n")
+assert "\r" not in out
+assert all(line == line.rstrip(" ") for line in out.split("\n"))
+=== END AC report-balances-format ===
+
+=== AC report-balances-usage ===
+Intent: Extra arguments and an unknown report name exit 2 with nothing on stdout.
+
+from cli.testing import cli_runner
+
+for args in [("report", "balances", "extra"), ("report", "nosuchreport"), ("report",)]:
+    code, out, err = cli_runner(*args)
+    print(out)
+    print(err)
+    assert code == 2
+    assert out == ""
+=== END AC report-balances-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- No report row, count, or total is hardcoded; every value comes from a query.
+- Money is integer cents until formatting; floating point is never used.
+- The command writes nothing to the database.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-ReportCategories.md ===
+# FEATURE: Report Categories
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger report categories`, per-category transaction count, inflow, outflow, and net with a total row, computed from stored data. |
+| Depends On | FEATURE-CliEntry.md, FEATURE-Validation.md, DATABASE.md |
+| Provides | ledger report categories |
+| Consumes | ledger_core.money, cli.registry |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Report totals by category, including categories with no transactions. Every value is computed from queries over stored rows. Persistence is reached only through the generated `persistence` package via `ledger_core`.
+
+## Behavior
+
+1. Header `category,description,transactions,inflow,outflow,net`.
+2. One row per category ordered by category code, including categories with no transactions (count 0 and zero amounts).
+3. `inflow` is the sum of positive amounts, `outflow` the sum of the absolute values of negative amounts written as a positive number, and `net` is inflow minus outflow.
+4. A final row `TOTAL,,<count>,<inflow>,<outflow>,<net>` over all transactions.
+5. Amounts use exactly two decimals, a leading `-` when negative, and no thousands separator.
+6. Extra arguments exit 2. Output uses `\n` endings, no quoting, and no trailing spaces.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md and reached through `ledger_core`.
+
+## Programmatic Acceptance
+
+=== AC report-categories-values ===
+Intent: Each category row and the TOTAL row match inflow, outflow, net, and count derived from stored transactions, including a category with mixed signs and an empty category.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+import csv
+import io
+
+def f(row, name):
+    return row[name] if isinstance(row, dict) else getattr(row, name)
+
+def fmt(c):
+    sign = "-" if c < 0 else ""
+    q, r = divmod(abs(c), 100)
+    return f"{sign}{q}.{r:02d}"
+
+def summarize(amounts):
+    inflow = sum(a for a in amounts if a > 0)
+    outflow = sum(-a for a in amounts if a < 0)
+    return [str(len(amounts)), fmt(inflow), fmt(outflow), fmt(inflow - outflow)]
+
+acct, mixed, empty = "ZZRC1", "ZZRCM", "ZZRCE"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Category Account")
+    db.categories.create(category=mixed, description="Mixed Category")
+    db.categories.create(category=empty, description="Empty Category")
+    db.transactions.create(txn_id=900500001, date="2026-05-01", account=acct, category=mixed, amount=100050, memo="")
+    db.transactions.create(txn_id=900500002, date="2026-05-02", account=acct, category=mixed, amount=-2505, memo="")
+    db.transactions.create(txn_id=900500003, date="2026-05-03", account=acct, category=mixed, amount=-7, memo="")
+    code, out, err = cli_runner("report", "categories")
+    print(out)
+    print(err)
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[0] == ["category", "description", "transactions", "inflow", "outflow", "net"]
+    txns = db.transactions.list()
+    expected = []
+    for cat in sorted(db.categories.list(), key=lambda r: f(r, "category")):
+        amounts = [f(t, "amount") for t in txns if f(t, "category") == f(cat, "category")]
+        expected.append([f(cat, "category"), f(cat, "description")] + summarize(amounts))
+    expected.append(["TOTAL", ""] + summarize([f(t, "amount") for t in txns]))
+    assert rows[1:] == expected
+=== END AC report-categories-values ===
+
+=== AC report-categories-empty ===
+Intent: A category with no transactions is listed with count 0 and zero inflow, outflow, and net.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+import csv
+import io
+
+def fmt(c):
+    sign = "-" if c < 0 else ""
+    q, r = divmod(abs(c), 100)
+    return f"{sign}{q}.{r:02d}"
+
+empty = "ZZRCE2"
+with db_session() as db:
+    db.categories.create(category=empty, description="Nothing here")
+    code, out, err = cli_runner("report", "categories")
+    print(out)
+    print(err)
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    row = [r for r in rows[1:-1] if r[0] == empty][0]
+    assert row[2:] == ["0", fmt(0), fmt(0), fmt(0)]
+=== END AC report-categories-empty ===
+
+=== AC report-categories-order ===
+Intent: Categories are ordered by code regardless of creation order, and the TOTAL row is last.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+import csv
+import io
+
+codes = ["ZZRCB", "ZZRCA"]
+with db_session() as db:
+    for c in codes:
+        db.categories.create(category=c, description="Order " + c)
+    code, out, err = cli_runner("report", "categories")
+    print(out)
+    print(err)
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    seen = [r[0] for r in rows[1:-1]]
+    assert seen == sorted(seen)
+    assert rows[-1][0] == "TOTAL"
+=== END AC report-categories-order ===
+
+=== AC report-categories-net-identity ===
+Intent: For every row including TOTAL, net equals inflow minus outflow, and outflow is never written with a leading minus.
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+import csv
+import io
+
+def cents(text):
+    neg = text.startswith("-")
+    whole, frac = text.lstrip("-").split(".")
+    v = int(whole) * 100 + int(frac)
+    return -v if neg else v
+
+acct, cat = "ZZRC2", "ZZRCN"
+with db_session() as db:
+    db.accounts.create(account=acct, name="Net Account")
+    db.categories.create(category=cat, description="Net Category")
+    db.transactions.create(txn_id=900500010, date="2026-05-01", account=acct, category=cat, amount=1000, memo="")
+    db.transactions.create(txn_id=900500011, date="2026-05-02", account=acct, category=cat, amount=-1500, memo="")
+    code, out, err = cli_runner("report", "categories")
+    print(out)
+    print(err)
+    assert code == 0
+    rows = list(csv.reader(io.StringIO(out)))[1:]
+    for r in rows:
+        assert not r[4].startswith("-")
+        assert cents(r[5]) == cents(r[3]) - cents(r[4])
+=== END AC report-categories-net-identity ===
+
+=== AC report-categories-format ===
+Intent: Output uses newline endings only, ends with a newline, and no line carries trailing spaces.
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("report", "categories")
+print(out)
+print(err)
+assert code == 0
+assert out.endswith("\n")
+assert "\r" not in out
+assert all(line == line.rstrip(" ") for line in out.split("\n"))
+=== END AC report-categories-format ===
+
+=== AC report-categories-usage ===
+Intent: Extra arguments exit 2 with nothing on stdout.
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner("report", "categories", "extra")
+print(out)
+print(err)
+assert code == 2
+assert out == ""
+=== END AC report-categories-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- No report row, count, or total is hardcoded; every value comes from a query.
+- Money is integer cents until formatting; floating point is never used.
+- The command writes nothing to the database.
+=== END ARTIFACT ===

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/commands/transfers.py</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/commands/transfers.py</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../build/LayersTesting/cli/commands/transfers.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Transfer command: ``ledger transfer &lt;from&gt; &lt;to&gt; &lt;amount&gt; &lt;date&gt;``, two linked rows stored together.&quot;&quot;&quot;
+
+from functools import partial
+
+from cli.registry import Command
+from ledger_core.atomic import run_all
+from ledger_core.balances import Insert, check_no_negative
+from ledger_core.errors import Rejected
+from ledger_core.money import parse_amount
+from ledger_core.transactions import next_txn_id, txn_row
+from ledger_core.validation import validate_date
+
+TRANSFER_CATEGORY = &quot;TRANSFER&quot;
+TXN_HEADER = [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;]
+
+
+def transfer(db, args: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Move cash between two accounts as an outgoing and an incoming row, or store neither.
+
+    Every check, including the source balance after the debit, runs before the first insert.
+    &quot;&quot;&quot;
+    source, target = args[0], args[1]
+    cents = parse_amount(args[2])
+    if cents &lt; 0:
+        raise Rejected(&quot;transfer amount must be positive&quot;)
+    day = validate_date(args[3])
+    if source == target:
+        raise Rejected(&quot;transfer needs two different accounts&quot;)
+    if db.accounts.get(account=source) is None:
+        raise Rejected(f&quot;account {source} does not exist&quot;)
+    if db.accounts.get(account=target) is None:
+        raise Rejected(f&quot;account {target} does not exist&quot;)
+    if db.categories.get(category=TRANSFER_CATEGORY) is None:
+        raise Rejected(f&quot;category {TRANSFER_CATEGORY} does not exist&quot;)
+    check_no_negative(db, [Insert(account=source, amount=-cents)])
+
+    first_id = next_txn_id(db)
+    outgoing = {
+        &quot;txn_id&quot;: first_id,
+        &quot;date&quot;: day,
+        &quot;account&quot;: source,
+        &quot;category&quot;: TRANSFER_CATEGORY,
+        &quot;amount&quot;: -cents,
+        &quot;memo&quot;: f&quot;transfer to {target}&quot;,
+    }
+    incoming = {
+        &quot;txn_id&quot;: first_id + 1,
+        &quot;date&quot;: day,
+        &quot;account&quot;: target,
+        &quot;category&quot;: TRANSFER_CATEGORY,
+        &quot;amount&quot;: cents,
+        &quot;memo&quot;: f&quot;transfer from {source}&quot;,
+    }
+    stored = []
+
+    def insert(fields: dict):
+        stored.append(db.transactions.create(**fields))
+
+    run_all(
+        [
+            (partial(insert, outgoing), partial(db.transactions.delete, txn_id=outgoing[&quot;txn_id&quot;])),
+            (partial(insert, incoming), partial(db.transactions.delete, txn_id=incoming[&quot;txn_id&quot;])),
+        ]
+    )
+    return [TXN_HEADER] + [txn_row(txn) for txn in stored]
+
+
+COMMANDS = {
+    (&quot;transfer&quot;,): Command(transfer, 4, 4),
+}
+</pre></article>
+</main>
+</body>
+</html>

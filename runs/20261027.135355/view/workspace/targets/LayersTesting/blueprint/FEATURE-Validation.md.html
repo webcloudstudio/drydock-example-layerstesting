@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-Validation.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-Validation.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-Validation.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Validation</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Pure validation of codes, names, memos, amounts, and dates, and conversion between integer cents and two-decimal text.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md</td></tr><tr><td>Provides</td><td>ledger_core.validation, ledger_core.money</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Every command validates its inputs with these functions before it writes. They touch no storage and print nothing. Every violation raises <code>ledger_core.errors.Rejected</code> (exit code 3).</p>
+<h2>Interface</h2>
+<p><code>ledger_core.validation</code>, each returning the validated string unchanged:</p>
+<div class="scroll"><table><thead><tr><th>Function</th><th>Rule</th></tr></thead><tbody><tr><td><code>validate_code(value)</code></td><td>1 to 12 characters, each in <code>A-Z</code> or <code>0-9</code>.</td></tr><tr><td><code>validate_name(value)</code></td><td>1 to 40 characters, no comma, no newline. Used for account names and category descriptions.</td></tr><tr><td><code>validate_memo(value)</code></td><td>0 to 60 characters, no comma, no newline.</td></tr><tr><td><code>validate_date(value)</code></td><td>A real calendar date written <code>YYYY-MM-DD</code> with four-digit year, two-digit month and day. <code>2026-02-30</code> is rejected.</td></tr></tbody></table></div>
+<p><code>ledger_core.money</code>:</p>
+<div class="scroll"><table><thead><tr><th>Function</th><th>Rule</th></tr></thead><tbody><tr><td><code>parse_amount(text) -&gt; int</code></td><td>Input matches <code>-?DIGITS[.D[D]]</code>: at least one digit, an optional single decimal part of one or two digits, no sign other than <code>-</code>, no spaces. Returns integer cents. Zero (<code>0</code>, <code>0.00</code>, <code>-0</code>) is rejected. Three or more decimals are rejected. No floating point is used.</td></tr><tr><td><code>format_cents(cents) -&gt; str</code></td><td>Exactly two decimal places, a leading <code>-</code> when negative, no thousands separator: <code>-12.50</code>, <code>0.00</code>, <code>5000.00</code>.</td></tr></tbody></table></div>
+<h2>Database Interface</h2>
+<ul><li>None — this feature is pure and reaches no repository.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC validation-code ===<br>Intent: Codes of 1 to 12 characters from A-Z and 0-9 are returned unchanged; empty, lowercase, too long, and other characters are rejected with exit code 3.</p>
+<p>from ledger_core.validation import validate_code from ledger_core.errors import Rejected</p>
+<p>def rejected(value): try: validate_code(value) except Rejected as err: assert err.exit_code == 3 return True return False</p>
+<p>for good in [&quot;DRAWER1&quot;, &quot;A&quot;, &quot;0&quot;, &quot;ABCDEFGHIJKL&quot;, &quot;Z9Z9Z9Z9Z9Z9&quot;]: assert validate_code(good) == good for bad in [&quot;&quot;, &quot;drawer1&quot;, &quot;Drawer&quot;, &quot;ABCDEFGHIJKLM&quot;, &quot;AB-C&quot;, &quot;A B&quot;, &quot;A_B&quot;]: assert rejected(bad), bad === END AC validation-code ===</p>
+<p>=== AC validation-name ===<br>Intent: Names of 1 to 40 characters without comma or newline are accepted; empty, 41 characters, comma, and newline are rejected.</p>
+<p>from ledger_core.validation import validate_name from ledger_core.errors import Rejected</p>
+<p>def rejected(value): try: validate_name(value) except Rejected as err: assert err.exit_code == 3 return True return False</p>
+<p>for good in [&quot;Front Drawer&quot;, &quot;x&quot;, &quot;x&quot; * 40]: assert validate_name(good) == good for bad in [&quot;&quot;, &quot;x&quot; * 41, &quot;a,b&quot;, &quot;a\nb&quot;]: assert rejected(bad), repr(bad) === END AC validation-name ===</p>
+<p>=== AC validation-memo ===<br>Intent: Memos of 0 to 60 characters without comma or newline are accepted, including the empty memo; 61 characters, comma, and newline are rejected.</p>
+<p>from ledger_core.validation import validate_memo from ledger_core.errors import Rejected</p>
+<p>def rejected(value): try: validate_memo(value) except Rejected as err: assert err.exit_code == 3 return True return False</p>
+<p>for good in [&quot;&quot;, &quot;walk in sale&quot;, &quot;m&quot; * 60]: assert validate_memo(good) == good for bad in [&quot;m&quot; * 61, &quot;a,b&quot;, &quot;a\nb&quot;]: assert rejected(bad), repr(bad) === END AC validation-memo ===</p>
+<p>=== AC validation-date ===<br>Intent: Real calendar dates in YYYY-MM-DD form are accepted, including a leap day; impossible dates and other layouts are rejected.</p>
+<p>from ledger_core.validation import validate_date from ledger_core.errors import Rejected</p>
+<p>def rejected(value): try: validate_date(value) except Rejected as err: assert err.exit_code == 3 return True return False</p>
+<p>for good in [&quot;2026-04-01&quot;, &quot;2024-02-29&quot;, &quot;2026-12-31&quot;]: assert validate_date(good) == good for bad in [&quot;2026-02-30&quot;, &quot;2026-02-29&quot;, &quot;2026-13-01&quot;, &quot;2026-00-10&quot;, &quot;2026-4-1&quot;, &quot;20260401&quot;, &quot;&quot;, &quot;2026-04-01x&quot;]: assert rejected(bad), bad === END AC validation-date ===</p>
+<p>=== AC money-parse-valid ===<br>Intent: Valid amount text parses to the integer cents it denotes, as an int and not a float.</p>
+<p>from ledger_core.money import parse_amount</p>
+<p>cases = [(&quot;45.50&quot;, 4550), (&quot;-12.34&quot;, -1234), (&quot;7&quot;, 700), (&quot;1.5&quot;, 150), (&quot;0.01&quot;, 1), (&quot;5000.00&quot;, 500000), (&quot;-0.99&quot;, -99), (&quot;-3&quot;, -300)] for text, cents in cases: value = parse_amount(text) assert type(value) is int, text assert value == cents, text === END AC money-parse-valid ===</p>
+<p>=== AC money-parse-invalid ===<br>Intent: Zero, three or more decimals, and text outside -?DIGITS[.D[D]] are rejected with exit code 3.</p>
+<p>from ledger_core.money import parse_amount from ledger_core.errors import Rejected</p>
+<p>def rejected(value): try: parse_amount(value) except Rejected as err: assert err.exit_code == 3 return True return False</p>
+<p>for bad in [&quot;0&quot;, &quot;0.00&quot;, &quot;-0&quot;, &quot;-0.0&quot;, &quot;1.234&quot;, &quot;1.000&quot;, &quot;abc&quot;, &quot;1.&quot;, &quot;.5&quot;, &quot;+5&quot;, &quot;1,5&quot;, &quot;&quot;, &quot;-&quot;, &quot;1 .5&quot;, &quot;--5&quot;]: assert rejected(bad), repr(bad) === END AC money-parse-invalid ===</p>
+<p>=== AC money-format ===<br>Intent: Integer cents format with exactly two decimals, a leading minus when negative, and no thousands separator.</p>
+<p>from ledger_core.money import format_cents</p>
+<p>cases = [(-1250, &quot;-12.50&quot;), (0, &quot;0.00&quot;), (500000, &quot;5000.00&quot;), (5, &quot;0.05&quot;), (-5, &quot;-0.05&quot;), (123456789, &quot;1234567.89&quot;)] for cents, text in cases: assert format_cents(cents) == text, cents === END AC money-format ===</p>
+<p>=== AC money-round-trip ===<br>Intent: Parsing the formatted text of any nonzero cents value returns the same cents.</p>
+<p>from ledger_core.money import parse_amount, format_cents</p>
+<p>for cents in [1, -1, 99, 100, -100, 12345, -987654, 500000]: assert parse_amount(format_cents(cents)) == cents === END AC money-round-trip ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>No floating point is used for money, in parsing or formatting.</li><li>Validation functions write nothing and read nothing from storage.</li><li>A violation raises <code>Rejected</code>; no other exception type signals invalid input.</li></ul></article>
+</main>
+</body>
+</html>

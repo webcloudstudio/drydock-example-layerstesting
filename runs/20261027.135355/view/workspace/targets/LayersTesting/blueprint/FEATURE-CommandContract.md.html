@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-CommandContract.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-CommandContract.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-CommandContract.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Command Contract</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Assembly story verifying the CSV output contract and exit codes across every delivered ledger command.</td></tr><tr><td>Depends On</td><td>FEATURE-InitCount.md, FEATURE-LoadAccounts.md, FEATURE-LoadCategories.md, FEATURE-LoadTransactions.md, FEATURE-AccountAdd.md, FEATURE-AccountGet.md, FEATURE-AccountRename.md, FEATURE-AccountDelete.md, FEATURE-TxnPost.md, FEATURE-TxnGet.md, FEATURE-TxnAmend.md, FEATURE-TxnDelete.md, FEATURE-Transfer.md, FEATURE-ReportBalances.md, FEATURE-ReportCategories.md, FEATURE-ReportMonthly.md</td></tr><tr><td>Provides</td><td>—</td></tr><tr><td>Consumes</td><td>ledger init, ledger count, ledger load accounts, ledger load categories, ledger load transactions, ledger account add, ledger account get, ledger account rename, ledger account delete, ledger txn post, ledger txn get, ledger txn amend, ledger txn delete, ledger transfer, ledger report balances, ledger report categories, ledger report monthly</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Assembly and intent only. Verify across the delivered commands that:</p>
+<ul><li>successful output is CSV with the specified headers, <code>\n</code> endings, two-decimal amounts, no quoting, and no trailing spaces;</li><li>a failing command writes nothing to standard output and one diagnostic line to standard error;</li><li>exit 2 results from unknown commands, tables, reports, and wrong argument counts;</li><li>exit 1 results from an unreadable file, 3 from rejection, 4 from not found;</li><li>every rejected writing command leaves the table counts unchanged.</li></ul>
+<p>Any seam defect is fixed in the owning module; this story adds no new behavior.</p>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC contract-usage-errors ===<br>Intent: Unknown commands, unknown tables or reports, and wrong argument counts all exit 2 with empty standard output.</p>
+<p>from cli.testing import cli_runner</p>
+<p>cases = [ (&quot;frobnicate&quot;,), (&quot;report&quot;, &quot;nosuch&quot;), (&quot;report&quot;,), (&quot;load&quot;, &quot;nosuch&quot;, &quot;x.csv&quot;), (&quot;account&quot;,), (&quot;account&quot;, &quot;get&quot;), (&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;), (&quot;transfer&quot;, &quot;A&quot;, &quot;B&quot;), (&quot;count&quot;, &quot;extra&quot;), ] for args in cases: code, out, err = cli_runner(*args) print(args, code, err) assert code == 2, args assert out == &quot;&quot;, args === END AC contract-usage-errors ===</p>
+<p>=== AC contract-csv-format ===<br>Intent: Successful commands emit the declared headers, newline-only endings, no trailing spaces, and amounts with exactly two decimals.</p>
+<p>import csv import io import re from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>def parse(out): return list(csv.reader(io.StringIO(out)))</p>
+<p>def clean(out): assert out.endswith(&quot;\n&quot;) assert &quot;\r&quot; not in out for line in out.split(&quot;\n&quot;): assert line == line.rstrip(&quot; &quot;)</p>
+<p>acct = &quot;ZZCF1&quot; cat = &quot;ZZCFC&quot; with db_session() as db: if db.categories.get(category=cat) is None: db.categories.create(category=cat, description=&quot;Format Probe&quot;) code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Format Probe&quot;) assert code == 0 clean(out) assert parse(out)[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;]</p>
+<p>code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;7.5&quot;, &quot;2099-05-05&quot;, &quot;fmt&quot;) print(out, err) assert code == 0 clean(out) table = parse(out) assert table[0] == [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;] assert re.fullmatch(r&quot;-?\d+\.\d{2}&quot;, table[1][4])</p>
+<p>code, out, err = cli_runner(&quot;count&quot;) assert code == 0 clean(out) table = parse(out) assert table[0] == [&quot;table&quot;, &quot;rows&quot;] assert [r[0] for r in table[1:]] == [&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;]</p>
+<p>code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;) assert code == 0 clean(out) assert parse(out)[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;] code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;) assert code == 0 clean(out) assert parse(out)[0] == [&quot;category&quot;, &quot;description&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;] code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;) assert code == 0 clean(out) assert parse(out)[0] == [&quot;month&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;] === END AC contract-csv-format ===</p>
+<p>=== AC contract-failures-silent-stdout ===<br>Intent: Failing commands write nothing to standard output and exactly one diagnostic line to standard error, with the documented exit code for each failure class.</p>
+<p>from cli.testing import cli_runner</p>
+<p>cases = [ ((&quot;account&quot;, &quot;get&quot;, &quot;ZZNOSUCH9&quot;), 4), ((&quot;account&quot;, &quot;add&quot;, &quot;lower&quot;, &quot;Bad Code&quot;), 3), ((&quot;txn&quot;, &quot;get&quot;, &quot;999999999&quot;), 4), ((&quot;txn&quot;, &quot;post&quot;, &quot;ZZNOSUCH9&quot;, &quot;ZZNOCAT9&quot;, &quot;1.00&quot;, &quot;2099-01-01&quot;), 3), ((&quot;load&quot;, &quot;accounts&quot;, &quot;/nonexistent-dir/zz-missing.csv&quot;), 1), ] for args, want in cases: code, out, err = cli_runner(*args) print(args, code, err) assert code == want, args assert out == &quot;&quot;, args assert len(err.strip().splitlines()) == 1, args === END AC contract-failures-silent-stdout ===</p>
+<p>=== AC contract-rejected-writes-change-nothing ===<br>Intent: Rejected writing commands exit 3 and leave the counts of all three tables unchanged.</p>
+<p>import csv import io from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>def counts(): code, out, err = cli_runner(&quot;count&quot;) assert code == 0 return {r[0]: int(r[1]) for r in list(csv.reader(io.StringIO(out)))[1:]}</p>
+<p>acct = &quot;ZZCR1&quot; other = &quot;ZZCR2&quot; cat = &quot;ZZCRC&quot; with db_session() as db: if db.categories.get(category=cat) is None: db.categories.create(category=cat, description=&quot;Reject Probe&quot;) for a in (acct, other): code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, a, &quot;Reject &quot; + a) assert code == 0 code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;5.00&quot;, &quot;2099-02-02&quot;, &quot;seed&quot;) assert code == 0</p>
+<p>before = counts() rejected = [ (&quot;account&quot;, &quot;add&quot;, acct, &quot;Duplicate&quot;), (&quot;account&quot;, &quot;add&quot;, &quot;bad code&quot;, &quot;Name&quot;), (&quot;account&quot;, &quot;delete&quot;, acct), (&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;1.234&quot;, &quot;2099-02-03&quot;), (&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;1.00&quot;, &quot;2026-02-30&quot;), (&quot;txn&quot;, &quot;post&quot;, acct, &quot;ZZNOCAT9&quot;, &quot;1.00&quot;, &quot;2099-02-03&quot;), (&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;0&quot;, &quot;2099-02-03&quot;), (&quot;transfer&quot;, acct, acct, &quot;1.00&quot;, &quot;2099-02-03&quot;), (&quot;transfer&quot;, acct, other, &quot;0.50&quot;, &quot;2099-02-30&quot;), ] for args in rejected: code, out, err = cli_runner(*args) print(args, code, err) assert code == 3, args assert out == &quot;&quot;, args assert counts() == before === END AC contract-rejected-writes-change-nothing ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>This story adds no new command behavior; defects are fixed in the owning module.</li><li>Acceptance reads state by parsing CSV output and exit codes, never message wording.</li></ul></article>
+</main>
+</body>
+</html>

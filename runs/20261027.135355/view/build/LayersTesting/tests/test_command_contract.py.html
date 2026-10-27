@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_command_contract.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_command_contract.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_command_contract.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Command contract across every delivered command: CSV output, exit codes, and rejected writes.
+
+Assembly checks for FEATURE-CommandContract. Each check acts through ``cli_runner``, then reads the
+output back as CSV or reads the counts through ``count``. Every test runs against a fresh store.
+&quot;&quot;&quot;
+
+import csv
+import io
+import re
+
+import pytest
+
+from cli.testing import cli_runner
+
+ACCOUNT_HEADER = [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;]
+TXN_HEADER = [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;]
+AMOUNT = re.compile(r&quot;-?\d+\.\d{2}&quot;)
+
+
+def _rows(out: str) -&gt; list[list[str]]:
+    return list(csv.reader(io.StringIO(out)))
+
+
+def _clean(out: str) -&gt; None:
+    assert out.endswith(&quot;\n&quot;)
+    assert &quot;\r&quot; not in out
+    for line in out.split(&quot;\n&quot;):
+        assert line == line.rstrip(&quot; &quot;)
+
+
+def _counts() -&gt; dict[str, int]:
+    code, out, err = cli_runner(&quot;count&quot;)
+    assert code == 0, err
+    return {row[0]: int(row[1]) for row in _rows(out)[1:]}
+
+
+# ── usage errors: exit 2, nothing on stdout ─────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    &quot;args&quot;,
+    [
+        (&quot;frobnicate&quot;,),
+        (&quot;report&quot;, &quot;nosuch&quot;),
+        (&quot;report&quot;,),
+        (&quot;load&quot;, &quot;nosuch&quot;, &quot;x.csv&quot;),
+        (&quot;account&quot;,),
+        (&quot;account&quot;, &quot;get&quot;),
+        (&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;),
+        (&quot;transfer&quot;, &quot;A&quot;, &quot;B&quot;),
+        (&quot;count&quot;, &quot;extra&quot;),
+    ],
+)
+def test_usage_error_exits_two_with_empty_stdout(ledger_store, args):
+    code, out, err = cli_runner(*args)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+# ── CSV format on successful output ─────────────────────────────────────────────────────────
+
+
+@pytest.fixture
+def probe_category(ledger_store, store_open):
+    with store_open(ledger_store) as db:
+        db.categories.create(category=&quot;ZZCFC&quot;, description=&quot;Format Probe&quot;)
+    return &quot;ZZCFC&quot;
+
+
+def test_account_add_prints_clean_csv_with_account_header(ledger_store, probe_category):
+    code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZZCF1&quot;, &quot;Format Probe&quot;)
+    assert code == 0, err
+    _clean(out)
+    assert _rows(out)[0] == ACCOUNT_HEADER
+
+
+def test_txn_post_prints_clean_csv_with_two_decimal_amount(ledger_store, probe_category):
+    assert cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZZCF1&quot;, &quot;Format Probe&quot;)[0] == 0
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;ZZCF1&quot;, probe_category, &quot;7.5&quot;, &quot;2099-05-05&quot;, &quot;fmt&quot;)
+    assert code == 0, err
+    _clean(out)
+    table = _rows(out)
+    assert table[0] == TXN_HEADER
+    assert AMOUNT.fullmatch(table[1][4])
+    assert table[1][4] == &quot;7.50&quot;
+
+
+def test_count_prints_clean_csv_with_table_rows_in_declared_order(ledger_store):
+    code, out, err = cli_runner(&quot;count&quot;)
+    assert code == 0, err
+    _clean(out)
+    table = _rows(out)
+    assert table[0] == [&quot;table&quot;, &quot;rows&quot;]
+    assert [row[0] for row in table[1:]] == [&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;]
+
+
+@pytest.mark.parametrize(
+    &quot;args, header&quot;,
+    [
+        ((&quot;report&quot;, &quot;balances&quot;), ACCOUNT_HEADER),
+        ((&quot;report&quot;, &quot;categories&quot;), [&quot;category&quot;, &quot;description&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;]),
+        ((&quot;report&quot;, &quot;monthly&quot;), [&quot;month&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;]),
+    ],
+)
+def test_report_prints_clean_csv_with_declared_header(ledger_store, args, header):
+    code, out, err = cli_runner(*args)
+    assert code == 0, err
+    _clean(out)
+    assert _rows(out)[0] == header
+
+
+# ── failing commands: exit class, nothing on stdout, one diagnostic line on stderr ──────────
+
+
+@pytest.mark.parametrize(
+    &quot;args, want&quot;,
+    [
+        ((&quot;account&quot;, &quot;get&quot;, &quot;ZZNOSUCH9&quot;), 4),
+        ((&quot;account&quot;, &quot;add&quot;, &quot;lower&quot;, &quot;Bad Code&quot;), 3),
+        ((&quot;txn&quot;, &quot;get&quot;, &quot;999999999&quot;), 4),
+        ((&quot;txn&quot;, &quot;post&quot;, &quot;ZZNOSUCH9&quot;, &quot;ZZNOCAT9&quot;, &quot;1.00&quot;, &quot;2099-01-01&quot;), 3),
+        ((&quot;load&quot;, &quot;accounts&quot;, &quot;/nonexistent-dir/zz-missing.csv&quot;), 1),
+    ],
+)
+def test_failure_exits_with_class_code_and_one_stderr_line(ledger_store, args, want):
+    code, out, err = cli_runner(*args)
+    assert code == want
+    assert out == &quot;&quot;
+    assert len(err.strip().splitlines()) == 1
+
+
+# ── rejected writes leave every table count unchanged ───────────────────────────────────────
+
+
+@pytest.fixture
+def reject_store(ledger_store, store_open):
+    &quot;&quot;&quot;Two accounts with one posted transaction on the first, and a category to post against.&quot;&quot;&quot;
+    with store_open(ledger_store) as db:
+        db.categories.create(category=&quot;ZZCRC&quot;, description=&quot;Reject Probe&quot;)
+    for account in (&quot;ZZCR1&quot;, &quot;ZZCR2&quot;):
+        assert cli_runner(&quot;account&quot;, &quot;add&quot;, account, &quot;Reject &quot; + account)[0] == 0
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;ZZCR1&quot;, &quot;ZZCRC&quot;, &quot;5.00&quot;, &quot;2099-02-02&quot;, &quot;seed&quot;)[0] == 0
+    return ledger_store
+
+
+@pytest.mark.parametrize(
+    &quot;args&quot;,
+    [
+        (&quot;account&quot;, &quot;add&quot;, &quot;ZZCR1&quot;, &quot;Duplicate&quot;),
+        (&quot;account&quot;, &quot;add&quot;, &quot;bad code&quot;, &quot;Name&quot;),
+        (&quot;account&quot;, &quot;delete&quot;, &quot;ZZCR1&quot;),
+        (&quot;txn&quot;, &quot;post&quot;, &quot;ZZCR1&quot;, &quot;ZZCRC&quot;, &quot;1.234&quot;, &quot;2099-02-03&quot;),
+        (&quot;txn&quot;, &quot;post&quot;, &quot;ZZCR1&quot;, &quot;ZZCRC&quot;, &quot;1.00&quot;, &quot;2026-02-30&quot;),
+        (&quot;txn&quot;, &quot;post&quot;, &quot;ZZCR1&quot;, &quot;ZZNOCAT9&quot;, &quot;1.00&quot;, &quot;2099-02-03&quot;),
+        (&quot;txn&quot;, &quot;post&quot;, &quot;ZZCR1&quot;, &quot;ZZCRC&quot;, &quot;0&quot;, &quot;2099-02-03&quot;),
+        (&quot;transfer&quot;, &quot;ZZCR1&quot;, &quot;ZZCR1&quot;, &quot;1.00&quot;, &quot;2099-02-03&quot;),
+        (&quot;transfer&quot;, &quot;ZZCR1&quot;, &quot;ZZCR2&quot;, &quot;0.50&quot;, &quot;2026-02-30&quot;),
+    ],
+)
+def test_rejected_write_exits_three_and_leaves_counts_unchanged(reject_store, args):
+    before = _counts()
+    code, out, err = cli_runner(*args)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert _counts() == before
+</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompts/20261027.142853.523Z_layerstesting_build_claude.prompt.md</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompts/20261027.142853.523Z_layerstesting_build_claude.prompt.md</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompts/20261027.142853.523Z_layerstesting_build_claude.prompt.md">Raw file</a></div></header>
+<article class="doc"><h1>System Instructions</h1>
+<p>This prompt is divided into three sections:</p>
+<ol><li><strong>System Instructions</strong> (this section) — structural orientation only. Do not treat this</li></ol>
+<p>section as task input.</p>
+<ol><li><strong>Input Context</strong> — begins with the heading <code># Input Context</code>. All blocks are wrapped in</li></ol>
+<p><code>&lt;pblock&gt;</code> tags. Two block types:</p>
+<ul><li>File blocks: <code>&lt;pblock filename=&quot;&lt;name&gt;&quot; role=&quot;&lt;role&gt;&quot; guidance=&quot;...&quot;&gt;</code> — optional</li></ul>
+<p><code>guidance</code> attribute carries context-specific instructions; content is in a fenced block.</p>
+<ul><li>Metadata/section blocks: <code>&lt;pblock label=&quot;&lt;label&gt;&quot; kind=&quot;&lt;kind&gt;&quot;&gt;</code> — job parameters,</li></ul>
+<p>rules, instructions, or group headers.</p>
+<ol><li><strong>Agent Task</strong> — begins with the heading <code># Agent Task</code>. Defines your persona, constraints,</li></ol>
+<p>and required outputs. Read all input context before acting on this section.</p>
+<h1>Input Context</h1>
+<p>&lt;pblock label=&quot;Build block job&quot; kind=&quot;job&quot;&gt;</p>
+<h2>Build block job</h2>
+<ul><li>TARGET: LayersTesting</li><li>BUILD_DIRECTORY: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting</li><li>WORKING_DIRECTORY: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting</li><li>BUILD_BLOCK: Block 5 · Service (block-5)</li><li>STORIES: Implement <code>ledger init</code> and <code>ledger count</code>. (feature-init-count), Read and header-check a CSV file named on the command line, exiting 1 when it cannot be read. (feature-load-csv-reader), Implement <code>ledger account add &lt;code&gt; &lt;name&gt;</code>. (feature-account-add), Implement <code>ledger txn post &lt;account&gt; &lt;category&gt; &lt;amount&gt; &lt;date&gt; [&lt;memo&gt;]</code>. (feature-txn-post)</li><li>DATE: 2026-10-27</li><li>BUILD_SCOPE: exactly one MANIFEST.md build block</li></ul>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock label=&quot;Stories in this block&quot; kind=&quot;section&quot;&gt;</p>
+<h2>Stories in this block</h2>
+<ul><li>Implement <code>ledger init</code> and <code>ledger count</code>. (feature-init-count) [story]</li><li>Read and header-check a CSV file named on the command line, exiting 1 when it cannot be read. (feature-load-csv-reader) [story]</li><li>Implement <code>ledger account add &lt;code&gt; &lt;name&gt;</code>. (feature-account-add) [story]</li><li>Implement <code>ledger txn post &lt;account&gt; &lt;category&gt; &lt;amount&gt; &lt;date&gt; [&lt;memo&gt;]</code>. (feature-txn-post) [story]</li></ul>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock label=&quot;Files on disk&quot; kind=&quot;section&quot;&gt;</p>
+<h2>Files on disk in the build directory</h2>
+<ul><li>sources/run.sh</li><li>sources/seed_accounts.csv</li><li>sources/seed_categories.csv</li><li>sources/seed_transactions.csv</li><li>sources/seed_transactions_bad.csv</li></ul>
+<p>These are the only imported files present on disk. Every other file named in this prompt is supplied as prompt context and is not on disk; read it here and do not report it as a missing input.</p>
+<p>&lt;/pblock&gt;</p>
+<h2>COMPASS - Target Orientation</h2>
+<p>&lt;pblock filename=&quot;COMPASS.md&quot; role=&quot;compass&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/COMPASS.md&quot; guidance=&quot;Important: This is the core project intent, constraints, and guardrails. It should have presecedence in conflicts.&quot;&gt;</p>
+<pre><code># COMPASS: LayersTesting
+
+## Compass
+
+Build a command-line cash ledger, an executable named `ledger` at the application root, as
+described in `sources/INSTRUCTIONS.md`. It keeps accounts, categories, and cash transactions in a
+relational database reached only through the shipped persistence library, rejects a failing command
+before it writes, enforces non-negative balances, and reports balances, category totals, and monthly totals.
+
+Correctness is measured by `sources/run.sh`: 43 checks of exit code and standard output against
+known answers computed from the seed files. The goal is every check passing.
+
+## Constraints
+
+- Implement in the language and database named under `## Stack` in `sources/INSTRUCTIONS.md`.
+- Provide an executable named `ledger` at the application root, invoked as `./ledger &lt;command&gt;`.
+- Read the database location from `DATABASE_URL`, then `DATABASE_PATH`, then `data/app.db`.
+- Store amounts as integer cents.
+- Check every command in full before its first write.
+- Run without network access.
+- Diagnostics go to standard error and are never compared.
+
+## Guardrails
+
+- Do not modify, rewrite, regenerate, or substitute any file under `sources/`.
+- Do not read `sources/run.sh` or any seed file from application code. Seed files reach the
+  database only through `ledger load`.
+- Do not hardcode a report row, a count, or a total. Every value comes from a query.
+- Do not open a database driver outside the shipped persistence library.
+- Do not use floating point for money at any layer.
+
+## Verification Protocol
+
+| Story kind | Command | Asserts |
+|---|---|---|
+| Every behavioral story | `sh bin/test.sh` | exit `0` |
+| Terminal story (once, last) | `sh sources/run.sh` | exit `0` |
+
+&lt;!-- drydock:build-write-guardrail:start --&gt;
+## Build Write Guardrail
+
+- Authorized build directory: `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting`
+- Authorized Target directory: `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting`
+- Build agents have permission to create, modify, and remove files required by the active build block inside these authorized directories.
+- No path outside these authorized directories may be modified.
+- Protected Drydock artifacts:
+  - `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/blueprint/`
+  - `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/MANIFEST.md`
+  - `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/COMPASS.md`
+  - `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/QuarterDeck/`
+  - `/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/evidence/`
+&lt;!-- drydock:build-write-guardrail:end --&gt;</code></pre>
+<p>&lt;/pblock&gt;</p>
+<h2>STACK - Technology HOW</h2>
+<p>&lt;pblock filename=&quot;python_compact.md&quot; role=&quot;stack&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/Rigging/languages/python/python_compact.md&quot;&gt;</p>
+<pre><code>&lt;!-- Compacted from Rigging/languages/python/python.md sha256=fe344456a351e3237cfe3bae2408a69758d401430b935f60c15f91b9a97e8016 on 2026-10-18 by Rigging maintenance --&gt;
+
+## Foundation Contract
+
+- source_root: ./
+- test_command: pytest -q
+- environment: `.venv`, created by `uv venv` and activated by launchers in `bin/`
+- dependencies: `pyproject.toml` and committed `uv.lock`
+
+The language foundation owns the project root, environment, dependency manifest, and test runner.
+Later foundations add their packages to this tree without replacing those contracts.
+
+### How do we execute and measure Acceptance Criteria in this language?
+
+An Acceptance Criterion (AC) is an executable check of Blueprint-required behavior. Use the
+existing Programmatic Acceptance format: a Python script with assertions against the built
+product. Drydock executes each criterion through `languages/python/acceptance/runner.py`; `pytest -q`
+runs the project test suite. Retain the criterion ID, observed values, stdout/stderr and result;
+an assertion failure fails the check. The harness reports failure operands and available case
+counts. Code coverage and persistence interactions require explicit instrumentation; record
+available observations as key/value data associated with the criterion. Missing observations
+are unknown, not proof that code or an interaction was unused.
+
+### How does this language provide the shared persistence contract?
+
+Use `stack/persistence.md`. Drydock copies `Rigging/languages/python/persistence/{db,sqlite,postgres}.py` and generates
+`persistence/{schema,__init__,testing}.py` plus `schema.sql` from `DATABASE.md`. Call
+`open_database(dsn)` and `db.&lt;table&gt;.&lt;operation&gt;(...)`; use `persistence.testing.db_session()`
+for criteria. SQLite uses the standard library; PostgreSQL needs `psycopg[binary]` in the project
+dependencies. Both engines ship together and the DSN selects the engine. Library verification
+lives in `tests/test_shipped_database.py`; a Target still verifies its own schema and operations.
+
+## Consumer Rules
+
+- Python &gt;=3.11; use modern type hints on public interfaces and named cross-package data shapes.
+- Centralize typed runtime settings; use Blueprint names and defaults. Keep secrets out of Git and logs.
+- Keep behavior in importable modules; launchers activate `.venv` and invoke modules.
+- Use pytest with isolated external state; all test gates run `pytest -q`.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;common_compact.md&quot; role=&quot;stack&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/Rigging/stack/common_compact.md&quot;&gt;</p>
+<pre><code>&lt;!-- Compacted from /mnt/c/Users/barlo/projects/drydock/Rigging/stack/common.md sha256=2d665e4a232b3ef5b681149974e74928c8f5abb9adaac02604cc6b5987ac0f85 on 2026-10-24 by drydock rigging compact — regenerate with: drydock rigging compact --include-file {rel_source} --&gt;
+
+# Common Best Practices — Contract Surface
+
+## Project Layout
+
+### Rule: project-directory-layout
+
+Every project must use the standard root layout and may add stack-specific directories.
+
+Constraints: Include `bin/`, `data/` with `logs/` and `backups/`, `docs/`, `tests/`, optional `PROJECT/`, `.env`, `.env.example`, `.gitignore`, `CLAUDE.md`, and `Links.md`; keep runtime data under `data/`.
+
+## Shell Scripts
+
+### Rule: user-facing-operation-scripts
+
+User-facing operations must be implemented as Bash scripts in `bin/`.
+
+Constraints: Scripts must use standardized headers, `set -euo pipefail`, resolve project-relative paths, create `data/logs/`, log execution details, run from the project root, tee output to console and a timestamped log, and record completion.
+
+### Rule: command-center-discovery-header
+
+A discoverable script must begin with a Command Center header.
+
+| Field | Required | Values |
+|---|---:|---|
+| `# CommandCenter Operation` | Yes | Literal |
+| `# Name:` | Yes | Free text |
+| `# Type:` | No | `daemon` or `batch`; defaults to `batch` |
+| `# Port:` | No | Integer; daemon port |
+
+Constraints: Scripts without `# CommandCenter Operation` remain valid but are not discoverable by Command Center.
+
+### Rule: standard-scripts
+
+Projects should provide applicable operation scripts with these names and purposes.
+
+| Script | Type | Purpose |
+|---|---|---|
+| `bin/start.sh` | daemon | Start the development server |
+| `bin/stop.sh` | batch | Stop the development server |
+| `bin/test.sh` | batch | Run tests |
+| `bin/build.sh` | batch | Build or compile |
+| `bin/deploy.sh` | batch | Deploy to production |
+| `bin/backup.sh` | batch | Back up data or databases |
+
+### Rule: script-logging
+
+Operation scripts must capture stdout and stderr in `data/logs/`.
+
+Constraints: Log filenames must follow `&lt;script&gt;_&lt;YYYY-MM-DD_HHMMSS&gt;.log`; initial log lines must record timestamp, arguments, and working directory.
+
+## Links
+
+### Rule: links-file
+
+Every project must provide a root-level `Links.md` containing one two-column Markdown table.
+
+| Column | Requirement |
+|---|---|
+| `Label` | Short and descriptive |
+| `URL` | Relevant project URL |
+
+Constraints: Command Center reads this table and exposes the links through project configuration.
+
+## Agent Instructions
+
+### Rule: claude-file
+
+Every project must provide a root-level `CLAUDE.md` with the following sections.
+
+| Section | Required content |
+|---|---|
+| `## Project Overview` | Purpose and key features |
+| `## Architecture` | Technology stack, key files, and patterns |
+| `## Dev Commands` | Bash project commands in a code block |
+| `## Service Endpoints` | `- Label: https://url` entries |
+| `## Bookmarks` | Grouped links using `### Group` and `- [Title](URL)` |
+
+Constraints: Normalize equivalent headings to the standard names: `Commands`, `Development Commands`, and `Build Commands` become `Dev Commands`; `Overview` and `Project Purpose` become `Project Overview`; `Stack` becomes `Architecture`.
+
+## Version Control
+
+### Rule: gitignore-and-secrets
+
+Repositories must ignore secrets, generated files, and runtime data.
+
+Constraints: Ignore `data/`, `*.db`, `*.log`, `.env`, `venv/`, `node_modules/`, Python caches and bytecode, `*.egg-info/`, `dist/`, `build/`, `.DS_Store`, and `Thumbs.db`; commit `.env.example` with placeholders.
+
+### Rule: commit-message
+
+Commit messages must use imperative, descriptive text without AI or tool mentions.
+
+## Development Workflow
+
+### Rule: task-commit
+
+Completed, error-free tasks must be committed immediately.
+
+### Rule: local-only-commit
+
+Changes must be committed locally and must not be pushed.
+
+### Rule: co-authorship
+
+Commits must not contain `Co-authored-by` lines.
+
+### Rule: restart-notice
+
+Code-change responses for web-server projects must state whether a restart is required.
+
+Constraints: Template, CSS, or static-only changes require the notice `No restart needed — browser refresh is enough.`; Python or JavaScript server changes require `Restart required — run the start script or equivalent.`</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;cli.md&quot; role=&quot;stack&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/Rigging/stack/cli.md&quot;&gt;</p>
+<pre><code># Command-Line Application
+
+**Type:** cli
+**Version:** 20260920 V1
+**Tier:** platform
+**Category:** Technologies
+**Foundation:** cli
+**Description:** Command-line application structure: entry point, argument parsing, exit codes, cross-platform launchers, and testing without spawning a process.
+
+Technology reference. This file does not change between projects.
+
+Prerequisites: `stack/common.md`, `languages/python/python.md`
+
+---
+
+## Foundation Contract
+
+The published shape of this foundation. Drydock synthesizes the story that builds it and every
+acceptance criterion writes against these names. Carried verbatim into `cli_compact.md`.
+
+- package: cli
+- entry: main(argv: list[str] | None = None) -&gt; int
+- fixture: cli_runner
+- fixture_source: cli/testing.py
+
+```python
+# cli/__init__.py
+def main(argv: list[str] | None = None) -&gt; int:
+    ...
+
+# cli/testing.py
+import contextlib
+import io
+from cli import main
+
+def cli_runner(*args: str) -&gt; tuple[int, str, str]:
+    &quot;&quot;&quot;Return (exit_code, stdout, stderr) without spawning a process.&quot;&quot;&quot;
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        code = main(list(args))
+    return code, out.getvalue(), err.getvalue()
+
+# conftest.py
+import pytest
+from cli import testing
+
+@pytest.fixture
+def cli_runner():
+    return testing.cli_runner
+```
+
+A criterion imports `cli_runner` from `cli.testing`, calls `cli_runner(&quot;status&quot;, &quot;--json&quot;)`, and
+asserts on the returned tuple. It does not call `subprocess.run`, which measures the installed
+console script and the shell rather than the code the story wrote.
+
+---
+
+## 1. Directory Layout
+
+**Rule**: Command code lives in `cli/`. The root holds only packaging and infrastructure files.
+
+```
+project/
+  pyproject.toml            # [project.scripts] declares the console script
+  cli/
+    __init__.py             # main() — the single entry point
+    commands.py             # one function per command; no argument parsing
+    parser.py               # argparse construction; no behavior
+  bin/
+    run.sh                  # bash launcher
+    run.ps1                 # PowerShell launcher
+  tests/
+```
+
+**Why**: Parsing, behavior, and launching are three contracts. Collapsing them produces a command
+that cannot be tested without a shell.
+
+---
+
+## 2. Entry Point and Exit Codes
+
+**Rule**: `main(argv=None) -&gt; int` parses, dispatches, and returns an exit code. It never calls
+`sys.exit` and never raises for an expected failure. The console script is the only caller that
+translates the return value into a process exit.
+
+```python
+# cli/__init__.py
+import sys
+from cli.parser import build_parser
+from cli import commands
+
+def main(argv: list[str] | None = None) -&gt; int:
+    args = build_parser().parse_args(argv)
+    try:
+        return commands.dispatch(args)
+    except OperationalError as exc:
+        print(f&quot;error: {exc}&quot;, file=sys.stderr)
+        return 1
+```
+
+```toml
+# pyproject.toml
+[project.scripts]
+mytool = &quot;cli:main&quot;
+```
+
+**Exit codes**: `0` success, `1` operational failure, `2` usage error. `argparse` already returns
+`2` for a usage error; do not override it.
+
+**Why**: A `main` that returns rather than exits is callable from a test in-process. A `main` that
+calls `sys.exit` forces every criterion to spawn a subprocess and measure the shell.
+
+---
+
+## 3. Parsing Is Separate From Behavior
+
+**Rule**: `parser.py` builds the `argparse` tree and returns it. `commands.py` holds one function
+per command taking plain arguments, not a `Namespace`. Neither imports the other.
+
+```python
+# cli/parser.py
+import argparse
+
+def build_parser() -&gt; argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog=&quot;mytool&quot;)
+    sub = parser.add_subparsers(dest=&quot;command&quot;, required=True)
+    status = sub.add_parser(&quot;status&quot;, help=&quot;Report current state&quot;)
+    status.add_argument(&quot;--json&quot;, action=&quot;store_true&quot;)
+    return parser
+```
+
+```python
+# cli/commands.py
+def status(*, as_json: bool) -&gt; int:
+    ...
+
+def dispatch(args) -&gt; int:
+    if args.command == &quot;status&quot;:
+        return status(as_json=args.json)
+    return 2
+```
+
+**Why**: Behavior tested through a `Namespace` is behavior tested through the parser. Separating
+them lets a criterion call `status(as_json=True)` directly.
+
+---
+
+## 4. Cross-Platform Launchers
+
+**Rule**: Ship both launchers. They locate the environment and invoke the package entry point;
+they contain no business logic. A launcher that makes a decision is a second implementation of the
+command.
+
+```bash
+#!/usr/bin/env bash
+# bin/run.sh — locate the environment and hand off. No business logic.
+set -euo pipefail
+ROOT=&quot;$(cd &quot;$(dirname &quot;${BASH_SOURCE[0]}&quot;)/..&quot; &amp;&amp; pwd)&quot;
+if [ -d &quot;$ROOT/.venv&quot; ]; then
+    source &quot;$ROOT/.venv/bin/activate&quot;
+fi
+exec python -m cli &quot;$@&quot;
+```
+
+```powershell
+# bin/run.ps1 — locate the environment and hand off. No business logic.
+$ErrorActionPreference = &quot;Stop&quot;
+$Root = Split-Path -Parent $PSScriptRoot
+$Activate = Join-Path $Root &quot;.venv\Scripts\Activate.ps1&quot;
+if (Test-Path $Activate) { &amp; $Activate }
+python -m cli @args
+exit $LASTEXITCODE
+```
+
+```python
+# cli/__main__.py — makes `python -m cli` work identically on both platforms
+import sys
+from cli import main
+
+sys.exit(main())
+```
+
+**Why**: `python -m cli` is the one invocation both launchers share, so the two scripts cannot
+drift in behavior — only in how they find the interpreter. `exit $LASTEXITCODE` is required in
+PowerShell; without it the exit code is discarded and a failing command reports success.
+
+---
+
+## 5. Output and Streams
+
+**Rule**: Results go to stdout, diagnostics to stderr. A `--json` mode prints one JSON document to
+stdout and nothing else. Never interleave progress text into a machine-readable stream.
+
+**Why**: A caller piping stdout to `jq` receives the progress lines too, and the command becomes
+unusable in a pipeline.
+
+---
+
+## 6. Testing Without a Process
+
+**Rule**: Test through `main([&quot;status&quot;, &quot;--json&quot;])` or the `cli_runner` fixture. Reserve
+`subprocess.run` for one packaging test asserting the installed console script exists and runs.
+
+```python
+def test_status_reports_json(cli_runner):
+    code, out, err = cli_runner(&quot;status&quot;, &quot;--json&quot;)
+    assert code == 0
+    assert json.loads(out)[&quot;state&quot;] == &quot;ready&quot;
+    assert err == &quot;&quot;
+```
+
+**Why**: In-process tests are fast, debuggable, and measure the code. Subprocess tests measure the
+installed environment, which is a different and much smaller question.
+
+---
+
+## Checklist
+
+- [ ] `cli/` package; `main(argv=None) -&gt; int` that returns rather than exits
+- [ ] `[project.scripts]` declares the console script
+- [ ] `cli/__main__.py` so `python -m cli` works
+- [ ] Both `bin/run.sh` and `bin/run.ps1`, neither holding logic; `.ps1` ends with `exit $LASTEXITCODE`
+- [ ] Parsing in `parser.py`, behavior in `commands.py`, no import between them
+- [ ] Exit codes `0` / `1` / `2` used consistently
+- [ ] Results on stdout, diagnostics on stderr, `--json` emits nothing else
+- [ ] Criteria use `cli_runner`; at most one subprocess test for packaging</code></pre>
+<p>&lt;/pblock&gt;</p>
+<h2>CONTEXT - Read-Only Support</h2>
+<p>&lt;pblock filename=&quot;ARCHITECTURE_compact.md&quot; role=&quot;context&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/blueprint/ARCHITECTURE_compact.md&quot;&gt;</p>
+<pre><code>&lt;!-- Compacted from ARCHITECTURE.md sha256=5c919fe47ef8fc30da6c74103c97b0528a77ab903c7c0e7a51838b17c57c163d on 2026-10-27 by drydock build agent --&gt;
+
+Foundation contract (foundation-python):
+- Python &gt;=3.11; deps in pyproject.toml; uv.lock committed; .venv local (gitignored).
+- bin/test.sh (POSIX sh): runs `pytest -q` from root; exit status = verdict.
+- conftest.py fixtures: db_session (delegates to persistence.testing.db_session), cli_runner (delegates to cli.testing.cli_runner).
+- ledger_core.config.database_path() -&gt; str: DATABASE_URL (strip leading &quot;sqlite://&quot;), else DATABASE_PATH, else &quot;data/app.db&quot;; empty = unset.
+- ledger_core.errors: LedgerError(Exception) with exit_code:int; Rejected=3, NotFound=4, Operational=1.
+- Boundary: no module under ledger_core/ or cli/ imports sqlite3/psycopg/psycopg2; no float calls or float literals in ledger_core/.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;DATABASE_compact.md&quot; role=&quot;context&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/blueprint/DATABASE_compact.md&quot;&gt;</p>
+<pre><code>&lt;!-- Compacted from DATABASE.md sha256=a9d242b773d4d8d48d088bcadf1977d0c725cd9a9a0dd205e5e466a140c35e12 on 2026-10-27 by drydock build agent --&gt;
+
+Database: LayersTesting (version 20261027 V1). Build order 1. Provides persistence.accounts, persistence.categories, persistence.transactions.
+
+Access: `open_database(dsn)` returns `Database`; `db.&lt;table&gt;.&lt;op&gt;(...)`. Money: integer cents everywhere. No aggregate operations; callers compute counts, sums, next txn_id from list results.
+
+Operations (input -&gt; output; * = match key):
+- accounts.create(account, name) -&gt; (account, name)
+- accounts.get(account*) -&gt; (account, name) | None
+- accounts.update(account*, name) -&gt; (account, name)
+- accounts.delete(account*) -&gt; (account)
+- accounts.list() -&gt; [(account, name)] order account asc
+- accounts.clear(min_account) -&gt; count; removes account &gt;= min_account; &quot;&quot; removes all
+- categories.create(category, description) -&gt; (category, description)
+- categories.get(category*) -&gt; (category, description) | None
+- categories.update(category*, description) -&gt; (category, description)
+- categories.delete(category*) -&gt; (category)
+- categories.list() -&gt; [(category, description)] order category asc
+- categories.clear(min_category) -&gt; count; &quot;&quot; removes all
+- transactions.create(txn_id, date, account, category, amount, memo) -&gt; (txn_id, date, account, category, amount, memo)
+- transactions.get(txn_id*) -&gt; row | None
+- transactions.update(txn_id*, amount) -&gt; row
+- transactions.delete(txn_id*) -&gt; (txn_id)
+- transactions.list(account?, category?, start_date?, end_date?) -&gt; [row] filters account, category, date&gt;=start_date, date&lt;=end_date; order txn_id asc
+- transactions.clear(min_txn_id) -&gt; count; 0 removes all
+
+Schema:
+- accounts(account TEXT PK, 1-12 chars A-Z0-9; name TEXT NOT NULL, 1-40 chars)
+- categories(category TEXT PK, 1-12 chars A-Z0-9; description TEXT NOT NULL, 1-40 chars)
+- transactions(txn_id INTEGER PK; date TEXT YYYY-MM-DD; account FK accounts; category FK categories; amount INTEGER cents signed, never zero; memo TEXT 0-60 chars default &#x27;&#x27;); INDEX(account, date)
+
+Config: DATABASE_URL (SQLite path, optional sqlite:// prefix, wins), DATABASE_PATH (fallback), default data/app.db.
+
+Guardrails: only the persistence package opens a driver; amounts never float; counts/balances never hardcoded.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<h2>IMPLEMENTS - Authoritative Step Specifications</h2>
+<p>&lt;pblock label=&quot;Implementation recency anchor&quot; kind=&quot;section&quot;&gt; The files in this section are the load-bearing specifications for this build block. Build these files exactly. Treat earlier sections as constraints and context.</p>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;FEATURE-InitCount.md&quot; role=&quot;implements&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/blueprint/FEATURE-InitCount.md&quot; guidance=&quot;Feature Specification&quot;&gt;</p>
+<pre><code># FEATURE: Init and Count
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | The `ledger init` command that empties the ledger and the `ledger count` command that reports table row counts. |
+| Depends On | FEATURE-CliEntry.md, DATABASE.md, ARCHITECTURE.md |
+| Provides | ledger init, ledger count |
+| Consumes | ledger, cli.registry |
+
+## Purpose
+
+`init` prepares an empty ledger for loading and use. `count` reports how many rows each table holds. Both are registered in `cli/commands/maintenance.py` through its `COMMANDS` mapping, with keys `(&quot;init&quot;,)` and `(&quot;count&quot;,)`, each taking no arguments.
+
+## Behavior
+
+### `ledger init`
+
+- Opens the database through the entry point; opening creates the database file and declared schema when they do not yet exist.
+- Removes every row from `transactions`, then `categories`, then `accounts` (foreign-key order).
+- Returns no rows, so nothing is written to stdout, and exits `0`.
+- Running it again on an empty ledger also exits `0`.
+
+### `ledger count`
+
+- Output is CSV: header `table,rows`, then the rows `accounts`, `categories`, `transactions` in that order, each with the number of rows stored, read from the database.
+- Counts are never embedded; they are computed from the repository `list` results.
+
+An argument given to either command is a usage error (exit 2).
+
+## Database Interface
+
+- `FEATURE-ACCOUNT-005` — read: list accounts to count them - supplies: — - returns: `account`
+- `FEATURE-CATEGORY-005` — read: list categories to count them - supplies: — - returns: `category`
+- `FEATURE-TXN-005` — read: list transactions to count them - supplies: — - returns: `txn_id`
+- `FEATURE-TXN-006` — write: remove every transaction on init - supplies: `min_txn_id` - returns: —
+- `FEATURE-CATEGORY-006` — write: remove every category on init - supplies: `min_category` - returns: —
+- `FEATURE-ACCOUNT-006` — write: remove every account on init - supplies: `min_account` - returns: —
+
+## Programmatic Acceptance
+
+=== AC count-shape ===
+Intent: count prints the header table,rows and the three tables in order, each count equal to the number of stored rows.
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+code, out, err = cli_runner(&quot;count&quot;)
+print(code, repr(out), repr(err))
+assert code == 0
+rows = list(csv.reader(io.StringIO(out)))
+assert rows[0] == [&quot;table&quot;, &quot;rows&quot;]
+assert [r[0] for r in rows[1:]] == [&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;]
+with db_session() as db:
+    expected = [len(db.accounts.list()), len(db.categories.list()), len(db.transactions.list())]
+assert [int(r[1]) for r in rows[1:]] == expected
+=== END AC count-shape ===
+
+=== AC count-tracks-writes ===
+Intent: After one account, one category, and one transaction are stored, each reported count rises by exactly one.
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+def counts():
+    code, out, err = cli_runner(&quot;count&quot;)
+    assert code == 0, err
+    return [int(r[1]) for r in list(csv.reader(io.StringIO(out)))[1:]]
+
+before = counts()
+with db_session() as db:
+    db.accounts.create(account=&quot;ZZCNT1&quot;, name=&quot;Count Probe&quot;)
+    db.categories.create(category=&quot;ZZCNTC&quot;, description=&quot;Count Cat&quot;)
+    db.transactions.create(txn_id=900200001, date=&quot;2026-05-01&quot;, account=&quot;ZZCNT1&quot;,
+                           category=&quot;ZZCNTC&quot;, amount=100, memo=&quot;&quot;)
+after = counts()
+assert after == [n + 1 for n in before]
+=== END AC count-tracks-writes ===
+
+=== AC init-empties-tables ===
+Intent: init exits 0 with empty stdout, removes rows in foreign-key order without error, and leaves all three tables empty.
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    db.accounts.create(account=&quot;ZZINI1&quot;, name=&quot;Init Probe&quot;)
+    db.categories.create(category=&quot;ZZINIC&quot;, description=&quot;Init Cat&quot;)
+    db.transactions.create(txn_id=900200011, date=&quot;2026-05-01&quot;, account=&quot;ZZINI1&quot;,
+                           category=&quot;ZZINIC&quot;, amount=100, memo=&quot;&quot;)
+code, out, err = cli_runner(&quot;init&quot;)
+print(code, repr(out), repr(err))
+assert code == 0
+assert out == &quot;&quot;
+with db_session() as db:
+    assert len(db.transactions.list()) == 0
+    assert len(db.categories.list()) == 0
+    assert len(db.accounts.list()) == 0
+=== END AC init-empties-tables ===
+
+=== AC init-then-count ===
+Intent: After init, count reports zero rows for every table, and init run a second time on the empty ledger still exits 0.
+
+import csv
+import io
+from cli.testing import cli_runner
+
+code, out, err = cli_runner(&quot;init&quot;)
+assert code == 0, err
+code, out, err = cli_runner(&quot;init&quot;)
+assert code == 0, err
+assert out == &quot;&quot;
+code, out, err = cli_runner(&quot;count&quot;)
+assert code == 0, err
+rows = list(csv.reader(io.StringIO(out)))
+assert rows[0] == [&quot;table&quot;, &quot;rows&quot;]
+assert [r[0] for r in rows[1:]] == [&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;]
+assert [int(r[1]) for r in rows[1:]] == [0, 0, 0]
+=== END AC init-then-count ===
+
+=== AC init-fresh-database ===
+Intent: init against a database path that does not yet exist creates the file, exits 0, and count then reports zero rows.
+
+import csv
+import io
+import os
+from drydock_acceptance import database_environment
+from cli.testing import cli_runner
+
+with database_environment(url=&quot;fresh.db&quot;) as root:
+    assert not os.path.exists(root / &quot;fresh.db&quot;)
+    code, out, err = cli_runner(&quot;init&quot;)
+    print(code, repr(out), repr(err))
+    assert code == 0
+    assert os.path.exists(root / &quot;fresh.db&quot;)
+    code, out, err = cli_runner(&quot;count&quot;)
+    assert code == 0, err
+    rows = list(csv.reader(io.StringIO(out)))
+    assert [int(r[1]) for r in rows[1:]] == [0, 0, 0]
+=== END AC init-fresh-database ===
+
+=== AC init-count-usage ===
+Intent: init and count with an extra argument are usage errors that exit 2 with empty stdout.
+
+from cli.testing import cli_runner
+
+for args in [(&quot;init&quot;, &quot;extra&quot;), (&quot;count&quot;, &quot;extra&quot;)]:
+    code, out, err = cli_runner(*args)
+    print(args, code, repr(out), repr(err))
+    assert code == 2
+    assert out == &quot;&quot;
+=== END AC init-count-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- `init` writes nothing to standard output.
+- Counts are read from the database on every run and are never embedded.
+- `init` removes rows in foreign-key order: transactions, then categories, then accounts.
+- Amounts and counts use no floating point.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;FEATURE-LoadCsvReader.md&quot; role=&quot;implements&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/blueprint/FEATURE-LoadCsvReader.md&quot; guidance=&quot;Feature Specification&quot;&gt;</p>
+<pre><code># FEATURE: Load CSV Reader
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Shared reader that opens a CSV file named on the command line, checks its header, and returns numbered rows. |
+| Depends On | ARCHITECTURE.md, FEATURE-CliEntry.md |
+| Provides | ledger_core.csvio |
+| Consumes | ledger, cli.registry |
+
+## Purpose
+
+The three `ledger load &lt;table&gt; &lt;csv&gt;` commands share one reader so that file handling, header
+checking, and the exit codes for unreadable files and malformed rows are identical. The reader
+only reads: it never touches the database and never writes.
+
+## Interface
+
+`ledger_core.csvio.read_rows(path, header)`
+
+- `path` is the file path named on the command line; `header` is the sequence of column names the
+  table requires, in order.
+- Returns a list of `(line_number, fields)` tuples, one per data row, in file order. `line_number`
+  is the 1-based line of the file (the header is line 1, so the first data row is line 2). `fields`
+  is a list of strings exactly as parsed by the `csv` module.
+- A file that is missing or cannot be read or decoded raises `Operational` (exit 1).
+- A header that differs from `header` in names or order, an empty file, or a data row whose field
+  count differs from `len(header)` raises `Rejected` (exit 3), with a diagnostic naming the line.
+- A file with a valid header and no data rows returns an empty list.
+- Blank lines are not data rows and are skipped.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC csvio-reads-numbered-rows ===
+Intent: read_rows returns every data row in file order with 1-based file line numbers and the parsed fields, for a file whose header matches.
+Requires: executable=python3; scope=test
+
+import csv
+import os
+import tempfile
+from ledger_core.csvio import read_rows
+
+header = [&quot;account&quot;, &quot;name&quot;]
+rows = [[&quot;ZZR1&quot;, &quot;First Row&quot;], [&quot;ZZR2&quot;, &quot;Second Row&quot;], [&quot;ZZR3&quot;, &quot;Third Row&quot;]]
+with tempfile.TemporaryDirectory() as d:
+    path = os.path.join(d, &quot;in.csv&quot;)
+    with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh:
+        w = csv.writer(fh, lineterminator=&quot;\n&quot;)
+        w.writerow(header)
+        w.writerows(rows)
+    got = read_rows(path, header)
+    assert len(got) == len(rows)
+    for i, (line_no, fields) in enumerate(got):
+        assert line_no == i + 2
+        assert list(fields) == rows[i]
+=== END AC csvio-reads-numbered-rows ===
+
+=== AC csvio-header-only-is-empty ===
+Intent: a file with a matching header and no data rows yields an empty list rather than an error.
+Requires: executable=python3; scope=test
+
+import csv
+import os
+import tempfile
+from ledger_core.csvio import read_rows
+
+header = [&quot;category&quot;, &quot;description&quot;]
+with tempfile.TemporaryDirectory() as d:
+    path = os.path.join(d, &quot;in.csv&quot;)
+    with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh:
+        csv.writer(fh, lineterminator=&quot;\n&quot;).writerow(header)
+    assert list(read_rows(path, header)) == []
+=== END AC csvio-header-only-is-empty ===
+
+=== AC csvio-missing-file-operational ===
+Intent: an unreadable path raises the Operational error, which the CLI maps to exit 1.
+Requires: executable=python3; scope=test
+
+import os
+import tempfile
+from ledger_core.csvio import read_rows
+
+with tempfile.TemporaryDirectory() as d:
+    path = os.path.join(d, &quot;does-not-exist.csv&quot;)
+    try:
+        read_rows(path, [&quot;account&quot;, &quot;name&quot;])
+    except Exception as exc:
+        assert type(exc).__name__ == &quot;Operational&quot;
+    else:
+        raise AssertionError(&quot;expected Operational&quot;)
+=== END AC csvio-missing-file-operational ===
+
+=== AC csvio-bad-header-rejected ===
+Intent: a header with the wrong names, the wrong order, or no content raises Rejected, which the CLI maps to exit 3.
+Requires: executable=python3; scope=test
+
+import csv
+import os
+import tempfile
+from ledger_core.csvio import read_rows
+
+header = [&quot;account&quot;, &quot;name&quot;]
+bad_headers = [[&quot;name&quot;, &quot;account&quot;], [&quot;account&quot;], [&quot;account&quot;, &quot;name&quot;, &quot;extra&quot;], [&quot;code&quot;, &quot;name&quot;]]
+with tempfile.TemporaryDirectory() as d:
+    for i, bad in enumerate(bad_headers):
+        path = os.path.join(d, f&quot;bad{i}.csv&quot;)
+        with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh:
+            csv.writer(fh, lineterminator=&quot;\n&quot;).writerow(bad)
+        try:
+            read_rows(path, header)
+        except Exception as exc:
+            assert type(exc).__name__ == &quot;Rejected&quot;
+        else:
+            raise AssertionError(&quot;expected Rejected for header %r&quot; % (bad,))
+    empty = os.path.join(d, &quot;empty.csv&quot;)
+    open(empty, &quot;w&quot;).close()
+    try:
+        read_rows(empty, header)
+    except Exception as exc:
+        assert type(exc).__name__ == &quot;Rejected&quot;
+    else:
+        raise AssertionError(&quot;expected Rejected for an empty file&quot;)
+=== END AC csvio-bad-header-rejected ===
+
+=== AC csvio-wrong-field-count-rejected ===
+Intent: a data row with too few or too many fields raises Rejected even when the header is valid.
+Requires: executable=python3; scope=test
+
+import os
+import tempfile
+from ledger_core.csvio import read_rows
+
+header = [&quot;account&quot;, &quot;name&quot;]
+bodies = [&quot;ZZR1\n&quot;, &quot;ZZR1,Name,Extra\n&quot;]
+with tempfile.TemporaryDirectory() as d:
+    for i, body in enumerate(bodies):
+        path = os.path.join(d, f&quot;row{i}.csv&quot;)
+        with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh:
+            fh.write(&quot;,&quot;.join(header) + &quot;\n&quot; + body)
+        try:
+            read_rows(path, header)
+        except Exception as exc:
+            assert type(exc).__name__ == &quot;Rejected&quot;
+        else:
+            raise AssertionError(&quot;expected Rejected for body %r&quot; % body)
+=== END AC csvio-wrong-field-count-rejected ===
+
+=== AC csvio-load-missing-file-exit-1 ===
+Intent: through the CLI, a load naming an unreadable file exits 1, writes nothing to stdout, and stores nothing.
+Requires: executable=python3; scope=test
+
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+with tempfile.TemporaryDirectory() as d:
+    path = os.path.join(d, &quot;missing.csv&quot;)
+    with db_session() as db:
+        before = len(db.accounts.list())
+        code, out, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path)
+        assert code == 1
+        assert out == &quot;&quot;
+        assert len(db.accounts.list()) == before
+=== END AC csvio-load-missing-file-exit-1 ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- The reader never writes to the database or to any file.
+- The reader never opens a database driver.
+- Diagnostics go to standard error only; nothing is written to standard output.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;FEATURE-AccountAdd.md&quot; role=&quot;implements&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/blueprint/FEATURE-AccountAdd.md&quot; guidance=&quot;Feature Specification&quot;&gt;</p>
+<pre><code># FEATURE: Account Add
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger account add &lt;code&gt; &lt;name&gt;` and the shared `account_row` helper. |
+| Depends On | FEATURE-CliEntry.md, FEATURE-Validation.md, DATABASE.md |
+| Provides | ledger account add, ledger_core.accounts |
+| Consumes | ledger_core.validation, ledger_core.money, cli.registry |
+
+## Purpose
+
+Create one account and print its row. The module `ledger_core.accounts` also exports the helper the
+other account commands use to build an account row from live data.
+
+## Behavior
+
+1. `ledger account add &lt;code&gt; &lt;name&gt;` takes exactly two arguments; other counts exit 2.
+2. Validate the code (1 to 12 characters of `A-Z0-9`) and the name (1 to 40 characters, no comma or
+   newline). A violation exits 3.
+3. A code that is already stored exits 3 and leaves the stored account unchanged.
+4. Insert the account, then print CSV: the header `account,name,transactions,balance` and one row
+   with the new account, its name, `0` transactions, and balance `0.00`.
+5. A failing command writes nothing to standard output.
+
+## Interface
+
+`ledger_core.accounts.account_row(db, code)` returns `None` when the account is absent, otherwise
+the tuple `(account, name, transactions, balance_cents)` where `transactions` is the number of that
+account&#x27;s stored transactions and `balance_cents` is the integer sum of their amounts. Both are
+computed from the database on every call. Formatting the balance as text is done by
+`ledger_core.money.format_cents` in the command, not in the helper.
+
+## Database Interface
+
+- `FEATURE-ACCOUNT-002` — read: get an account by code - supplies: `account` - returns: `account`, `name`
+- `FEATURE-ACCOUNT-001` — write: create an account - supplies: `account`, `name` - returns: `account`, `name`
+- `FEATURE-TXN-005` — read: list an account&#x27;s transactions to count and sum them - supplies: `account` - returns: `amount`
+
+## Programmatic Acceptance
+
+=== AC account-add-success ===
+Intent: adding a new account exits 0, prints the header and one row with zero transactions and a zero balance, and the account reads back from the store.
+Requires: executable=python3; scope=test
+
+import csv
+import io
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = &quot;ZZNA1&quot;
+name = &quot;Add Probe&quot;
+with db_session() as db:
+    code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, name)
+    print(out, err)
+    assert code == 0
+    parsed = list(csv.reader(io.StringIO(out)))
+    assert parsed[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;]
+    assert parsed[1] == [acct, name, &quot;0&quot;, &quot;0.00&quot;]
+    assert len(parsed) == 2
+    row = db.accounts.get(account=acct)
+    assert row is not None
+    got = row[&quot;name&quot;] if isinstance(row, dict) else row.name
+    assert got == name
+=== END AC account-add-success ===
+
+=== AC account-add-duplicate-rejected ===
+Intent: adding a code that already exists exits 3, prints nothing, and leaves the stored name unchanged.
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = &quot;ZZNB1&quot;
+original = &quot;Original Name&quot;
+with db_session() as db:
+    code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, original)
+    assert code == 0
+    code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Different Name&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+    row = db.accounts.get(account=acct)
+    got = row[&quot;name&quot;] if isinstance(row, dict) else row.name
+    assert got == original
+=== END AC account-add-duplicate-rejected ===
+
+=== AC account-add-invalid-code ===
+Intent: lowercase letters, a code longer than 12 characters, a bad character, and an empty code each exit 3 with no output and store no account.
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+bad_codes = [&quot;zznc1&quot;, &quot;ABCDEFGHIJKLM&quot;, &quot;ZZ-NC&quot;, &quot;ZZ NC&quot;, &quot;&quot;]
+with db_session() as db:
+    before = len(db.accounts.list())
+    for bad in bad_codes:
+        code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, bad, &quot;Valid Name&quot;)
+        assert code == 3, bad
+        assert out == &quot;&quot;
+    assert len(db.accounts.list()) == before
+=== END AC account-add-invalid-code ===
+
+=== AC account-add-invalid-name ===
+Intent: an empty name, a name over 40 characters, and a name containing a comma each exit 3 with no output and store no account.
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = &quot;ZZND1&quot;
+bad_names = [&quot;&quot;, &quot;n&quot; * 41, &quot;has,comma&quot;]
+with db_session() as db:
+    for bad in bad_names:
+        code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, bad)
+        assert code == 3, bad
+        assert out == &quot;&quot;
+        assert db.accounts.get(account=acct) is None
+=== END AC account-add-invalid-name ===
+
+=== AC account-add-boundary-lengths ===
+Intent: a 12-character code and a 40-character name are the largest accepted values and are stored whole.
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+acct = &quot;Z&quot; * 12
+name = &quot;n&quot; * 40
+with db_session() as db:
+    code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, name)
+    assert code == 0
+    row = db.accounts.get(account=acct)
+    assert row is not None
+    got = row[&quot;name&quot;] if isinstance(row, dict) else row.name
+    assert got == name
+=== END AC account-add-boundary-lengths ===
+
+=== AC account-add-usage-errors ===
+Intent: the wrong number of arguments is a usage error with exit 2 and no output.
+Requires: executable=python3; scope=test
+
+from cli.testing import cli_runner
+
+for args in ((&quot;account&quot;, &quot;add&quot;), (&quot;account&quot;, &quot;add&quot;, &quot;ZZNE1&quot;), (&quot;account&quot;, &quot;add&quot;, &quot;ZZNE1&quot;, &quot;Name&quot;, &quot;Extra&quot;)):
+    code, out, err = cli_runner(*args)
+    assert code == 2, args
+    assert out == &quot;&quot;
+=== END AC account-add-usage-errors ===
+
+=== AC account-row-helper ===
+Intent: account_row reports the live transaction count and the integer-cent balance computed from stored transactions, and None for an absent account.
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from ledger_core.accounts import account_row
+
+acct, cat = &quot;ZZNF1&quot;, &quot;ZZNFC&quot;
+name = &quot;Helper Probe&quot;
+amounts = [10000, -2550, 1]
+with db_session() as db:
+    db.accounts.create(account=acct, name=name)
+    db.categories.create(category=cat, description=&quot;Helper Category&quot;)
+    for i, cents in enumerate(amounts):
+        db.transactions.create(txn_id=930000000 + i, date=&quot;2026-03-01&quot;, account=acct,
+                               category=cat, amount=cents, memo=&quot;&quot;)
+    row = account_row(db, acct)
+    assert row is not None
+    assert tuple(row) == (acct, name, len(amounts), sum(amounts))
+    assert account_row(db, &quot;ZZNFNONE&quot;) is None
+=== END AC account-row-helper ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Validation completes before the insert; a rejected add changes nothing.
+- The balance is integer cents in the helper and is formatted only for output.
+- A failing command writes nothing to standard output.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;FEATURE-TxnPost.md&quot; role=&quot;implements&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/blueprint/FEATURE-TxnPost.md&quot; guidance=&quot;Feature Specification&quot;&gt;</p>
+<pre><code># FEATURE: Transaction Post
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger txn post`, validating every input and the balance rule before inserting one transaction. |
+| Depends On | FEATURE-CliEntry.md, FEATURE-Validation.md, FEATURE-BalanceRule.md, DATABASE.md |
+| Provides | ledger txn post, ledger_core.transactions |
+| Consumes | ledger_core.validation, ledger_core.money, ledger_core.balances, cli.registry |
+
+## Purpose
+
+`ledger txn post &lt;account&gt; &lt;category&gt; &lt;amount&gt; &lt;date&gt; [&lt;memo&gt;]` records one transaction and prints the header row `txn_id,date,account,category,amount,memo` followed by the new row. `ledger_core.transactions` exports `txn_row` (formats a stored transaction as an output row) and `next_txn_id` (largest stored `txn_id` plus one, or 1 in an empty table), used by the other transaction commands and by transfer.
+
+## Behavior
+
+- Four or five arguments are required; otherwise exit 2. An omitted memo is stored as the empty string.
+- Everything is checked before the write, in this order: amount, date, and memo validation; account exists; category exists; no resulting balance below zero. Any violation exits 3 and writes nothing.
+- The amount is parsed to integer cents with no floating point and printed with exactly two decimals.
+- The new `txn_id` is the largest present plus one, or 1 when none exist.
+
+## Database Interface
+
+- `FEATURE-ACCOUNT-002` — read: check the account exists - supplies: `account` - returns: `account`
+- `FEATURE-CATEGORY-002` — read: check the category exists - supplies: `category` - returns: `category`
+- `FEATURE-TXN-005` — read: list transactions for balance and next id - supplies: `account` - returns: `txn_id`, `amount`
+- `FEATURE-TXN-001` — write: create the transaction - supplies: `txn_id`, `date`, `account`, `category`, `amount`, `memo` - returns: `txn_id`, `date`, `account`, `category`, `amount`, `memo`
+
+## Programmatic Acceptance
+
+=== AC txn-post-success ===
+Intent: A valid post prints the new row with the next id, the supplied values, and a two-decimal amount, and a separate read shows the stored cents.
+Requires: executable=python3; scope=test
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+def f(row, name):
+    return row[name] if isinstance(row, dict) else getattr(row, name)
+
+acct, cat = &quot;ZZTP1&quot;, &quot;ZZTPC1&quot;
+amount, cents = &quot;45.50&quot;, 4550
+day, memo = &quot;2026-04-01&quot;, &quot;walk in sale&quot;
+with db_session() as db:
+    db.accounts.create(account=acct, name=&quot;Post Probe&quot;)
+    db.categories.create(category=cat, description=&quot;Post Category&quot;)
+    expected_id = max([f(r, &quot;txn_id&quot;) for r in db.transactions.list()], default=0) + 1
+    rc, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, amount, day, memo)
+    print(out)
+    print(err)
+    assert rc == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[0] == [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;]
+    assert rows[1] == [str(expected_id), day, acct, cat, amount, memo]
+    back = db.transactions.get(txn_id=expected_id)
+    assert back is not None
+    assert f(back, &quot;amount&quot;) == cents
+    assert f(back, &quot;memo&quot;) == memo
+=== END AC txn-post-success ===
+
+=== AC txn-post-default-memo ===
+Intent: Omitting the memo stores an empty memo and the row still prints with six fields.
+Requires: executable=python3; scope=test
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+def f(row, name):
+    return row[name] if isinstance(row, dict) else getattr(row, name)
+
+acct, cat = &quot;ZZTP2&quot;, &quot;ZZTPC2&quot;
+amount, day = &quot;10.00&quot;, &quot;2026-04-02&quot;
+with db_session() as db:
+    db.accounts.create(account=acct, name=&quot;Post Probe&quot;)
+    db.categories.create(category=cat, description=&quot;Post Category&quot;)
+    expected_id = max([f(r, &quot;txn_id&quot;) for r in db.transactions.list()], default=0) + 1
+    rc, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, amount, day)
+    print(out)
+    print(err)
+    assert rc == 0
+    rows = list(csv.reader(io.StringIO(out)))
+    assert rows[1] == [str(expected_id), day, acct, cat, amount, &quot;&quot;]
+    assert f(db.transactions.get(txn_id=expected_id), &quot;memo&quot;) == &quot;&quot;
+=== END AC txn-post-default-memo ===
+
+=== AC txn-post-next-id ===
+Intent: Two consecutive posts receive consecutive ids, the second one more than the first.
+Requires: executable=python3; scope=test
+
+import csv
+import io
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct, cat = &quot;ZZTP3&quot;, &quot;ZZTPC3&quot;
+with db_session() as db:
+    db.accounts.create(account=acct, name=&quot;Post Probe&quot;)
+    db.categories.create(category=cat, description=&quot;Post Category&quot;)
+    ids = []
+    for amount in [&quot;5.00&quot;, &quot;6.00&quot;]:
+        rc, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, amount, &quot;2026-04-03&quot;)
+        print(err)
+        assert rc == 0
+        ids.append(int(list(csv.reader(io.StringIO(out)))[1][0]))
+    assert ids[1] == ids[0] + 1
+=== END AC txn-post-next-id ===
+
+=== AC txn-post-rejections ===
+Intent: Unknown category, unknown account, three-decimal amount, zero amount, and an impossible calendar date each exit 3 and leave the transaction count unchanged.
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct, cat = &quot;ZZTP4&quot;, &quot;ZZTPC4&quot;
+with db_session() as db:
+    db.accounts.create(account=acct, name=&quot;Post Probe&quot;)
+    db.categories.create(category=cat, description=&quot;Post Category&quot;)
+    before = len(db.transactions.list())
+    cases = [
+        (acct, &quot;ZZNOCAT&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;),
+        (&quot;ZZNOACCT&quot;, cat, &quot;1.00&quot;, &quot;2026-04-01&quot;),
+        (acct, cat, &quot;1.234&quot;, &quot;2026-04-01&quot;),
+        (acct, cat, &quot;0&quot;, &quot;2026-04-01&quot;),
+        (acct, cat, &quot;1.00&quot;, &quot;2026-02-30&quot;),
+    ]
+    for case in cases:
+        rc, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, *case)
+        print(case, rc, err)
+        assert rc == 3
+        assert out == &quot;&quot;
+    assert len(db.transactions.list()) == before
+=== END AC txn-post-rejections ===
+
+=== AC txn-post-negative-balance ===
+Intent: A withdrawal larger than the account balance exits 3 and stores nothing, while a withdrawal within the balance succeeds.
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+acct, cat = &quot;ZZTP5&quot;, &quot;ZZTPC5&quot;
+funds = 1000
+with db_session() as db:
+    db.accounts.create(account=acct, name=&quot;Post Probe&quot;)
+    db.categories.create(category=cat, description=&quot;Post Category&quot;)
+    db.transactions.create(txn_id=900001501, date=&quot;2026-04-01&quot;, account=acct, category=cat, amount=funds, memo=&quot;&quot;)
+    before = len(db.transactions.list())
+    rc, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;-10.01&quot;, &quot;2026-04-02&quot;)
+    print(err)
+    assert rc == 3
+    assert out == &quot;&quot;
+    assert len(db.transactions.list()) == before
+    rc, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;-10.00&quot;, &quot;2026-04-02&quot;)
+    print(err)
+    assert rc == 0
+    assert len(db.transactions.list()) == before + 1
+=== END AC txn-post-negative-balance ===
+
+=== AC txn-post-usage ===
+Intent: Too few or too many arguments are usage errors with exit 2 and no standard output.
+Requires: executable=python3; scope=test
+
+from persistence.testing import db_session
+from cli.testing import cli_runner
+
+with db_session() as db:
+    rc, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;ZZTP6&quot;, &quot;ZZTPC6&quot;, &quot;1.00&quot;)
+    assert rc == 2
+    assert out == &quot;&quot;
+    rc, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;B&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;, &quot;m&quot;, &quot;extra&quot;)
+    assert rc == 2
+    assert out == &quot;&quot;
+=== END AC txn-post-usage ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Every input and the balance rule are checked before the first write; a rejected post stores nothing.
+- Amounts are integer cents at every layer; floating point is never used for money.
+- The next `txn_id` is computed from stored rows, never hardcoded.
+- Failures write nothing to standard output.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock label=&quot;Build instructions&quot; kind=&quot;instructions&quot;&gt;</p>
+<h3>Build instructions for this block</h3>
+<h4>Implement <code>ledger init</code> and <code>ledger count</code>. (feature-init-count)</h4>
+<p><code>init</code> creates the database file if absent, removes all rows from transactions, then categories, then accounts (foreign-key order), writes nothing, exits 0. <code>count</code> prints <code>table,rows</code> then accounts, categories, transactions counts read from the database.</p>
+<h4>Read and header-check a CSV file named on the command line, exiting 1 when it cannot be read. (feature-load-csv-reader)</h4>
+<p>Provide <code>read_rows(path, header)</code> using the csv module. An unreadable or missing file raises Operational (exit 1) with no writes. A header differing from the table&#x27;s columns in order, or a row with the wrong field count, raises Rejected (exit 3). It returns parsed rows with their line numbers for diagnostics and writes nothing.</p>
+<h4>Implement <code>ledger account add &lt;code&gt; &lt;name&gt;</code>. (feature-account-add)</h4>
+<p>Validate code and name, reject a duplicate with exit 3, insert, and print the row <code>account,name,transactions,balance</code> with 0 transactions and 0.00. Export an <code>account_row</code> helper computing the transaction count and balance from the database for the other account commands.</p>
+<h4>Implement <code>ledger txn post &lt;account&gt; &lt;category&gt; &lt;amount&gt; &lt;date&gt; [&lt;memo&gt;]</code>. (feature-txn-post)</h4>
+<p>Validate every input and rule first: account and category exist, amount, date, memo, and the no-negative-balance rule. Assign txn_id as max(txn_id)+1, or 1 when empty, insert, and print the row <code>txn_id,date,account,category,amount,memo</code>. Export <code>txn_row</code> and <code>next_txn_id</code> helpers. Any violation exits 3 and writes nothing.</p>
+<p>&lt;/pblock&gt;</p>
+<h1>Agent Task</h1>
+<p>You are a Drydock build agent implementing exactly one build step of a larger plan. The build job block below names the target, the build working directory, and the step. Everything you need is stacked into this prompt under role headings:</p>
+<ul><li><code>compass</code> — the Target&#x27;s COMPASS.md orientation.</li><li><code>implements</code> — the Typed Specification files this step builds. These are</li></ul>
+<p>authoritative; implement them exactly.</p>
+<ul><li><code>context</code> — read-only support specifications. Do not reimplement them.</li><li><code>stack</code> — enterprise stack and technology rules. Honor them.</li><li><code>rules</code> — governance and branding rules. Honor them.</li></ul>
+<p>Operating contract:</p>
+<ol><li>Follow the write authorization and protected paths in the stacked <code>COMPASS.md</code> exactly.</li></ol>
+<p>That persisted guardrail is the sole authority for paths this build may modify.</p>
+<ol><li>Start by inspecting the build working directory. Read the current contents of each file before</li></ol>
+<p>applying a contextual patch. If patch verification fails, re-read that file and rebuild the patch against its current text; do not repeat stale context or overwrite unrelated changes. Preserve existing application files unless this step&#x27;s specifications require a change. Its <code>sources/</code> subdirectory holds staged build assets — imported test corpora, conformance harnesses, and fixtures — placed there for you. They are read-only inputs: run them, import them, and write code against them, but never create, rewrite, trim, regenerate, or substitute one, even to make a check pass. A step that modifies a staged asset fails and the asset is restored. If an asset you expect is absent, report that; do not author a replacement.</p>
+<ol><li>Implement only this step. Use <code>context</code>, <code>stack</code>, and <code>rules</code> as constraints,</li></ol>
+<p>not as additional work to perform.</p>
+<ol><li>Follow the stack and rules for languages, structure, naming, and branding.</li><li>The programmatic acceptance assertions in the <code>implements</code> specifications are</li></ol>
+<p>this step&#x27;s <strong>Definition of Done</strong> — human-owned, declared before the build, and fixed. Build the story and, in this same step, write the deterministic tests that prove each declared assertion, as a TDD master would; add finer tests for coverage. Every test you write follows the same rule the acceptance assertions do: <strong>act on the system, read the state back, compare to expected.</strong> The oracle is a return value, parsed JSON, a status code, a stored row, file contents read back, or an exit status — never a substring of captured stdout or stderr, a test-runner tally, or a log line. Write tests in the project&#x27;s own language using that language&#x27;s libraries; an in-language HTTP client yields a status code and a parsed body, where <code>curl</code> yields text to scrape. Round-trip anything that stores state: act, then read back through the public interface. Assert declared failure signals on negative paths, never message wording. You may add tests but must never remove, soften, or weaken a declared acceptance assertion. A <code>Suite: full</code> conformance check gates on the entire imported test suite: the step is done only when it passes in full, never on a representative subset — reproduce the standard exactly rather than wrapping a third-party library that approximates it. For a suite, the runner&#x27;s exit status is the verdict and the whole verdict: print its captured output for diagnosis, never assert on the text of its summary. When an assertion is a static or filesystem scan (import boundary, &quot;X never appears outside Y,&quot; grep/AST gate), honor the scope the specification states and never widen it: scan production source only, exclude <code>.venv/</code>, <code>site-packages</code>, and vendored or generated code, and do not flag test doubles or fixtures that use the guarded dependency. Run targeted tests for the behavior you change and preserve existing passing behavior. Drydock executes every declared acceptance assertion after your call and owns the verdict. Use available failure logs before rerunning suites to rediscover failures; use section or example filters to diagnose the underlying behavior, never example-specific exceptions. If you run a suite, wait for completion or its declared timeout; silence is not a hang. During repair, select a failing example, reproduce it before editing, and trace its actual execution branch. Add a regression that fails on the current code, fix the cause, and run that regression plus a passing neighbor. Revise an ineffective edit within this call. Report only tests actually executed, with their command and result; label unrun tests unrun.</p>
+<ol><li>Grow the project&#x27;s own test suite as you write the code, and treat it as the project&#x27;s</li></ol>
+<p>real coverage. The acceptance assertions in <code>implements</code> are gates: few, fixed, and written before any code existed, so every expectation in them is a prediction. The tests you write are written <em>beside</em> the finished code, so their expected values are observed rather than predicted — which is why exhaustive coverage belongs here and not there. Extend the suite in the project&#x27;s established location and runner, keep it runnable by the project&#x27;s declared test command, and leave it green when you return. Cover, at minimum: every public entry point and every verb it declares, including declared error paths; the boundaries — empty, exactly one, many, absent optional fields, declared maxima; declared idempotence, applied twice; one behavior per test, named for the behavior; and isolation — database criteria use the provisioned application store and the shipped rollback fixture, passing its connection into the feature. Other connections and durability tests use criterion-owned records, idempotent setup and checked cleanup through supported interfaces. Never replace the configured store, reapply schema, or delete unrelated business records. When Drydock supplies a disposable SQLite store in DATABASE_URL/DATABASE_PATH, use those inherited values for development tests. Each agent call receives a fresh provisioned test store. Never delete a default database path to clean test failures. Project tests still need fixture-owned setup and cleanup so repeated tests in the same call do not depend on order. A managed-state violation stops the block and retains a recovery snapshot; do not restore or reprovision shared state yourself. Preserve published text even when a conflicting criterion requests formatting: report the source conflict and its evidence instead of changing semantics. Where a staged authoritative suite already covers a surface, use it as the coverage; do not duplicate its cases. Any invocation must respect this step&#x27;s declared scope. Do not run the unscoped entry point for a <code>Suite: scoped</code> story, or run a suite this step does not declare. Report only completed checks and their observed results.</p>
+<ol><li>Treat <code>User Acceptance</code> entries as review evidence requirements. Implement</li></ol>
+<p>the supporting behavior, but do not claim to have performed human judgment.</p>
+<ol><li>The <code>implements</code> section is authoritative and intentionally stacked late in</li></ol>
+<p>the prompt as the recency anchor. Build that WHAT exactly; do not substitute generic framework defaults.</p>
+<ol><li>Before adding or installing Python dependencies, verify each package name</li></ol>
+<p>against the declared registry. Do not invent package names. If a needed package cannot be verified or appears newly published, fail explicitly instead of installing it.</p>
+<ol><li>Use the stack&#x27;s required package manager workflow for dependency changes.</li></ol>
+<p>When the stack requires <code>uv</code>, update manifests through <code>uv</code> conventions rather than bare <code>pip install</code>.</p>
+<ol><li>Do not claim success unless you actually created or modified project files in</li></ol>
+<p>the build working directory. If you cannot write files or cannot complete the step, report failure explicitly.</p>
+<ol><li>Do not run <code>git add</code>, <code>git commit</code>, create branches, create tags, rewrite</li></ol>
+<p>history, or otherwise mutate Git history. Drydock checkpoints application changes and Target evidence after each execution and completed step. File lineage comes from Git and the Manifest&#x27;s <code>implements:</code> entries; no additional attribution response is required.</p>
+<ol><li>End your response with this exact closing structure:</li></ol>
+<pre><code>RESULT: SUCCESS | FAILED
+
+FILES CHANGED:
+- relative/path
+
+SUMMARY:
+&lt;brief reviewable summary&gt;
+
+BLOCKERS:
+- &lt;only if any&gt;</code></pre>
+<p>Before <code>RESULT</code>, you may emit one optional JSON payload when implementation required a bounded choice not already settled by the owning specification. This records what you did; it does not ask permission, create a questionnaire, or excuse incomplete work:</p>
+<pre><code>&lt;blueprint-decisions&gt;
+[{&quot;spec&quot;:&quot;FEATURE-Example.md&quot;,&quot;severity&quot;:&quot;Material&quot;,&quot;subject&quot;:&quot;Chosen behavior&quot;,&quot;decision&quot;:&quot;Options A and B were available. I implemented B because ... Is that acceptable, or should this change on replan?&quot;}]
+&lt;/blueprint-decisions&gt;</code></pre>
+<p>Name only a specification implemented by this build block. Use <code>Low</code> or <code>Material</code>; Build never emits a Blocking decision. Omit the payload when no implementation decision was necessary.</p>
+<ol><li><code>FILES CHANGED</code> must list only files actually written in the build working</li></ol>
+<p>directory. When the existing implementation already satisfies this step, report <code>RESULT: SUCCESS</code>, list no changed files, and state the checks performed and their results. A verification-only step requires no application changes. Drydock runs the declared deterministic checks and decides the outcome independently of this report.</p>
+<ol><li>On <code>RESULT: FAILED</code>, append two additional lines so the failure is actionable</li></ol>
+<p>without opening logs. <code>FAILURE_SUMMARY</code> is one line naming the cause; <code>FAILURE_DETAIL</code> states what happened, why, and what to change before a rerun. Name concrete conditions when they apply: token or context limit exceeded, could not execute commands in this environment, a required input was missing, or a specific tool or command failed.</p>
+<pre><code>FAILURE_SUMMARY: &lt;one line naming the cause&gt;
+FAILURE_DETAIL: &lt;what happened, why, and what to change before rerunning&gt;</code></pre>
+<ol><li>When a declared acceptance criterion cannot pass no matter how the code is written,</li></ol>
+<p>say so with this exact token. You may not edit the criterion — it is staged and restored before grading:</p>
+<pre><code>AC_BROKEN: &lt;check-id&gt;[, &lt;check-id&gt;]</code></pre>
+<p>This is a report, not a verdict, and it stops nothing. A criterion reaches you only when its expected value is one its author could not have invented — a status code, a staged suite&#x27;s exit status, a value the criterion itself supplied as input — so your claim that the criterion rather than the code is at fault is the less likely explanation, and the budget is spent as it would be for any other failure. A criterion whose expectation <em>was</em> hand-typed already settles <code>DISPUTED</code> on its own, without you naming it. Emit the token only after running the criterion and confirming the underlying command succeeded while the assertion still failed. Name the affected check ids, emit it alongside your normal <code>RESULT</code> line, state the reasoning in <code>FAILURE_DETAIL</code>, and emit it even when <code>RESULT: SUCCESS</code>. Do not use it for a criterion you merely failed to satisfy.</p></article>
+</main>
+</body>
+</html>

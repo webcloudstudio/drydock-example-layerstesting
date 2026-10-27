@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261027.140505.432Z_layerstesting_plan_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261027.140505.432Z_layerstesting_plan_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261027.140505.432Z_layerstesting_plan_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT FEATURE-ReportMonthly.md ===
+# FEATURE: Report Monthly
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Implements `ledger report monthly`, the per-month transaction, inflow, outflow, and net totals computed from stored transactions. |
+| Depends On | ARCHITECTURE.md, DATABASE.md, FEATURE-CliEntry.md, FEATURE-Validation.md |
+| Provides | ledger report monthly |
+| Consumes | ledger_core.money, cli.registry |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Give the shop a report of cash movement by calendar month. Every value is computed from the
+database at call time; no total is embedded.
+
+## Interface
+
+`ledger report monthly` takes no further arguments. Extra arguments are a usage error (exit 2).
+
+Output on success (CSV, `\n` endings, no quoting, no trailing spaces):
+
+- Header: `month,transactions,inflow,outflow,net`
+- One row per `YYYY-MM` that has at least one transaction, ascending by month. The month is the
+  first seven characters of the stored date.
+- `transactions` is the count of that month&#x27;s transactions.
+- `inflow` is the sum of positive amounts, `outflow` the sum of the absolute values of negative
+  amounts (written positive), `net` is `inflow - outflow`.
+- Final row `TOTAL,&lt;count&gt;,&lt;inflow&gt;,&lt;outflow&gt;,&lt;net&gt;` over all transactions.
+- Amounts are computed in integer cents and written with exactly two decimals via `ledger_core.money`.
+  A month with no transactions is absent. An empty ledger prints the header and a TOTAL row of zeros.
+
+## Behavior
+
+1. Read all transactions with `db.transactions.list(...)`.
+2. Group by the first seven characters of `date` in integer cents; never use floating point.
+3. Emit rows in ascending month order, then the TOTAL row.
+
+## Database Interface
+
+- `FEATURE-TXN-005` — read: list transactions for aggregation - supplies: — - returns: `date`, `amount`
+
+## Programmatic Acceptance
+
+=== AC report-monthly-rows ===
+Intent: Monthly rows, ordering, and the TOTAL row are computed from posted transactions; expected counts and sums are derived from the supplied amounts with Decimal.
+
+import csv
+import io
+from decimal import Decimal
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+acct = &quot;ZZRM1&quot;
+cat = &quot;ZZRMC&quot;
+with db_session() as db:
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description=&quot;Monthly Probe&quot;)
+code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Monthly Probe&quot;)
+print(out, err)
+assert code == 0
+postings = [(&quot;2099-01-05&quot;, &quot;100.50&quot;), (&quot;2099-01-20&quot;, &quot;40.25&quot;), (&quot;2099-01-21&quot;, &quot;-30.10&quot;), (&quot;2099-03-02&quot;, &quot;10.00&quot;)]
+for day, amount in postings:
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, amount, day, &quot;m&quot;)
+    print(out, err)
+    assert code == 0
+
+code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;)
+print(out, err)
+assert code == 0
+table = parse(out)
+assert table[0] == [&quot;month&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;]
+body = table[1:-1]
+months = [r[0] for r in body]
+assert months == sorted(months)
+by_month = {r[0]: r for r in body}
+assert &quot;2099-02&quot; not in by_month
+for month in (&quot;2099-01&quot;, &quot;2099-03&quot;):
+    amounts = [Decimal(a) for d, a in postings if d[:7] == month]
+    inflow = sum((a for a in amounts if a &gt; 0), Decimal(0))
+    outflow = sum((-a for a in amounts if a &lt; 0), Decimal(0))
+    row = by_month[month]
+    assert int(row[1]) == len(amounts)
+    assert Decimal(row[2]) == inflow
+    assert Decimal(row[3]) == outflow
+    assert Decimal(row[4]) == inflow - outflow
+    for cell in row[2:]:
+        assert len(cell.split(&quot;.&quot;)[1]) == 2
+total = table[-1]
+assert total[0] == &quot;TOTAL&quot; and len(total) == 5
+assert int(total[1]) == sum(int(r[1]) for r in body)
+assert Decimal(total[2]) == sum(Decimal(r[2]) for r in body)
+assert Decimal(total[3]) == sum(Decimal(r[3]) for r in body)
+assert Decimal(total[4]) == Decimal(total[2]) - Decimal(total[3])
+=== END AC report-monthly-rows ===
+
+=== AC report-monthly-usage ===
+Intent: Extra arguments to report monthly are a usage error with exit 2 and nothing on standard output.
+
+from cli.testing import cli_runner
+
+code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;, &quot;extra&quot;)
+print(out, err)
+assert code == 2
+assert out == &quot;&quot;
+=== END AC report-monthly-usage ===
+
+=== AC report-monthly-reflects-changes ===
+Intent: The report is recomputed from the database: posting one more transaction in a new month adds exactly one month row with the posted amount as inflow.
+
+import csv
+import io
+from decimal import Decimal
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+acct = &quot;ZZRM2&quot;
+cat = &quot;ZZRMD&quot;
+month = &quot;2098-07&quot;
+amount = &quot;12.34&quot;
+with db_session() as db:
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description=&quot;Monthly Probe&quot;)
+code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Monthly Probe 2&quot;)
+assert code == 0
+code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;)
+assert code == 0
+before = {r[0] for r in parse(out)[1:-1]}
+assert month not in before
+code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, amount, month + &quot;-10&quot;, &quot;m&quot;)
+print(out, err)
+assert code == 0
+code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;)
+assert code == 0
+rows = {r[0]: r for r in parse(out)[1:-1]}
+assert set(rows) == before | {month}
+assert int(rows[month][1]) == 1
+assert Decimal(rows[month][2]) == Decimal(amount)
+assert Decimal(rows[month][3]) == Decimal(0)
+=== END AC report-monthly-reflects-changes ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Every value comes from a database query; no row, count, or total is hardcoded.
+- Money is integer cents at every layer; floating point is never used.
+- A failing command writes nothing to standard output.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-CommandContract.md ===
+# FEATURE: Command Contract
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Assembly story verifying the CSV output contract and exit codes across every delivered ledger command. |
+| Depends On | FEATURE-InitCount.md, FEATURE-LoadAccounts.md, FEATURE-LoadCategories.md, FEATURE-LoadTransactions.md, FEATURE-AccountAdd.md, FEATURE-AccountGet.md, FEATURE-AccountRename.md, FEATURE-AccountDelete.md, FEATURE-TxnPost.md, FEATURE-TxnGet.md, FEATURE-TxnAmend.md, FEATURE-TxnDelete.md, FEATURE-Transfer.md, FEATURE-ReportBalances.md, FEATURE-ReportCategories.md, FEATURE-ReportMonthly.md |
+| Provides | — |
+| Consumes | ledger init, ledger count, ledger load accounts, ledger load categories, ledger load transactions, ledger account add, ledger account get, ledger account rename, ledger account delete, ledger txn post, ledger txn get, ledger txn amend, ledger txn delete, ledger transfer, ledger report balances, ledger report categories, ledger report monthly |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Assembly and intent only. Verify across the delivered commands that:
+
+- successful output is CSV with the specified headers, `\n` endings, two-decimal amounts, no quoting, and no trailing spaces;
+- a failing command writes nothing to standard output and one diagnostic line to standard error;
+- exit 2 results from unknown commands, tables, reports, and wrong argument counts;
+- exit 1 results from an unreadable file, 3 from rejection, 4 from not found;
+- every rejected writing command leaves the table counts unchanged.
+
+Any seam defect is fixed in the owning module; this story adds no new behavior.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC contract-usage-errors ===
+Intent: Unknown commands, unknown tables or reports, and wrong argument counts all exit 2 with empty standard output.
+
+from cli.testing import cli_runner
+
+cases = [
+    (&quot;frobnicate&quot;,),
+    (&quot;report&quot;, &quot;nosuch&quot;),
+    (&quot;report&quot;,),
+    (&quot;load&quot;, &quot;nosuch&quot;, &quot;x.csv&quot;),
+    (&quot;account&quot;,),
+    (&quot;account&quot;, &quot;get&quot;),
+    (&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;),
+    (&quot;transfer&quot;, &quot;A&quot;, &quot;B&quot;),
+    (&quot;count&quot;, &quot;extra&quot;),
+]
+for args in cases:
+    code, out, err = cli_runner(*args)
+    print(args, code, err)
+    assert code == 2, args
+    assert out == &quot;&quot;, args
+=== END AC contract-usage-errors ===
+
+=== AC contract-csv-format ===
+Intent: Successful commands emit the declared headers, newline-only endings, no trailing spaces, and amounts with exactly two decimals.
+
+import csv
+import io
+import re
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+def clean(out):
+    assert out.endswith(&quot;\n&quot;)
+    assert &quot;\r&quot; not in out
+    for line in out.split(&quot;\n&quot;):
+        assert line == line.rstrip(&quot; &quot;)
+
+acct = &quot;ZZCF1&quot;
+cat = &quot;ZZCFC&quot;
+with db_session() as db:
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description=&quot;Format Probe&quot;)
+code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Format Probe&quot;)
+assert code == 0
+clean(out)
+assert parse(out)[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;]
+
+code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;7.5&quot;, &quot;2099-05-05&quot;, &quot;fmt&quot;)
+print(out, err)
+assert code == 0
+clean(out)
+table = parse(out)
+assert table[0] == [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;]
+assert re.fullmatch(r&quot;-?\d+\.\d{2}&quot;, table[1][4])
+
+code, out, err = cli_runner(&quot;count&quot;)
+assert code == 0
+clean(out)
+table = parse(out)
+assert table[0] == [&quot;table&quot;, &quot;rows&quot;]
+assert [r[0] for r in table[1:]] == [&quot;accounts&quot;, &quot;categories&quot;, &quot;transactions&quot;]
+
+code, out, err = cli_runner(&quot;report&quot;, &quot;balances&quot;)
+assert code == 0
+clean(out)
+assert parse(out)[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;]
+code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;)
+assert code == 0
+clean(out)
+assert parse(out)[0] == [&quot;category&quot;, &quot;description&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;]
+code, out, err = cli_runner(&quot;report&quot;, &quot;monthly&quot;)
+assert code == 0
+clean(out)
+assert parse(out)[0] == [&quot;month&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;]
+=== END AC contract-csv-format ===
+
+=== AC contract-failures-silent-stdout ===
+Intent: Failing commands write nothing to standard output and exactly one diagnostic line to standard error, with the documented exit code for each failure class.
+
+from cli.testing import cli_runner
+
+cases = [
+    ((&quot;account&quot;, &quot;get&quot;, &quot;ZZNOSUCH9&quot;), 4),
+    ((&quot;account&quot;, &quot;add&quot;, &quot;lower&quot;, &quot;Bad Code&quot;), 3),
+    ((&quot;txn&quot;, &quot;get&quot;, &quot;999999999&quot;), 4),
+    ((&quot;txn&quot;, &quot;post&quot;, &quot;ZZNOSUCH9&quot;, &quot;ZZNOCAT9&quot;, &quot;1.00&quot;, &quot;2099-01-01&quot;), 3),
+    ((&quot;load&quot;, &quot;accounts&quot;, &quot;/nonexistent-dir/zz-missing.csv&quot;), 1),
+]
+for args, want in cases:
+    code, out, err = cli_runner(*args)
+    print(args, code, err)
+    assert code == want, args
+    assert out == &quot;&quot;, args
+    assert len(err.strip().splitlines()) == 1, args
+=== END AC contract-failures-silent-stdout ===
+
+=== AC contract-rejected-writes-change-nothing ===
+Intent: Rejected writing commands exit 3 and leave the counts of all three tables unchanged.
+
+import csv
+import io
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def counts():
+    code, out, err = cli_runner(&quot;count&quot;)
+    assert code == 0
+    return {r[0]: int(r[1]) for r in list(csv.reader(io.StringIO(out)))[1:]}
+
+acct = &quot;ZZCR1&quot;
+other = &quot;ZZCR2&quot;
+cat = &quot;ZZCRC&quot;
+with db_session() as db:
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description=&quot;Reject Probe&quot;)
+for a in (acct, other):
+    code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, a, &quot;Reject &quot; + a)
+    assert code == 0
+code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;5.00&quot;, &quot;2099-02-02&quot;, &quot;seed&quot;)
+assert code == 0
+
+before = counts()
+rejected = [
+    (&quot;account&quot;, &quot;add&quot;, acct, &quot;Duplicate&quot;),
+    (&quot;account&quot;, &quot;add&quot;, &quot;bad code&quot;, &quot;Name&quot;),
+    (&quot;account&quot;, &quot;delete&quot;, acct),
+    (&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;1.234&quot;, &quot;2099-02-03&quot;),
+    (&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;1.00&quot;, &quot;2026-02-30&quot;),
+    (&quot;txn&quot;, &quot;post&quot;, acct, &quot;ZZNOCAT9&quot;, &quot;1.00&quot;, &quot;2099-02-03&quot;),
+    (&quot;txn&quot;, &quot;post&quot;, acct, cat, &quot;0&quot;, &quot;2099-02-03&quot;),
+    (&quot;transfer&quot;, acct, acct, &quot;1.00&quot;, &quot;2099-02-03&quot;),
+    (&quot;transfer&quot;, acct, other, &quot;0.50&quot;, &quot;2099-02-30&quot;),
+]
+for args in rejected:
+    code, out, err = cli_runner(*args)
+    print(args, code, err)
+    assert code == 3, args
+    assert out == &quot;&quot;, args
+assert counts() == before
+=== END AC contract-rejected-writes-change-nothing ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- This story adds no new command behavior; defects are fixed in the owning module.
+- Acceptance reads state by parsing CSV output and exit codes, never message wording.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-NoNegativeBalance.md ===
+# FEATURE: No Negative Balance
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Assembly story verifying that load, post, amend, delete, and transfer each reject any command that would leave an account balance below zero and change nothing. |
+| Depends On | FEATURE-LoadTransactions.md, FEATURE-TxnPost.md, FEATURE-TxnAmend.md, FEATURE-TxnDelete.md, FEATURE-Transfer.md |
+| Provides | — |
+| Consumes | ledger load transactions, ledger txn post, ledger txn amend, ledger txn delete, ledger transfer |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Assembly and intent only. An account&#x27;s balance is the sum of its transaction amounts and must never
+be below zero. For each of load, post, amend, delete, and transfer, a case that would leave a
+balance below zero exits 3 and leaves balances and row counts unchanged. A load file whose later
+rows make an earlier-valid balance negative is rejected whole.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC nonneg-load ===
+Intent: A transactions load whose earlier rows are individually valid but whose combined effect makes the balance negative is rejected whole with exit 3 and stores none of its rows.
+
+import csv
+import io
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+def counts():
+    code, out, err = cli_runner(&quot;count&quot;)
+    assert code == 0
+    return {r[0]: int(r[1]) for r in parse(out)[1:]}
+
+acct = &quot;ZZNL1&quot;
+cat = &quot;ZZNLC&quot;
+with db_session() as db:
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description=&quot;Load Probe&quot;)
+code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Load Probe&quot;)
+assert code == 0
+before = counts()
+rows = [
+    [&quot;800000001&quot;, &quot;2099-03-01&quot;, acct, cat, &quot;50.00&quot;, &quot;in&quot;],
+    [&quot;800000002&quot;, &quot;2099-03-02&quot;, acct, cat, &quot;-30.00&quot;, &quot;out one&quot;],
+    [&quot;800000003&quot;, &quot;2099-03-03&quot;, acct, cat, &quot;-30.00&quot;, &quot;out two&quot;],
+]
+with tempfile.TemporaryDirectory() as tmp:
+    path = os.path.join(tmp, &quot;txns.csv&quot;)
+    with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh:
+        w = csv.writer(fh, lineterminator=&quot;\n&quot;)
+        w.writerow([&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;])
+        w.writerows(rows)
+    code, out, err = cli_runner(&quot;load&quot;, &quot;transactions&quot;, path)
+print(out, err)
+assert code == 3
+assert out == &quot;&quot;
+assert counts() == before
+code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, rows[0][0])
+assert code == 4
+code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, acct)
+assert parse(out)[1][2] == &quot;0&quot;
+=== END AC nonneg-load ===
+
+=== AC nonneg-post ===
+Intent: Posting an outflow larger than the balance exits 3 and leaves the balance and transaction count unchanged.
+
+import csv
+import io
+from decimal import Decimal
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+acct = &quot;ZZNP1&quot;
+cat = &quot;ZZNPC&quot;
+with db_session() as db:
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description=&quot;Post Probe&quot;)
+code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Post Probe&quot;)
+assert code == 0
+deposit = Decimal(&quot;10.00&quot;)
+code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(deposit), &quot;2099-03-01&quot;, &quot;in&quot;)
+assert code == 0
+code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(-(deposit + Decimal(&quot;0.01&quot;))), &quot;2099-03-02&quot;, &quot;out&quot;)
+print(out, err)
+assert code == 3
+assert out == &quot;&quot;
+code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, acct)
+row = parse(out)[1]
+assert row[2] == &quot;1&quot;
+assert Decimal(row[3]) == deposit
+=== END AC nonneg-post ===
+
+=== AC nonneg-amend ===
+Intent: Amending a deposit down so the account would go negative exits 3 and the original amount remains.
+
+import csv
+import io
+from decimal import Decimal
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+acct = &quot;ZZNA1&quot;
+cat = &quot;ZZNAC&quot;
+with db_session() as db:
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description=&quot;Amend Probe&quot;)
+code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Amend Probe&quot;)
+assert code == 0
+big, spend = Decimal(&quot;100.00&quot;), Decimal(&quot;60.00&quot;)
+code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(big), &quot;2099-03-01&quot;, &quot;in&quot;)
+assert code == 0
+deposit_id = parse(out)[1][0]
+code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(-spend), &quot;2099-03-02&quot;, &quot;out&quot;)
+assert code == 0
+code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, deposit_id, &quot;50.00&quot;)
+print(out, err)
+assert code == 3
+assert out == &quot;&quot;
+code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, deposit_id)
+assert code == 0
+assert Decimal(parse(out)[1][4]) == big
+code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, acct)
+assert Decimal(parse(out)[1][3]) == big - spend
+=== END AC nonneg-amend ===
+
+=== AC nonneg-delete ===
+Intent: Deleting a deposit that funds a later outflow exits 3, keeps the row, and leaves the balance unchanged.
+
+import csv
+import io
+from decimal import Decimal
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+acct = &quot;ZZND1&quot;
+cat = &quot;ZZNDC&quot;
+with db_session() as db:
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description=&quot;Delete Probe&quot;)
+code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Delete Probe&quot;)
+assert code == 0
+big, spend = Decimal(&quot;100.00&quot;), Decimal(&quot;60.00&quot;)
+code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(big), &quot;2099-03-01&quot;, &quot;in&quot;)
+assert code == 0
+deposit_id = parse(out)[1][0]
+code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(-spend), &quot;2099-03-02&quot;, &quot;out&quot;)
+assert code == 0
+code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, deposit_id)
+print(out, err)
+assert code == 3
+assert out == &quot;&quot;
+code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, deposit_id)
+assert code == 0
+code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, acct)
+row = parse(out)[1]
+assert row[2] == &quot;2&quot;
+assert Decimal(row[3]) == big - spend
+=== END AC nonneg-delete ===
+
+=== AC nonneg-transfer ===
+Intent: A transfer larger than the source balance exits 3 and stores neither row; both balances and the table count are unchanged.
+
+import csv
+import io
+from decimal import Decimal
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+def txn_count():
+    code, out, err = cli_runner(&quot;count&quot;)
+    assert code == 0
+    return {r[0]: int(r[1]) for r in parse(out)[1:]}[&quot;transactions&quot;]
+
+src, dst = &quot;ZZNT1&quot;, &quot;ZZNT2&quot;
+cat = &quot;ZZNTC&quot;
+with db_session() as db:
+    for c, d in ((cat, &quot;Transfer Probe&quot;), (&quot;TRANSFER&quot;, &quot;Internal transfer&quot;)):
+        if db.categories.get(category=c) is None:
+            db.categories.create(category=c, description=d)
+for a in (src, dst):
+    code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, a, &quot;Xfer &quot; + a)
+    assert code == 0
+funds = Decimal(&quot;20.00&quot;)
+code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, src, cat, str(funds), &quot;2099-03-01&quot;, &quot;in&quot;)
+assert code == 0
+before = txn_count()
+code, out, err = cli_runner(&quot;transfer&quot;, src, dst, str(funds + Decimal(&quot;0.01&quot;)), &quot;2099-03-02&quot;)
+print(out, err)
+assert code == 3
+assert out == &quot;&quot;
+assert txn_count() == before
+code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, src)
+assert Decimal(parse(out)[1][3]) == funds
+code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, dst)
+assert Decimal(parse(out)[1][3]) == Decimal(&quot;0&quot;)
+=== END AC nonneg-transfer ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- The balance check runs before the first write of every writing command.
+- A rejected command writes nothing to standard output and changes no stored record.
+=== END ARTIFACT ===
+=== BEGIN ARTIFACT FEATURE-Verification.md ===
+# FEATURE: Verification
+
+| Field | Value |
+|-------|-------|
+| Version | 20261027 V1 |
+| Description | Terminal gate that runs the supplied end-to-end grader and the project&#x27;s own test suite. |
+| Depends On | ARCHITECTURE.md, DATABASE.md, FEATURE-CommandContract.md, FEATURE-NoNegativeBalance.md |
+| Provides | — |
+| Consumes | ledger |
+
+## Questions
+
+- None.
+
+## Purpose
+
+Terminal story. After every other story has closed, run `sh sources/run.sh` and `sh bin/test.sh`,
+each of which must exit zero. Nothing under `sources/` is modified. Failures are fixed in the
+owning module, never by editing the grader or its seed files.
+
+The grader creates its own temporary SQLite database and runs `ledger init`, which empties the
+database. The criterion therefore removes `DATABASE_URL` and `DATABASE_PATH` from the otherwise
+inherited environment so the managed store is never touched by a child process.
+
+## Database Interface
+
+- None — persistence is owned by DATABASE.md.
+
+## Programmatic Acceptance
+
+=== AC verification-full-suite ===
+Intent: The supplied grader and the project&#x27;s own test suite both exit zero when run from the application root against their own temporary databases.
+Suite: full
+Requires: executable=sh; scope=test
+
+import os
+import subprocess
+import sys
+
+env = {k: v for k, v in os.environ.items() if k not in (&quot;DATABASE_URL&quot;, &quot;DATABASE_PATH&quot;)}
+
+grader = subprocess.run([&quot;sh&quot;, &quot;sources/run.sh&quot;], capture_output=True, text=True, env=env)
+print(grader.stdout)
+print(grader.stderr, file=sys.stderr)
+assert grader.returncode == 0
+
+suite = subprocess.run([&quot;sh&quot;, &quot;bin/test.sh&quot;], capture_output=True, text=True, env=env)
+print(suite.stdout)
+print(suite.stderr, file=sys.stderr)
+assert suite.returncode == 0
+=== END AC verification-full-suite ===
+
+## User Acceptance
+
+- None.
+
+## Guardrails
+
+- Do not modify, rewrite, regenerate, or substitute anything under `sources/`.
+- Application code never reads `sources/run.sh` or any seed file.
+- Child processes never receive the managed store&#x27;s `DATABASE_URL` or `DATABASE_PATH`.
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

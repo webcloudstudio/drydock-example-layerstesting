@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_no_negative_balance.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_no_negative_balance.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_no_negative_balance.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;No negative balance across every writing command that changes a transaction.
+
+Assembly checks for FEATURE-NoNegativeBalance. Each case drives a command that would leave an
+account below zero, asserts exit 3 with empty stdout, and reads the balances and row counts back
+through the persistence interface and ``cli_runner`` to confirm nothing changed. Every test runs
+against a fresh store.
+&quot;&quot;&quot;
+
+import csv
+import io
+from decimal import Decimal
+
+import pytest
+
+from cli.testing import cli_runner
+
+HEADER = [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;]
+
+
+def _rows(out: str) -&gt; list[list[str]]:
+    return list(csv.reader(io.StringIO(out)))
+
+
+def _counts() -&gt; dict[str, int]:
+    code, out, err = cli_runner(&quot;count&quot;)
+    assert code == 0, err
+    return {row[0]: int(row[1]) for row in _rows(out)[1:]}
+
+
+def _write_csv(path, rows) -&gt; str:
+    with open(path, &quot;w&quot;, newline=&quot;&quot;, encoding=&quot;utf-8&quot;) as fh:
+        writer = csv.writer(fh, lineterminator=&quot;\n&quot;)
+        writer.writerow(HEADER)
+        writer.writerows(rows)
+    return str(path)
+
+
+# ── load transactions ──────────────────────────────────────────────────────────────────────
+
+
+def test_load_whose_later_rows_overdraw_is_rejected_whole(ledger_store, store_open, tmp_path):
+    acct, cat = &quot;ZZNL1&quot;, &quot;ZZNLC&quot;
+    with store_open(ledger_store) as db:
+        db.categories.create(category=cat, description=&quot;Load Probe&quot;)
+    assert cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Load Probe&quot;)[0] == 0
+    before = _counts()
+
+    rows = [
+        [&quot;800000001&quot;, &quot;2099-03-01&quot;, acct, cat, &quot;50.00&quot;, &quot;in&quot;],
+        [&quot;800000002&quot;, &quot;2099-03-02&quot;, acct, cat, &quot;-30.00&quot;, &quot;out one&quot;],
+        [&quot;800000003&quot;, &quot;2099-03-03&quot;, acct, cat, &quot;-30.00&quot;, &quot;out two&quot;],
+    ]
+    path = _write_csv(tmp_path / &quot;txns.csv&quot;, rows)
+    code, out, err = cli_runner(&quot;load&quot;, &quot;transactions&quot;, path)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert _counts() == before
+
+    code, _, _ = cli_runner(&quot;txn&quot;, &quot;get&quot;, rows[0][0])
+    assert code == 4
+    code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, acct)
+    assert code == 0, err
+    assert _rows(out)[1][2] == &quot;0&quot;
+    assert _rows(out)[1][3] == &quot;0.00&quot;
+
+
+# ── txn post ───────────────────────────────────────────────────────────────────────────────
+
+
+def test_post_outflow_beyond_balance_is_rejected_and_balance_unchanged(ledger_store, store_open):
+    acct, cat = &quot;ZZNP1&quot;, &quot;ZZNPC&quot;
+    with store_open(ledger_store) as db:
+        db.categories.create(category=cat, description=&quot;Post Probe&quot;)
+    assert cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Post Probe&quot;)[0] == 0
+    deposit = Decimal(&quot;10.00&quot;)
+    code, _, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(deposit), &quot;2099-03-01&quot;, &quot;in&quot;)
+    assert code == 0, err
+
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(-(deposit + Decimal(&quot;0.01&quot;))), &quot;2099-03-02&quot;, &quot;out&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+
+    code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, acct)
+    assert code == 0, err
+    row = _rows(out)[1]
+    assert row[2] == &quot;1&quot;
+    assert Decimal(row[3]) == deposit
+
+
+# ── txn amend ──────────────────────────────────────────────────────────────────────────────
+
+
+def test_amend_deposit_below_outflow_is_rejected_and_original_remains(ledger_store, store_open):
+    acct, cat = &quot;ZZNA1&quot;, &quot;ZZNAC&quot;
+    with store_open(ledger_store) as db:
+        db.categories.create(category=cat, description=&quot;Amend Probe&quot;)
+    assert cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Amend Probe&quot;)[0] == 0
+    big, spend = Decimal(&quot;100.00&quot;), Decimal(&quot;60.00&quot;)
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(big), &quot;2099-03-01&quot;, &quot;in&quot;)
+    assert code == 0, err
+    deposit_id = _rows(out)[1][0]
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(-spend), &quot;2099-03-02&quot;, &quot;out&quot;)[0] == 0
+
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, deposit_id, &quot;50.00&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, deposit_id)
+    assert code == 0, err
+    assert Decimal(_rows(out)[1][4]) == big
+    code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, acct)
+    assert code == 0, err
+    assert Decimal(_rows(out)[1][3]) == big - spend
+
+
+# ── txn delete ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_delete_deposit_that_funds_later_outflow_is_rejected_and_row_kept(ledger_store, store_open):
+    acct, cat = &quot;ZZND1&quot;, &quot;ZZNDC&quot;
+    with store_open(ledger_store) as db:
+        db.categories.create(category=cat, description=&quot;Delete Probe&quot;)
+    assert cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Delete Probe&quot;)[0] == 0
+    big, spend = Decimal(&quot;100.00&quot;), Decimal(&quot;60.00&quot;)
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(big), &quot;2099-03-01&quot;, &quot;in&quot;)
+    assert code == 0, err
+    deposit_id = _rows(out)[1][0]
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(-spend), &quot;2099-03-02&quot;, &quot;out&quot;)[0] == 0
+
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, deposit_id)
+    assert code == 3
+    assert out == &quot;&quot;
+
+    assert cli_runner(&quot;txn&quot;, &quot;get&quot;, deposit_id)[0] == 0
+    code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, acct)
+    assert code == 0, err
+    row = _rows(out)[1]
+    assert row[2] == &quot;2&quot;
+    assert Decimal(row[3]) == big - spend
+
+
+# ── transfer ───────────────────────────────────────────────────────────────────────────────
+
+
+def test_transfer_beyond_source_balance_stores_neither_row(ledger_store, store_open):
+    src, dst, cat = &quot;ZZNT1&quot;, &quot;ZZNT2&quot;, &quot;ZZNTC&quot;
+    with store_open(ledger_store) as db:
+        db.categories.create(category=cat, description=&quot;Transfer Probe&quot;)
+        db.categories.create(category=&quot;TRANSFER&quot;, description=&quot;Internal transfer&quot;)
+    for account in (src, dst):
+        assert cli_runner(&quot;account&quot;, &quot;add&quot;, account, &quot;Xfer &quot; + account)[0] == 0
+    funds = Decimal(&quot;20.00&quot;)
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, src, cat, str(funds), &quot;2099-03-01&quot;, &quot;in&quot;)[0] == 0
+    before = _counts()[&quot;transactions&quot;]
+
+    code, out, err = cli_runner(&quot;transfer&quot;, src, dst, str(funds + Decimal(&quot;0.01&quot;)), &quot;2099-03-02&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert _counts()[&quot;transactions&quot;] == before
+
+    code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, src)
+    assert code == 0, err
+    assert Decimal(_rows(out)[1][3]) == funds
+    code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, dst)
+    assert code == 0, err
+    assert Decimal(_rows(out)[1][3]) == Decimal(&quot;0&quot;)
+</pre></article>
+</main>
+</body>
+</html>

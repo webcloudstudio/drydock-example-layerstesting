@@ -1,0 +1,29 @@
+I'll start by inspecting the build directory and the existing files.The `ledger_core` package exists, so I'll add `validation.py`, `money.py`, and `balances.py` alongside it. Next I need the persistence row shape and the test-isolation fixture.Rows come back as dataclasses, so balance code should read attributes such as `.amount`. Before writing tests, I'll check how existing tests use the `db_session` fixture and the rollback context.I have what I need. I'll write the three domain modules first, then tests. Validation comes first.Next, the money module: integer-only parsing and formatting.The `or "0"` in the fraction expression is dead code, since `"".ljust(2, "0")` is already `"00"`. I'll remove it.Now the balance rule. Edits and deletes take their account and stored amount from the database, so the check judges the net effect per account.Now the tests. I'll start with validation, covering the declared boundaries and the rejection paths.Balance tests follow. They use the rollback session from `persistence.testing`, as the acceptance criteria do, and check results by reading the store back.One test has a sloppy argument (`0 + 1`) and doesn't cover what its name claims. I'll make it deliberately net to zero for its own account while another account is already negative.Next I'll run the project's declared test command, `bin/test.sh`, which runs the whole suite.All 155 tests pass. I'll confirm the set of files I changed in the working tree, and check the `ledger_core` boundary rules are covered by the passing foundation tests.The Validation and Balance Rule stories are built, and the project suite passes: 155 tests, exit 0, run with `sh bin/test.sh`.
+
+- **Validation:** codes, names, memos, dates, and amounts are checked as specified, and cents are formatted as two-decimal text. Money uses integer arithmetic only, so the foundation's no-float scan still passes.
+- **Balance rule:** `check_no_negative` nets the changes per account and rejects any account that would go below zero, before anything is written.
+- **Tests:** new tests cover every declared assertion's cases plus boundaries and rejection paths. Balance tests use the rollback session and read state back through the persistence interface.
+
+I did not run the spec's acceptance blocks verbatim. The new tests cover the same cases, so Drydock's run is the check on the declared text. Nothing is committed.
+
+```text
+<blueprint-decisions>
+[{"spec":"FEATURE-BalanceRule.md","severity":"Low","subject":"Edit or Delete of a missing transaction","decision":"The spec does not say what happens when txn_id is absent. I raise NotFound (exit 4), matching the CLI error table for absent transactions on amend and delete. Is that acceptable?"},{"spec":"FEATURE-Validation.md","severity":"Low","subject":"Carriage return in names and memos","decision":"The spec forbids only comma and newline. I also reject carriage return (\\r), because it would break the CSV output. Is that acceptable?"}]
+</blueprint-decisions>
+```
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- ledger_core/validation.py
+- ledger_core/money.py
+- ledger_core/balances.py
+- tests/test_validation.py
+- tests/test_money.py
+- tests/test_balances.py
+
+SUMMARY:
+Implemented `validate_code`, `validate_name`, `validate_memo`, `validate_date`, `parse_amount`, and `format_cents` in `ledger_core`, plus `Insert`/`Edit`/`Delete`, `current_balance`, and `check_no_negative` in `ledger_core/balances.py`. Violations raise `Rejected` (exit 3). Missing transactions on Edit/Delete raise `NotFound` (exit 4). Checks were run with `sh bin/test.sh`: 155 passed, exit 0. The new tests mirror the declared acceptance cases and add boundary and negative-path coverage. The spec's acceptance blocks were not run verbatim.
+
+BLOCKERS:
+- None.

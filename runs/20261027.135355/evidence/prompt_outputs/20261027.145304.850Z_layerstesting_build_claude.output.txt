@@ -1,0 +1,16 @@
+Existing load commands and core validators cover most of what this step needs. I'll get a baseline test run before editing.Baseline is green: 365 passed. Now I'll replace the transactions placeholder with the validating loader, reusing the existing `read_rows`, validators, `check_no_negative`, and `run_all`.I wrote the undo wrong: `_remove` calls its argument positionally, but `transactions.delete` takes `txn_id=` as a keyword. Fixing that with a dedicated undo helper.Now the tests. I'll follow `tests/test_load.py`: act through `cli_runner`, read back through the store, and cover the declared acceptance cases plus boundaries and a rollback path.That last test is wrong: a `-0.01` row on an empty account is overdrawn and would be rejected, and the `or True` assertion checks nothing. I'll rewrite the whole file cleanly.Running the new tests first, then the full suite and the grader.The suite is green at 389 passed. The grader shows 37 of 43 passing; the six failures are all `ledger report`, which is outside this block. Let me confirm the load-transaction checks specifically pass.RESULT: SUCCESS
+
+`ledger load transactions <csv>` now validates the whole file before its first write and inserts all rows as one unit. The pytest suite passes (389 tests, including 24 new ones). The grader is at 37 of 43: all 6 failures are `ledger report` checks (C1–C3, H1–H3), which belong to a later block. Every load-transactions check passes, including B3 (120 seed rows) and D1 (the bad file, which exits 3 with nothing stored).
+
+FILES CHANGED:
+- cli/commands/load.py
+- tests/test_load_transactions.py
+
+SUMMARY:
+- **`cli/commands/load.py`**: replaced the placeholder with `load_transactions`. Validation runs over every row first: `txn_id` parses as an integer, repeated ids in the file and ids already stored are rejected, the date is a real `YYYY-MM-DD` date, the account and category exist in the store, the amount parses to integer cents with at most two decimals and is not zero, and the memo is 0–60 characters with no comma or newline. Then `check_no_negative` runs over all rows together as inserts, so the net effect per account decides. Only after that does `run_all` insert the rows, keeping each file `txn_id`. Output is `table,loaded` and `transactions,<n>`.
+- **`tests/test_load_transactions.py`**: covers the five declared acceptance scenarios, plus boundaries (header-only file, 60-character memo, one-decimal amount, a withdrawal that leaves exactly zero), overdraft against a stored balance, unknown account and category, the row-11 case, each invalid field, duplicate ids, wrong header, missing file, usage counts, and rollback when an insert fails partway. Tests act through `cli_runner` and read back through the store.
+
+Choices I made:
+- Atomicity uses the existing `run_all` compensating-delete pattern from `ledger_core/atomic.py`, not a real database transaction. The persistence layer exposes no multi-write transaction, and the account and category loaders already work this way.
+- `parse_txn_id` accepts negative integers, since the spec says only "an integer". Say if you want positive ids only.
+- Nothing was committed, per the build instructions.

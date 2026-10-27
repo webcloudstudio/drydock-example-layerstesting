@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_account_manage.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_account_manage.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_account_manage.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger account get``, ``rename``, and ``delete``, against a fresh store per test.&quot;&quot;&quot;
+
+import csv
+import io
+
+import pytest
+
+from cli.testing import cli_runner
+
+ACCOUNT_HEADER = [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;]
+CATEGORY = &quot;ZMAC1&quot;
+
+
+def _rows(out: str) -&gt; list[list[str]]:
+    return list(csv.reader(io.StringIO(out)))
+
+
+def _name(store_open, path, code):
+    with store_open(path) as db:
+        row = db.accounts.get(account=code)
+        return None if row is None else row.name
+
+
+@pytest.fixture
+def account_store(ledger_store, store_open):
+    with store_open(ledger_store) as db:
+        db.categories.create(category=CATEGORY, description=&quot;Manage Category&quot;)
+    return ledger_store
+
+
+def _post(store_open, path, code, txn_id, cents):
+    with store_open(path) as db:
+        db.transactions.create(txn_id=txn_id, date=&quot;2026-04-01&quot;, account=code, category=CATEGORY, amount=cents, memo=&quot;&quot;)
+
+
+# ── get ───────────────────────────────────────────────────────────────────────────────────
+
+
+def test_get_reports_live_count_and_balance(account_store, store_open):
+    cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZMG1&quot;, &quot;Get Probe&quot;)
+    _post(store_open, account_store, &quot;ZMG1&quot;, 1, 1000)
+    _post(store_open, account_store, &quot;ZMG1&quot;, 2, -250)
+    code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;ZMG1&quot;)
+    assert code == 0, err
+    assert _rows(out) == [ACCOUNT_HEADER, [&quot;ZMG1&quot;, &quot;Get Probe&quot;, &quot;2&quot;, &quot;7.50&quot;]]
+
+
+def test_get_empty_account_reports_zero_count_and_zero_balance(account_store):
+    cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZMG2&quot;, &quot;Empty Probe&quot;)
+    code, out, _ = cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;ZMG2&quot;)
+    assert code == 0
+    assert _rows(out)[1] == [&quot;ZMG2&quot;, &quot;Empty Probe&quot;, &quot;0&quot;, &quot;0.00&quot;]
+
+
+def test_get_reflects_a_posting_made_after_the_last_read(account_store, store_open):
+    cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZMG3&quot;, &quot;Live&quot;)
+    assert _rows(cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;ZMG3&quot;)[1])[1] == [&quot;ZMG3&quot;, &quot;Live&quot;, &quot;0&quot;, &quot;0.00&quot;]
+    _post(store_open, account_store, &quot;ZMG3&quot;, 5, 4200)
+    assert _rows(cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;ZMG3&quot;)[1])[1] == [&quot;ZMG3&quot;, &quot;Live&quot;, &quot;1&quot;, &quot;42.00&quot;]
+
+
+def test_get_absent_exits_four_with_no_stdout(account_store):
+    code, out, _ = cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;ZMGNONE&quot;)
+    assert code == 4
+    assert out == &quot;&quot;
+
+
+def test_get_does_not_write(account_store, store_open):
+    cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZMG4&quot;, &quot;Read Only&quot;)
+    cli_runner(&quot;account&quot;, &quot;get&quot;, &quot;ZMG4&quot;)
+    with store_open(account_store) as db:
+        assert [row.account for row in db.accounts.list()] == [&quot;ZMG4&quot;]
+        assert db.transactions.list() == []
+
+
+@pytest.mark.parametrize(&quot;args&quot;, [(&quot;account&quot;, &quot;get&quot;), (&quot;account&quot;, &quot;get&quot;, &quot;ZMG5&quot;, &quot;EXTRA&quot;)])
+def test_get_wrong_argument_count_is_usage_error(account_store, args):
+    code, out, _ = cli_runner(*args)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+# ── rename ────────────────────────────────────────────────────────────────────────────────
+
+
+def test_rename_prints_updated_row_and_persists_new_name(account_store, store_open):
+    cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZMR1&quot;, &quot;Old Name&quot;)
+    code, out, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, &quot;ZMR1&quot;, &quot;New Name&quot;)
+    assert code == 0, err
+    assert _rows(out) == [ACCOUNT_HEADER, [&quot;ZMR1&quot;, &quot;New Name&quot;, &quot;0&quot;, &quot;0.00&quot;]]
+    assert _name(store_open, account_store, &quot;ZMR1&quot;) == &quot;New Name&quot;
+
+
+def test_rename_changes_only_the_name(account_store, store_open):
+    cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZMR2&quot;, &quot;Before&quot;)
+    _post(store_open, account_store, &quot;ZMR2&quot;, 7, 1250)
+    cli_runner(&quot;account&quot;, &quot;rename&quot;, &quot;ZMR2&quot;, &quot;After&quot;)
+    with store_open(account_store) as db:
+        row = db.accounts.get(account=&quot;ZMR2&quot;)
+        assert row.account == &quot;ZMR2&quot;
+        assert row.name == &quot;After&quot;
+        posted = db.transactions.list(account=&quot;ZMR2&quot;)
+        assert [(t.txn_id, t.amount) for t in posted] == [(7, 1250)]
+
+
+def test_rename_to_largest_name_is_stored_whole(account_store, store_open):
+    cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZMR3&quot;, &quot;Short&quot;)
+    code, _, err = cli_runner(&quot;account&quot;, &quot;rename&quot;, &quot;ZMR3&quot;, &quot;n&quot; * 40)
+    assert code == 0, err
+    assert _name(store_open, account_store, &quot;ZMR3&quot;) == &quot;n&quot; * 40
+
+
+@pytest.mark.parametrize(&quot;bad&quot;, [&quot;has,comma&quot;, &quot;&quot;, &quot;x&quot; * 41, &quot;line\nbreak&quot;])
+def test_rename_invalid_name_exits_three_and_keeps_name(account_store, store_open, bad):
+    cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZMR4&quot;, &quot;Keep Me&quot;)
+    code, out, _ = cli_runner(&quot;account&quot;, &quot;rename&quot;, &quot;ZMR4&quot;, bad)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert _name(store_open, account_store, &quot;ZMR4&quot;) == &quot;Keep Me&quot;
+
+
+def test_rename_absent_exits_four_and_creates_nothing(account_store, store_open):
+    code, out, _ = cli_runner(&quot;account&quot;, &quot;rename&quot;, &quot;ZMRNONE&quot;, &quot;Any Name&quot;)
+    assert code == 4
+    assert out == &quot;&quot;
+    assert _name(store_open, account_store, &quot;ZMRNONE&quot;) is None
+
+
+@pytest.mark.parametrize(&quot;args&quot;, [(&quot;account&quot;, &quot;rename&quot;, &quot;ZMR5&quot;), (&quot;account&quot;, &quot;rename&quot;, &quot;ZMR5&quot;, &quot;A&quot;, &quot;B&quot;)])
+def test_rename_wrong_argument_count_is_usage_error(account_store, args):
+    code, out, _ = cli_runner(*args)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+# ── delete ────────────────────────────────────────────────────────────────────────────────
+
+
+def test_delete_without_transactions_prints_confirmation_and_removes(account_store, store_open):
+    cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZMD1&quot;, &quot;Delete Me&quot;)
+    code, out, err = cli_runner(&quot;account&quot;, &quot;delete&quot;, &quot;ZMD1&quot;)
+    assert code == 0, err
+    assert _rows(out) == [[&quot;deleted&quot;], [&quot;ZMD1&quot;]]
+    assert _name(store_open, account_store, &quot;ZMD1&quot;) is None
+
+
+def test_delete_leaves_other_accounts_untouched(account_store, store_open):
+    cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZMD2&quot;, &quot;Stays&quot;)
+    cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZMD3&quot;, &quot;Goes&quot;)
+    cli_runner(&quot;account&quot;, &quot;delete&quot;, &quot;ZMD3&quot;)
+    assert _name(store_open, account_store, &quot;ZMD2&quot;) == &quot;Stays&quot;
+
+
+def test_delete_account_with_transaction_is_refused(account_store, store_open):
+    cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZMD4&quot;, &quot;In Use&quot;)
+    _post(store_open, account_store, &quot;ZMD4&quot;, 11, 500)
+    code, out, _ = cli_runner(&quot;account&quot;, &quot;delete&quot;, &quot;ZMD4&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert _name(store_open, account_store, &quot;ZMD4&quot;) == &quot;In Use&quot;
+    with store_open(account_store) as db:
+        assert db.transactions.get(txn_id=11) is not None
+
+
+def test_delete_absent_exits_four_with_no_stdout(account_store):
+    code, out, _ = cli_runner(&quot;account&quot;, &quot;delete&quot;, &quot;ZMDNONE&quot;)
+    assert code == 4
+    assert out == &quot;&quot;
+
+
+def test_delete_twice_second_attempt_exits_four(account_store):
+    cli_runner(&quot;account&quot;, &quot;add&quot;, &quot;ZMD5&quot;, &quot;Once&quot;)
+    assert cli_runner(&quot;account&quot;, &quot;delete&quot;, &quot;ZMD5&quot;)[0] == 0
+    code, out, _ = cli_runner(&quot;account&quot;, &quot;delete&quot;, &quot;ZMD5&quot;)
+    assert code == 4
+    assert out == &quot;&quot;
+
+
+@pytest.mark.parametrize(&quot;args&quot;, [(&quot;account&quot;, &quot;delete&quot;), (&quot;account&quot;, &quot;delete&quot;, &quot;ZMD6&quot;, &quot;EXTRA&quot;)])
+def test_delete_wrong_argument_count_is_usage_error(account_store, args):
+    code, out, _ = cli_runner(*args)
+    assert code == 2
+    assert out == &quot;&quot;
+</pre></article>
+</main>
+</body>
+</html>

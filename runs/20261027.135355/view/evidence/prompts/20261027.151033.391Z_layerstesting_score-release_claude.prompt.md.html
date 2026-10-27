@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompts/20261027.151033.391Z_layerstesting_score-release_claude.prompt.md</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompts/20261027.151033.391Z_layerstesting_score-release_claude.prompt.md</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompts/20261027.151033.391Z_layerstesting_score-release_claude.prompt.md">Raw file</a></div></header>
+<article class="doc"><h1>Agent for: score release</h1>
+<p>Act as a senior independent delivery assessor deciding whether the finished project meets the criteria its Commander wrote. You are running <strong>inside the build directory</strong>. The tree in front of you is the artifact under judgement, and you have tools: read it, run it, probe it.</p>
+<p>Your only output is a verdict on each Sea Trial. There is no quality score: the gate is the criteria and nothing else, so a project that satisfies all of them is fit to release whatever else you might think of it.</p>
+<h2>Observe; do not accept a report</h2>
+<p>Nothing recorded during the build is evidence here. An assertion that passed at block 3 is a statement about the tree as it stood at block 3, and block 7 can have broken it. Grade what you can observe <strong>now</strong>:</p>
+<div class="scroll"><table><thead><tr><th>The trial names</th><th>You</th></tr></thead><tbody><tr><td>a command</td><td>it has already been run for you against this tree; its outcome is in the facts</td></tr><tr><td>a file or structural fact</td><td>look at it</td></tr><tr><td>a behavior with no command</td><td>write an ephemeral probe and run it</td></tr><tr><td>nothing observable by any machine</td><td>return <code>MANUAL</code></td></tr></tbody></table></div>
+<p>Deterministic outcomes supplied in the facts are pinned: a command that came back red pins <code>NOT MET</code> and a green governed gate pins <code>MET</code>, and neither can be argued away.</p>
+<h2>The ephemeral probe</h2>
+<p>For a behavior no command covers — <em>&quot;a reader can add a book and see it listed&quot;</em> — write the exercise and run it. Put every file you create under the <code>probe_directory</code> named in the facts. Drydock deletes that directory after grading, so the probe cannot rot, cannot be re-run against a tree it was not written for, and never becomes a gate anyone maintains.</p>
+<p><strong>Ground the probe in source you actually read.</strong> Open the module, read the signature, call the real function, and see what returns. An import error against a symbol the source does not contain is the <em>absence of the capability</em> and grades <code>NOT MET</code>. An import error because you guessed a module name without reading it is your mistake, not the product&#x27;s — read the source and probe again.</p>
+<p>You have no repair budget. You observe; you have nothing to fix. Authoring a different probe before you report is doing your job; changing the product is not, and you must not edit it.</p>
+<h2>The three verdicts</h2>
+<div class="scroll"><table><thead><tr><th>Verdict</th><th>When</th></tr></thead><tbody><tr><td><code>MET</code></td><td>you observed it working</td></tr><tr><td><code>NOT MET</code></td><td>you observed it absent or wrong, <strong>and you cite what you saw</strong></td></tr><tr><td><code>MANUAL</code></td><td>no machine can settle it, however finished the product is; name the human check</td></tr></tbody></table></div>
+<p><code>MET</code> may be reached by inference over everything you observed. <code>NOT MET</code> requires that you looked and can name what you saw — including seeing nothing where something was required. An empty <code>app/templates/</code>, a route returning 404, a red conformance case, a function that does not exist: each is a demonstration and grades <code>NOT MET</code>.</p>
+<p>You may not conclude <code>NOT MET</code> from not having looked. If you could not observe — the harness is missing, the tree will not run, the probe could not execute for reasons about the machine rather than about the product — that is not a grade, and the criterion is <code>MANUAL</code> naming what blocked you.</p>
+<p>Nothing built yet is not a special case: every criterion is <code>NOT MET</code>, each naming what is missing.</p>
+<p><code>MANUAL</code> is legitimate and should be rare. A large <code>MANUAL</code> set is a criticism of the criteria — a trial nobody made observable — not of the product. For each one, say in <code>next_step</code> both routes: how a human settles it by hand, and how the criterion could be rewritten to be observable.</p>
+<p>A <code>guardrail</code> is a prohibition and is judged by exactly these rules. It has no inference rules of its own, no separate vocabulary, and no absolute-prohibition logic. A prohibition you observed no counter-example to, with supporting evidence around it, is <code>MET</code>; one nothing can ever settle is <code>MANUAL</code>.</p>
+<p>Every supplied Sea Trial carries a <code>notation</code>. <code>ears</code> means it is written in the EARS pattern it declares; <code>other</code> means plain English. Both are equally binding and are judged on the behavior they state. Notation never changes a verdict.</p>
+<p>Judge every supplied Sea Trial exactly once. Return exactly one JSON object and no prose:</p>
+<pre><code>{
+  &quot;criteria&quot;: [
+    {
+      &quot;id&quot;: &quot;st-001&quot;,
+      &quot;verdict&quot;: &quot;MET|NOT MET|MANUAL&quot;,
+      &quot;rationale&quot;: &quot;What you observed, in one sentence.&quot;,
+      &quot;evidence&quot;: [&quot;app/main.py:3 imports Flask&quot;, &quot;probe: GET / returned 200 with both titles&quot;],
+      &quot;next_step&quot;: &quot;Only for MANUAL: the human check, and how to make the criterion observable.&quot;
+    }
+  ],
+  &quot;improvements&quot;: [&quot;Highest-value improvement first.&quot;]
+}</code></pre>
+<h2>Evidence facts</h2>
+<pre><code>{
+  &quot;target&quot;: &quot;LayersTesting&quot;,
+  &quot;build_directory&quot;: &quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting&quot;,
+  &quot;probe_directory&quot;: &quot;.drydock-probe&quot;,
+  &quot;code&quot;: {
+    &quot;identity&quot;: &quot;228eaece43d79fb6efea0bb0dfb4a13cb67ad8e1&quot;,
+    &quot;dirty&quot;: false
+  },
+  &quot;governed_gate&quot;: {
+    &quot;name&quot;: &quot;full&quot;,
+    &quot;outcome&quot;: &quot;PASS&quot;,
+    &quot;argv&quot;: [
+      &quot;sh&quot;,
+      &quot;sources/run.sh&quot;
+    ],
+    &quot;return_code&quot;: 0,
+    &quot;duration_ms&quot;: 14492,
+    &quot;detail&quot;: &quot;&quot;,
+    &quot;timed_out&quot;: false,
+    &quot;build_identity&quot;: &quot;bdae64cfb85a467c&quot;,
+    &quot;stdout&quot;: &quot;PASS A1: ledger init\nPASS A2: ledger count\nPASS B1: ledger load accounts /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/sources/seed_accounts.csv\nPASS B2: ledger load categories /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/sources/seed_categories.csv\nPASS B3: ledger load transactions /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/sources/seed_transactions.csv\nPASS B4: ledger count\nPASS C1: ledger report balances\nPASS C2: ledger report categories\nPASS C3: ledger report monthly\nPASS D1: ledger load transactions /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/sources/seed_transactions_bad.csv\nPASS D2: ledger load accounts /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/sources/seed_accounts.csv\nPASS D3: ledger count\nPASS E1: ledger account add CASH9 Event Float\nPASS E2: ledger account add CASH9 Event Float\nPASS E3: ledger account get CASH9\nPASS E4: ledger account rename CASH9 Event Cash Box\nPASS E5: ledger account get NOSUCH\nPASS E6: ledger account delete DRAWER1\nPASS E7: ledger account delete CASH9\nPASS E8: ledger account get CASH9\nPASS F1: ledger txn post DRAWER1 SALES 45.50 2026-04-01 walk in sale\nPASS F2: ledger txn get 121\nPASS F3: ledger txn amend 121 54.50\nPASS F4: ledger txn get 999\nPASS F5: ledger txn post DRAWER1 NOSUCH 1.00 2026-04-01\nPASS F6: ledger txn post DRAWER1 SALES 1.234 2026-04-01\nPASS F7: ledger txn post DRAWER1 SALES 1.00 2026-02-30\nPASS F8: ledger txn delete 121\nPASS F9: ledger txn get 121\nPASS F10: ledger txn post PETTY SUPPLY -12.34 2026-04-02 tape\nPASS G1: ledger transfer DRAWER1 SAFE 500.00 2026-04-03\nPASS G2: ledger transfer SAFE PETTY 999.99 2026-04-04\nPASS G3: ledger txn post PETTY SUPPLY -1000.00 2026-04-04\nPASS G4: ledger txn amend 1 1.00\nPASS G5: ledger txn delete 1\nPASS G6: ledger count\nPASS H1: ledger report balances\nPASS H2: ledger report categories\nPASS H3: ledger report monthly\nPASS U1: ledger frobnicate\nPASS U2: ledger report nosuch\nPASS Z1: ledger init\nPASS Z2: ledger count\nLayersTesting: 43 passed, 0 failed (of 43)\n&quot;,
+    &quot;stderr&quot;: &quot;&quot;
+  },
+  &quot;observations&quot;: [
+    {
+      &quot;criterion_id&quot;: &quot;st-001&quot;,
+      &quot;kind&quot;: &quot;command&quot;,
+      &quot;source&quot;: &quot;[\&quot;sh\&quot;, \&quot;sources/run.sh\&quot;]&quot;,
+      &quot;return_code&quot;: 0,
+      &quot;pinned&quot;: &quot;MET&quot;,
+      &quot;detail&quot;: &quot;[\&quot;sh\&quot;, \&quot;sources/run.sh\&quot;] exited 0&quot;,
+      &quot;output&quot;: &quot;PASS F5: ledger txn post DRAWER1 NOSUCH 1.00 2026-04-01\nPASS F6: ledger txn post DRAWER1 SALES 1.234 2026-04-01\nPASS F7: ledger txn post DRAWER1 SALES 1.00 2026-02-30\nPASS F8: ledger txn delete 121\nPASS F9: ledger txn get 121\nPASS F10: ledger txn post PETTY SUPPLY -12.34 2026-04-02 tape\nPASS G1: ledger transfer DRAWER1 SAFE 500.00 2026-04-03\nPASS G2: ledger transfer SAFE PETTY 999.99 2026-04-04\nPASS G3: ledger txn post PETTY SUPPLY -1000.00 2026-04-04\nPASS G4: ledger txn amend 1 1.00\nPASS G5: ledger txn delete 1\nPASS G6: ledger count\nPASS H1: ledger report balances\nPASS H2: ledger report categories\nPASS H3: ledger report monthly\nPASS U1: ledger frobnicate\nPASS U2: ledger report nosuch\nPASS Z1: ledger init\nPASS Z2: ledger count\nLayersTesting: 43 passed, 0 failed (of 43)&quot;
+    }
+  ],
+  &quot;sea_trials&quot;: [
+    {
+      &quot;criterion_id&quot;: &quot;st-001&quot;,
+      &quot;title&quot;: &quot;The supplied grader passes&quot;,
+      &quot;trial_type&quot;: &quot;technical&quot;,
+      &quot;required&quot;: true,
+      &quot;criterion&quot;: &quot;The completed ledger shall pass every check in the supplied end-to-end workflow grader, sh sources/run.sh, with exit code zero.&quot;,
+      &quot;verification&quot;: &quot;proof&quot;,
+      &quot;testability&quot;: &quot;deterministic&quot;,
+      &quot;consequence&quot;: &quot;blocks&quot;,
+      &quot;pattern&quot;: &quot;ubiquitous&quot;,
+      &quot;notation&quot;: &quot;ears&quot;,
+      &quot;command&quot;: [
+        &quot;sh&quot;,
+        &quot;sources/run.sh&quot;
+      ],
+      &quot;extract&quot;: &quot;&quot;,
+      &quot;evidence&quot;: &quot;&quot;,
+      &quot;baseline&quot;: null,
+      &quot;operator&quot;: &quot;&quot;,
+      &quot;target&quot;: null,
+      &quot;unit&quot;: &quot;&quot;
+    },
+    {
+      &quot;criterion_id&quot;: &quot;st-004&quot;,
+      &quot;title&quot;: &quot;The seed files load exactly&quot;,
+      &quot;trial_type&quot;: &quot;behavioral&quot;,
+      &quot;required&quot;: true,
+      &quot;criterion&quot;: &quot;When the supplied accounts, categories, and transactions files are loaded in order into an empty ledger, the application shall accept all records, report the loaded counts, and retain 4 accounts, 7 categories, and 120 transactions across subsequent command invocations.&quot;,
+      &quot;verification&quot;: &quot;proof&quot;,
+      &quot;testability&quot;: &quot;deterministic&quot;,
+      &quot;consequence&quot;: &quot;blocks&quot;,
+      &quot;pattern&quot;: &quot;event&quot;,
+      &quot;notation&quot;: &quot;ears&quot;,
+      &quot;command&quot;: [],
+      &quot;extract&quot;: &quot;&quot;,
+      &quot;evidence&quot;: &quot;&quot;,
+      &quot;baseline&quot;: null,
+      &quot;operator&quot;: &quot;&quot;,
+      &quot;target&quot;: null,
+      &quot;unit&quot;: &quot;&quot;
+    },
+    {
+      &quot;criterion_id&quot;: &quot;st-005&quot;,
+      &quot;title&quot;: &quot;Reports match the known answers&quot;,
+      &quot;trial_type&quot;: &quot;behavioral&quot;,
+      &quot;required&quot;: true,
+      &quot;criterion&quot;: &quot;The application shall compute account balances, category totals, and monthly totals from stored ledger data, matching the known answers in sources/run.sh byte for byte both before and after the supplied transaction and transfer workflows.&quot;,
+      &quot;verification&quot;: &quot;proof&quot;,
+      &quot;testability&quot;: &quot;deterministic&quot;,
+      &quot;consequence&quot;: &quot;blocks&quot;,
+      &quot;pattern&quot;: &quot;ubiquitous&quot;,
+      &quot;notation&quot;: &quot;ears&quot;,
+      &quot;command&quot;: [],
+      &quot;extract&quot;: &quot;&quot;,
+      &quot;evidence&quot;: &quot;&quot;,
+      &quot;baseline&quot;: null,
+      &quot;operator&quot;: &quot;&quot;,
+      &quot;target&quot;: null,
+      &quot;unit&quot;: &quot;&quot;
+    },
+    {
+      &quot;criterion_id&quot;: &quot;st-006&quot;,
+      &quot;title&quot;: &quot;Accounts and transactions support create, read, update, and delete&quot;,
+      &quot;trial_type&quot;: &quot;behavioral&quot;,
+      &quot;required&quot;: true,
+      &quot;criterion&quot;: &quot;The application shall retain account additions and renames and transaction postings and amendments across command invocations, return their current values on retrieval, remove successfully deleted records, refuse deletion of an account with transactions with exit code 3, and report an absent record with exit code 4.&quot;,
+      &quot;verification&quot;: &quot;proof&quot;,
+      &quot;testability&quot;: &quot;deterministic&quot;,
+      &quot;consequence&quot;: &quot;blocks&quot;,
+      &quot;pattern&quot;: &quot;ubiquitous&quot;,
+      &quot;notation&quot;: &quot;ears&quot;,
+      &quot;command&quot;: [],
+      &quot;extract&quot;: &quot;&quot;,
+      &quot;evidence&quot;: &quot;&quot;,
+      &quot;baseline&quot;: null,
+      &quot;operator&quot;: &quot;&quot;,
+      &quot;target&quot;: null,
+      &quot;unit&quot;: &quot;&quot;
+    },
+    {
+      &quot;criterion_id&quot;: &quot;st-007&quot;,
+      &quot;title&quot;: &quot;A failed command changes nothing&quot;,
+      &quot;trial_type&quot;: &quot;behavioral&quot;,
+      &quot;required&quot;: true,
+      &quot;criterion&quot;: &quot;If a load, account change, transaction change, or transfer violates a validation or business rule, then the application shall exit 3 and preserve all previously stored ledger records without adding, altering, or removing any record.&quot;,
+      &quot;verification&quot;: &quot;proof&quot;,
+      &quot;testability&quot;: &quot;deterministic&quot;,
+      &quot;consequence&quot;: &quot;blocks&quot;,
+      &quot;pattern&quot;: &quot;unwanted&quot;,
+      &quot;notation&quot;: &quot;ears&quot;,
+      &quot;command&quot;: [],
+      &quot;extract&quot;: &quot;&quot;,
+      &quot;evidence&quot;: &quot;&quot;,
+      &quot;baseline&quot;: null,
+      &quot;operator&quot;: &quot;&quot;,
+      &quot;target&quot;: null,
+      &quot;unit&quot;: &quot;&quot;
+    },
+    {
+      &quot;criterion_id&quot;: &quot;st-008&quot;,
+      &quot;title&quot;: &quot;No balance goes negative&quot;,
+      &quot;trial_type&quot;: &quot;behavioral&quot;,
+      &quot;required&quot;: true,
+      &quot;criterion&quot;: &quot;If loading transactions, posting, amending, deleting, or transferring would leave any account balance below zero, then the application shall reject the entire command with exit code 3 and preserve the prior balances.&quot;,
+      &quot;verification&quot;: &quot;proof&quot;,
+      &quot;testability&quot;: &quot;deterministic&quot;,
+      &quot;consequence&quot;: &quot;blocks&quot;,
+      &quot;pattern&quot;: &quot;unwanted&quot;,
+      &quot;notation&quot;: &quot;ears&quot;,
+      &quot;command&quot;: [],
+      &quot;extract&quot;: &quot;&quot;,
+      &quot;evidence&quot;: &quot;&quot;,
+      &quot;baseline&quot;: null,
+      &quot;operator&quot;: &quot;&quot;,
+      &quot;target&quot;: null,
+      &quot;unit&quot;: &quot;&quot;
+    },
+    {
+      &quot;criterion_id&quot;: &quot;st-010&quot;,
+      &quot;title&quot;: &quot;Transfers conserve cash&quot;,
+      &quot;trial_type&quot;: &quot;behavioral&quot;,
+      &quot;required&quot;: true,
+      &quot;criterion&quot;: &quot;When a valid transfer is requested between distinct accounts, the application shall record an equal debit and credit in category TRANSFER, return both transaction rows, and update both account balances without changing the total cash held.&quot;,
+      &quot;verification&quot;: &quot;proof&quot;,
+      &quot;testability&quot;: &quot;deterministic&quot;,
+      &quot;consequence&quot;: &quot;blocks&quot;,
+      &quot;pattern&quot;: &quot;event&quot;,
+      &quot;notation&quot;: &quot;ears&quot;,
+      &quot;command&quot;: [],
+      &quot;extract&quot;: &quot;&quot;,
+      &quot;evidence&quot;: &quot;&quot;,
+      &quot;baseline&quot;: null,
+      &quot;operator&quot;: &quot;&quot;,
+      &quot;target&quot;: null,
+      &quot;unit&quot;: &quot;&quot;
+    },
+    {
+      &quot;criterion_id&quot;: &quot;st-011&quot;,
+      &quot;title&quot;: &quot;Command results follow the CLI contract&quot;,
+      &quot;trial_type&quot;: &quot;behavioral&quot;,
+      &quot;required&quot;: true,
+      &quot;criterion&quot;: &quot;The application shall return the CSV headers, row ordering, two-decimal monetary values, and exit codes specified in sources/INSTRUCTIONS.md, returning exit 2 for unknown commands or reports and incorrect argument counts, and writing failures only to standard error.&quot;,
+      &quot;verification&quot;: &quot;proof&quot;,
+      &quot;testability&quot;: &quot;deterministic&quot;,
+      &quot;consequence&quot;: &quot;blocks&quot;,
+      &quot;pattern&quot;: &quot;ubiquitous&quot;,
+      &quot;notation&quot;: &quot;ears&quot;,
+      &quot;command&quot;: [],
+      &quot;extract&quot;: &quot;&quot;,
+      &quot;evidence&quot;: &quot;&quot;,
+      &quot;baseline&quot;: null,
+      &quot;operator&quot;: &quot;&quot;,
+      &quot;target&quot;: null,
+      &quot;unit&quot;: &quot;&quot;
+    }
+  ],
+  &quot;reported&quot;: []
+}</code></pre></article>
+</main>
+</body>
+</html>

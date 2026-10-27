@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261027.141325.731Z_layerstesting_plan-repair_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261027.141325.731Z_layerstesting_plan-repair_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261027.141325.731Z_layerstesting_plan-repair_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== AC FEATURE-NoNegativeBalance.md :: nonneg-load ===
+Intent: A transactions load whose earlier rows are individually valid but whose combined effect makes the balance negative is rejected whole with exit 3 and stores none of its rows.
+
+import csv
+import io
+import os
+import tempfile
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+def counts():
+    code, out, err = cli_runner(&quot;count&quot;)
+    assert code == 0
+    return {r[0]: int(r[1]) for r in parse(out)[1:]}
+
+acct = &quot;ZZNL1&quot;
+cat = &quot;ZZNLC&quot;
+with db_session() as db:
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description=&quot;Load Probe&quot;)
+code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Load Probe&quot;)
+assert code == 0
+before = counts()
+rows = [
+    [&quot;800000001&quot;, &quot;2099-03-01&quot;, acct, cat, &quot;50.00&quot;, &quot;in&quot;],
+    [&quot;800000002&quot;, &quot;2099-03-02&quot;, acct, cat, &quot;-30.00&quot;, &quot;out one&quot;],
+    [&quot;800000003&quot;, &quot;2099-03-03&quot;, acct, cat, &quot;-30.00&quot;, &quot;out two&quot;],
+]
+with tempfile.TemporaryDirectory() as tmp:
+    path = os.path.join(tmp, &quot;txns.csv&quot;)
+    with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh:
+        w = csv.writer(fh, lineterminator=&quot;\n&quot;)
+        w.writerow([&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;])
+        w.writerows(rows)
+    code, out, err = cli_runner(&quot;load&quot;, &quot;transactions&quot;, path)
+print(out, err)
+assert code == 3
+assert out == &quot;&quot;
+assert counts() == before
+code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, rows[0][0])
+assert code == 4
+code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, acct)
+assert code == 0
+assert parse(out)[1][2] == &quot;0&quot;
+=== END AC FEATURE-NoNegativeBalance.md :: nonneg-load ===
+=== AC FEATURE-NoNegativeBalance.md :: nonneg-post ===
+Intent: Posting an outflow larger than the balance exits 3 and leaves the balance and transaction count unchanged.
+
+import csv
+import io
+from decimal import Decimal
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+acct = &quot;ZZNP1&quot;
+cat = &quot;ZZNPC&quot;
+with db_session() as db:
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description=&quot;Post Probe&quot;)
+code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Post Probe&quot;)
+assert code == 0
+deposit = Decimal(&quot;10.00&quot;)
+code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(deposit), &quot;2099-03-01&quot;, &quot;in&quot;)
+assert code == 0
+code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(-(deposit + Decimal(&quot;0.01&quot;))), &quot;2099-03-02&quot;, &quot;out&quot;)
+print(out, err)
+assert code == 3
+assert out == &quot;&quot;
+code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, acct)
+assert code == 0
+row = parse(out)[1]
+assert row[2] == &quot;1&quot;
+assert Decimal(row[3]) == deposit
+=== END AC FEATURE-NoNegativeBalance.md :: nonneg-post ===
+=== AC FEATURE-NoNegativeBalance.md :: nonneg-amend ===
+Intent: Amending a deposit down so the account would go negative exits 3 and the original amount remains.
+
+import csv
+import io
+from decimal import Decimal
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+acct = &quot;ZZNA1&quot;
+cat = &quot;ZZNAC&quot;
+with db_session() as db:
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description=&quot;Amend Probe&quot;)
+code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Amend Probe&quot;)
+assert code == 0
+big, spend = Decimal(&quot;100.00&quot;), Decimal(&quot;60.00&quot;)
+code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(big), &quot;2099-03-01&quot;, &quot;in&quot;)
+assert code == 0
+deposit_id = parse(out)[1][0]
+code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(-spend), &quot;2099-03-02&quot;, &quot;out&quot;)
+assert code == 0
+code, out, err = cli_runner(&quot;txn&quot;, &quot;amend&quot;, deposit_id, &quot;50.00&quot;)
+print(out, err)
+assert code == 3
+assert out == &quot;&quot;
+code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, deposit_id)
+assert code == 0
+assert Decimal(parse(out)[1][4]) == big
+code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, acct)
+assert code == 0
+assert Decimal(parse(out)[1][3]) == big - spend
+=== END AC FEATURE-NoNegativeBalance.md :: nonneg-amend ===
+=== AC FEATURE-NoNegativeBalance.md :: nonneg-delete ===
+Intent: Deleting a deposit that funds a later outflow exits 3, keeps the row, and leaves the balance unchanged.
+
+import csv
+import io
+from decimal import Decimal
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+acct = &quot;ZZND1&quot;
+cat = &quot;ZZNDC&quot;
+with db_session() as db:
+    if db.categories.get(category=cat) is None:
+        db.categories.create(category=cat, description=&quot;Delete Probe&quot;)
+code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Delete Probe&quot;)
+assert code == 0
+big, spend = Decimal(&quot;100.00&quot;), Decimal(&quot;60.00&quot;)
+code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(big), &quot;2099-03-01&quot;, &quot;in&quot;)
+assert code == 0
+deposit_id = parse(out)[1][0]
+code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, acct, cat, str(-spend), &quot;2099-03-02&quot;, &quot;out&quot;)
+assert code == 0
+code, out, err = cli_runner(&quot;txn&quot;, &quot;delete&quot;, deposit_id)
+print(out, err)
+assert code == 3
+assert out == &quot;&quot;
+code, out, err = cli_runner(&quot;txn&quot;, &quot;get&quot;, deposit_id)
+assert code == 0
+code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, acct)
+assert code == 0
+row = parse(out)[1]
+assert row[2] == &quot;2&quot;
+assert Decimal(row[3]) == big - spend
+=== END AC FEATURE-NoNegativeBalance.md :: nonneg-delete ===
+=== AC FEATURE-NoNegativeBalance.md :: nonneg-transfer ===
+Intent: A transfer larger than the source balance exits 3 and stores neither row; both balances and the table count are unchanged.
+
+import csv
+import io
+from decimal import Decimal
+from cli.testing import cli_runner
+from persistence.testing import db_session
+
+def parse(out):
+    return list(csv.reader(io.StringIO(out)))
+
+def txn_count():
+    code, out, err = cli_runner(&quot;count&quot;)
+    assert code == 0
+    return {r[0]: int(r[1]) for r in parse(out)[1:]}[&quot;transactions&quot;]
+
+src, dst = &quot;ZZNT1&quot;, &quot;ZZNT2&quot;
+cat = &quot;ZZNTC&quot;
+with db_session() as db:
+    for c, d in ((cat, &quot;Transfer Probe&quot;), (&quot;TRANSFER&quot;, &quot;Internal transfer&quot;)):
+        if db.categories.get(category=c) is None:
+            db.categories.create(category=c, description=d)
+for a in (src, dst):
+    code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, a, &quot;Xfer &quot; + a)
+    assert code == 0
+funds = Decimal(&quot;20.00&quot;)
+code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, src, cat, str(funds), &quot;2099-03-01&quot;, &quot;in&quot;)
+assert code == 0
+before = txn_count()
+code, out, err = cli_runner(&quot;transfer&quot;, src, dst, str(funds + Decimal(&quot;0.01&quot;)), &quot;2099-03-02&quot;)
+print(out, err)
+assert code == 3
+assert out == &quot;&quot;
+assert txn_count() == before
+code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, src)
+assert code == 0
+assert Decimal(parse(out)[1][3]) == funds
+code, out, err = cli_runner(&quot;account&quot;, &quot;get&quot;, dst)
+assert code == 0
+assert Decimal(parse(out)[1][3]) == Decimal(&quot;0&quot;)
+=== END AC FEATURE-NoNegativeBalance.md :: nonneg-transfer ===</pre></article>
+</main>
+</body>
+</html>

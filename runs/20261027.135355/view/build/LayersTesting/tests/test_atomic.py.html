@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_atomic.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_atomic.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_atomic.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``run_all`` undo behaviour and ``parse_txn_id`` acceptance, tested without a database.&quot;&quot;&quot;
+
+import pytest
+
+from ledger_core.atomic import run_all
+from ledger_core.errors import Operational, Rejected
+from ledger_core.transactions import parse_txn_id
+from persistence import PersistenceError
+
+
+def test_run_all_runs_every_insert_in_order_and_undoes_nothing():
+    log = []
+    run_all([(lambda: log.append(&quot;a&quot;), lambda: log.append(&quot;undo a&quot;)), (lambda: log.append(&quot;b&quot;), lambda: log.append(&quot;undo b&quot;))])
+    assert log == [&quot;a&quot;, &quot;b&quot;]
+
+
+def test_run_all_on_failure_undoes_completed_steps_newest_first():
+    log = []
+
+    def fail():
+        raise PersistenceError(&quot;boom&quot;)
+
+    steps = [
+        (lambda: log.append(&quot;a&quot;), lambda: log.append(&quot;undo a&quot;)),
+        (lambda: log.append(&quot;b&quot;), lambda: log.append(&quot;undo b&quot;)),
+        (fail, lambda: log.append(&quot;undo c&quot;)),
+    ]
+    with pytest.raises(Operational):
+        run_all(steps)
+    assert log == [&quot;a&quot;, &quot;b&quot;, &quot;undo b&quot;, &quot;undo a&quot;]
+
+
+def test_run_all_does_not_undo_the_step_that_failed():
+    log = []
+
+    def fail():
+        raise PersistenceError(&quot;boom&quot;)
+
+    with pytest.raises(Operational):
+        run_all([(fail, lambda: log.append(&quot;undo failed step&quot;))])
+    assert log == []
+
+
+@pytest.mark.parametrize(&quot;text&quot;, [&quot;1&quot;, &quot;42&quot;, &quot;-7&quot;, &quot;900200001&quot;])
+def test_parse_txn_id_accepts_integers(text):
+    assert parse_txn_id(text) == int(text)
+
+
+@pytest.mark.parametrize(&quot;text&quot;, [&quot;&quot;, &quot;abc&quot;, &quot;1.5&quot;, &quot; 3&quot;, &quot;3 &quot;, &quot;1e3&quot;, &quot;--2&quot;, &quot;+4&quot;])
+def test_parse_txn_id_rejects_non_integers(text):
+    with pytest.raises(Rejected):
+        parse_txn_id(text)
+</pre></article>
+</main>
+</body>
+</html>

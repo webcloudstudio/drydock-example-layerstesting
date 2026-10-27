@@ -1,0 +1,171 @@
+{
+  "schema_version": 5,
+  "recorded_at": "2026-10-27T15:11:15+00:00",
+  "target": "LayersTesting",
+  "verdict": "PASSED",
+  "verdict_line": "LayersTesting: PASSED \u2014 8 of 8",
+  "statement": "LayersTesting: PASSED \u2014 8 of 8\n\n  st-001  MET       [\"sh\", \"sources/run.sh\"] exited 0; governed gate full: outcome PASS, return_code 0, 'LayersTesting: 43 passed, 0 failed (of 43)'; sources/run.sh:97-98 exits 0 only when FAILED is 0\n  st-004  MET       sources/run.sh:B1-B3 expect 'accounts,4', 'categories,7', 'transactions,120' with exit 0; sources/run.sh:B4 checks counts 4/7/120 across a separate invocation, PASS; governed gate stdout: PASS B1, B2, B3, B4\n  st-005  MET       sources/run.sh:45-47 uses cmp -s on stdout for C1-C3; sources/run.sh:H1-H3 repeat the comparison after the transfer and posting workflows; governed gate stdout: PASS C1, C2, C3, H1, H2, H3\n  st-006  MET       sources/run.sh:E1-E4 add, get, and rename CASH9 with expected returned values, all PASS; sources/run.sh:E6 'account delete DRAWER1' exits 3 and PASS; sources/run.sh:E7-E8 delete CASH9, then get exits 4, PASS; sources/run.sh:F1-F3 post, get, and amend txn 121 with current values, PASS; sources/run.sh:F8-F9 delete txn 121, then get exits 4, PASS\n  st-007  MET       sources/run.sh:D1-D2 rejected load of bad transactions and duplicate account load exit 3, PASS; sources/run.sh:D3 counts still 4/7/120, PASS; sources/run.sh:E2 duplicate account add exits 3, then E3 reads CASH9 unchanged, PASS; sources/run.sh:F5-F7 rejected postings exit 3; H1-H3 later show unchanged totals for the same accounts; probe st011: 'post bad account' and 'post bad date' rc=3, stdout empty\n  st-008  MET       sources/run.sh:G2 transfer SAFE->PETTY 999.99 exits 3, PASS; sources/run.sh:G3 post PETTY -1000.00 exits 3, PASS; sources/run.sh:G4 amend txn 1 to 1.00 and G5 delete txn 1 each exit 3, PASS; sources/run.sh:H1 PETTY balance 293.91 and SAFE 750.00 show the rejected G-series commands changed nothing, PASS\n  st-010  MET       sources/run.sh:G1 expects txn rows 122 (-500.00 DRAWER1) and 123 (+500.00 SAFE), category TRANSFER, PASS; sources/run.sh:H1 SAFE 250.00 -> 750.00 and DRAWER1 2299.38 -> 1799.38 after G1, PASS; sources/run.sh:H2 TRANSFER net 0.00 at inflow and outflow 5600.00, PASS\n  st-011  MET       probe st011: 'frobnicate' rc=2, stdout 0 lines, stderr 1 line; probe st011: 'report nosuch' rc=2, stdout 0 lines, stderr 1 line; probe st011: 'account get' with no argument and with extra arguments rc=2, stdout empty, stderr 1 line; probe st011: 'count extra' and 'init extra' rc=2, stdout empty; probe st011: 'get absent acct' rc=4, stderr 'error: account NOSUCH does not exist'; sources/run.sh:U1-U2 expect exit 2 for unknown command and report, PASS; README.md:28-35 defines the exit-code and stderr contract that the probe checked",
+  "complete": true,
+  "governed_gate": {
+    "name": "full",
+    "outcome": "PASS",
+    "argv": [
+      "sh",
+      "sources/run.sh"
+    ],
+    "return_code": 0,
+    "duration_ms": 14492,
+    "detail": "",
+    "timed_out": false,
+    "build_identity": "bdae64cfb85a467c",
+    "stdout": "PASS A1: ledger init\nPASS A2: ledger count\nPASS B1: ledger load accounts /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/sources/seed_accounts.csv\nPASS B2: ledger load categories /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/sources/seed_categories.csv\nPASS B3: ledger load transactions /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/sources/seed_transactions.csv\nPASS B4: ledger count\nPASS C1: ledger report balances\nPASS C2: ledger report categories\nPASS C3: ledger report monthly\nPASS D1: ledger load transactions /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/sources/seed_transactions_bad.csv\nPASS D2: ledger load accounts /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting/sources/seed_accounts.csv\nPASS D3: ledger count\nPASS E1: ledger account add CASH9 Event Float\nPASS E2: ledger account add CASH9 Event Float\nPASS E3: ledger account get CASH9\nPASS E4: ledger account rename CASH9 Event Cash Box\nPASS E5: ledger account get NOSUCH\nPASS E6: ledger account delete DRAWER1\nPASS E7: ledger account delete CASH9\nPASS E8: ledger account get CASH9\nPASS F1: ledger txn post DRAWER1 SALES 45.50 2026-04-01 walk in sale\nPASS F2: ledger txn get 121\nPASS F3: ledger txn amend 121 54.50\nPASS F4: ledger txn get 999\nPASS F5: ledger txn post DRAWER1 NOSUCH 1.00 2026-04-01\nPASS F6: ledger txn post DRAWER1 SALES 1.234 2026-04-01\nPASS F7: ledger txn post DRAWER1 SALES 1.00 2026-02-30\nPASS F8: ledger txn delete 121\nPASS F9: ledger txn get 121\nPASS F10: ledger txn post PETTY SUPPLY -12.34 2026-04-02 tape\nPASS G1: ledger transfer DRAWER1 SAFE 500.00 2026-04-03\nPASS G2: ledger transfer SAFE PETTY 999.99 2026-04-04\nPASS G3: ledger txn post PETTY SUPPLY -1000.00 2026-04-04\nPASS G4: ledger txn amend 1 1.00\nPASS G5: ledger txn delete 1\nPASS G6: ledger count\nPASS H1: ledger report balances\nPASS H2: ledger report categories\nPASS H3: ledger report monthly\nPASS U1: ledger frobnicate\nPASS U2: ledger report nosuch\nPASS Z1: ledger init\nPASS Z2: ledger count\nLayersTesting: 43 passed, 0 failed (of 43)\n",
+    "stderr": ""
+  },
+  "criteria": [
+    {
+      "criterion_id": "st-001",
+      "verdict": "MET",
+      "rationale": "The governed gate `sh sources/run.sh` exited 0 against the current tree, with 43 of 43 checks passing.",
+      "evidence": [
+        "[\"sh\", \"sources/run.sh\"] exited 0",
+        "governed gate full: outcome PASS, return_code 0, 'LayersTesting: 43 passed, 0 failed (of 43)'",
+        "sources/run.sh:97-98 exits 0 only when FAILED is 0"
+      ]
+    },
+    {
+      "criterion_id": "st-004",
+      "verdict": "MET",
+      "rationale": "The grader loads the three seed files in order into a fresh database and checks each load's reported count (4, 7, 120) and the post-load counts, all PASS.",
+      "evidence": [
+        "sources/run.sh:B1-B3 expect 'accounts,4', 'categories,7', 'transactions,120' with exit 0",
+        "sources/run.sh:B4 checks counts 4/7/120 across a separate invocation, PASS",
+        "governed gate stdout: PASS B1, B2, B3, B4"
+      ]
+    },
+    {
+      "criterion_id": "st-005",
+      "verdict": "MET",
+      "rationale": "Balances, category totals, and monthly totals are compared byte-for-byte with `cmp -s` both before the workflows (C1-C3) and after them (H1-H3), and all six checks PASS.",
+      "evidence": [
+        "sources/run.sh:45-47 uses cmp -s on stdout for C1-C3",
+        "sources/run.sh:H1-H3 repeat the comparison after the transfer and posting workflows",
+        "governed gate stdout: PASS C1, C2, C3, H1, H2, H3"
+      ]
+    },
+    {
+      "criterion_id": "st-006",
+      "verdict": "MET",
+      "rationale": "Grader checks cover account add, rename, get, and delete, and transaction post, get, amend, and delete. They also cover the exit-3 refusal to delete an account that has transactions, and exit-4 for absent records.",
+      "evidence": [
+        "sources/run.sh:E1-E4 add, get, and rename CASH9 with expected returned values, all PASS",
+        "sources/run.sh:E6 'account delete DRAWER1' exits 3 and PASS",
+        "sources/run.sh:E7-E8 delete CASH9, then get exits 4, PASS",
+        "sources/run.sh:F1-F3 post, get, and amend txn 121 with current values, PASS",
+        "sources/run.sh:F8-F9 delete txn 121, then get exits 4, PASS"
+      ]
+    },
+    {
+      "criterion_id": "st-007",
+      "verdict": "MET",
+      "rationale": "Rejected loads, account changes, transaction changes, and transfers each exit 3 and are followed by counts and balances that show nothing changed.",
+      "evidence": [
+        "sources/run.sh:D1-D2 rejected load of bad transactions and duplicate account load exit 3, PASS",
+        "sources/run.sh:D3 counts still 4/7/120, PASS",
+        "sources/run.sh:E2 duplicate account add exits 3, then E3 reads CASH9 unchanged, PASS",
+        "sources/run.sh:F5-F7 rejected postings exit 3; H1-H3 later show unchanged totals for the same accounts",
+        "probe st011: 'post bad account' and 'post bad date' rc=3, stdout empty"
+      ]
+    },
+    {
+      "criterion_id": "st-008",
+      "verdict": "MET",
+      "rationale": "Every command that would drive a balance below zero (transfer, post, amend, delete) exits 3, and the H-series balances show the prior balances were preserved.",
+      "evidence": [
+        "sources/run.sh:G2 transfer SAFE->PETTY 999.99 exits 3, PASS",
+        "sources/run.sh:G3 post PETTY -1000.00 exits 3, PASS",
+        "sources/run.sh:G4 amend txn 1 to 1.00 and G5 delete txn 1 each exit 3, PASS",
+        "sources/run.sh:H1 PETTY balance 293.91 and SAFE 750.00 show the rejected G-series commands changed nothing, PASS"
+      ]
+    },
+    {
+      "criterion_id": "st-010",
+      "verdict": "MET",
+      "rationale": "A valid transfer between DRAWER1 and SAFE returns two rows with equal and opposite amounts in category TRANSFER, and the balances change accordingly. The total held across accounts is unchanged by the transfer itself.",
+      "evidence": [
+        "sources/run.sh:G1 expects txn rows 122 (-500.00 DRAWER1) and 123 (+500.00 SAFE), category TRANSFER, PASS",
+        "sources/run.sh:H1 SAFE 250.00 -> 750.00 and DRAWER1 2299.38 -> 1799.38 after G1, PASS",
+        "sources/run.sh:H2 TRANSFER net 0.00 at inflow and outflow 5600.00, PASS"
+      ]
+    },
+    {
+      "criterion_id": "st-011",
+      "verdict": "MET",
+      "rationale": "Unknown commands and wrong argument counts exit 2 with empty stdout and one stderr line. Rejections and not-found exit 3 and 4 with stdout empty. Successful output is the grader's CSV. The contract is in README.md because sources/INSTRUCTIONS.md does not exist.",
+      "evidence": [
+        "probe st011: 'frobnicate' rc=2, stdout 0 lines, stderr 1 line",
+        "probe st011: 'report nosuch' rc=2, stdout 0 lines, stderr 1 line",
+        "probe st011: 'account get' with no argument and with extra arguments rc=2, stdout empty, stderr 1 line",
+        "probe st011: 'count extra' and 'init extra' rc=2, stdout empty",
+        "probe st011: 'get absent acct' rc=4, stderr 'error: account NOSUCH does not exist'",
+        "sources/run.sh:U1-U2 expect exit 2 for unknown command and report, PASS",
+        "README.md:28-35 defines the exit-code and stderr contract that the probe checked"
+      ]
+    }
+  ],
+  "guardrail_ids": [],
+  "observations": [
+    {
+      "criterion_id": "st-001",
+      "kind": "command",
+      "source": "[\"sh\", \"sources/run.sh\"]",
+      "return_code": 0,
+      "pinned": "MET",
+      "detail": "[\"sh\", \"sources/run.sh\"] exited 0",
+      "output": "PASS F5: ledger txn post DRAWER1 NOSUCH 1.00 2026-04-01\nPASS F6: ledger txn post DRAWER1 SALES 1.234 2026-04-01\nPASS F7: ledger txn post DRAWER1 SALES 1.00 2026-02-30\nPASS F8: ledger txn delete 121\nPASS F9: ledger txn get 121\nPASS F10: ledger txn post PETTY SUPPLY -12.34 2026-04-02 tape\nPASS G1: ledger transfer DRAWER1 SAFE 500.00 2026-04-03\nPASS G2: ledger transfer SAFE PETTY 999.99 2026-04-04\nPASS G3: ledger txn post PETTY SUPPLY -1000.00 2026-04-04\nPASS G4: ledger txn amend 1 1.00\nPASS G5: ledger txn delete 1\nPASS G6: ledger count\nPASS H1: ledger report balances\nPASS H2: ledger report categories\nPASS H3: ledger report monthly\nPASS U1: ledger frobnicate\nPASS U2: ledger report nosuch\nPASS Z1: ledger init\nPASS Z2: ledger count\nLayersTesting: 43 passed, 0 failed (of 43)"
+    }
+  ],
+  "blockers": [],
+  "attestations": [],
+  "kit_faults": [],
+  "warnings": [],
+  "improvements": [
+    "st-011 cites sources/INSTRUCTIONS.md, which is not in the tree; the contract actually lives in README.md. Either restore the file or repoint the criterion at README.md so the spec it grades against exists.",
+    "sources/run.sh captures stderr but never compares it, so the 'failures only to standard error' clause of st-011 is only checked by an ad-hoc probe. Add a check that asserts stdout is empty and stderr holds one line for each failing case.",
+    "st-010 does not say what happens when the two accounts are the same. Either add that case to the criterion (expected exit 3) and to the grader, or state that it is out of scope.",
+    "Several README requirements have no grader or probe coverage: unknown table names exit 2, and exit 1 for unreadable files is only checked in my probe. Add these to the grader so the gate covers the full exit-code contract."
+  ],
+  "identities": {
+    "code": "228eaece43d79fb6efea0bb0dfb4a13cb67ad8e1",
+    "sea_trials": "60d79d6ea21c579e902c6ca7dc180d1b56b2185b04cde8e58c96747289ee023d",
+    "blueprint": {
+      "ARCHITECTURE.md": "5c919fe47ef8fc30da6c74103c97b0528a77ab903c7c0e7a51838b17c57c163d",
+      "ARCHITECTURE_compact.md": "2d58c368b400ed95e4be5cb368a195b00eb7a29ff4b06c3256a3e0f4e466fb10",
+      "DATABASE.md": "a9d242b773d4d8d48d088bcadf1977d0c725cd9a9a0dd205e5e466a140c35e12",
+      "DATABASE_compact.md": "b3ccbd42270cfaa76f374bc8a35bea7cd35d81579f268ca8e14319982cf08b33",
+      "FEATURE-AccountAdd.md": "ea8a306990a07e20324386ec9425836a71d92234fcea1adcd93c4a04a885ec89",
+      "FEATURE-AccountDelete.md": "7b5e32c54b46c5ceec9c886b07d7f9a90b7b9c3dbae42769c636f4c94db7ca7b",
+      "FEATURE-AccountGet.md": "e4b1d5380612571f77bbfb9a20a5011fa68dd963070daad908afc44e24dd4467",
+      "FEATURE-AccountRename.md": "1a17a8ee3b9073a5d55381f98ade4be6732c20b10cb90ff4c869da712de7f754",
+      "FEATURE-BalanceRule.md": "1f7ea4530bf215298d1f8a6ba376a7b29053ed7531b36541bd88d441fe3432f2",
+      "FEATURE-CliEntry.md": "9af3feba8efc52e0e94bbb46218d8e0543a87e0ac58c81a632716b720e72f947",
+      "FEATURE-CommandContract.md": "7198f452e45d426fc2445c1f6b1dbe16a5ea6e9874709052491b04e72a506b60",
+      "FEATURE-InitCount.md": "f8542bbca9375e0b41bf50d74fadba5cbff509696b036f3051d8387940951e11",
+      "FEATURE-LoadAccounts.md": "6120a621c1e47c15eb9bf18ac2dd1271a23d9187711a1a652483ae1150d29679",
+      "FEATURE-LoadCategories.md": "9b3c1383dffd234545ee7a8ccdcb26ef31bca99a9fc793fad861d5d6c53123fc",
+      "FEATURE-LoadCsvReader.md": "8fe0394200f01ca0bac21a071fa74571b42b63f1254add8826e95fe26465d058",
+      "FEATURE-LoadTransactions.md": "4d4b58d5dcb8cfa021424f1b4cc03d3b6f62642ddf7fc9d7b19d6bc52ec75b5c",
+      "FEATURE-NoNegativeBalance.md": "3e3d73150ef86b246a72e27316d6ea982bcb34c7aaa76ecaea01005b9436c178",
+      "FEATURE-ReportBalances.md": "0fea0a0f9c3ef5b87a04dc503b12e4494ef2577d47324d25f44f1fb4534ba390",
+      "FEATURE-ReportCategories.md": "882e14a9e550c503d1db95a3ca6e349be1c92ac267aa9d195fa6897d7743fd9d",
+      "FEATURE-ReportMonthly.md": "83f5157405198f4b8e89301c11bb59f174de28c24db5edc57bb30ca2501a5112",
+      "FEATURE-Transfer.md": "2ca18ae95b52f0109c03dd928ef1b1a2849612bf82710ce11a5644006ac7dc54",
+      "FEATURE-TxnAmend.md": "85419894972bfdac63d54e7f6f1e051f5a74c0ec955edf900ef803ae9ea28a3d",
+      "FEATURE-TxnDelete.md": "964000487a48ccf641e5f32488407bf072758ee94b74726f40c460931e3c10c2",
+      "FEATURE-TxnGet.md": "452ba6c21d9b97602f5a57d8fb7499baabd48795a44fd3f32866a508f96c7934",
+      "FEATURE-TxnPost.md": "b0a7cd7affc61e6be8a7529308ca01201b69fc7a92101271ba5b8bf694b8d3c4",
+      "FEATURE-Validation.md": "0acd1e795efba02673d72ce56a9a077844ed8c1ae522470724b25c1856e478a1",
+      "FEATURE-Verification.md": "97b214145cb2734ccddc15a0e61ab873d8f3ef01a08bb9ad254ffcedc015f2cf"
+    }
+  },
+  "execution_id": "20261027.151033.391Z-2bb02dd5"
+}

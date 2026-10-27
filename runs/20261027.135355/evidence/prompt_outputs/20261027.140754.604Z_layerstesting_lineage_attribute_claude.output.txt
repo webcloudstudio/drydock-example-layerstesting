@@ -1,0 +1,35 @@
+<requirement name="load-transactions-rejects-unknown-account" stories="feature-load-transactions,feature-load-csv-reader,feature-validation,feature-command-contract">
+211,2026-04-01,NOSUCH,SALES,10.00,unknown account
+</requirement>
+<requirement name="load-transactions-rejects-overdraft-batch" stories="feature-load-transactions,feature-balance-rule,feature-no-negative-balance,feature-load-csv-reader,feature-validation,feature-command-contract">
+txn_id,date,account,category,amount,memo
+201,2026-04-01,DRAWER1,SALES,10.00,bad batch 1
+202,2026-04-01,DRAWER1,SALES,10.00,bad batch 2
+203,2026-04-01,DRAWER1,SALES,10.00,bad batch 3
+204,2026-04-01,DRAWER1,SALES,10.00,bad batch 4
+205,2026-04-01,DRAWER1,SALES,10.00,bad batch 5
+206,2026-04-01,DRAWER1,SALES,10.00,bad batch 6
+207,2026-04-01,DRAWER1,SALES,10.00,bad batch 7
+208,2026-04-01,DRAWER1,SALES,10.00,bad batch 8
+209,2026-04-01,DRAWER1,SALES,10.00,bad batch 9
+210,2026-04-01,DRAWER1,SALES,10.00,bad batch 10
+</requirement>
+<unattached story="foundation-python"/>
+<unattached story="foundation-database"/>
+<unattached story="foundation-cli"/>
+<unattached story="feature-init-count"/>
+<unattached story="feature-account-add"/>
+<unattached story="feature-txn-post"/>
+<unattached story="feature-load-accounts"/>
+<unattached story="feature-account-delete"/>
+<unattached story="feature-txn-get"/>
+<unattached story="feature-account-rename"/>
+<unattached story="feature-account-get"/>
+<unattached story="feature-txn-delete"/>
+<unattached story="feature-txn-amend"/>
+<unattached story="feature-load-categories"/>
+<unattached story="feature-transfer"/>
+<unattached story="feature-report-balances"/>
+<unattached story="feature-report-monthly"/>
+<unattached story="feature-report-categories"/>
+<unattached story="feature-verification"/>

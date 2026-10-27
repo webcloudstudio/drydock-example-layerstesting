@@ -1,0 +1,10 @@
+{"label": "INITIALIZED", "result": "pass", "at": "2026-10-27T13:53:58.542+00:00", "detail": "", "command": "drydock init LayersTesting", "attempts": 1}
+{"label": "IMPORTED", "result": "pass", "at": "2026-10-27T13:54:05.783+00:00", "detail": "", "command": "drydock import LayersTesting", "attempts": 1}
+{"label": "ANALYZED", "result": "pass", "at": "2026-10-27T13:54:40.085+00:00", "detail": "", "command": "drydock analyze LayersTesting", "attempts": 1}
+{"label": "PLAN CREATED", "result": "fail", "at": "2026-10-27T14:11:37.239+00:00", "detail": "5 criteria cannot run", "command": "drydock plan verify LayersTesting", "attempts": 2}
+{"label": "PLAN REPAIRED", "result": "pass", "at": "2026-10-27T14:15:34.821+00:00", "detail": "", "command": "drydock plan repair LayersTesting", "attempts": 1}
+{"label": "BUILDING", "result": "pass", "at": "2026-10-27T14:17:35.243+00:00", "detail": "", "command": "drydock build LayersTesting", "attempts": 1}
+{"label": "BUILT", "result": "pass", "at": "2026-10-27T15:07:54.839+00:00", "detail": "", "command": "drydock build LayersTesting", "attempts": 1}
+{"label": "SCORE AC", "result": "pass", "at": "2026-10-27T15:10:00.090+00:00", "detail": "", "command": "drydock score ac LayersTesting", "attempts": 1}
+{"label": "SCORE RELEASE", "result": "pass", "at": "2026-10-27T15:11:16.227+00:00", "detail": "", "command": "drydock score release LayersTesting", "attempts": 1}
+{"state": "SCORE RELEASE", "result": "pass", "at": "2026-10-27T15:11:16.227+00:00", "attempts": 1}

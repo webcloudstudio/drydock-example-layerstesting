@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-LoadCsvReader.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-LoadCsvReader.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-LoadCsvReader.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Load CSV Reader</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Shared reader that opens a CSV file named on the command line, checks its header, and returns numbered rows.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, FEATURE-CliEntry.md</td></tr><tr><td>Provides</td><td>ledger_core.csvio</td></tr><tr><td>Consumes</td><td>ledger, cli.registry</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>The three <code>ledger load &lt;table&gt; &lt;csv&gt;</code> commands share one reader so that file handling, header checking, and the exit codes for unreadable files and malformed rows are identical. The reader only reads: it never touches the database and never writes.</p>
+<h2>Interface</h2>
+<p><code>ledger_core.csvio.read_rows(path, header)</code></p>
+<ul><li><code>path</code> is the file path named on the command line; <code>header</code> is the sequence of column names the</li></ul>
+<p>table requires, in order.</p>
+<ul><li>Returns a list of <code>(line_number, fields)</code> tuples, one per data row, in file order. <code>line_number</code></li></ul>
+<p>is the 1-based line of the file (the header is line 1, so the first data row is line 2). <code>fields</code> is a list of strings exactly as parsed by the <code>csv</code> module.</p>
+<ul><li>A file that is missing or cannot be read or decoded raises <code>Operational</code> (exit 1).</li><li>A header that differs from <code>header</code> in names or order, an empty file, or a data row whose field</li></ul>
+<p>count differs from <code>len(header)</code> raises <code>Rejected</code> (exit 3), with a diagnostic naming the line.</p>
+<ul><li>A file with a valid header and no data rows returns an empty list.</li><li>Blank lines are not data rows and are skipped.</li></ul>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC csvio-reads-numbered-rows ===<br>Intent: read_rows returns every data row in file order with 1-based file line numbers and the parsed fields, for a file whose header matches.<br>Requires: executable=python3; scope=test</p>
+<p>import csv import os import tempfile from ledger_core.csvio import read_rows</p>
+<p>header = [&quot;account&quot;, &quot;name&quot;] rows = [[&quot;ZZR1&quot;, &quot;First Row&quot;], [&quot;ZZR2&quot;, &quot;Second Row&quot;], [&quot;ZZR3&quot;, &quot;Third Row&quot;]] with tempfile.TemporaryDirectory() as d: path = os.path.join(d, &quot;in.csv&quot;) with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh: w = csv.writer(fh, lineterminator=&quot;\n&quot;) w.writerow(header) w.writerows(rows) got = read_rows(path, header) assert len(got) == len(rows) for i, (line_no, fields) in enumerate(got): assert line_no == i + 2 assert list(fields) == rows[i] === END AC csvio-reads-numbered-rows ===</p>
+<p>=== AC csvio-header-only-is-empty ===<br>Intent: a file with a matching header and no data rows yields an empty list rather than an error.<br>Requires: executable=python3; scope=test</p>
+<p>import csv import os import tempfile from ledger_core.csvio import read_rows</p>
+<p>header = [&quot;category&quot;, &quot;description&quot;] with tempfile.TemporaryDirectory() as d: path = os.path.join(d, &quot;in.csv&quot;) with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh: csv.writer(fh, lineterminator=&quot;\n&quot;).writerow(header) assert list(read_rows(path, header)) == [] === END AC csvio-header-only-is-empty ===</p>
+<p>=== AC csvio-missing-file-operational ===<br>Intent: an unreadable path raises the Operational error, which the CLI maps to exit 1.<br>Requires: executable=python3; scope=test</p>
+<p>import os import tempfile from ledger_core.csvio import read_rows</p>
+<p>with tempfile.TemporaryDirectory() as d: path = os.path.join(d, &quot;does-not-exist.csv&quot;) try: read_rows(path, [&quot;account&quot;, &quot;name&quot;]) except Exception as exc: assert type(exc).<strong>name</strong> == &quot;Operational&quot; else: raise AssertionError(&quot;expected Operational&quot;) === END AC csvio-missing-file-operational ===</p>
+<p>=== AC csvio-bad-header-rejected ===<br>Intent: a header with the wrong names, the wrong order, or no content raises Rejected, which the CLI maps to exit 3.<br>Requires: executable=python3; scope=test</p>
+<p>import csv import os import tempfile from ledger_core.csvio import read_rows</p>
+<p>header = [&quot;account&quot;, &quot;name&quot;] bad_headers = [[&quot;name&quot;, &quot;account&quot;], [&quot;account&quot;], [&quot;account&quot;, &quot;name&quot;, &quot;extra&quot;], [&quot;code&quot;, &quot;name&quot;]] with tempfile.TemporaryDirectory() as d: for i, bad in enumerate(bad_headers): path = os.path.join(d, f&quot;bad{i}.csv&quot;) with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh: csv.writer(fh, lineterminator=&quot;\n&quot;).writerow(bad) try: read_rows(path, header) except Exception as exc: assert type(exc).<strong>name</strong> == &quot;Rejected&quot; else: raise AssertionError(&quot;expected Rejected for header %r&quot; % (bad,)) empty = os.path.join(d, &quot;empty.csv&quot;) open(empty, &quot;w&quot;).close() try: read_rows(empty, header) except Exception as exc: assert type(exc).<strong>name</strong> == &quot;Rejected&quot; else: raise AssertionError(&quot;expected Rejected for an empty file&quot;) === END AC csvio-bad-header-rejected ===</p>
+<p>=== AC csvio-wrong-field-count-rejected ===<br>Intent: a data row with too few or too many fields raises Rejected even when the header is valid.<br>Requires: executable=python3; scope=test</p>
+<p>import os import tempfile from ledger_core.csvio import read_rows</p>
+<p>header = [&quot;account&quot;, &quot;name&quot;] bodies = [&quot;ZZR1\n&quot;, &quot;ZZR1,Name,Extra\n&quot;] with tempfile.TemporaryDirectory() as d: for i, body in enumerate(bodies): path = os.path.join(d, f&quot;row{i}.csv&quot;) with open(path, &quot;w&quot;, newline=&quot;&quot;) as fh: fh.write(&quot;,&quot;.join(header) + &quot;\n&quot; + body) try: read_rows(path, header) except Exception as exc: assert type(exc).<strong>name</strong> == &quot;Rejected&quot; else: raise AssertionError(&quot;expected Rejected for body %r&quot; % body) === END AC csvio-wrong-field-count-rejected ===</p>
+<p>=== AC csvio-load-missing-file-exit-1 ===<br>Intent: through the CLI, a load naming an unreadable file exits 1, writes nothing to stdout, and stores nothing.<br>Requires: executable=python3; scope=test</p>
+<p>import os import tempfile from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>with tempfile.TemporaryDirectory() as d: path = os.path.join(d, &quot;missing.csv&quot;) with db_session() as db: before = len(db.accounts.list()) code, out, err = cli_runner(&quot;load&quot;, &quot;accounts&quot;, path) assert code == 1 assert out == &quot;&quot; assert len(db.accounts.list()) == before === END AC csvio-load-missing-file-exit-1 ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>The reader never writes to the database or to any file.</li><li>The reader never opens a database driver.</li><li>Diagnostics go to standard error only; nothing is written to standard output.</li></ul></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-ReportCategories.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-ReportCategories.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-ReportCategories.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Report Categories</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger report categories</code>, per-category transaction count, inflow, outflow, and net with a total row, computed from stored data.</td></tr><tr><td>Depends On</td><td>FEATURE-CliEntry.md, FEATURE-Validation.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger report categories</td></tr><tr><td>Consumes</td><td>ledger_core.money, cli.registry</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Report totals by category, including categories with no transactions. Every value is computed from queries over stored rows. Persistence is reached only through the generated <code>persistence</code> package via <code>ledger_core</code>.</p>
+<h2>Behavior</h2>
+<ol><li>Header <code>category,description,transactions,inflow,outflow,net</code>.</li><li>One row per category ordered by category code, including categories with no transactions (count 0 and zero amounts).</li><li><code>inflow</code> is the sum of positive amounts, <code>outflow</code> the sum of the absolute values of negative amounts written as a positive number, and <code>net</code> is inflow minus outflow.</li><li>A final row <code>TOTAL,,&lt;count&gt;,&lt;inflow&gt;,&lt;outflow&gt;,&lt;net&gt;</code> over all transactions.</li><li>Amounts use exactly two decimals, a leading <code>-</code> when negative, and no thousands separator.</li><li>Extra arguments exit 2. Output uses <code>\n</code> endings, no quoting, and no trailing spaces.</li></ol>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md and reached through <code>ledger_core</code>.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC report-categories-values ===<br>Intent: Each category row and the TOTAL row match inflow, outflow, net, and count derived from stored transactions, including a category with mixed signs and an empty category.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session import csv import io</p>
+<p>def f(row, name): return row[name] if isinstance(row, dict) else getattr(row, name)</p>
+<p>def fmt(c): sign = &quot;-&quot; if c &lt; 0 else &quot;&quot; q, r = divmod(abs(c), 100) return f&quot;{sign}{q}.{r:02d}&quot;</p>
+<p>def summarize(amounts): inflow = sum(a for a in amounts if a &gt; 0) outflow = sum(-a for a in amounts if a &lt; 0) return [str(len(amounts)), fmt(inflow), fmt(outflow), fmt(inflow - outflow)]</p>
+<p>acct, mixed, empty = &quot;ZZRC1&quot;, &quot;ZZRCM&quot;, &quot;ZZRCE&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Category Account&quot;) db.categories.create(category=mixed, description=&quot;Mixed Category&quot;) db.categories.create(category=empty, description=&quot;Empty Category&quot;) db.transactions.create(txn_id=900500001, date=&quot;2026-05-01&quot;, account=acct, category=mixed, amount=100050, memo=&quot;&quot;) db.transactions.create(txn_id=900500002, date=&quot;2026-05-02&quot;, account=acct, category=mixed, amount=-2505, memo=&quot;&quot;) db.transactions.create(txn_id=900500003, date=&quot;2026-05-03&quot;, account=acct, category=mixed, amount=-7, memo=&quot;&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) assert rows[0] == [&quot;category&quot;, &quot;description&quot;, &quot;transactions&quot;, &quot;inflow&quot;, &quot;outflow&quot;, &quot;net&quot;] txns = db.transactions.list() expected = [] for cat in sorted(db.categories.list(), key=lambda r: f(r, &quot;category&quot;)): amounts = [f(t, &quot;amount&quot;) for t in txns if f(t, &quot;category&quot;) == f(cat, &quot;category&quot;)] expected.append([f(cat, &quot;category&quot;), f(cat, &quot;description&quot;)] + summarize(amounts)) expected.append([&quot;TOTAL&quot;, &quot;&quot;] + summarize([f(t, &quot;amount&quot;) for t in txns])) assert rows[1:] == expected === END AC report-categories-values ===</p>
+<p>=== AC report-categories-empty ===<br>Intent: A category with no transactions is listed with count 0 and zero inflow, outflow, and net.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session import csv import io</p>
+<p>def fmt(c): sign = &quot;-&quot; if c &lt; 0 else &quot;&quot; q, r = divmod(abs(c), 100) return f&quot;{sign}{q}.{r:02d}&quot;</p>
+<p>empty = &quot;ZZRCE2&quot; with db_session() as db: db.categories.create(category=empty, description=&quot;Nothing here&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) row = [r for r in rows[1:-1] if r[0] == empty][0] assert row[2:] == [&quot;0&quot;, fmt(0), fmt(0), fmt(0)] === END AC report-categories-empty ===</p>
+<p>=== AC report-categories-order ===<br>Intent: Categories are ordered by code regardless of creation order, and the TOTAL row is last.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session import csv import io</p>
+<p>codes = [&quot;ZZRCB&quot;, &quot;ZZRCA&quot;] with db_session() as db: for c in codes: db.categories.create(category=c, description=&quot;Order &quot; + c) code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out))) seen = [r[0] for r in rows[1:-1]] assert seen == sorted(seen) assert rows[-1][0] == &quot;TOTAL&quot; === END AC report-categories-order ===</p>
+<p>=== AC report-categories-net-identity ===<br>Intent: For every row including TOTAL, net equals inflow minus outflow, and outflow is never written with a leading minus.</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session import csv import io</p>
+<p>def cents(text): neg = text.startswith(&quot;-&quot;) whole, frac = text.lstrip(&quot;-&quot;).split(&quot;.&quot;) v = int(whole) * 100 + int(frac) return -v if neg else v</p>
+<p>acct, cat = &quot;ZZRC2&quot;, &quot;ZZRCN&quot; with db_session() as db: db.accounts.create(account=acct, name=&quot;Net Account&quot;) db.categories.create(category=cat, description=&quot;Net Category&quot;) db.transactions.create(txn_id=900500010, date=&quot;2026-05-01&quot;, account=acct, category=cat, amount=1000, memo=&quot;&quot;) db.transactions.create(txn_id=900500011, date=&quot;2026-05-02&quot;, account=acct, category=cat, amount=-1500, memo=&quot;&quot;) code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;) print(out) print(err) assert code == 0 rows = list(csv.reader(io.StringIO(out)))[1:] for r in rows: assert not r[4].startswith(&quot;-&quot;) assert cents(r[5]) == cents(r[3]) - cents(r[4]) === END AC report-categories-net-identity ===</p>
+<p>=== AC report-categories-format ===<br>Intent: Output uses newline endings only, ends with a newline, and no line carries trailing spaces.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;) print(out) print(err) assert code == 0 assert out.endswith(&quot;\n&quot;) assert &quot;\r&quot; not in out assert all(line == line.rstrip(&quot; &quot;) for line in out.split(&quot;\n&quot;)) === END AC report-categories-format ===</p>
+<p>=== AC report-categories-usage ===<br>Intent: Extra arguments exit 2 with nothing on stdout.</p>
+<p>from cli.testing import cli_runner</p>
+<p>code, out, err = cli_runner(&quot;report&quot;, &quot;categories&quot;, &quot;extra&quot;) print(out) print(err) assert code == 2 assert out == &quot;&quot; === END AC report-categories-usage ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>No report row, count, or total is hardcoded; every value comes from a query.</li><li>Money is integer cents until formatting; floating point is never used.</li><li>The command writes nothing to the database.</li></ul></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,130 @@
+Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+2026-10-27 09:54:47 EDT  Calling CLAUDE/sonnet (plan · topology)...
+  Claude session: start id=5e188cd7-35b2-4b86-8f1e-5974e5e6597b
+  Completed CLAUDE/claude-sonnet-5-5 (plan · topology)  rc=0
+========================================================================
+PLAN PROGRESS  ·  STAGE 1 · TOPOLOGY
+========================================================================
+Topology Created:  True
+Blueprints Created: 0 / 25
+Manifest Created:  False
+Blueprints Remaining: 25
+Batch Result:       Topology accepted
+========================================================================
+2026-10-27 09:56:16 EDT  Calling CLAUDE/sonnet (plan · blueprint batch 1)...
+  Claude session: start id=545845a4-e451-442c-9578-88c609f24b69
+  Completed CLAUDE/claude-sonnet-5-5 (plan · blueprint batch 1)  rc=0
+========================================================================
+PLAN PROGRESS  ·  STAGE 2 · BLUEPRINT BATCH 1
+========================================================================
+Topology Created:  True
+Blueprints Created: 1 / 25
+Manifest Created:  False
+Blueprints Remaining: 24
+Batch Result:       Accepted 1 Blueprint(s)
+========================================================================
+2026-10-27 09:57:34 EDT  Calling CLAUDE/sonnet (plan · blueprint batch 2)...
+  Claude session: start id=659b03f1-87c9-46c3-a5da-3bc8c7da3840
+  Completed CLAUDE/claude-sonnet-5-5 (plan · blueprint batch 2)  rc=0
+========================================================================
+PLAN PROGRESS  ·  STAGE 2 · BLUEPRINT BATCH 2
+========================================================================
+Topology Created:  True
+Blueprints Created: 6 / 25
+Manifest Created:  False
+Blueprints Remaining: 19
+Batch Result:       Accepted 5 Blueprint(s)
+========================================================================
+2026-10-27 10:00:22 EDT  Calling CLAUDE/sonnet (plan · blueprint batch 3)...
+  Claude session: start id=e4f327d2-8209-4f94-8946-e60793f01513
+  Completed CLAUDE/claude-sonnet-5-5 (plan · blueprint batch 3)  rc=0
+========================================================================
+PLAN PROGRESS  ·  STAGE 2 · BLUEPRINT BATCH 3
+========================================================================
+Topology Created:  True
+Blueprints Created: 11 / 25
+Manifest Created:  False
+Blueprints Remaining: 14
+Batch Result:       Accepted 5 Blueprint(s)
+========================================================================
+2026-10-27 10:02:14 EDT  Calling CLAUDE/sonnet (plan · blueprint batch 4)...
+  Claude session: start id=15146107-6807-4507-98a2-88e49d6f63a7
+  Completed CLAUDE/claude-sonnet-5-5 (plan · blueprint batch 4)  rc=0
+========================================================================
+PLAN PROGRESS  ·  STAGE 2 · BLUEPRINT BATCH 4
+========================================================================
+Topology Created:  True
+Blueprints Created: 16 / 25
+Manifest Created:  False
+Blueprints Remaining: 9
+Batch Result:       Accepted 5 Blueprint(s)
+========================================================================
+2026-10-27 10:03:22 EDT  Calling CLAUDE/sonnet (plan · blueprint batch 5)...
+  Claude session: start id=bd073373-59b5-4f07-88f9-5af0b04cbe23
+  Completed CLAUDE/claude-sonnet-5-5 (plan · blueprint batch 5)  rc=0
+========================================================================
+PLAN PROGRESS  ·  STAGE 2 · BLUEPRINT BATCH 5
+========================================================================
+Topology Created:  True
+Blueprints Created: 21 / 25
+Manifest Created:  False
+Blueprints Remaining: 4
+Batch Result:       Accepted 5 Blueprint(s)
+========================================================================
+2026-10-27 10:05:05 EDT  Calling CLAUDE/sonnet (plan · blueprint batch 6)...
+  Claude session: start id=3eda475e-07c3-4372-8cb5-79c15e840b70
+  Completed CLAUDE/claude-sonnet-5-5 (plan · blueprint batch 6)  rc=0
+========================================================================
+PLAN PROGRESS  ·  STAGE 2 · BLUEPRINT BATCH 6
+========================================================================
+Topology Created:  True
+Blueprints Created: 25 / 25
+Manifest Created:  False
+Blueprints Remaining: 0
+Batch Result:       Accepted 4 Blueprint(s)
+========================================================================
+========================================================================
+PLAN PROGRESS  ·  STAGE 3 · MANIFEST
+========================================================================
+Topology Created:  True
+Blueprints Created: 25 / 25
+Manifest Created:  True
+Blueprints Remaining: 0
+Batch Result:       Manifest validated and serialized
+========================================================================
+2026-10-27 10:07:02 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+2026-10-27 10:07:20 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+2026-10-27 10:07:30 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+2026-10-27 10:07:38 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+2026-10-27 10:07:44 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+2026-10-27 10:07:54 EDT  Calling CLAUDE/sonnet (lineage_attribute)...
+  Completed CLAUDE/claude-sonnet-5-5 (lineage_attribute)  rc=0
+
+Mode: OVERWRITE (Blueprint specs regenerated from analysis)
+Provider: claude / sonnet
+Graph: 0 features, 25 stories, 0 spikes, 0 acceptance gates
+Warnings: 1
+Outcome: updated
+Execution: 20261027.135447.259Z-01b42598
+Elapsed: 15 minutes 5 seconds
+Review: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/QuarterDeck
+
+Planning warnings:
+  - DATABASE.md: Drydock verified SQLite construction and connectivity for 3 declared table(s)
+
+⚠  Plan written but not buildable — the Manifest is draft and Build refuses it.
+plan verify: LayersTesting
+  5 criteria cannot run as written
+  ✗  FEATURE-NoNegativeBalance.md [nonneg-load]: calls `cli_runner` at line(s) 42 without asserting its exit status; bind it as `code, out, err = cli_runner(...)` and assert `code` before the next call
+  ✗  FEATURE-NoNegativeBalance.md [nonneg-post]: calls `cli_runner` at line(s) 24 without asserting its exit status; bind it as `code, out, err = cli_runner(...)` and assert `code` before the next call
+  ✗  FEATURE-NoNegativeBalance.md [nonneg-amend]: calls `cli_runner` at line(s) 30 without asserting its exit status; bind it as `code, out, err = cli_runner(...)` and assert `code` before the next call
+  ✗  FEATURE-NoNegativeBalance.md [nonneg-delete]: calls `cli_runner` at line(s) 29 without asserting its exit status; bind it as `code, out, err = cli_runner(...)` and assert `code` before the next call
+  ✗  FEATURE-NoNegativeBalance.md [nonneg-transfer]: calls `cli_runner` at line(s) 33, 35 without asserting its exit status; bind it as `code, out, err = cli_runner(...)` and assert `code` before the next call
+  Run: drydock plan repair LayersTesting
+Next step: follow the recovery command(s) in the verification result above.
+Target - committed project workspace git store

@@ -1,0 +1,671 @@
+# MANIFEST: LayersTesting
+updated: 2026-10-27T14:15:34+00:00
+state: approved
+blocks:      10
+
+applied_specs: |
+  ARCHITECTURE.md sha256=5c919fe47ef8fc30da6c74103c97b0528a77ab903c7c0e7a51838b17c57c163d commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-1 applied_at=2026-10-27T14:22:12+00:00 build_sha256=5c919fe47ef8fc30da6c74103c97b0528a77ab903c7c0e7a51838b17c57c163d
+  ARCHITECTURE_compact.md sha256=2d58c368b400ed95e4be5cb368a195b00eb7a29ff4b06c3256a3e0f4e466fb10 commit=c5ee7409b8633e4af0a89d7f8952ae021b96e8ab applied_by=block-10 applied_at=2026-10-27T15:07:49+00:00 build_sha256=2d58c368b400ed95e4be5cb368a195b00eb7a29ff4b06c3256a3e0f4e466fb10
+  DATABASE.md sha256=a9d242b773d4d8d48d088bcadf1977d0c725cd9a9a0dd205e5e466a140c35e12 commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-3 applied_at=2026-10-27T14:26:09+00:00 build_sha256=4019972b245b2b714787069f69d304b0c1ff562b984333ca53b7f24603fd42ea database_operations=FEATURE-ACCOUNT-001:45a6aa1674892e78b04f30fc7197ac29d5c6657dc0984f024efccf9064d23af0;FEATURE-ACCOUNT-002:a2255e9071838edf2cee7251da6036ce985f2e34521ecc0046aa4fd95d50c2b3;FEATURE-ACCOUNT-003:a1a833fefc971745311575ba8a9c78bde7a1ea4f3bdb3e196155512d6011d2a3;FEATURE-ACCOUNT-004:f763931ee295bec551a5fcc39cbf034d397d12e65f622a5b540209d87a1c32e7;FEATURE-ACCOUNT-005:5411c50ca594a049632508b9143ec55fdb4abd530d24bdb2732aa0674e720e7b;FEATURE-ACCOUNT-006:09979feb22f84d1bbbfcb205e78929ca08d5fb8970b166a9e6180b431509e6e3;FEATURE-CATEGORY-001:186704bcd90a2f2b4ba8a203275b462b427aaa845051b2894b0dcbef48abb7cf;FEATURE-CATEGORY-002:8752dd8bcd810e7c27e99113c9aae4b37f2bdd0243c866211afb731f03d9251c;FEATURE-CATEGORY-003:fc6f1a18ac1f80e1b65b6e1312704b5a26f7d0e119994109116ae004038d641c;FEATURE-CATEGORY-004:6ccf180c8284f79e70bf5c11321fd44bbbae40e4ade5d9425de2c9751269cec1;FEATURE-CATEGORY-005:0ed3c940a74f7c3c8f9a06db163c37f2fd9718f06fbb0d1be34c4f8b39ec5169;FEATURE-CATEGORY-006:e90b3a0108bb0bc7db86be3e310bf3f80ce47b8a8d41772b2acd61dd7b6b071f;FEATURE-TXN-001:3bcba494ab8e5ad15d99bcee4d435ca22a3921788077a0c252bb80f441e6b539;FEATURE-TXN-002:fba288e083ca93eafbd2e357a0ae8dd1883494fb8653522485541bddfa28b98a;FEATURE-TXN-003:bc96284669f51be66a4767b05eccd6cf53602e6fd61982f757bf4eda1387c7de;FEATURE-TXN-004:dc144d362632a705370c4d1832dd8f16ff05c676a5592984441ba5ac9c4d5d3c;FEATURE-TXN-005:634fb73a218621287cddaa42a0b2002aeb7c97d70f61227f4150bc36c12f4474;FEATURE-TXN-006:fcf47c9a774922a785a95abf3b0548ba6113187c083ba94bb91514b934c0e509
+  DATABASE_compact.md sha256=b3ccbd42270cfaa76f374bc8a35bea7cd35d81579f268ca8e14319982cf08b33 commit=ee344256ae28650930fffc5832b0ddfa40ebe80e applied_by=block-10 applied_at=2026-10-27T15:07:49+00:00 build_sha256=b3ccbd42270cfaa76f374bc8a35bea7cd35d81579f268ca8e14319982cf08b33
+  FEATURE-AccountAdd.md sha256=ea8a306990a07e20324386ec9425836a71d92234fcea1adcd93c4a04a885ec89 commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-5 applied_at=2026-10-27T14:45:35+00:00 build_sha256=8a273cf70704abbfeca5f40068a079a6fd85b15db96ff1c240bbec925aab5b36
+  FEATURE-AccountDelete.md sha256=7b5e32c54b46c5ceec9c886b07d7f9a90b7b9c3dbae42769c636f4c94db7ca7b commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-6 applied_at=2026-10-27T14:52:45+00:00 build_sha256=d5a9209ab1717c68036dc184979f5e7af44d4f618e1c31cf91767ae5e24767c4
+  FEATURE-AccountGet.md sha256=e4b1d5380612571f77bbfb9a20a5011fa68dd963070daad908afc44e24dd4467 commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-6 applied_at=2026-10-27T14:52:45+00:00 build_sha256=ff81779053f9ab67eff7945435a5e972d938f34bbfcc25735a5ccce18fcee640
+  FEATURE-AccountRename.md sha256=1a17a8ee3b9073a5d55381f98ade4be6732c20b10cb90ff4c869da712de7f754 commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-6 applied_at=2026-10-27T14:52:45+00:00 build_sha256=021edd4e02e5c367d612a820672e4c813e84bb3e27d5c8761f7b5352e131885b
+  FEATURE-BalanceRule.md sha256=1f7ea4530bf215298d1f8a6ba376a7b29053ed7531b36541bd88d441fe3432f2 commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-4 applied_at=2026-10-27T14:28:32+00:00 build_sha256=5806c88e761c576ffdd86af98c7430a26d94f687c3ad23a6bfad1a6023b3365b
+  FEATURE-CliEntry.md sha256=9af3feba8efc52e0e94bbb46218d8e0543a87e0ac58c81a632716b720e72f947 commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-3 applied_at=2026-10-27T14:26:09+00:00 build_sha256=f3a69e4fff1044700847b7e3d421d8689b0f6f7e1a4811ec7d6ef26fb70d2591
+  FEATURE-CommandContract.md sha256=7198f452e45d426fc2445c1f6b1dbe16a5ea6e9874709052491b04e72a506b60 commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-9 applied_at=2026-10-27T15:04:22+00:00 build_sha256=0a1cff2fd2d3eb1ad58fbbf4cbe31afc07897a1201d96999b702fe556c2831d3
+  FEATURE-InitCount.md sha256=f8542bbca9375e0b41bf50d74fadba5cbff509696b036f3051d8387940951e11 commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-5 applied_at=2026-10-27T14:45:35+00:00 build_sha256=ba51a7024e8a48dd032996cfb84d578f1cdfc985f435e3057ac881310448deb6
+  FEATURE-LoadAccounts.md sha256=6120a621c1e47c15eb9bf18ac2dd1271a23d9187711a1a652483ae1150d29679 commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-6 applied_at=2026-10-27T14:52:45+00:00 build_sha256=29a3ff6d212f4934a96baba39b44f0dac8b1477bb3e535dcc62521766045fd87
+  FEATURE-LoadCategories.md sha256=9b3c1383dffd234545ee7a8ccdcb26ef31bca99a9fc793fad861d5d6c53123fc commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-6 applied_at=2026-10-27T14:52:45+00:00 build_sha256=2a2bc51ab1c5d002b8b331df0370a778ef0857eb291f866f2ea410ddc279e683
+  FEATURE-LoadCsvReader.md sha256=8fe0394200f01ca0bac21a071fa74571b42b63f1254add8826e95fe26465d058 commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-5 applied_at=2026-10-27T14:45:35+00:00 build_sha256=5da37a3b0b425b806c329bf215dbb68f6cd7033caa7968f979481d3e51cfa109
+  FEATURE-LoadTransactions.md sha256=4d4b58d5dcb8cfa021424f1b4cc03d3b6f62642ddf7fc9d7b19d6bc52ec75b5c commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-7 applied_at=2026-10-27T14:57:15+00:00 build_sha256=54771b35e993c45a0751c66e531e295e3ffce0f5e4871cbab95bf0b00e03e1e8
+  FEATURE-NoNegativeBalance.md sha256=3e3d73150ef86b246a72e27316d6ea982bcb34c7aaa76ecaea01005b9436c178 commit=4256ea958ac3ef1dfd5343e4cbe405d9fcf8d4f3 applied_by=block-9 applied_at=2026-10-27T15:04:22+00:00 build_sha256=d0384e108f3714f0289af76d9fe3ad8fec231bf8818af28f3504e2402100f110
+  FEATURE-ReportBalances.md sha256=0fea0a0f9c3ef5b87a04dc503b12e4494ef2577d47324d25f44f1fb4534ba390 commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-8 applied_at=2026-10-27T15:00:34+00:00 build_sha256=e03083f9fb591e9c85292638413e63ce790cae75557d96637b2f6999f8a98ed0
+  FEATURE-ReportCategories.md sha256=882e14a9e550c503d1db95a3ca6e349be1c92ac267aa9d195fa6897d7743fd9d commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-8 applied_at=2026-10-27T15:00:34+00:00 build_sha256=039cbe8f2139423ba12da012d971718c5f9ddfa06756cb00df683f6abb7f2277
+  FEATURE-ReportMonthly.md sha256=83f5157405198f4b8e89301c11bb59f174de28c24db5edc57bb30ca2501a5112 commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-8 applied_at=2026-10-27T15:00:34+00:00 build_sha256=637688d166251dd51e201ad9de45080944ae7560b1aee5d325d806aa67f902a6
+  FEATURE-Transfer.md sha256=2ca18ae95b52f0109c03dd928ef1b1a2849612bf82710ce11a5644006ac7dc54 commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-6 applied_at=2026-10-27T14:52:45+00:00 build_sha256=193780b14c275b63a01299979305129b61317934c3527139fbb94eac243637ea
+  FEATURE-TxnAmend.md sha256=85419894972bfdac63d54e7f6f1e051f5a74c0ec955edf900ef803ae9ea28a3d commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-6 applied_at=2026-10-27T14:52:45+00:00 build_sha256=4ddb8428afd5f94c89668e629b400ebee453ddc050dadb84562c9347e4faaee8
+  FEATURE-TxnDelete.md sha256=964000487a48ccf641e5f32488407bf072758ee94b74726f40c460931e3c10c2 commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-6 applied_at=2026-10-27T14:52:45+00:00 build_sha256=b6db94dfc4d1ebe511738f35641ffa30244c84d3a95028f5260802cd36eabb73
+  FEATURE-TxnGet.md sha256=452ba6c21d9b97602f5a57d8fb7499baabd48795a44fd3f32866a508f96c7934 commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-6 applied_at=2026-10-27T14:52:45+00:00 build_sha256=875faf17fd8dde0508fd73564d22e794a426b94c0569ab1541b924e0c16a5d75
+  FEATURE-TxnPost.md sha256=b0a7cd7affc61e6be8a7529308ca01201b69fc7a92101271ba5b8bf694b8d3c4 commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-5 applied_at=2026-10-27T14:45:35+00:00 build_sha256=10e2b88bfb44d94e02da0bcabc16f00147fa335d1c16bfcf6fba67015dbc8e94
+  FEATURE-Validation.md sha256=0acd1e795efba02673d72ce56a9a077844ed8c1ae522470724b25c1856e478a1 commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-4 applied_at=2026-10-27T14:28:32+00:00 build_sha256=548febf78686a3869ff2fc5bf85fac83f6b9034bff5b5e447de7b15beabc3c3a
+  FEATURE-Verification.md sha256=97b214145cb2734ccddc15a0e61ab873d8f3ef01a08bb9ad254ffcedc015f2cf commit=3713427438de77908fcfcd97236a98bb9c7a63d1 applied_by=block-10 applied_at=2026-10-27T15:07:49+00:00 build_sha256=bd7a68b15c2e0c5af1e4de8794c809e8cc88c8278b8a2aca65baa268b4b17b14
+## story 1: Stand up the Python project tree, environment, dependency manifest, pytest runner, and bin/test.sh.
+id:           foundation-python
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-1.md
+summary:      Stand up the Python project tree, environment, dependency manifest, pytest runner, and bin/test.sh.
+type:         foundational
+kind:         capability
+phase:        1
+block:        1
+implements:   ARCHITECTURE.md
+instructions: |
+  Build the Python 3.11+ project root: pyproject.toml, committed uv.lock, `.venv` launchers in bin/,
+  conftest.py, and a POSIX `bin/test.sh` that runs pytest -q from the application root and exits zero
+  only when every test passes.
+
+  Create the `ledger_core` package that later stories fill (validation, money, balances, csvio,
+  accounts, transactions, reports). State the module ownership table: only the generated
+  `persistence` package touches the database; no driver is imported elsewhere. Money is integer
+  cents at every layer; no floating point.
+
+  Configuration resolves DATABASE_URL (optional `sqlite://` prefix), then DATABASE_PATH, then
+  `data/app.db`. An unopenable database path is an operational failure, exit 1, with no writes.
+stack:        common.md, python.md
+stack_mode:   builder
+size:         8376
+provides:     project tree, bin/test.sh
+acceptance:   yes
+state: closed/implemented
+
+## story 2: Declare the accounts, categories, and transactions tables and every repository operation the stories need.
+id:           foundation-database
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-2.md
+summary:      Declare the accounts, categories, and transactions tables and every repository operation the stories need.
+type:         foundational
+kind:         capability
+phase:        1
+block:        2
+implements:   DATABASE.md
+instructions: |
+  Author DATABASE.md as the complete persistence declaration. Tables: accounts(account PK, name),
+  categories(category PK, description), transactions(txn_id INTEGER PK, date, account REFERENCES
+  accounts, category REFERENCES categories, amount INTEGER cents, memo).
+
+  Declare one access pattern per operation any story needs: create/get/update/delete/list for each
+  table; transactions listing by account and by month; count per table; max txn_id; per-account
+  transaction count and balance sum; delete-all per table for init; and atomic multi-row create
+  where the persistence library allows it. Every operation carries a criterion that calls it.
+  The builder writes no persistence code; Drydock generates it.
+stack:        common.md, python.md, persistence.md, sqlite.md
+stack_mode:   builder
+size:         24429
+provides:     persistence.accounts, persistence.categories, persistence.transactions
+depends:      foundation-python
+acceptance:   yes
+state: closed/implemented
+
+## story 3: Provide the `ledger` executable at the application root with a command registry, usage-error handling, and the stdout/stderr contract.
+id: foundation-cli
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-3.md
+summary: Provide the `ledger` executable at the application root with a command registry, usage-error handling, and the stdout/stderr contract.
+type: foundational
+kind: capability
+phase: 1
+block: 3
+implements: FEATURE-CliEntry.md
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: builder
+size: 23251
+provides: ledger, cli.registry
+consumes: persistence.accounts, persistence.categories, persistence.transactions
+instructions: |
+  Create the executable `ledger` (POSIX launcher that activates .venv and calls `cli.main`), the
+  `cli` package with `main(argv) -> int` and `cli/testing.py` with `cli_runner`.
+  
+  Commands are discovered from modules in `cli/commands/`; each module exposes a COMMANDS mapping from
+  a word tuple such as ("account", "add") to a handler. Dispatch rules: unknown first word, a known
+  group word with an unknown sub-word (unknown table or report), or a wrong argument count exit 2 with
+  one stderr line and no stdout. A handler returns the rows to print; stdout is written only after the
+  handler succeeds, so a failing command never prints. Domain errors map to exit codes: Rejected 3,
+  NotFound 4, Operational 1. Output is CSV with `\n` endings, no quoting, no trailing spaces.
+acceptance: yes
+depends: foundation-database
+state: closed/implemented
+
+## story 4: Validate codes, names, memos, amounts, and dates, and format integer cents as two-decimal text.
+id: feature-validation
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-4.md
+summary: Validate codes, names, memos, amounts, and dates, and format integer cents as two-decimal text.
+type: service
+kind: capability
+phase: 1
+block: 4
+implements: FEATURE-Validation.md
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md
+stack_mode: consumer
+size: 18993
+provides: ledger_core.validation, ledger_core.money
+instructions: |
+  Implement pure functions. Codes: 1 to 12 chars of A-Z0-9. Names/descriptions: 1 to 40 chars;
+  memos 0 to 60; none contains a comma or newline. Amounts on input match `-?DIGITS[.D[D]]`,
+  parse to integer cents with Decimal-free integer arithmetic or Decimal, never float, and reject
+  zero and three or more decimals. Dates are real calendar dates `YYYY-MM-DD` (reject 2026-02-30).
+  `format_cents` writes exactly two decimals, leading `-` when negative, no thousands separator.
+  Violations raise Rejected (exit 3).
+acceptance: yes
+depends: foundation-python
+state: closed/implemented
+
+## story 5: Check that a proposed set of transaction changes leaves no account balance below zero before any write.
+id: feature-balance-rule
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-4.md
+summary: Check that a proposed set of transaction changes leaves no account balance below zero before any write.
+type: service
+kind: capability
+phase: 1
+block: 4
+implements: FEATURE-BalanceRule.md
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md
+stack_mode: consumer
+size: 20002
+provides: ledger_core.balances
+consumes: persistence.transactions
+instructions: |
+  Provide `check_no_negative(db, changes)` where changes are inserts, amount edits, and deletions of
+  transaction rows. It computes each affected account's resulting balance as the stored sum plus the
+  net delta, and raises Rejected if any resulting balance is below zero. An account's balance is the
+  sum of its amounts. It writes nothing. Used by load, post, amend, delete, and transfer.
+acceptance: yes
+depends: foundation-database
+state: closed/implemented
+
+## story 6: Implement `ledger init` and `ledger count`.
+id: feature-init-count
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-5.md
+summary: Implement `ledger init` and `ledger count`.
+type: service
+kind: capability
+phase: 2
+block: 5
+implements: FEATURE-InitCount.md
+covers: LEDGER-SCHEMA-001
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 21595
+provides: ledger init, ledger count
+consumes: ledger, cli.registry
+instructions: |
+  `init` creates the database file if absent, removes all rows from transactions, then categories,
+  then accounts (foreign-key order), writes nothing, exits 0. `count` prints `table,rows` then
+  accounts, categories, transactions counts read from the database.
+acceptance: yes
+depends: foundation-cli
+state: closed/implemented
+
+## story 7: Read and header-check a CSV file named on the command line, exiting 1 when it cannot be read.
+id: feature-load-csv-reader
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-5.md
+summary: Read and header-check a CSV file named on the command line, exiting 1 when it cannot be read.
+type: service
+kind: capability
+phase: 2
+block: 5
+implements: FEATURE-LoadCsvReader.md
+covers: LEDGER-LOAD-004
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 21644
+provides: ledger_core.csvio
+consumes: ledger, cli.registry
+instructions: |
+  Provide `read_rows(path, header)` using the csv module. An unreadable or missing file raises
+  Operational (exit 1) with no writes. A header differing from the table's columns in order, or a
+  row with the wrong field count, raises Rejected (exit 3). It returns parsed rows with their line
+  numbers for diagnostics and writes nothing.
+acceptance: yes
+depends: foundation-cli
+state: closed/implemented
+
+## story 8: Implement `ledger account add <code> <name>`.
+id: feature-account-add
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-5.md
+summary: Implement `ledger account add <code> <name>`.
+type: service
+kind: capability
+phase: 2
+block: 5
+implements: FEATURE-AccountAdd.md
+covers: LEDGER-ACCT-001
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 21859
+provides: ledger account add, ledger_core.accounts
+consumes: ledger_core.validation, ledger_core.money, cli.registry
+instructions: |
+  Validate code and name, reject a duplicate with exit 3, insert, and print the row
+  `account,name,transactions,balance` with 0 transactions and 0.00. Export an `account_row`
+  helper computing the transaction count and balance from the database for the other account
+  commands.
+acceptance: yes
+depends: foundation-cli, feature-validation
+state: closed/implemented
+
+## story 9: Implement `ledger txn post <account> <category> <amount> <date> [<memo>]`.
+id: feature-txn-post
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-5.md
+summary: Implement `ledger txn post <account> <category> <amount> <date> [<memo>]`.
+type: service
+kind: capability
+phase: 2
+block: 5
+implements: FEATURE-TxnPost.md
+covers: LEDGER-TXN-001
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 22190
+provides: ledger txn post, ledger_core.transactions
+consumes: ledger_core.validation, ledger_core.money, ledger_core.balances, cli.registry
+instructions: |
+  Validate every input and rule first: account and category exist, amount, date, memo, and the
+  no-negative-balance rule. Assign txn_id as max(txn_id)+1, or 1 when empty, insert, and print the
+  row `txn_id,date,account,category,amount,memo`. Export `txn_row` and `next_txn_id` helpers.
+  Any violation exits 3 and writes nothing.
+acceptance: yes
+depends: foundation-cli, feature-validation, feature-balance-rule
+state: closed/implemented
+
+## story 10: Implement `ledger load accounts <csv>` as an all-or-nothing load.
+id: feature-load-accounts
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-6.md
+summary: Implement `ledger load accounts <csv>` as an all-or-nothing load.
+type: service
+kind: capability
+phase: 2
+block: 6
+implements: FEATURE-LoadAccounts.md
+covers: LEDGER-LOAD-001
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 22164
+provides: ledger load accounts
+consumes: ledger_core.csvio, ledger_core.validation, cli.registry
+instructions: |
+  Header `account,name`. Validate every row (code, name, duplicate key within the file and against
+  stored accounts) before the first write, then insert all rows atomically. On success print
+  `table,loaded` and `accounts,<rows>`. Any invalid row exits 3 and stores none of the rows.
+acceptance: yes
+depends: feature-load-csv-reader, feature-validation
+state: closed/implemented
+
+## story 11: Implement `ledger account delete <code>`.
+id: feature-account-delete
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-6.md
+summary: Implement `ledger account delete <code>`.
+type: service
+kind: capability
+phase: 2
+block: 6
+implements: FEATURE-AccountDelete.md
+covers: LEDGER-ACCT-004
+accepts: st-006
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 20531
+provides: ledger account delete
+consumes: ledger_core.accounts, cli.registry
+instructions: |
+  Check existence (absent exits 4), then check the account has no transactions (otherwise exit 3),
+  then delete and print `deleted` and the code.
+acceptance: yes
+depends: feature-account-add
+state: closed/implemented
+
+## story 12: Implement `ledger txn get <id>`.
+id: feature-txn-get
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-6.md
+summary: Implement `ledger txn get <id>`.
+type: service
+kind: capability
+phase: 2
+block: 6
+implements: FEATURE-TxnGet.md
+covers: LEDGER-TXN-002
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 20606
+provides: ledger txn get
+consumes: ledger_core.transactions, cli.registry
+instructions: Print the transaction row; an absent id exits 4 and a non-integer id exits 3.
+acceptance: yes
+depends: feature-txn-post
+state: closed/implemented
+
+## story 13: Implement `ledger account rename <code> <name>`.
+id: feature-account-rename
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-6.md
+summary: Implement `ledger account rename <code> <name>`.
+type: service
+kind: capability
+phase: 2
+block: 6
+implements: FEATURE-AccountRename.md
+covers: LEDGER-ACCT-003
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 20660
+provides: ledger account rename
+consumes: ledger_core.accounts, ledger_core.validation, cli.registry
+instructions: |
+  Validate the new name, update only the name, and print the updated row. An absent code exits 4;
+  an invalid name exits 3 and changes nothing.
+acceptance: yes
+depends: feature-account-add
+state: closed/implemented
+
+## story 14: Implement `ledger account get <code>`.
+id: feature-account-get
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-6.md
+summary: Implement `ledger account get <code>`.
+type: service
+kind: capability
+phase: 2
+block: 6
+implements: FEATURE-AccountGet.md
+covers: LEDGER-ACCT-002
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 20759
+provides: ledger account get
+consumes: ledger_core.accounts, cli.registry
+instructions: Print the current account row with live transaction count and balance. An absent code exits 4.
+acceptance: yes
+depends: feature-account-add
+state: closed/implemented
+
+## story 15: Implement `ledger txn delete <id>`.
+id: feature-txn-delete
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-6.md
+summary: Implement `ledger txn delete <id>`.
+type: service
+kind: capability
+phase: 2
+block: 6
+implements: FEATURE-TxnDelete.md
+covers: LEDGER-TXN-004
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 21028
+provides: ledger txn delete
+consumes: ledger_core.transactions, ledger_core.balances, cli.registry
+instructions: |
+  Absent id exits 4. Check that removing the row leaves its account balance non-negative (else
+  exit 3, row kept), then delete and print `deleted` and the id.
+acceptance: yes
+depends: feature-txn-post
+state: closed/implemented
+
+## story 16: Implement `ledger txn amend <id> <amount>`.
+id: feature-txn-amend
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-6.md
+summary: Implement `ledger txn amend <id> <amount>`.
+type: service
+kind: capability
+phase: 2
+block: 6
+implements: FEATURE-TxnAmend.md
+covers: LEDGER-TXN-003
+accepts: st-006
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 21999
+provides: ledger txn amend
+consumes: ledger_core.transactions, ledger_core.validation, ledger_core.balances, cli.registry
+instructions: |
+  Absent id exits 4. Validate the amount, check the resulting balance of the transaction's account
+  (stored sum minus old amount plus new) is non-negative, then update only the amount and print the
+  row. A rejection exits 3 and leaves the original amount.
+acceptance: yes
+depends: feature-txn-post
+state: closed/implemented
+
+## story 17: Implement `ledger load categories <csv>` as an all-or-nothing load.
+id: feature-load-categories
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-6.md
+summary: Implement `ledger load categories <csv>` as an all-or-nothing load.
+type: service
+kind: capability
+phase: 2
+block: 6
+implements: FEATURE-LoadCategories.md
+covers: LEDGER-LOAD-002
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 22097
+provides: ledger load categories
+consumes: ledger_core.csvio, ledger_core.validation, cli.registry
+instructions: |
+  Header `category,description`. Same validate-everything-then-write rule as accounts. On success
+  print `table,loaded` and `categories,<rows>`; any invalid row or duplicate key exits 3 with no rows
+  stored.
+acceptance: yes
+depends: feature-load-csv-reader, feature-validation
+state: closed/implemented
+
+## story 18: Implement `ledger transfer <from> <to> <amount> <date>` as an atomic two-row write.
+id: feature-transfer
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-6.md
+summary: Implement `ledger transfer <from> <to> <amount> <date>` as an atomic two-row write.
+type: service
+kind: capability
+phase: 2
+block: 6
+implements: FEATURE-Transfer.md
+covers: LEDGER-XFER-001
+accepts: st-010
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 22392
+provides: ledger transfer
+consumes: ledger_core.transactions, ledger_core.validation, ledger_core.balances, cli.registry
+instructions: |
+  Both accounts must exist and differ; the amount is positive; the date is valid; the TRANSFER
+  category must exist. Check the source balance after the debit before any write. Insert the
+  outgoing row (-amount, memo `transfer to <to>`) with id max+1 and the incoming row
+  (+amount, memo `transfer from <from>`) with the next id, atomically, and print both rows.
+  A rejection stores neither.
+acceptance: yes
+depends: feature-txn-post
+state: closed/implemented
+
+## story 19: Implement `ledger load transactions <csv>` with foreign-key, date, amount, and balance validation before any write.
+id: feature-load-transactions
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-7.md
+summary: Implement `ledger load transactions <csv>` with foreign-key, date, amount, and balance validation before any write.
+type: service
+kind: capability
+phase: 2
+block: 7
+implements: FEATURE-LoadTransactions.md
+covers: LEDGER-LOAD-003
+accepts: st-004
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 24710
+provides: ledger load transactions
+consumes: ledger_core.csvio, ledger_core.validation, ledger_core.balances, cli.registry
+instructions: |
+  Header `txn_id,date,account,category,amount,memo`. Keep each file txn_id. Reject, before any write,
+  a duplicate txn_id (in file or stored), an unknown account or category (stored or none), a bad
+  date, amount, or memo, and any file whose combined effect leaves an account balance below zero.
+  The balance check considers all rows together. Insert all rows atomically; print `table,loaded`
+  and `transactions,<rows>`. A rejection at row 11 stores none of rows 1 to 10.
+acceptance: yes
+depends: feature-load-csv-reader, feature-validation, feature-balance-rule, feature-load-accounts, feature-load-categories
+state: closed/implemented
+
+## story 20: Implement `ledger report balances`.
+id: feature-report-balances
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-8.md
+summary: Implement `ledger report balances`.
+type: service
+kind: capability
+phase: 3
+block: 8
+implements: FEATURE-ReportBalances.md
+covers: LEDGER-RPT-001
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 21556
+provides: ledger report balances
+consumes: ledger_core.money, cli.registry
+instructions: |
+  Header `account,name,transactions,balance`; one row per account ordered by code, then
+  `TOTAL,,<count>,<sum>`. All values computed from queries; amounts formatted from integer cents.
+acceptance: yes
+depends: foundation-cli, feature-validation
+state: closed/implemented
+
+## story 21: Implement `ledger report monthly`.
+id: feature-report-monthly
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-8.md
+summary: Implement `ledger report monthly`.
+type: service
+kind: capability
+phase: 3
+block: 8
+implements: FEATURE-ReportMonthly.md
+covers: LEDGER-RPT-003
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 21330
+provides: ledger report monthly
+consumes: ledger_core.money, cli.registry
+instructions: |
+  Header `month,transactions,inflow,outflow,net`; one row per YYYY-MM that has transactions,
+  ascending, then `TOTAL,<count>,<inflow>,<outflow>,<net>`. Month is the first seven characters of
+  the stored date.
+acceptance: yes
+depends: foundation-cli, feature-validation
+state: closed/implemented
+
+## story 22: Implement `ledger report categories`.
+id: feature-report-categories
+finding: ADVISORY: implemented, not verified — no governed acceptance command covers this story. Declare one in ACCEPTANCE.json to gate it.
+evidence: evidence/block-8.md
+summary: Implement `ledger report categories`.
+type: service
+kind: capability
+phase: 3
+block: 8
+implements: FEATURE-ReportCategories.md
+covers: LEDGER-RPT-002
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 21830
+provides: ledger report categories
+consumes: ledger_core.money, cli.registry
+instructions: |
+  Header `category,description,transactions,inflow,outflow,net`; every category ordered by code,
+  including those with no transactions (zero values), then the TOTAL row. inflow is the sum of
+  positive amounts, outflow the sum of absolute negative amounts, net inflow minus outflow.
+acceptance: yes
+depends: foundation-cli, feature-validation
+state: closed/implemented
+
+## story 23: Assemble and verify the CSV output contract and exit codes across every command.
+id: feature-command-contract
+finding: ADVISORY: implemented, not verified — every binding criterion this story passed was already green before the story built, so none measured the work. Repair the criteria in the Blueprint to exercise this story and rebuild to obtain a verdict.
+evidence: evidence/block-9.md
+summary: Assemble and verify the CSV output contract and exit codes across every command.
+type: feature
+kind: integration
+phase: 4
+block: 9
+implements: FEATURE-CommandContract.md
+covers: LEDGER-CLI-001
+accepts: st-007, st-011
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 21759
+consumes: ledger init, ledger count, ledger load accounts, ledger load categories, ledger load transactions, ledger account add, ledger account get, ledger account rename, ledger account delete, ledger txn post, ledger txn get, ledger txn amend, ledger txn delete, ledger transfer, ledger report balances, ledger report categories, ledger report monthly
+instructions: |
+  Assembly and intent only. Verify across the delivered commands that successful output is CSV with
+  the specified headers, `\n` endings, two-decimal amounts and no trailing spaces; that a failing
+  command writes nothing to stdout; that exit 2 results from unknown commands, tables, reports, and
+  wrong argument counts; and that every rejected writing command leaves counts unchanged. Fix
+  seams in the owning modules rather than adding new behavior.
+acceptance: yes
+depends: feature-init-count, feature-load-accounts, feature-load-categories, feature-load-transactions, feature-account-add, feature-account-get, feature-account-rename, feature-account-delete, feature-txn-post, feature-txn-get, feature-txn-amend, feature-txn-delete, feature-transfer, feature-report-balances, feature-report-categories, feature-report-monthly
+state: closed/implemented
+
+## story 24: Assemble and verify that every writing command enforces the no-negative-balance rule atomically.
+id: feature-no-negative-balance
+finding: ADVISORY: implemented, not verified — every binding criterion this story passed was already green before the story built, so none measured the work. Repair the criteria in the Blueprint to exercise this story and rebuild to obtain a verdict.
+evidence: evidence/block-9.md
+summary: Assemble and verify that every writing command enforces the no-negative-balance rule atomically.
+type: feature
+kind: integration
+phase: 4
+block: 9
+implements: FEATURE-NoNegativeBalance.md
+covers: LEDGER-CLI-002
+accepts: st-008
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 22095
+consumes: ledger load transactions, ledger txn post, ledger txn amend, ledger txn delete, ledger transfer
+instructions: |
+  Assembly and intent only. For each of load, post, amend, delete, and transfer, drive a case that
+  would leave a balance below zero, assert exit 3, and read back that balances and row counts are
+  unchanged. Include a load file whose later rows make an earlier-valid balance negative.
+acceptance: yes
+depends: feature-load-transactions, feature-txn-post, feature-txn-amend, feature-txn-delete, feature-transfer
+state: closed/implemented
+
+## story 25: Terminal gate: run the supplied grader and the full project test suite.
+id: feature-verification
+finding: ADVISORY: implemented, not verified — every binding criterion this story passed was already green before the story built, so none measured the work. Repair the criteria in the Blueprint to exercise this story and rebuild to obtain a verdict.
+evidence: evidence/block-10.md
+summary: Terminal gate: run the supplied grader and the full project test suite.
+type: feature
+kind: test harness
+phase: 4
+block: 10
+implements: FEATURE-Verification.md
+accepts: st-001, st-005
+context: ARCHITECTURE_compact.md, DATABASE_compact.md
+stack: common.md, python.md, cli.md
+stack_mode: consumer
+size: 19960
+instructions: |
+  Terminal story. Its acceptance declares `Suite: full`, runs `sh sources/run.sh` and requires exit
+  status 0, and runs `sh bin/test.sh` requiring exit 0. Print captured output before asserting.
+  Supply the inherited environment when invoking. Do not modify anything under sources/.
+acceptance: yes
+depends: foundation-python, foundation-database, foundation-cli, feature-validation, feature-balance-rule, feature-init-count, feature-load-csv-reader, feature-load-accounts, feature-load-categories, feature-load-transactions, feature-account-add, feature-account-get, feature-account-rename, feature-account-delete, feature-txn-post, feature-txn-get, feature-txn-amend, feature-txn-delete, feature-transfer, feature-report-balances, feature-report-categories, feature-report-monthly, feature-command-contract, feature-no-negative-balance
+state: closed/implemented

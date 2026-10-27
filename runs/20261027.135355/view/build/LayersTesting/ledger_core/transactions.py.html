@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/ledger_core/transactions.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/ledger_core/transactions.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/ledger_core/transactions.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Transaction rows: formatting a stored transaction for output, the next free id, and id parsing.&quot;&quot;&quot;
+
+import re
+from typing import Union
+
+from persistence import Database
+from persistence.schema import (
+    TransactionsCreateOutput,
+    TransactionsGetOutput,
+    TransactionsListOutput,
+    TransactionsUpdateOutput,
+)
+
+from ledger_core.errors import Rejected
+from ledger_core.money import format_cents
+
+StoredTxn = Union[TransactionsCreateOutput, TransactionsGetOutput, TransactionsListOutput, TransactionsUpdateOutput]
+
+_TXN_ID = re.compile(r&quot;-?[0-9]+&quot;)
+
+
+def parse_txn_id(text: str) -&gt; int:
+    &quot;&quot;&quot;Parse a transaction id written as an integer. Any other text is rejected.&quot;&quot;&quot;
+    if not isinstance(text, str) or _TXN_ID.fullmatch(text) is None:
+        raise Rejected(f&quot;transaction id must be an integer: {text!r}&quot;)
+    return int(text)
+
+
+def txn_row(txn: StoredTxn) -&gt; list[str]:
+    &quot;&quot;&quot;Format a stored transaction as the output row ``txn_id,date,account,category,amount,memo``.&quot;&quot;&quot;
+    return [str(txn.txn_id), txn.date, txn.account, txn.category, format_cents(txn.amount), txn.memo]
+
+
+def next_txn_id(db: Database) -&gt; int:
+    &quot;&quot;&quot;Return the largest stored ``txn_id`` plus one, or ``1`` when the ledger has no transactions.&quot;&quot;&quot;
+    return max((txn.txn_id for txn in db.transactions.list()), default=0) + 1
+</pre></article>
+</main>
+</body>
+</html>

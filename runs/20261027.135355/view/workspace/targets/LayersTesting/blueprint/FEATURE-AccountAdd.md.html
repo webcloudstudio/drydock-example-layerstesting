@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-AccountAdd.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-AccountAdd.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-AccountAdd.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: Account Add</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>Implements <code>ledger account add &lt;code&gt; &lt;name&gt;</code> and the shared <code>account_row</code> helper.</td></tr><tr><td>Depends On</td><td>FEATURE-CliEntry.md, FEATURE-Validation.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger account add, ledger_core.accounts</td></tr><tr><td>Consumes</td><td>ledger_core.validation, ledger_core.money, cli.registry</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Create one account and print its row. The module <code>ledger_core.accounts</code> also exports the helper the other account commands use to build an account row from live data.</p>
+<h2>Behavior</h2>
+<ol><li><code>ledger account add &lt;code&gt; &lt;name&gt;</code> takes exactly two arguments; other counts exit 2.</li><li>Validate the code (1 to 12 characters of <code>A-Z0-9</code>) and the name (1 to 40 characters, no comma or</li></ol>
+<p>newline). A violation exits 3.</p>
+<ol><li>A code that is already stored exits 3 and leaves the stored account unchanged.</li><li>Insert the account, then print CSV: the header <code>account,name,transactions,balance</code> and one row</li></ol>
+<p>with the new account, its name, <code>0</code> transactions, and balance <code>0.00</code>.</p>
+<ol><li>A failing command writes nothing to standard output.</li></ol>
+<h2>Interface</h2>
+<p><code>ledger_core.accounts.account_row(db, code)</code> returns <code>None</code> when the account is absent, otherwise the tuple <code>(account, name, transactions, balance_cents)</code> where <code>transactions</code> is the number of that account&#x27;s stored transactions and <code>balance_cents</code> is the integer sum of their amounts. Both are computed from the database on every call. Formatting the balance as text is done by <code>ledger_core.money.format_cents</code> in the command, not in the helper.</p>
+<h2>Database Interface</h2>
+<ul><li><code>FEATURE-ACCOUNT-002</code> — read: get an account by code - supplies: <code>account</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-ACCOUNT-001</code> — write: create an account - supplies: <code>account</code>, <code>name</code> - returns: <code>account</code>, <code>name</code></li><li><code>FEATURE-TXN-005</code> — read: list an account&#x27;s transactions to count and sum them - supplies: <code>account</code> - returns: <code>amount</code></li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC account-add-success ===<br>Intent: adding a new account exits 0, prints the header and one row with zero transactions and a zero balance, and the account reads back from the store.<br>Requires: executable=python3; scope=test</p>
+<p>import csv import io from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZZNA1&quot; name = &quot;Add Probe&quot; with db_session() as db: code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, name) print(out, err) assert code == 0 parsed = list(csv.reader(io.StringIO(out))) assert parsed[0] == [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;] assert parsed[1] == [acct, name, &quot;0&quot;, &quot;0.00&quot;] assert len(parsed) == 2 row = db.accounts.get(account=acct) assert row is not None got = row[&quot;name&quot;] if isinstance(row, dict) else row.name assert got == name === END AC account-add-success ===</p>
+<p>=== AC account-add-duplicate-rejected ===<br>Intent: adding a code that already exists exits 3, prints nothing, and leaves the stored name unchanged.<br>Requires: executable=python3; scope=test</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZZNB1&quot; original = &quot;Original Name&quot; with db_session() as db: code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, original) assert code == 0 code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, &quot;Different Name&quot;) assert code == 3 assert out == &quot;&quot; row = db.accounts.get(account=acct) got = row[&quot;name&quot;] if isinstance(row, dict) else row.name assert got == original === END AC account-add-duplicate-rejected ===</p>
+<p>=== AC account-add-invalid-code ===<br>Intent: lowercase letters, a code longer than 12 characters, a bad character, and an empty code each exit 3 with no output and store no account.<br>Requires: executable=python3; scope=test</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>bad_codes = [&quot;zznc1&quot;, &quot;ABCDEFGHIJKLM&quot;, &quot;ZZ-NC&quot;, &quot;ZZ NC&quot;, &quot;&quot;] with db_session() as db: before = len(db.accounts.list()) for bad in bad_codes: code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, bad, &quot;Valid Name&quot;) assert code == 3, bad assert out == &quot;&quot; assert len(db.accounts.list()) == before === END AC account-add-invalid-code ===</p>
+<p>=== AC account-add-invalid-name ===<br>Intent: an empty name, a name over 40 characters, and a name containing a comma each exit 3 with no output and store no account.<br>Requires: executable=python3; scope=test</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;ZZND1&quot; bad_names = [&quot;&quot;, &quot;n&quot; * 41, &quot;has,comma&quot;] with db_session() as db: for bad in bad_names: code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, bad) assert code == 3, bad assert out == &quot;&quot; assert db.accounts.get(account=acct) is None === END AC account-add-invalid-name ===</p>
+<p>=== AC account-add-boundary-lengths ===<br>Intent: a 12-character code and a 40-character name are the largest accepted values and are stored whole.<br>Requires: executable=python3; scope=test</p>
+<p>from cli.testing import cli_runner from persistence.testing import db_session</p>
+<p>acct = &quot;Z&quot; * 12 name = &quot;n&quot; * 40 with db_session() as db: code, out, err = cli_runner(&quot;account&quot;, &quot;add&quot;, acct, name) assert code == 0 row = db.accounts.get(account=acct) assert row is not None got = row[&quot;name&quot;] if isinstance(row, dict) else row.name assert got == name === END AC account-add-boundary-lengths ===</p>
+<p>=== AC account-add-usage-errors ===<br>Intent: the wrong number of arguments is a usage error with exit 2 and no output.<br>Requires: executable=python3; scope=test</p>
+<p>from cli.testing import cli_runner</p>
+<p>for args in ((&quot;account&quot;, &quot;add&quot;), (&quot;account&quot;, &quot;add&quot;, &quot;ZZNE1&quot;), (&quot;account&quot;, &quot;add&quot;, &quot;ZZNE1&quot;, &quot;Name&quot;, &quot;Extra&quot;)): code, out, err = cli_runner(*args) assert code == 2, args assert out == &quot;&quot; === END AC account-add-usage-errors ===</p>
+<p>=== AC account-row-helper ===<br>Intent: account_row reports the live transaction count and the integer-cent balance computed from stored transactions, and None for an absent account.<br>Requires: executable=python3; scope=test</p>
+<p>from persistence.testing import db_session from ledger_core.accounts import account_row</p>
+<p>acct, cat = &quot;ZZNF1&quot;, &quot;ZZNFC&quot; name = &quot;Helper Probe&quot; amounts = [10000, -2550, 1] with db_session() as db: db.accounts.create(account=acct, name=name) db.categories.create(category=cat, description=&quot;Helper Category&quot;) for i, cents in enumerate(amounts): db.transactions.create(txn_id=930000000 + i, date=&quot;2026-03-01&quot;, account=acct, category=cat, amount=cents, memo=&quot;&quot;) row = account_row(db, acct) assert row is not None assert tuple(row) == (acct, name, len(amounts), sum(amounts)) assert account_row(db, &quot;ZZNFNONE&quot;) is None === END AC account-row-helper ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>Validation completes before the insert; a rejected add changes nothing.</li><li>The balance is integer cents in the helper and is formatted only for output.</li><li>A failing command writes nothing to standard output.</li></ul></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_transactions.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_transactions.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_transactions.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;``ledger txn post``, ``txn_row``, and ``next_txn_id``, against a fresh store per test.&quot;&quot;&quot;
+
+import csv
+import io
+
+import pytest
+
+from cli.testing import cli_runner
+from ledger_core.transactions import next_txn_id, txn_row
+from persistence.schema import TransactionsGetOutput
+
+TXN_HEADER = [&quot;txn_id&quot;, &quot;date&quot;, &quot;account&quot;, &quot;category&quot;, &quot;amount&quot;, &quot;memo&quot;]
+ACCOUNT = &quot;ZZTA1&quot;
+CATEGORY = &quot;ZZTC1&quot;
+
+
+@pytest.fixture
+def posting_store(ledger_store, store_open):
+    &quot;&quot;&quot;A store with one account and one category, ready for postings.&quot;&quot;&quot;
+    with store_open(ledger_store) as db:
+        db.accounts.create(account=ACCOUNT, name=&quot;Post Probe&quot;)
+        db.categories.create(category=CATEGORY, description=&quot;Post Category&quot;)
+    return ledger_store
+
+
+def _rows(out: str) -&gt; list[list[str]]:
+    return list(csv.reader(io.StringIO(out)))
+
+
+def _stored(store_open, path):
+    with store_open(path) as db:
+        return db.transactions.list()
+
+
+def test_post_prints_header_and_new_row(posting_store, store_open):
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, ACCOUNT, CATEGORY, &quot;45.50&quot;, &quot;2026-04-01&quot;, &quot;walk in sale&quot;)
+    assert code == 0, err
+    assert _rows(out) == [TXN_HEADER, [&quot;1&quot;, &quot;2026-04-01&quot;, ACCOUNT, CATEGORY, &quot;45.50&quot;, &quot;walk in sale&quot;]]
+
+
+def test_posted_row_reads_back_with_cent_amount_and_memo(posting_store, store_open):
+    cli_runner(&quot;txn&quot;, &quot;post&quot;, ACCOUNT, CATEGORY, &quot;45.50&quot;, &quot;2026-04-01&quot;, &quot;walk in sale&quot;)
+    with store_open(posting_store) as db:
+        stored = db.transactions.get(txn_id=1)
+    assert stored.amount == 4550
+    assert stored.memo == &quot;walk in sale&quot;
+    assert stored.date == &quot;2026-04-01&quot;
+
+
+def test_omitted_memo_is_stored_empty_and_prints_six_fields(posting_store, store_open):
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, ACCOUNT, CATEGORY, &quot;10.00&quot;, &quot;2026-04-02&quot;)
+    assert code == 0, err
+    assert _rows(out)[1] == [&quot;1&quot;, &quot;2026-04-02&quot;, ACCOUNT, CATEGORY, &quot;10.00&quot;, &quot;&quot;]
+    with store_open(posting_store) as db:
+        assert db.transactions.get(txn_id=1).memo == &quot;&quot;
+
+
+def test_consecutive_posts_get_consecutive_ids(posting_store):
+    ids = []
+    for amount in [&quot;5.00&quot;, &quot;6.00&quot;, &quot;7.00&quot;]:
+        code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, ACCOUNT, CATEGORY, amount, &quot;2026-04-03&quot;)
+        assert code == 0, err
+        ids.append(int(_rows(out)[1][0]))
+    assert ids == [1, 2, 3]
+
+
+def test_next_id_follows_the_largest_stored_id_not_the_count(posting_store, store_open):
+    with store_open(posting_store) as db:
+        db.transactions.create(txn_id=500, date=&quot;2026-04-01&quot;, account=ACCOUNT, category=CATEGORY,
+                               amount=100, memo=&quot;&quot;)
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, ACCOUNT, CATEGORY, &quot;1.00&quot;, &quot;2026-04-02&quot;)
+    assert code == 0, err
+    assert _rows(out)[1][0] == &quot;501&quot;
+
+
+@pytest.mark.parametrize(
+    &quot;case&quot;,
+    [
+        (ACCOUNT, &quot;ZZNOCAT&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;),
+        (&quot;ZZNOACCT&quot;, CATEGORY, &quot;1.00&quot;, &quot;2026-04-01&quot;),
+        (ACCOUNT, CATEGORY, &quot;1.234&quot;, &quot;2026-04-01&quot;),
+        (ACCOUNT, CATEGORY, &quot;0&quot;, &quot;2026-04-01&quot;),
+        (ACCOUNT, CATEGORY, &quot;0.00&quot;, &quot;2026-04-01&quot;),
+        (ACCOUNT, CATEGORY, &quot;1.00&quot;, &quot;2026-02-30&quot;),
+        (ACCOUNT, CATEGORY, &quot;1.00&quot;, &quot;2026-13-01&quot;),
+        (ACCOUNT, CATEGORY, &quot;1.00&quot;, &quot;04/01/2026&quot;),
+        (ACCOUNT, CATEGORY, &quot;1.00&quot;, &quot;2026-04-01&quot;, &quot;bad,memo&quot;),
+        (ACCOUNT, CATEGORY, &quot;1.00&quot;, &quot;2026-04-01&quot;, &quot;x&quot; * 61),
+        (ACCOUNT, CATEGORY, &quot;abc&quot;, &quot;2026-04-01&quot;),
+    ],
+)
+def test_rejections_exit_three_with_no_output_and_no_write(posting_store, store_open, case):
+    before = len(_stored(store_open, posting_store))
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, *case)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert len(_stored(store_open, posting_store)) == before
+
+
+def test_withdrawal_beyond_balance_is_rejected(posting_store, store_open):
+    with store_open(posting_store) as db:
+        db.transactions.create(txn_id=900001501, date=&quot;2026-04-01&quot;, account=ACCOUNT,
+                               category=CATEGORY, amount=1000, memo=&quot;&quot;)
+    before = len(_stored(store_open, posting_store))
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, ACCOUNT, CATEGORY, &quot;-10.01&quot;, &quot;2026-04-02&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert len(_stored(store_open, posting_store)) == before
+
+
+def test_withdrawal_to_exactly_zero_is_accepted(posting_store, store_open):
+    with store_open(posting_store) as db:
+        db.transactions.create(txn_id=900001501, date=&quot;2026-04-01&quot;, account=ACCOUNT,
+                               category=CATEGORY, amount=1000, memo=&quot;&quot;)
+    code, out, err = cli_runner(&quot;txn&quot;, &quot;post&quot;, ACCOUNT, CATEGORY, &quot;-10.00&quot;, &quot;2026-04-02&quot;)
+    assert code == 0, err
+    assert len(_stored(store_open, posting_store)) == 2
+
+
+def test_balance_rule_counts_prior_postings(posting_store, store_open):
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, ACCOUNT, CATEGORY, &quot;5.00&quot;, &quot;2026-04-01&quot;)[0] == 0
+    assert cli_runner(&quot;txn&quot;, &quot;post&quot;, ACCOUNT, CATEGORY, &quot;-3.00&quot;, &quot;2026-04-02&quot;)[0] == 0
+    code, out, _ = cli_runner(&quot;txn&quot;, &quot;post&quot;, ACCOUNT, CATEGORY, &quot;-2.01&quot;, &quot;2026-04-03&quot;)
+    assert code == 3
+    assert out == &quot;&quot;
+    assert len(_stored(store_open, posting_store)) == 2
+
+
+@pytest.mark.parametrize(
+    &quot;args&quot;,
+    [
+        (&quot;txn&quot;, &quot;post&quot;, ACCOUNT, CATEGORY, &quot;1.00&quot;),
+        (&quot;txn&quot;, &quot;post&quot;, &quot;A&quot;, &quot;B&quot;, &quot;1.00&quot;, &quot;2026-04-01&quot;, &quot;m&quot;, &quot;extra&quot;),
+    ],
+)
+def test_wrong_argument_count_is_usage_error(posting_store, args):
+    code, out, _ = cli_runner(*args)
+    assert code == 2
+    assert out == &quot;&quot;
+
+
+def test_txn_row_formats_stored_fields(posting_store):
+    txn = TransactionsGetOutput(txn_id=7, date=&quot;2026-06-01&quot;, account=ACCOUNT, category=CATEGORY,
+                                amount=-1205, memo=&quot;rent&quot;)
+    assert txn_row(txn) == [&quot;7&quot;, &quot;2026-06-01&quot;, ACCOUNT, CATEGORY, &quot;-12.05&quot;, &quot;rent&quot;]
+
+
+def test_next_txn_id_is_one_on_empty_ledger(ledger_store, store_open):
+    with store_open(ledger_store) as db:
+        assert next_txn_id(db) == 1
+
+
+def test_next_txn_id_is_largest_plus_one(posting_store, store_open):
+    with store_open(posting_store) as db:
+        for txn_id in (3, 11, 7):
+            db.transactions.create(txn_id=txn_id, date=&quot;2026-04-01&quot;, account=ACCOUNT,
+                                   category=CATEGORY, amount=1, memo=&quot;&quot;)
+        assert next_txn_id(db) == 12
+</pre></article>
+</main>
+</body>
+</html>

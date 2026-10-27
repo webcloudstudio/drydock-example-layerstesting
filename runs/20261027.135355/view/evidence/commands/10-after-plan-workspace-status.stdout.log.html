@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/commands/10-after-plan-workspace-status.stdout.log</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/commands/10-after-plan-workspace-status.stdout.log</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/commands/10-after-plan-workspace-status.stdout.log">Raw file</a></div></header>
+<article class="doc"><pre>Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+Drydock status — workspace
+
+Target: LayersTesting
+   Phase:     Implement
+   State:     25 pending
+   Detail:    6 imported · 25 authored · metadata planned
+   Analysis:  Ready · 15 stories · 0 questions · 0 blockers
+   Plan:      25 pending
+   Next Step: drydock build LayersTesting  (frontier: Stand up the Python project tree, environment, dependency manifest, pytest runner, and bin/test.sh.)
+   10-27:     ✅  drydock build status LayersTesting
+   10-27:     ✅  drydock plan verify LayersTesting --plan-override-model sonnet
+   10-27:     ✅  drydock plan repair LayersTesting --plan-override-model sonnet
+   10-27:     ❌  drydock plan verify LayersTesting --plan-override-model sonnet
+   10-27:     ✅  drydock plan LayersTesting --override --plan-override-model sonnet
+
+</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompt_outputs/20261027.135409.186Z_layerstesting_analyze_claude.output.txt</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompt_outputs/20261027.135409.186Z_layerstesting_analyze_claude.output.txt</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompt_outputs/20261027.135409.186Z_layerstesting_analyze_claude.output.txt">Raw file</a></div></header>
+<article class="doc"><pre>=== BEGIN ARTIFACT ANALYSIS.md ===
+# Blueprint Analysis: drydock Layers Testing Uat Case
+
+## Commander Expectations
+
+- assert the completed ledger is a command-line cash ledger that stores all data in SQLite through the shipped persistence library
+- assert every command either completes in full or changes nothing
+- assert the supplied grader `sources/run.sh` passes with exit code zero
+- assert every report is computed from the database and never embedded as an answer
+- assert a rejected command leaves all previously stored records unchanged
+
+## Crew
+
+| Crew | Charge |
+|---|---|
+| Commander | Defines intent and decides what done means. |
+| Team Lead | Confirms epic completeness and stakeholder expectations. |
+| Planning Crew | Authors atomic specifications and the ordered Manifest. |
+| Shipyard Crew | Builds the tickets without synchronous Commander access. |
+
+## Story List
+
+### Feature: Schema and Bulk Load
+
+| ID | Story | High-level AC |
+|---|---|---|
+| LEDGER-SCHEMA-001 | Initialize an empty ledger with `ledger init` | `init` prepares three tables (accounts, categories, transactions) with the specified columns and keys, writes nothing, and removes existing records when rerun; `count` reports 0 rows for each table |
+| LEDGER-LOAD-001 | Load accounts from CSV with `ledger load accounts &lt;csv&gt;` | Header must match `account,name`; all rows accepted; writes `table,loaded` and `accounts,&lt;rows&gt;`; invalid row rejects the whole file with exit 3 |
+| LEDGER-LOAD-002 | Load categories from CSV with `ledger load categories &lt;csv&gt;` | Header must match `category,description`; all rows accepted; writes `table,loaded` and `categories,&lt;rows&gt;`; invalid row rejects the whole file with exit 3 |
+| LEDGER-LOAD-003 | Load transactions from CSV with `ledger load transactions &lt;csv&gt;` | Header must match `txn_id,date,account,category,amount,memo`; keeps file `txn_id`; all rows accepted or none; unknown account or category rejects the whole file with exit 3 |
+| LEDGER-LOAD-004 | Reject a load file with unreadable path | Unreadable file named on command line exits 1 with no writes |
+
+### Feature: Account Management
+
+| ID | Story | High-level AC |
+|---|---|---|
+| LEDGER-ACCT-001 | Add an account with `ledger account add &lt;code&gt; &lt;name&gt;` | Validates code (1–12 chars `A-Z0-9`) and name (1–40 chars, no comma/newline); duplicate key rejected with exit 3; returns account row with 0 transactions and 0.00 balance |
+| LEDGER-ACCT-002 | Retrieve an account with `ledger account get &lt;code&gt;` | Returns current account row; absent code exits 4 |
+| LEDGER-ACCT-003 | Rename an account with `ledger account rename &lt;code&gt; &lt;name&gt;` | Updates name only; returns updated row; absent code exits 4 |
+| LEDGER-ACCT-004 | Delete an account with `ledger account delete &lt;code&gt;` | Removes account and writes `deleted` and code; refused with exit 3 while transactions exist; absent code exits 4 |
+
+### Feature: Transaction Management
+
+| ID | Story | High-level AC |
+|---|---|---|
+| LEDGER-TXN-001 | Post a transaction with `ledger txn post` | Validates account, category (must exist), amount (`-?DIGITS[.D[D]]`, nonzero, ≤2 decimals), date (real calendar date), memo (0–60 chars); assigns `txn_id` as max+1 or 1; returns row; invalid input exits 3 |
+| LEDGER-TXN-002 | Retrieve a transaction with `ledger txn get &lt;id&gt;` | Returns current transaction row; absent id exits 4 |
+| LEDGER-TXN-003 | Amend a transaction amount with `ledger txn amend &lt;id&gt; &lt;amount&gt;` | Changes only amount; returns updated row; rejected if resulting balance would go negative; absent id exits 4 |
+| LEDGER-TXN-004 | Delete a transaction with `ledger txn delete &lt;id&gt;` | Removes row and writes `deleted` and id; rejected if resulting balance would go negative; absent id exits 4 |
+
+### Feature: Transfers
+
+| ID | Story | High-level AC |
+|---|---|---|
+| LEDGER-XFER-001 | Transfer cash between accounts with `ledger transfer &lt;from&gt; &lt;to&gt; &lt;amount&gt; &lt;date&gt;` | Records two rows in category `TRANSFER` (outgoing `-amount` then incoming `+amount`) with specified memos and consecutive ids; accounts must differ and amount must be positive; rejected entirely if source would go negative |
+
+### Feature: Reporting
+
+| ID | Story | High-level AC |
+|---|---|---|
+| LEDGER-RPT-001 | Report account balances with `ledger report balances` | Per-account rows ordered by code with count and balance, then `TOTAL,,&lt;count&gt;,&lt;sum&gt;` |
+| LEDGER-RPT-002 | Report category totals with `ledger report categories` | Per-category rows ordered by code (including empty categories) with inflow, outflow, net, then TOTAL row |
+| LEDGER-RPT-003 | Report monthly totals with `ledger report monthly` | Per `YYYY-MM` with transactions, ascending, with inflow, outflow, net, then TOTAL row |
+
+### Feature: Command Contract
+
+| ID | Story | High-level AC |
+|---|---|---|
+| LEDGER-CLI-001 | Enforce the CSV output contract and exit codes | Successful commands write CSV headers, `\n` endings, two-decimal amounts, no trailing spaces; failures write nothing to stdout and one diagnostic to stderr; exit 2 for unknown commands, tables, reports, or wrong argument counts |
+| LEDGER-CLI-002 | Enforce the no-negative-balance rule across all writing commands | Loading, posting, amending, deleting, and transferring each check every resulting balance before any write and reject the whole command with exit 3 |
+
+## Surfaced Acceptance Criteria
+
+| ID | Story ID | Criterion |
+|---|---|---|
+| AC-001 | LEDGER-SCHEMA-001 | `init` writes nothing to standard output and exits 0 |
+| AC-002 | LEDGER-LOAD-001 | A rejected accounts load stores none of the rows before the rejected row |
+| AC-003 | LEDGER-LOAD-003 | A rejected transactions load stores none of the rows before the rejected row |
+| AC-004 | LEDGER-ACCT-001 | Account code validation rejects lowercase letters, codes longer than 12 characters, and empty codes with exit 3 |
+| AC-005 | LEDGER-TXN-001 | Amount input with three decimal places is rejected with exit 3 |
+| AC-006 | LEDGER-TXN-001 | Date `2026-02-30` is rejected with exit 3 |
+| AC-007 | LEDGER-TXN-003 | Amending a transaction to an amount that would drive its account below zero exits 3 and leaves the original amount |
+| AC-008 | LEDGER-TXN-004 | Deleting a transaction that would drive its account below zero exits 3 and keeps the row |
+| AC-009 | LEDGER-XFER-001 | A transfer whose source would go negative stores neither of its two rows |
+| AC-010 | LEDGER-XFER-001 | A transfer with equal source and destination accounts exits 3 |
+| AC-011 | LEDGER-RPT-002 | Categories with no transactions appear in the report with zero values |
+
+## Relationship Model
+
+| Source or group | Relationship type | Related source or group | Evidence | Delivery implication |
+|---|---|---|---|---|
+| `sources/run.sh` | instruction-to-test | `sources/INSTRUCTIONS.md` | Grader known answers mirror the CLI contract and rules in INSTRUCTIONS.md | Grader is the final acceptance gate; stories must reproduce its outputs exactly |
+| `sources/seed_accounts.csv` | dependency | `sources/run.sh` (B1, D2, C1) | Grader loads these rows and asserts their counts and balances | Account load story must precede balance report stories |
+| `sources/seed_categories.csv` | dependency | `sources/run.sh` (B2, C2) | Grader loads these rows and asserts category totals | Category load story must precede category report story |
+| `sources/seed_transactions.csv` | dependency | `sources/run.sh` (B3, C1–C3) | Grader loads 120 rows and asserts all report totals | Transaction load story must precede all report stories |
+| `sources/seed_transactions_bad.csv` | instruction-to-test | `sources/run.sh` (D1) | Row 11 names unknown account `NOSUCH`; grader expects exit 3 with no writes | Load validation must be atomic |
+| `sources/INSTRUCTIONS.md` | dependency | `sources/run.sh` | Output formats and exit codes are fixed by INSTRUCTIONS.md | Output and exit-code stories derive from this file |
+
+## Source Roles
+
+| Path | Role | Plan disposition | Build disposition |
+|---|---|---|---|
+| sources/INSTRUCTIONS.md | normative specification | context | prompt-only |
+| sources/run.sh | conformance harness | compass | stage |
+| sources/seed_accounts.csv | test helper | context | stage |
+| sources/seed_categories.csv | test helper | context | stage |
+| sources/seed_transactions.csv | test helper | context | stage |
+| sources/seed_transactions_bad.csv | test helper | context | stage |
+
+## Planning Instructions
+
+### Delivery Shape
+
+The system is a Python 3.11+ command-line executable named `ledger` at the application root. Inputs are command-line arguments and CSV files named on the command line. Outputs are CSV on standard output and diagnostics on standard error. All persistence goes through the shipped persistence library over SQLite, with `DATABASE_URL` or `DATABASE_PATH` selecting the database file. Each writing command validates all inputs and rules before its first write, so it either completes fully or changes nothing.
+
+### Story Realization Map
+
+- LEDGER-SCHEMA-001: `sources/INSTRUCTIONS.md` Commands table (`init`, `count`); `sources/run.sh` A1–A2, Z1–Z2. Requires persistence library schema setup and a `count` command.
+- LEDGER-LOAD-001: `sources/INSTRUCTIONS.md` Database and Commands (`load accounts`); `sources/seed_accounts.csv`; `sources/run.sh` B1, D2. Requires the accounts table and atomic load.
+- LEDGER-LOAD-002: `sources/seed_categories.csv`; `sources/run.sh` B2. Requires the categories table and atomic load.
+- LEDGER-LOAD-003: `sources/seed_transactions.csv`, `sources/seed_transactions_bad.csv`; `sources/run.sh` B3, D1. Requires foreign-key validation before any write.
+- LEDGER-LOAD-004: `sources/INSTRUCTIONS.md` Exit codes (1); `sources/run.sh` (no direct check; covered by the exit-code contract).
+- LEDGER-ACCT-001 through LEDGER-ACCT-004: `sources/INSTRUCTIONS.md` account commands and rules 3–4; `sources/run.sh` E1–E8.
+- LEDGER-TXN-001 through LEDGER-TXN-004: `sources/INSTRUCTIONS.md` transaction commands and rules 5–7; `sources/run.sh` F1–F10, G3–G5.
+- LEDGER-XFER-001: `sources/INSTRUCTIONS.md` transfer command and rule 1; `sources/run.sh` G1–G2.
+- LEDGER-RPT-001 through LEDGER-RPT-003: `sources/INSTRUCTIONS.md` report commands; `sources/run.sh` C1–C3, H1–H3.
+- LEDGER-CLI-001: `sources/INSTRUCTIONS.md` Output and Exit codes; `sources/run.sh` U1–U2.
+- LEDGER-CLI-002: `sources/INSTRUCTIONS.md` Rule 2; `sources/run.sh` G3–G5.
+
+### Test and Acceptance Strategy
+
+Focused story tests run the story&#x27;s own slice of the Python test suite in `bin/test.sh`, scoped per story. The terminal verification story runs the grader `sh sources/run.sh` and the unfiltered suite. Sea Trials are verified by the SEA_TRIALS.md criteria, and the grader is the authoritative proof for report and workflow correctness.
+
+### Sequencing and Dependencies
+
+1. LEDGER-SCHEMA-001 (init and count) first.
+2. LEDGER-LOAD-001, LEDGER-LOAD-002 in parallel after LEDGER-SCHEMA-001.
+3. LEDGER-LOAD-003 after LEDGER-LOAD-001 and LEDGER-LOAD-002.
+4. Account, transaction, and transfer stories after the loads.
+5. Report stories after all write stories are in place.
+6. LEDGER-CLI-001 and LEDGER-CLI-002 cross-cut and are verified during each story they touch.
+7. Terminal verification story runs the full grader after all others.
+
+### Source Conflicts and Gaps
+
+- Source conflict: none. INSTRUCTIONS.md and run.sh agree on every output format, exit code, and rule checked by the grader.
+- Gap: INSTRUCTIONS.md does not state the exit code for a missing or invalid `DATABASE_URL` value. Resolved by choosing the narrowest behavior: exit 1 as an operational failure, with no writes.
+- Gap: The behavior when `ledger init` is run with no prior database file is not stated. Resolved by creating the file and schema.
+
+## Analysis Notes
+
+generated: 2026-10-27
+blueprint: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/blueprint
+
+Quality: Ready
+  blockers: 0
+  questions: 0
+  features: 6
+  stories: 15
+  stack: Python 3.11+, SQLite, pytest
+  display_name: not proposed
+  short_description: not proposed
+
+Observations:
+- SEA_TRIALS.md is a prior project acceptance contract; its stable IDs st-001, st-004 through st-008, st-010, and st-011 are preserved. st-002, st-003, and st-009 are retired and not re-emitted.
+- The grader `sources/run.sh` is the single authoritative project-level verification command.
+- `count` appears in the Commands table and the grader but is not listed in the Story List&#x27;s original commands; it is folded into LEDGER-SCHEMA-001.
+- `init` requires no separate schema-building story; the persistence library generates the schema.
+=== END ARTIFACT ===
+
+=== BEGIN ARTIFACT SEA_TRIALS.md ===
+# Sea Trials: drydock Layers Testing Uat Case
+
+## st-001: The supplied grader passes
+
+Type: technical
+Required: yes
+Criterion: The completed ledger shall pass every check in the supplied end-to-end workflow grader, sh sources/run.sh, with exit code zero.
+Verification: proof
+Pattern: ubiquitous
+Command: [&quot;sh&quot;, &quot;sources/run.sh&quot;]
+
+## st-004: The seed files load exactly
+
+Type: behavioral
+Required: yes
+Criterion: When the supplied accounts, categories, and transactions files are loaded in order into an empty ledger, the application shall accept all records, report the loaded counts, and retain 4 accounts, 7 categories, and 120 transactions across subsequent command invocations.
+Verification: proof
+Pattern: event
+
+## st-005: Reports match the known answers
+
+Type: behavioral
+Required: yes
+Criterion: The application shall compute account balances, category totals, and monthly totals from stored ledger data, matching the known answers in sources/run.sh byte for byte both before and after the supplied transaction and transfer workflows.
+Verification: proof
+Pattern: ubiquitous
+
+## st-006: Accounts and transactions support create, read, update, and delete
+
+Type: behavioral
+Required: yes
+Criterion: The application shall retain account additions and renames and transaction postings and amendments across command invocations, return their current values on retrieval, remove successfully deleted records, refuse deletion of an account with transactions with exit code 3, and report an absent record with exit code 4.
+Verification: proof
+Pattern: ubiquitous
+
+## st-007: A failed command changes nothing
+
+Type: behavioral
+Required: yes
+Criterion: If a load, account change, transaction change, or transfer violates a validation or business rule, then the application shall exit 3 and preserve all previously stored ledger records without adding, altering, or removing any record.
+Verification: proof
+Pattern: unwanted
+
+## st-008: No balance goes negative
+
+Type: behavioral
+Required: yes
+Criterion: If loading transactions, posting, amending, deleting, or transferring would leave any account balance below zero, then the application shall reject the entire command with exit code 3 and preserve the prior balances.
+Verification: proof
+Pattern: unwanted
+
+## st-010: Transfers conserve cash
+
+Type: behavioral
+Required: yes
+Criterion: When a valid transfer is requested between distinct accounts, the application shall record an equal debit and credit in category TRANSFER, return both transaction rows, and update both account balances without changing the total cash held.
+Verification: proof
+Pattern: event
+
+## st-011: Command results follow the CLI contract
+
+Type: behavioral
+Required: yes
+Criterion: The application shall return the CSV headers, row ordering, two-decimal monetary values, and exit codes specified in sources/INSTRUCTIONS.md, returning exit 2 for unknown commands or reports and incorrect argument counts, and writing failures only to standard error.
+Verification: proof
+Pattern: ubiquitous
+
+## Questions
+
+- None.
+=== END ARTIFACT ===
+
+=== BEGIN ARTIFACT TECHNOLOGY_STACK.md ===
+# Technology Stack
+
+| Technology | Rigging | Notes |
+|---|---|---|
+| Python 3.11+ | python.md | Implementation language named in INSTRUCTIONS.md |
+| SQLite | sqlite.md | Database named in INSTRUCTIONS.md; persistence library is the shipped access layer |
+| pytest | python.md | Test runner named in INSTRUCTIONS.md |
+| uv | uv_ruff.md | Proposed conventional tooling for environments; not named in sources |
+=== END ARTIFACT ===
+
+=== BEGIN ARTIFACT COMPASS.md ===
+# COMPASS: drydock Layers Testing Uat Case
+
+## Compass
+A command-line cash ledger for a small shop that tracks cash across drawers, a safe, and petty cash. Every receipt and payment is recorded against an account, and three reports summarize balances, category totals, and monthly totals. The product is an executable named `ledger` at the application root, backed entirely by SQLite through the shipped persistence library. Every command either completes in full or changes nothing.
+
+## Constraints
+- Python 3.11 or newer; tests run under pytest.
+- SQLite database; `DATABASE_URL` (optionally `sqlite://`-prefixed) takes precedence over `DATABASE_PATH`, which defaults to `data/app.db`.
+- Amounts stored as integer cents; never floating point.
+- Application code never opens a database driver directly; all access goes through the shipped persistence library.
+- Output is CSV with `\n` line endings, no quoting, no trailing spaces, two-decimal amounts.
+- `sources/run.sh`, `sources/seed_*.csv`, and `sources/seed_transactions_bad.csv` are read-only scoring assets.
+
+## Guardrails
+- Application code never reads `sources/run.sh` and never embeds a report answer.
+- Every report is computed from the database.
+- A rejected command changes nothing; validation completes before the first write.
+- No command leaves an account balance below zero.
+- Standard error is never compared by the grader; failures write nothing to standard output.
+=== END ARTIFACT ===
+
+=== BEGIN ARTIFACT discovery-identity.json ===
+{
+  &quot;id&quot;: &quot;discovery-identity&quot;,
+  &quot;title&quot;: &quot;Discovery: Project Identity&quot;,
+  &quot;purpose&quot;: &quot;Confirm the proposed display name and short description before planning.&quot;,
+  &quot;questions&quot;: [
+    {
+      &quot;id&quot;: &quot;display_name&quot;,
+      &quot;label&quot;: &quot;Display Name&quot;,
+      &quot;prompt&quot;: &quot;The display name Drydock will use for this project. Edit to override the proposal.&quot;,
+      &quot;input&quot;: &quot;text&quot;,
+      &quot;proposed&quot;: &quot;Cash Ledger&quot;,
+      &quot;answer&quot;: &quot;Cash Ledger&quot;
+    },
+    {
+      &quot;id&quot;: &quot;short_description&quot;,
+      &quot;label&quot;: &quot;Short Description&quot;,
+      &quot;prompt&quot;: &quot;One-sentence description of what this project does. Edit to override the proposal.&quot;,
+      &quot;input&quot;: &quot;textarea&quot;,
+      &quot;proposed&quot;: &quot;A command-line cash ledger that tracks cash across accounts, categories, and transactions, with balance, category, and monthly reports over SQLite.&quot;,
+      &quot;answer&quot;: &quot;A command-line cash ledger that tracks cash across accounts, categories, and transactions, with balance, category, and monthly reports over SQLite.&quot;
+    }
+  ]
+}
+=== END ARTIFACT ===</pre></article>
+</main>
+</body>
+</html>

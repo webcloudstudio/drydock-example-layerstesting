@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/FEATURE-CliEntry.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/FEATURE-CliEntry.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/FEATURE-CliEntry.md">Raw file</a></div></header>
+<article class="doc"><h1>FEATURE: CLI Entry</h1>
+<div class="scroll"><table><thead><tr><th>Field</th><th>Value</th></tr></thead><tbody><tr><td>Version</td><td>20261027 V1</td></tr><tr><td>Description</td><td>The <code>ledger</code> executable, command registry, dispatch rules, and stdout/stderr/exit-code contract.</td></tr><tr><td>Depends On</td><td>ARCHITECTURE.md, DATABASE.md</td></tr><tr><td>Provides</td><td>ledger, cli.registry</td></tr><tr><td>Consumes</td><td>persistence.accounts, persistence.categories, persistence.transactions</td></tr></tbody></table></div>
+<h2>Purpose</h2>
+<p>Provide the single entry point through which every command runs. It resolves the command words, checks the argument count, opens the database, calls the handler, and turns the result into CSV on stdout or one diagnostic line on stderr with the contract exit code.</p>
+<h2>Interface</h2>
+<ul><li><code>ledger</code> at the application root: a POSIX launcher that activates <code>.venv</code> and calls <code>cli.main(sys.argv[1:])</code>, exiting with its return value.</li><li><code>cli.main(argv: list[str] | None = None) -&gt; int</code>.</li><li><code>cli.testing.cli_runner(*args) -&gt; (exit_code, stdout, stderr)</code>, running <code>main</code> in process.</li><li><code>cli.registry</code>:<ul><li><code>Command(handler, min_args, max_args)</code>, a named tuple. <code>max_args</code> is <code>None</code> when unbounded.</li><li><code>COMMANDS: dict[tuple[str, ...], Command]</code>, keyed by command words such as <code>(&quot;account&quot;, &quot;add&quot;)</code>.</li><li><code>load()</code>, idempotent: imports every module in <code>cli/commands/</code> and adds the entries of each module&#x27;s <code>COMMANDS</code> mapping. It never removes entries.</li></ul></li><li>Handler signature: <code>handler(db, args: list[str]) -&gt; list[list[str]]</code>, where <code>db</code> is the opened database and <code>args</code> are the words after the command words. It returns every output row, header first, as lists of text.</li></ul>
+<h2>Dispatch Rules</h2>
+<ol><li>Call <code>registry.load()</code>.</li><li>Match the longest command-word prefix of <code>argv</code> in <code>COMMANDS</code>. No match, an empty <code>argv</code>, or a known group word with an unknown sub-word (unknown table or report) is a usage error.</li><li>An argument count outside <code>min_args..max_args</code> is a usage error.</li><li>A usage error exits <code>2</code>, writes one diagnostic line to stderr, and writes nothing to stdout.</li><li>Open the database with <code>persistence.open_database(ledger_core.config.database_path())</code>. A failure to open exits <code>1</code>.</li><li>Call the handler. On success, write the rows to stdout as CSV: comma-separated, no quoting, no trailing spaces, <code>\n</code> line endings. Nothing is written to stdout before the handler returns.</li><li>A <code>LedgerError</code> exits with its <code>exit_code</code> and one stderr line. Any other exception exits <code>1</code> with one stderr line. Stdout stays empty in both cases.</li></ol>
+<p>Handlers validate every input and rule before their first write. Check order inside a handler: input validation (exit 3), then existence lookups (exit 4), then business rules (exit 3).</p>
+<h2>Database Interface</h2>
+<ul><li>None — persistence is owned by DATABASE.md; this entry point only opens the database and passes it to handlers.</li></ul>
+<h2>Programmatic Acceptance</h2>
+<p>=== AC cli-registry-load ===<br>Intent: Registry loading is idempotent and every key is a tuple of words.</p>
+<p>from cli import registry</p>
+<p>registry.load() count = len(registry.COMMANDS) registry.load() assert len(registry.COMMANDS) == count for words in registry.COMMANDS: assert isinstance(words, tuple) assert all(isinstance(w, str) for w in words) === END AC cli-registry-load ===</p>
+<p>=== AC cli-unknown-command ===<br>Intent: An unknown command, or no command at all, exits 2 with an empty stdout and exactly one stderr line.</p>
+<p>from cli.testing import cli_runner</p>
+<p>for args in [(&quot;zzfrobnicate&quot;,), ()]: code, out, err = cli_runner(*args) print(code, repr(out), repr(err)) assert code == 2 assert out == &quot;&quot; assert len(err.strip().splitlines()) == 1 === END AC cli-unknown-command ===</p>
+<p>=== AC cli-dispatch-success ===<br>Intent: A registered command receives its arguments and its rows print as unquoted CSV with newline endings.</p>
+<p>import csv import io from cli import registry from cli.testing import cli_runner</p>
+<p>arg = &quot;alpha&quot; words = (&quot;zzgrp&quot;, &quot;ok&quot;)</p>
+<p>def handler(db, args): return [[&quot;h1&quot;, &quot;h2&quot;], [args[0], &quot;v&quot;]]</p>
+<p>registry.load() registry.COMMANDS[words] = registry.Command(handler, 1, 1) try: code, out, err = cli_runner(*words, arg) print(code, repr(out), repr(err)) assert code == 0 assert list(csv.reader(io.StringIO(out))) == [[&quot;h1&quot;, &quot;h2&quot;], [arg, &quot;v&quot;]] assert &quot;\r&quot; not in out assert out.endswith(&quot;\n&quot;) finally: registry.COMMANDS.pop(words, None) === END AC cli-dispatch-success ===</p>
+<p>=== AC cli-usage-errors ===<br>Intent: A wrong argument count, a bare group word, and a group word with an unknown sub-word each exit 2 with empty stdout.</p>
+<p>from cli import registry from cli.testing import cli_runner</p>
+<p>words = (&quot;zzgrp2&quot;, &quot;ok&quot;)</p>
+<p>def handler(db, args): return [[&quot;h&quot;], [args[0]]]</p>
+<p>registry.load() registry.COMMANDS[words] = registry.Command(handler, 1, 1) try: cases = [words, words + (&quot;a&quot;, &quot;b&quot;), (&quot;zzgrp2&quot;,), (&quot;zzgrp2&quot;, &quot;nosuch&quot;)] for args in cases: code, out, err = cli_runner(*args) print(args, code, repr(out), repr(err)) assert code == 2 assert out == &quot;&quot; assert err.strip() != &quot;&quot; finally: registry.COMMANDS.pop(words, None) === END AC cli-usage-errors ===</p>
+<p>=== AC cli-domain-error-codes ===<br>Intent: Handlers raising Rejected, NotFound, or Operational exit 3, 4, or 1 and print nothing to stdout.</p>
+<p>from cli import registry from cli.testing import cli_runner from ledger_core.errors import Rejected, NotFound, Operational</p>
+<p>cases = {&quot;rej&quot;: (Rejected, 3), &quot;nf&quot;: (NotFound, 4), &quot;op&quot;: (Operational, 1)} registry.load() added = [] try: for word, (cls, expected) in cases.items(): def handler(db, args, cls=cls): raise cls(&quot;probe failure&quot;) key = (&quot;zzerr&quot;, word) registry.COMMANDS[key] = registry.Command(handler, 0, 0) added.append(key) code, out, err = cli_runner(*key) print(word, code, repr(out), repr(err)) assert code == expected assert out == &quot;&quot; assert len(err.strip().splitlines()) == 1 finally: for key in added: registry.COMMANDS.pop(key, None) === END AC cli-domain-error-codes ===</p>
+<p>=== AC cli-unopenable-database ===<br>Intent: A database location that cannot be opened exits 1 with empty stdout.</p>
+<p>from drydock_acceptance import database_environment from cli import registry from cli.testing import cli_runner</p>
+<p>words = (&quot;zzopen&quot;, &quot;ok&quot;)</p>
+<p>def handler(db, args): return [[&quot;h&quot;]]</p>
+<p>registry.load() registry.COMMANDS[words] = registry.Command(handler, 0, 0) try: with database_environment(url=&quot;missing/app.db&quot;): code, out, err = cli_runner(*words) print(code, repr(out), repr(err)) assert code == 1 assert out == &quot;&quot; finally: registry.COMMANDS.pop(words, None) === END AC cli-unopenable-database ===</p>
+<p>=== AC cli-launcher ===<br>Intent: The ledger launcher at the application root is executable and exits 2 for an unknown command with empty stdout.</p>
+<p>import os import subprocess</p>
+<p>assert os.access(&quot;ledger&quot;, os.X_OK) result = subprocess.run([&quot;./ledger&quot;, &quot;zzfrobnicate&quot;], capture_output=True, text=True) print(result.stdout) print(result.stderr) assert result.returncode == 2 assert result.stdout == &quot;&quot; === END AC cli-launcher ===</p>
+<h2>User Acceptance</h2>
+<ul><li>None.</li></ul>
+<h2>Guardrails</h2>
+<ul><li>A failing command writes nothing to stdout and exactly one diagnostic line to stderr.</li><li>Stdout is written only after the handler has returned successfully.</li><li>Output uses <code>\n</code> line endings, no quoting, and no trailing spaces.</li><li>Only <code>cli</code> dispatch produces exit code 2.</li></ul></article>
+</main>
+</body>
+</html>

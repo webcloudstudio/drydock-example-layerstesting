@@ -1,0 +1,11 @@
+1 '' 'error: schema and transaction SQL are forbidden in rollback sessions\n'
+
+--- stderr ---
+--- drydock: values at failure ---
+  code = 1
+--- drydock: end values ---
+Traceback (most recent call last):
+  File "init-fresh-database.py", line 11, in <module>
+    assert code == 0
+           ^^^^^^^^^
+AssertionError

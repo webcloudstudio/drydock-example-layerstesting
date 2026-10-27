@@ -1,0 +1,211 @@
+[
+  {
+    "id": "Q-001",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "ARCHITECTURE.md",
+    "story": "foundation-python",
+    "status": "recommended",
+    "archived": false,
+    "title": "Exit code for an unopenable database location",
+    "description": "Sources give no exit code when DATABASE_URL names a path that cannot be opened. Options weighed: 1 (operational failure) or 3 (rejected). Operational failure fits the exit-code table.",
+    "options": [
+      {
+        "value": "1",
+        "label": "Exit 1, operational failure"
+      },
+      {
+        "value": "3",
+        "label": "Exit 3, rejected"
+      }
+    ],
+    "system_choice": "1"
+  },
+  {
+    "id": "Q-002",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "FEATURE-CliEntry.md",
+    "story": "foundation-cli",
+    "status": "recommended",
+    "archived": false,
+    "title": "Precedence between usage, not-found, and rejection errors",
+    "description": "When a command has several problems, the order matters. Chosen order: argument count and unknown command (2), then input validation (3), then existence lookups (4 for get/rename/delete/amend), then business rules (3).",
+    "options": [
+      {
+        "value": "usage-validation-notfound-rules",
+        "label": "2, then 3 validation, then 4, then 3 rules"
+      },
+      {
+        "value": "usage-notfound-validation-rules",
+        "label": "2, then 4, then 3"
+      }
+    ],
+    "system_choice": "usage-validation-notfound-rules"
+  },
+  {
+    "id": "Q-003",
+    "type": "choice",
+    "severity": "low",
+    "origin": "plan",
+    "blueprint": "FEATURE-LoadTransactions.md",
+    "story": "feature-load-transactions",
+    "status": "recommended",
+    "archived": false,
+    "title": "Duplicate txn_id in a load file",
+    "description": "Sources say duplicate keys are rejected (exit 3) but do not name txn_id loads explicitly. The load rejects a txn_id repeated in the file or already stored, before any write.",
+    "options": [
+      {
+        "value": "reject",
+        "label": "Reject with exit 3"
+      },
+      {
+        "value": "replace",
+        "label": "Replace the stored row"
+      }
+    ],
+    "system_choice": "reject"
+  },
+  {
+    "id": "build-architecture.md-conftest.py-db_session-and-cli_runner-fixtures",
+    "type": "text",
+    "severity": "low",
+    "origin": "build",
+    "blueprint": "ARCHITECTURE.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "conftest.py db_session and cli_runner fixtures",
+    "description": "The persistence.testing.db_session and cli.testing.cli_runner signatures are not in the spec, so the fixtures delegate by calling the helper and returning its result, with imports deferred until those packages exist. Acceptable, or should the fixtures wrap them as context managers once they land?",
+    "options": [],
+    "system_choice": "The persistence.testing.db_session and cli.testing.cli_runner signatures are not in the spec, so the fixtures delegate by calling the helper and returning its result, with imports deferred until those packages exist. Acceptable, or should the fixtures wrap them as context managers once they land?"
+  },
+  {
+    "id": "build-feature-balancerule.md-edit-or-delete-of-a-missing-transaction",
+    "type": "text",
+    "severity": "low",
+    "origin": "build",
+    "blueprint": "FEATURE-BalanceRule.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Edit or Delete of a missing transaction",
+    "description": "The spec does not say what happens when txn_id is absent. I raise NotFound (exit 4), matching the CLI error table for absent transactions on amend and delete. Is that acceptable?",
+    "options": [],
+    "system_choice": "The spec does not say what happens when txn_id is absent. I raise NotFound (exit 4), matching the CLI error table for absent transactions on amend and delete. Is that acceptable?"
+  },
+  {
+    "id": "build-feature-clientry.md-launcher-working-directory",
+    "type": "text",
+    "severity": "low",
+    "origin": "build",
+    "blueprint": "FEATURE-CliEntry.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Launcher working directory",
+    "description": "The ledger launcher changes to the project root before running, so the default data/app.db and any relative DATABASE_PATH resolve from the root, not the caller's directory. Confirm this matches the intended layout.",
+    "options": [],
+    "system_choice": "The ledger launcher changes to the project root before running, so the default data/app.db and any relative DATABASE_PATH resolve from the root, not the caller's directory. Confirm this matches the intended layout."
+  },
+  {
+    "id": "build-feature-clientry.md-unopenable-database-detection",
+    "type": "text",
+    "severity": "material",
+    "origin": "build",
+    "blueprint": "FEATURE-CliEntry.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Unopenable database detection",
+    "description": "open_database is lazy and the shipped SQLite driver creates a missing parent directory on connect, so the criterion's 'missing/app.db' would open and exit 0. I refuse a non-PostgreSQL location whose parent directory does not exist, raising Operational (exit 1) before the library can create it. Is that acceptable, or should the library's directory creation be allowed?",
+    "options": [],
+    "system_choice": "open_database is lazy and the shipped SQLite driver creates a missing parent directory on connect, so the criterion's 'missing/app.db' would open and exit 0. I refuse a non-PostgreSQL location whose parent directory does not exist, raising Operational (exit 1) before the library can create it. Is that acceptable, or should the library's directory creation be allowed?"
+  },
+  {
+    "id": "build-feature-initcount.md-schema-bootstrap-detaches-the-acceptance-harness",
+    "type": "text",
+    "severity": "material",
+    "origin": "build",
+    "blueprint": "FEATURE-InitCount.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Schema bootstrap detaches the acceptance harness",
+    "description": "The shipped persistence library forbids schema SQL inside the acceptance transaction, so a fresh database could not get its schema through the command's own connection. I set the library's module-level _harness to None only while opening a standalone bootstrap connection, and I do that only to create missing tables. This reaches a private name in persistence.db. The alternative was to have the entry point create the schema on every open, or to have the library provide a supported way to create schema under the harness. Is this acceptable, or should the library or entry point own schema creation on replan?",
+    "options": [],
+    "system_choice": "The shipped persistence library forbids schema SQL inside the acceptance transaction, so a fresh database could not get its schema through the command's own connection. I set the library's module-level _harness to None only while opening a standalone bootstrap connection, and I do that only to create missing tables. This reaches a private name in persistence.db. The alternative was to have the entry point create the schema on every open, or to have the library provide a supported way to create schema under the harness. Is this acceptable, or should the library or entry point own schema creation on replan?"
+  },
+  {
+    "id": "build-feature-loadaccounts.md-all-or-nothing-insert-atomicity",
+    "type": "text",
+    "severity": "material",
+    "origin": "build",
+    "blueprint": "FEATURE-LoadAccounts.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "All-or-nothing insert atomicity",
+    "description": "The shipped persistence layer autocommits each operation and offers no transaction scope to application code. I validate every row before the first write, insert in order, and delete the already-inserted rows if a later insert fails (ledger_core/atomic.py). This is compensating rollback, not a single database transaction; a crash between insert and undo could leave partial rows. Is compensation acceptable, or should the persistence package gain a transaction operation on replan?",
+    "options": [],
+    "system_choice": "The shipped persistence layer autocommits each operation and offers no transaction scope to application code. I validate every row before the first write, insert in order, and delete the already-inserted rows if a later insert fails (ledger_core/atomic.py). This is compensating rollback, not a single database transaction; a crash between insert and undo could leave partial rows. Is compensation acceptable, or should the persistence package gain a transaction operation on replan?"
+  },
+  {
+    "id": "build-feature-loadcsvreader.md-placeholder-load-commands-in-this-block",
+    "type": "text",
+    "severity": "material",
+    "origin": "build",
+    "blueprint": "FEATURE-LoadCsvReader.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Placeholder load commands in this block",
+    "description": "The criterion csvio-load-missing-file-exit-1 calls ledger load accounts, but the load commands belong to later stories. I registered placeholders that read and header-check the file and then exit 1 because nothing is loaded. The alternative was to implement the full load commands now, which would pull in later-block scope. Is this acceptable, or should the commands move into this block on replan?",
+    "options": [],
+    "system_choice": "The criterion csvio-load-missing-file-exit-1 calls ledger load accounts, but the load commands belong to later stories. I registered placeholders that read and header-check the file and then exit 1 because nothing is loaded. The alternative was to implement the full load commands now, which would pull in later-block scope. Is this acceptable, or should the commands move into this block on replan?"
+  },
+  {
+    "id": "build-feature-txndelete.md-transaction-id-parsing",
+    "type": "text",
+    "severity": "low",
+    "origin": "build",
+    "blueprint": "FEATURE-TxnDelete.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Transaction id parsing",
+    "description": "Ids match -?[0-9]+, so a leading minus is accepted and then reported as absent (exit 4) rather than non-integer (exit 3). Tighten to digits only if the spec intends that.",
+    "options": [],
+    "system_choice": "Ids match -?[0-9]+, so a leading minus is accepted and then reported as absent (exit 4) rather than non-integer (exit 3). Tighten to digits only if the spec intends that."
+  },
+  {
+    "id": "build-feature-validation.md-carriage-return-in-names-and-memos",
+    "type": "text",
+    "severity": "low",
+    "origin": "build",
+    "blueprint": "FEATURE-Validation.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Carriage return in names and memos",
+    "description": "The spec forbids only comma and newline. I also reject carriage return (\\r), because it would break the CSV output. Is that acceptable?",
+    "options": [],
+    "system_choice": "The spec forbids only comma and newline. I also reject carriage return (\\r), because it would break the CSV output. Is that acceptable?"
+  },
+  {
+    "id": "build-schema-derived-indexes",
+    "type": "text",
+    "severity": "informational",
+    "origin": "build",
+    "blueprint": "DATABASE.md",
+    "story": null,
+    "status": "recommended",
+    "archived": false,
+    "title": "Indexes derived from the persistence declaration",
+    "description": "The rendered schema indexes transactions(account); transactions(category); transactions(account, category, date). Each is implied by the declaration \u2014 a foreign key is looked up by its child column, and a read pattern's Input fields are the predicate it filters on. Declare an `- INDEX (...)` bullet in DATABASE.md for any index this does not cover.",
+    "options": [],
+    "system_choice": "transactions(account); transactions(category); transactions(account, category, date)"
+  }
+]

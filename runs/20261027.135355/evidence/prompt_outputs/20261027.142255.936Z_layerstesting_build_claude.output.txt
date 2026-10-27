@@ -1,0 +1,78 @@
+I'll start by inspecting the build directory and the existing files.The `cli` package doesn't exist yet. I'll read the persistence layer and existing tests to see what the CLI will depend on.The `cli` package is missing, and the `ledger` launcher with it. Before writing dispatch I need to confirm how `open_database` behaves on a bad path and what the `Database` close API is.I have what I need. The plan:
+
+- `cli/__init__.py`: `main(argv) -> int` doing longest-prefix dispatch, the usage and domain error mapping, and CSV output after the handler returns.
+- `cli/registry.py`: `Command`, `COMMANDS`, and an idempotent `load()` that merges each `cli/commands/*` module's `COMMANDS`.
+- `cli/commands/__init__.py`: an empty package. Commands arrive in later stories.
+- `cli/testing.py`: `cli_runner`, in-process.
+- `ledger`: a POSIX launcher that activates `.venv` and returns `main`'s exit code.
+
+Starting with the package.Next, the registry, the command package, the in-process runner, and the launcher.The launcher and usage paths behave. Now the test suite, using the project's `cli_runner` and asserting on return values and streams rather than log text.One cleanup before running: an unused `rows` variable in the partial-work test.The failure is real: `open_database` returns without touching the file, so a bad location exits 0. I need to see when `Database` actually connects.Connections open lazily on first use, so `open_database` cannot report an unopenable store by itself. I'll check whether the persistence library exposes a public way to force the connection, rather than reaching into the driver from the CLI.The SQLite driver calls `mkdir` on the parent directory before connecting. So `missing-directory/app.db` is not unopenable under the shipped library. I'll confirm that and clean up the directory my test run may have created.Opening is lazy, so the directory isn't created until a connection is made. I'll force a connection from a scratch directory so the build tree stays clean.The `-I` flag also ignores `PYTHONPATH`, so I'll add the build path explicitly.Confirmed: the shipped library creates a missing SQLite parent directory on connect. So under the library as written, the `missing/app.db` location in the acceptance criterion would open and exit 0. The CLI can't fix that inside the library, which must not be edited. The CLI can refuse a SQLite location whose directory is absent, before the library creates it. That keeps a typo from silently creating a store, and it is a bounded choice I'll record for the user.I'll tighten the unopenable test so it also proves no directory gets created, using `tmp_path` for isolation.Running the full suite again, then checking the `ledger` launcher manually for the unopenable-location case the criterion uses.All 53 tests pass through `bin/test.sh` (exit 0 in the log; the `exit=0` line above is `tail`'s status, not the suite's). Last, I'll check whether git will record the launcher's executable bit, since I can't stage anything myself.Everything is in place. The launcher is executable on disk, but `core.fileMode` is `false` in this repo, so git may record it as `100644` when committed. I'll flag that rather than change git config.
+
+**Result summary before the final block:** the `ledger` story is built and the full suite passes (53 tests, `bin/test.sh` exit 0). I did not commit, as instructed.
+
+<reusable-compact filename="DATABASE.md">
+Database: LayersTesting (version 20261027 V1). Build order 1. Provides persistence.accounts, persistence.categories, persistence.transactions.
+
+Access: `open_database(dsn)` returns `Database`; `db.<table>.<op>(...)`. Money: integer cents everywhere. No aggregate operations; callers compute counts, sums, next txn_id from list results.
+
+Operations (input -> output; * = match key):
+- accounts.create(account, name) -> (account, name)
+- accounts.get(account*) -> (account, name) | None
+- accounts.update(account*, name) -> (account, name)
+- accounts.delete(account*) -> (account)
+- accounts.list() -> [(account, name)] order account asc
+- accounts.clear(min_account) -> count; removes account >= min_account; "" removes all
+- categories.create(category, description) -> (category, description)
+- categories.get(category*) -> (category, description) | None
+- categories.update(category*, description) -> (category, description)
+- categories.delete(category*) -> (category)
+- categories.list() -> [(category, description)] order category asc
+- categories.clear(min_category) -> count; "" removes all
+- transactions.create(txn_id, date, account, category, amount, memo) -> (txn_id, date, account, category, amount, memo)
+- transactions.get(txn_id*) -> row | None
+- transactions.update(txn_id*, amount) -> row
+- transactions.delete(txn_id*) -> (txn_id)
+- transactions.list(account?, category?, start_date?, end_date?) -> [row] filters account, category, date>=start_date, date<=end_date; order txn_id asc
+- transactions.clear(min_txn_id) -> count; 0 removes all
+
+Schema:
+- accounts(account TEXT PK, 1-12 chars A-Z0-9; name TEXT NOT NULL, 1-40 chars)
+- categories(category TEXT PK, 1-12 chars A-Z0-9; description TEXT NOT NULL, 1-40 chars)
+- transactions(txn_id INTEGER PK; date TEXT YYYY-MM-DD; account FK accounts; category FK categories; amount INTEGER cents signed, never zero; memo TEXT 0-60 chars default ''); INDEX(account, date)
+
+Config: DATABASE_URL (SQLite path, optional sqlite:// prefix, wins), DATABASE_PATH (fallback), default data/app.db.
+
+Guardrails: only the persistence package opens a driver; amounts never float; counts/balances never hardcoded.
+</reusable-compact>
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- ledger
+- cli/__init__.py
+- cli/registry.py
+- cli/commands/__init__.py
+- cli/testing.py
+- tests/test_cli.py
+
+SUMMARY:
+- `ledger` is a POSIX launcher at the application root. It changes to the project root, activates `.venv` when present, and runs `cli.main(sys.argv[1:])`, exiting with its return value.
+- `cli/__init__.py` provides `main(argv) -> int`. It matches the longest registered command-word prefix. Unknown, empty, and wrong-count invocations exit 2 with one stderr line and empty stdout. The handler runs before any stdout is written. Output is unquoted CSV with `\n` endings. `LedgerError` maps to its exit code (3, 4, or 1). Any other exception exits 1.
+- `cli/registry.py` provides `Command(handler, min_args, max_args)`, `COMMANDS`, and an idempotent `load()` that merges each `cli/commands/*` module's `COMMANDS`.
+- `cli/commands/` is an empty package. Commands arrive in later stories.
+- `cli/testing.py` provides `cli_runner(*args)`, which runs in process.
+- `tests/test_cli.py` has 37 tests covering the registry, dispatch, usage errors, domain exit codes, CSV output, the unopenable-store path, and one subprocess test of the launcher.
+
+Verification run: `sh bin/test.sh` → 53 passed (log exit 0). This includes the existing foundation tests. I also ran `./ledger zzfrobnicate` by hand and got exit 2 with empty stdout.
+
+Choices I made for you to review:
+1. **SQLite location pre-check.** The shipped SQLite driver creates a missing parent directory on connect, and `open_database` is lazy. So `missing/app.db` would open and exit 0, which breaks the `cli-unopenable-database` criterion. I added a check in `cli/__init__.py` that refuses a SQLite location whose directory does not exist (exit 1). PostgreSQL DSNs skip the check. This also stops a typo from creating an empty store. If you'd rather the library create directories, this check should change on replan.
+2. **Launcher changes to the project root.** This makes the default `data/app.db` root-relative, which matches the project layout. A relative `DATABASE_PATH` is therefore resolved against the project root, not the caller's directory.
+3. **No `argparse` parser.** Dispatch is by command-word prefix, because `argparse` subcommands don't fit multi-word commands like `account add`.
+
+<blueprint-decisions>
+[{"spec":"FEATURE-CliEntry.md","severity":"Material","subject":"Unopenable database detection","decision":"open_database is lazy and the shipped SQLite driver creates a missing parent directory on connect, so the criterion's 'missing/app.db' would open and exit 0. I refuse a non-PostgreSQL location whose parent directory does not exist, raising Operational (exit 1) before the library can create it. Is that acceptable, or should the library's directory creation be allowed?"},{"spec":"FEATURE-CliEntry.md","severity":"Low","subject":"Launcher working directory","decision":"The ledger launcher changes to the project root before running, so the default data/app.db and any relative DATABASE_PATH resolve from the root, not the caller's directory. Confirm this matches the intended layout."}]
+</blueprint-decisions>
+
+BLOCKERS:
+- `core.fileMode` is `false` in this repo, so `ledger` may be committed as `100644` and fail `cli-launcher` (`os.access(X_OK)`) on a fresh checkout. The file is executable on disk now. Fix by committing with `git update-index --chmod=+x ledger` or enabling `core.fileMode`. I did not change git config or the index.

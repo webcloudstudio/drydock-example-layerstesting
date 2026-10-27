@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/registry.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/registry.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/cli/registry.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Command registry: maps command words to handlers, filled from the modules in ``cli/commands/``.&quot;&quot;&quot;
+
+import importlib
+import pkgutil
+from collections.abc import Callable
+from typing import Any, NamedTuple
+
+from cli import commands
+
+
+class Command(NamedTuple):
+    &quot;&quot;&quot;One registered command. ``max_args`` is ``None`` when the argument count is unbounded.&quot;&quot;&quot;
+
+    handler: Callable[[Any, list[str]], list[list[str]]]
+    min_args: int
+    max_args: int | None
+
+
+#: Command words, such as ``(&quot;account&quot;, &quot;add&quot;)``, mapped to their command.
+COMMANDS: dict[tuple[str, ...], Command] = {}
+
+
+def load() -&gt; None:
+    &quot;&quot;&quot;Import every module in ``cli/commands/`` and add its ``COMMANDS``. Idempotent; never removes.&quot;&quot;&quot;
+    for module_info in pkgutil.iter_modules(commands.__path__):
+        module = importlib.import_module(f&quot;{commands.__name__}.{module_info.name}&quot;)
+        COMMANDS.update(getattr(module, &quot;COMMANDS&quot;, {}))
+</pre></article>
+</main>
+</body>
+</html>

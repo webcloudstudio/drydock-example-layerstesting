@@ -1,0 +1,35 @@
+Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+
+Build report: LayersTesting
+  evidence: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/evidence
+  usage:    /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/logs/llm.jsonl
+
+  Blueprint acceptance (last `score ac`): PASS 119  FAIL 0  UNVERIFIED 0  PREPASSED 25  (144 AC)
+
+  Block                     Build AC  Calls     Cached  Uncached     Hit   Output     Time
+  ────────────────────────────────────────────────────────────────────────────────────────
+  ✓ Block 2 · Foundational     18/18      1          0         0       —        0       0s
+  ✓ Block 1 · Foundational       6/6      1    316,130        22  100.0%   16,012   2m 14s
+  ✓ Block 3 · Foundational       7/7      1  1,101,069        42  100.0%   22,109   2m 27s
+  ✓ Block 4 · Service          15/15      1    577,147        30  100.0%   15,542   1m 37s
+  ✓ Block 5 · Service          25/25      2  1,187,012        40  100.0%   35,643  15m 34s
+  ✓ Block 6 · Service          42/42      1  2,845,136        62  100.0%   46,915   5m 53s
+  ✓ Block 7 · Service            7/7      1    654,381        26  100.0%   17,286   3m 00s
+  ✓ Block 8 · Service          14/14      1    491,739        20  100.0%   17,092   2m 09s
+  ✓ Block 9 · Feature            9/9      1    584,330        24  100.0%   13,123   2m 24s
+  ✓ Block 10 · Feature           1/1      1     55,009         6  100.0%    1,515   1m 02s
+  ────────────────────────────────────────────────────────────────────────────────────────
+  TOTAL                      144/144     11  7,811,953       272  100.0%  185,237  36m 23s
+
+  Blocks: 10/10 verified · 9 on first call · 1 repaired
+  Model:  claude-haiku-5-5
+  Tokens: 7,811,953 cached · 272 uncached · 185,237 out
+
+  Repairs
+    Block 5 · Service [block-5]
+      initial build  incomplete 23/25 AC · 1,047,828 in · 100.0% hit · 3m 23s
+                     not yet passing: init-fresh-database, csvio-load-missing-file-exit-1
+      repair 1       built      25/25 AC · 139,224 in · 100.0% hit · 12m 11s
+
+  Note: 1 execution(s) have no usage record; their tokens read as zero.
+

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/ledger_core/balances.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/ledger_core/balances.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/ledger_core/balances.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Balance rule: a proposed set of transaction changes must leave no account below zero.
+
+An account&#x27;s balance is the sum of its stored transaction amounts in integer cents. The check only
+reads through the persistence interface and never writes.
+&quot;&quot;&quot;
+
+from dataclasses import dataclass
+from typing import Union
+
+from ledger_core.errors import NotFound, Rejected
+from persistence import Database
+
+
+@dataclass(frozen=True)
+class Insert:
+    &quot;&quot;&quot;A transaction to be added to ``account`` with ``amount`` cents.&quot;&quot;&quot;
+
+    account: str
+    amount: int
+
+
+@dataclass(frozen=True)
+class Edit:
+    &quot;&quot;&quot;A stored transaction whose amount becomes ``amount`` cents.&quot;&quot;&quot;
+
+    txn_id: int
+    amount: int
+
+
+@dataclass(frozen=True)
+class Delete:
+    &quot;&quot;&quot;A stored transaction to be removed.&quot;&quot;&quot;
+
+    txn_id: int
+
+
+Change = Union[Insert, Edit, Delete]
+
+
+def current_balance(db: Database, account: str) -&gt; int:
+    &quot;&quot;&quot;Return the sum of the stored amounts of ``account``; ``0`` when it has none.&quot;&quot;&quot;
+    return sum(row.amount for row in db.transactions.list(account=account))
+
+
+def _stored(db: Database, txn_id: int):
+    stored = db.transactions.get(txn_id=txn_id)
+    if stored is None:
+        raise NotFound(f&quot;transaction {txn_id} does not exist&quot;)
+    return stored
+
+
+def _net_deltas(db: Database, changes: list[Change]) -&gt; dict[str, int]:
+    &quot;&quot;&quot;Group the changes by account and sum each account&#x27;s net effect in cents.&quot;&quot;&quot;
+    deltas: dict[str, int] = {}
+    for change in changes:
+        if isinstance(change, Insert):
+            account, delta = change.account, change.amount
+        elif isinstance(change, Edit):
+            stored = _stored(db, change.txn_id)
+            account, delta = stored.account, change.amount - stored.amount
+        elif isinstance(change, Delete):
+            stored = _stored(db, change.txn_id)
+            account, delta = stored.account, -stored.amount
+        else:
+            raise Rejected(f&quot;unknown transaction change: {change!r}&quot;)
+        deltas[account] = deltas.get(account, 0) + delta
+    return deltas
+
+
+def check_no_negative(db: Database, changes: list[Change]) -&gt; None:
+    &quot;&quot;&quot;Raise ``Rejected`` when any affected account&#x27;s resulting balance is below zero.
+
+    Changes are judged together by their net effect per account, so their order does not matter.
+    A resulting balance of exactly zero is allowed. Accounts the changes do not touch are not judged.
+    &quot;&quot;&quot;
+    for account, delta in _net_deltas(db, list(changes)).items():
+        resulting = current_balance(db, account) + delta
+        if resulting &lt; 0:
+            raise Rejected(f&quot;account {account} would be overdrawn by {-resulting} cents&quot;)
+</pre></article>
+</main>
+</body>
+</html>

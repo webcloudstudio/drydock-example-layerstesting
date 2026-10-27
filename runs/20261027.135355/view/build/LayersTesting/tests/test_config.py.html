@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/test_config.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/test_config.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/test_config.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Database location precedence: DATABASE_URL, then DATABASE_PATH, then the default.&quot;&quot;&quot;
+
+import pytest
+
+from ledger_core.config import database_path
+
+
+@pytest.fixture(autouse=True)
+def clean_environment(monkeypatch):
+    &quot;&quot;&quot;Start every test with neither variable set so the inherited store cannot leak in.&quot;&quot;&quot;
+    monkeypatch.delenv(&quot;DATABASE_URL&quot;, raising=False)
+    monkeypatch.delenv(&quot;DATABASE_PATH&quot;, raising=False)
+
+
+def test_default_path_when_no_variable_is_set():
+    assert database_path() == &quot;data/app.db&quot;
+
+
+def test_database_url_is_used_alone(monkeypatch):
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, &quot;plain.db&quot;)
+    assert database_path() == &quot;plain.db&quot;
+
+
+def test_database_url_sqlite_prefix_is_removed(monkeypatch):
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, &quot;sqlite://primary.db&quot;)
+    assert database_path() == &quot;primary.db&quot;
+
+
+def test_database_url_wins_over_database_path(monkeypatch):
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, &quot;sqlite://primary.db&quot;)
+    monkeypatch.setenv(&quot;DATABASE_PATH&quot;, &quot;fallback.db&quot;)
+    assert database_path() == &quot;primary.db&quot;
+
+
+def test_empty_database_url_falls_through_to_database_path(monkeypatch):
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, &quot;&quot;)
+    monkeypatch.setenv(&quot;DATABASE_PATH&quot;, &quot;fallback.db&quot;)
+    assert database_path() == &quot;fallback.db&quot;
+
+
+def test_database_path_alone_is_used(monkeypatch):
+    monkeypatch.setenv(&quot;DATABASE_PATH&quot;, &quot;fallback.db&quot;)
+    assert database_path() == &quot;fallback.db&quot;
+
+
+def test_empty_database_path_falls_through_to_default(monkeypatch):
+    monkeypatch.setenv(&quot;DATABASE_PATH&quot;, &quot;&quot;)
+    assert database_path() == &quot;data/app.db&quot;
+
+
+def test_empty_url_and_path_fall_through_to_default(monkeypatch):
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, &quot;&quot;)
+    monkeypatch.setenv(&quot;DATABASE_PATH&quot;, &quot;&quot;)
+    assert database_path() == &quot;data/app.db&quot;
+
+</pre></article>
+</main>
+</body>
+</html>

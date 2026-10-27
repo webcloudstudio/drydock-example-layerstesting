@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/ledger_core/validation.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/ledger_core/validation.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/ledger_core/validation.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Pure validation of codes, names, memos, and dates.
+
+Each function returns the validated value unchanged, or raises ``Rejected``. Nothing here touches
+storage or prints anything.
+&quot;&quot;&quot;
+
+import datetime
+import re
+
+from ledger_core.errors import Rejected
+
+CODE_MAX = 12
+NAME_MAX = 40
+MEMO_MAX = 60
+
+_CODE = re.compile(r&quot;[A-Z0-9]{1,%d}&quot; % CODE_MAX)
+_DATE = re.compile(r&quot;([0-9]{4})-([0-9]{2})-([0-9]{2})&quot;)
+_FORBIDDEN_TEXT = (&quot;,&quot;, &quot;\n&quot;, &quot;\r&quot;)
+
+
+def _require_text(value: object, label: str) -&gt; str:
+    if not isinstance(value, str):
+        raise Rejected(f&quot;{label} must be text&quot;)
+    return value
+
+
+def _check_length(value: str, label: str, low: int, high: int) -&gt; None:
+    if not low &lt;= len(value) &lt;= high:
+        raise Rejected(f&quot;{label} must be {low} to {high} characters&quot;)
+
+
+def _check_plain_text(value: str, label: str) -&gt; None:
+    if any(mark in value for mark in _FORBIDDEN_TEXT):
+        raise Rejected(f&quot;{label} must not contain a comma or newline&quot;)
+
+
+def validate_code(value: str) -&gt; str:
+    &quot;&quot;&quot;Accept 1 to 12 characters, each ``A-Z`` or ``0-9``.&quot;&quot;&quot;
+    text = _require_text(value, &quot;code&quot;)
+    if not _CODE.fullmatch(text):
+        raise Rejected(&quot;code must be 1 to 12 characters from A-Z and 0-9&quot;)
+    return value
+
+
+def validate_name(value: str) -&gt; str:
+    &quot;&quot;&quot;Accept 1 to 40 characters with no comma or newline.&quot;&quot;&quot;
+    text = _require_text(value, &quot;name&quot;)
+    _check_length(text, &quot;name&quot;, 1, NAME_MAX)
+    _check_plain_text(text, &quot;name&quot;)
+    return value
+
+
+def validate_memo(value: str) -&gt; str:
+    &quot;&quot;&quot;Accept 0 to 60 characters with no comma or newline.&quot;&quot;&quot;
+    text = _require_text(value, &quot;memo&quot;)
+    _check_length(text, &quot;memo&quot;, 0, MEMO_MAX)
+    _check_plain_text(text, &quot;memo&quot;)
+    return value
+
+
+def validate_date(value: str) -&gt; str:
+    &quot;&quot;&quot;Accept a real calendar date written ``YYYY-MM-DD``.&quot;&quot;&quot;
+    text = _require_text(value, &quot;date&quot;)
+    match = _DATE.fullmatch(text)
+    if match is None:
+        raise Rejected(&quot;date must be written YYYY-MM-DD&quot;)
+    year, month, day = (int(part) for part in match.groups())
+    try:
+        datetime.date(year, month, day)
+    except ValueError as exc:
+        raise Rejected(f&quot;date is not a real calendar date: {text}&quot;) from exc
+    return value
+</pre></article>
+</main>
+</body>
+</html>

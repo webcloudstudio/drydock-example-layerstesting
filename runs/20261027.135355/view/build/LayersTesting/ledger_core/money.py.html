@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/ledger_core/money.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/ledger_core/money.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/ledger_core/money.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Conversion between amount text and integer cents.
+
+Amounts are signed integer cents everywhere. Parsing and formatting use integer arithmetic only.
+&quot;&quot;&quot;
+
+import re
+
+from ledger_core.errors import Rejected
+
+_AMOUNT = re.compile(r&quot;(-?)([0-9]+)(?:\.([0-9]{1,2}))?&quot;)
+
+
+def parse_amount(text: str) -&gt; int:
+    &quot;&quot;&quot;Parse ``-?DIGITS[.D[D]]`` into integer cents. Zero and three or more decimals are rejected.&quot;&quot;&quot;
+    if not isinstance(text, str):
+        raise Rejected(&quot;amount must be text&quot;)
+    match = _AMOUNT.fullmatch(text)
+    if match is None:
+        raise Rejected(f&quot;amount must look like -12.50 with at most two decimals: {text!r}&quot;)
+    sign, whole, fraction = match.groups()
+    cents = int(whole) * 100 + int((fraction or &quot;&quot;).ljust(2, &quot;0&quot;))
+    if cents == 0:
+        raise Rejected(&quot;amount must not be zero&quot;)
+    return -cents if sign else cents
+
+
+def format_cents(cents: int) -&gt; str:
+    &quot;&quot;&quot;Render integer cents with exactly two decimals, a leading ``-`` when negative, no separators.&quot;&quot;&quot;
+    if not isinstance(cents, int) or isinstance(cents, bool):
+        raise Rejected(&quot;cents must be an integer&quot;)
+    sign = &quot;-&quot; if cents &lt; 0 else &quot;&quot;
+    magnitude = abs(cents)
+    return f&quot;{sign}{magnitude // 100}.{magnitude % 100:02d}&quot;
+</pre></article>
+</main>
+</body>
+</html>

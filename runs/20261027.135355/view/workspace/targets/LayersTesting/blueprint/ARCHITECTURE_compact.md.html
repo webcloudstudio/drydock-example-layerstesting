@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>workspace/targets/LayersTesting/blueprint/ARCHITECTURE_compact.md</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>workspace/targets/LayersTesting/blueprint/ARCHITECTURE_compact.md</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../workspace/targets/LayersTesting/blueprint/ARCHITECTURE_compact.md">Raw file</a></div></header>
+<article class="doc"><p>&lt;!-- Compacted from ARCHITECTURE.md sha256=5c919fe47ef8fc30da6c74103c97b0528a77ab903c7c0e7a51838b17c57c163d on 2026-10-27 by drydock build agent --&gt;</p>
+<p>Foundation contract (foundation-python):</p>
+<ul><li>Python &gt;=3.11; deps in pyproject.toml; uv.lock committed; .venv local (gitignored).</li><li>bin/test.sh (POSIX sh): runs <code>pytest -q</code> from root; exit status = verdict.</li><li>conftest.py fixtures: db_session (delegates to persistence.testing.db_session), cli_runner (delegates to cli.testing.cli_runner).</li><li>ledger_core.config.database_path() -&gt; str: DATABASE_URL (strip leading &quot;sqlite://&quot;), else DATABASE_PATH, else &quot;data/app.db&quot;; empty = unset.</li><li>ledger_core.errors: LedgerError(Exception) with exit_code:int; Rejected=3, NotFound=4, Operational=1.</li><li>Boundary: no module under ledger_core/ or cli/ imports sqlite3/psycopg/psycopg2; no float calls or float literals in ledger_core/.</li></ul></article>
+</main>
+</body>
+</html>

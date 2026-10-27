@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/cli/commands/accounts.py</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/cli/commands/accounts.py</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../build/LayersTesting/cli/commands/accounts.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Account commands: ``ledger account add|get|rename|delete``.&quot;&quot;&quot;
+
+from cli.registry import Command
+from ledger_core.accounts import account_row
+from ledger_core.errors import NotFound, Rejected
+from ledger_core.money import format_cents
+from ledger_core.validation import validate_code, validate_name
+
+ACCOUNT_HEADER = [&quot;account&quot;, &quot;name&quot;, &quot;transactions&quot;, &quot;balance&quot;]
+DELETED_HEADER = [&quot;deleted&quot;]
+
+
+def _account_rows(db, code: str) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Return the header and the live row for ``code``; raise ``NotFound`` when it is absent.&quot;&quot;&quot;
+    row = account_row(db, code)
+    if row is None:
+        raise NotFound(f&quot;account {code} does not exist&quot;)
+    account, name, transactions, cents = row
+    return [ACCOUNT_HEADER, [account, name, str(transactions), format_cents(cents)]]
+
+
+def account_add(db, args: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Validate, reject a duplicate code, insert the account, and print its row.&quot;&quot;&quot;
+    code = validate_code(args[0])
+    name = validate_name(args[1])
+    if db.accounts.get(account=code) is not None:
+        raise Rejected(f&quot;account {code} already exists&quot;)
+    db.accounts.create(account=code, name=name)
+    return _account_rows(db, code)
+
+
+def account_get(db, args: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Print the account&#x27;s live row. Read-only; an absent code exits 4.&quot;&quot;&quot;
+    return _account_rows(db, args[0])
+
+
+def account_rename(db, args: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Validate the new name, then change only the name of an existing account and print its row.&quot;&quot;&quot;
+    code, name = args[0], validate_name(args[1])
+    if db.accounts.get(account=code) is None:
+        raise NotFound(f&quot;account {code} does not exist&quot;)
+    db.accounts.update(account=code, name=name)
+    return _account_rows(db, code)
+
+
+def account_delete(db, args: list[str]) -&gt; list[list[str]]:
+    &quot;&quot;&quot;Remove an account that has no transactions. Existence and use are both checked first.&quot;&quot;&quot;
+    code = args[0]
+    if db.accounts.get(account=code) is None:
+        raise NotFound(f&quot;account {code} does not exist&quot;)
+    if db.transactions.list(account=code):
+        raise Rejected(f&quot;account {code} has transactions and cannot be deleted&quot;)
+    db.accounts.delete(account=code)
+    return [DELETED_HEADER, [code]]
+
+
+COMMANDS = {
+    (&quot;account&quot;, &quot;add&quot;): Command(account_add, 2, 2),
+    (&quot;account&quot;, &quot;get&quot;): Command(account_get, 1, 1),
+    (&quot;account&quot;, &quot;rename&quot;): Command(account_rename, 2, 2),
+    (&quot;account&quot;, &quot;delete&quot;): Command(account_delete, 1, 1),
+}
+</pre></article>
+</main>
+</body>
+</html>

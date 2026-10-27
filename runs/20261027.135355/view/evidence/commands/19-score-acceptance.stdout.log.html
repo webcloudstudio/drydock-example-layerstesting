@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/commands/19-score-acceptance.stdout.log</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/commands/19-score-acceptance.stdout.log</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/commands/19-score-acceptance.stdout.log">Raw file</a></div></header>
+<article class="doc"><pre>Drydock 0.8.0  Copyright (c) 2026 Web Cloud Studio. All rights reserved.
+  ✓ PASS        [1/144]  arch-project-files                                  foundation-python            ARCHITECTURE.md
+  ✓ PASS        [2/144]  arch-packages-import                                foundation-python            ARCHITECTURE.md
+  ✓ PASS        [3/144]  arch-config-precedence                              foundation-python            ARCHITECTURE.md
+  ✓ PASS        [4/144]  arch-error-exit-codes                               foundation-python            ARCHITECTURE.md
+  ✓ PASS        [5/144]  arch-driver-boundary                                foundation-python            ARCHITECTURE.md
+  ✓ PASS        [6/144]  arch-no-float                                       foundation-python            ARCHITECTURE.md
+  ✓ PASS        [7/144]  accounts-create                                     foundation-database          DATABASE.md
+  ✓ PASS        [8/144]  accounts-get                                        foundation-database          DATABASE.md
+  ✓ PASS        [9/144]  accounts-update                                     foundation-database          DATABASE.md
+  ✓ PASS        [10/144]  accounts-delete                                     foundation-database          DATABASE.md
+  ✓ PASS        [11/144]  accounts-list                                       foundation-database          DATABASE.md
+  ✓ PASS        [12/144]  accounts-clear                                      foundation-database          DATABASE.md
+  ✓ PASS        [13/144]  categories-create                                   foundation-database          DATABASE.md
+  ✓ PASS        [14/144]  categories-get                                      foundation-database          DATABASE.md
+  ✓ PASS        [15/144]  categories-update                                   foundation-database          DATABASE.md
+  ✓ PASS        [16/144]  categories-delete                                   foundation-database          DATABASE.md
+  ✓ PASS        [17/144]  categories-list                                     foundation-database          DATABASE.md
+  ✓ PASS        [18/144]  categories-clear                                    foundation-database          DATABASE.md
+  ✓ PASS        [19/144]  transactions-create                                 foundation-database          DATABASE.md
+  ✓ PASS        [20/144]  transactions-get                                    foundation-database          DATABASE.md
+  ✓ PASS        [21/144]  transactions-update                                 foundation-database          DATABASE.md
+  ✓ PASS        [22/144]  transactions-delete                                 foundation-database          DATABASE.md
+  ✓ PASS        [23/144]  transactions-list                                   foundation-database          DATABASE.md
+  ✓ PASS        [24/144]  transactions-clear                                  foundation-database          DATABASE.md
+  ✓ PASS        [25/144]  cli-registry-load                                   foundation-cli               FEATURE-CliEntry.md
+  ✓ PASS        [26/144]  cli-unknown-command                                 foundation-cli               FEATURE-CliEntry.md
+  ✓ PASS        [27/144]  cli-dispatch-success                                foundation-cli               FEATURE-CliEntry.md
+  ✓ PASS        [28/144]  cli-usage-errors                                    foundation-cli               FEATURE-CliEntry.md
+  ✓ PASS        [29/144]  cli-domain-error-codes                              foundation-cli               FEATURE-CliEntry.md
+  ✓ PASS        [30/144]  cli-unopenable-database                             foundation-cli               FEATURE-CliEntry.md
+  ✓ PASS        [31/144]  cli-launcher                                        foundation-cli               FEATURE-CliEntry.md
+  ✓ PASS        [32/144]  validation-code                                     feature-validation           FEATURE-Validation.md
+  ✓ PASS        [33/144]  validation-name                                     feature-validation           FEATURE-Validation.md
+  ✓ PASS        [34/144]  validation-memo                                     feature-validation           FEATURE-Validation.md
+  ✓ PASS        [35/144]  validation-date                                     feature-validation           FEATURE-Validation.md
+  ✓ PASS        [36/144]  money-parse-valid                                   feature-validation           FEATURE-Validation.md
+  ✓ PASS        [37/144]  money-parse-invalid                                 feature-validation           FEATURE-Validation.md
+  ✓ PASS        [38/144]  money-format                                        feature-validation           FEATURE-Validation.md
+  ✓ PASS        [39/144]  money-round-trip                                    feature-validation           FEATURE-Validation.md
+  ✓ PASS        [40/144]  balance-current                                     feature-balance-rule         FEATURE-BalanceRule.md
+  ✓ PASS        [41/144]  balance-insert                                      feature-balance-rule         FEATURE-BalanceRule.md
+  ✓ PASS        [42/144]  balance-insert-new-account                          feature-balance-rule         FEATURE-BalanceRule.md
+  ✓ PASS        [43/144]  balance-edit                                        feature-balance-rule         FEATURE-BalanceRule.md
+  ✓ PASS        [44/144]  balance-delete                                      feature-balance-rule         FEATURE-BalanceRule.md
+  ✓ PASS        [45/144]  balance-combined                                    feature-balance-rule         FEATURE-BalanceRule.md
+  ✓ PASS        [46/144]  balance-multi-account                               feature-balance-rule         FEATURE-BalanceRule.md
+  ✓ PASS        [47/144]  count-shape                                         feature-init-count           FEATURE-InitCount.md
+  ✓ PASS        [48/144]  count-tracks-writes                                 feature-init-count           FEATURE-InitCount.md
+  ✓ PASS        [49/144]  init-empties-tables                                 feature-init-count           FEATURE-InitCount.md
+  ✓ PASS        [50/144]  init-then-count                                     feature-init-count           FEATURE-InitCount.md
+  ✓ PASS        [51/144]  init-fresh-database                                 feature-init-count           FEATURE-InitCount.md
+  ✓ PASS        [52/144]  init-count-usage                                    feature-init-count           FEATURE-InitCount.md
+  ✓ PASS        [53/144]  csvio-reads-numbered-rows                           feature-load-csv-reader      FEATURE-LoadCsvReader.md
+  ✓ PASS        [54/144]  csvio-header-only-is-empty                          feature-load-csv-reader      FEATURE-LoadCsvReader.md
+  ✓ PASS        [55/144]  csvio-missing-file-operational                      feature-load-csv-reader      FEATURE-LoadCsvReader.md
+  ✓ PASS        [56/144]  csvio-bad-header-rejected                           feature-load-csv-reader      FEATURE-LoadCsvReader.md
+  ✓ PASS        [57/144]  csvio-wrong-field-count-rejected                    feature-load-csv-reader      FEATURE-LoadCsvReader.md
+  ✓ PASS        [58/144]  csvio-load-missing-file-exit-1                      feature-load-csv-reader      FEATURE-LoadCsvReader.md
+  ✓ PASS        [59/144]  account-add-success                                 feature-account-add          FEATURE-AccountAdd.md
+  ✓ PASS        [60/144]  account-add-duplicate-rejected                      feature-account-add          FEATURE-AccountAdd.md
+  ✓ PASS        [61/144]  account-add-invalid-code                            feature-account-add          FEATURE-AccountAdd.md
+  ✓ PASS        [62/144]  account-add-invalid-name                            feature-account-add          FEATURE-AccountAdd.md
+  ✓ PASS        [63/144]  account-add-boundary-lengths                        feature-account-add          FEATURE-AccountAdd.md
+  ✓ PASS        [64/144]  account-add-usage-errors                            feature-account-add          FEATURE-AccountAdd.md
+  ✓ PASS        [65/144]  account-row-helper                                  feature-account-add          FEATURE-AccountAdd.md
+  ✓ PASS        [66/144]  txn-post-success                                    feature-txn-post             FEATURE-TxnPost.md
+  ✓ PASS        [67/144]  txn-post-default-memo                               feature-txn-post             FEATURE-TxnPost.md
+  ✓ PASS        [68/144]  txn-post-next-id                                    feature-txn-post             FEATURE-TxnPost.md
+  ✓ PASS        [69/144]  txn-post-rejections                                 feature-txn-post             FEATURE-TxnPost.md
+  ✓ PASS        [70/144]  txn-post-negative-balance                           feature-txn-post             FEATURE-TxnPost.md
+  ✓ PASS        [71/144]  txn-post-usage                                      feature-txn-post             FEATURE-TxnPost.md
+  ✓ PASS        [72/144]  load-accounts-success                               feature-load-accounts        FEATURE-LoadAccounts.md
+  ✓ PASS        [73/144]  load-accounts-rejected-row-stores-nothing           feature-load-accounts        FEATURE-LoadAccounts.md
+  ✓ PASS        [74/144]  load-accounts-invalid-fields                        feature-load-accounts        FEATURE-LoadAccounts.md
+  ✓ PASS        [75/144]  load-accounts-duplicates-rejected                   feature-load-accounts        FEATURE-LoadAccounts.md
+  ✓ PASS        [76/144]  load-accounts-header-and-usage                      feature-load-accounts        FEATURE-LoadAccounts.md
+  ✓ PASS        [77/144]  account-delete-success                              feature-account-delete       FEATURE-AccountDelete.md
+  ✓ PASS        [78/144]  account-delete-in-use                               feature-account-delete       FEATURE-AccountDelete.md
+  ✓ PASS        [79/144]  account-delete-absent                               feature-account-delete       FEATURE-AccountDelete.md
+  ✓ PASS        [80/144]  account-delete-usage                                feature-account-delete       FEATURE-AccountDelete.md
+  ✓ PASS        [81/144]  txn-get-existing                                    feature-txn-get              FEATURE-TxnGet.md
+  ✓ PASS        [82/144]  txn-get-negative-amount                             feature-txn-get              FEATURE-TxnGet.md
+  ✓ PASS        [83/144]  txn-get-absent                                      feature-txn-get              FEATURE-TxnGet.md
+  ✓ PASS        [84/144]  txn-get-bad-id                                      feature-txn-get              FEATURE-TxnGet.md
+  ✓ PASS        [85/144]  account-rename-success                              feature-account-rename       FEATURE-AccountRename.md
+  ✓ PASS        [86/144]  account-rename-absent                               feature-account-rename       FEATURE-AccountRename.md
+  ✓ PASS        [87/144]  account-rename-invalid-name                         feature-account-rename       FEATURE-AccountRename.md
+  ✓ PASS        [88/144]  account-rename-usage                                feature-account-rename       FEATURE-AccountRename.md
+  ✓ PASS        [89/144]  account-get-existing                                feature-account-get          FEATURE-AccountGet.md
+  ✓ PASS        [90/144]  account-get-empty-account                           feature-account-get          FEATURE-AccountGet.md
+  ✓ PASS        [91/144]  account-get-absent                                  feature-account-get          FEATURE-AccountGet.md
+  ✓ PASS        [92/144]  account-get-usage                                   feature-account-get          FEATURE-AccountGet.md
+  ✓ PASS        [93/144]  txn-delete-success                                  feature-txn-delete           FEATURE-TxnDelete.md
+  ✓ PASS        [94/144]  txn-delete-absent                                   feature-txn-delete           FEATURE-TxnDelete.md
+  ✓ PASS        [95/144]  txn-delete-negative-balance                         feature-txn-delete           FEATURE-TxnDelete.md
+  ✓ PASS        [96/144]  txn-delete-bad-id                                   feature-txn-delete           FEATURE-TxnDelete.md
+  ✓ PASS        [97/144]  txn-delete-usage                                    feature-txn-delete           FEATURE-TxnDelete.md
+  ✓ PASS        [98/144]  txn-amend-success                                   feature-txn-amend            FEATURE-TxnAmend.md
+  ✓ PASS        [99/144]  txn-amend-only-amount                               feature-txn-amend            FEATURE-TxnAmend.md
+  ✓ PASS        [100/144]  txn-amend-absent                                    feature-txn-amend            FEATURE-TxnAmend.md
+  ✓ PASS        [101/144]  txn-amend-negative-balance                          feature-txn-amend            FEATURE-TxnAmend.md
+  ✓ PASS        [102/144]  txn-amend-invalid-amount                            feature-txn-amend            FEATURE-TxnAmend.md
+  ✓ PASS        [103/144]  txn-amend-usage                                     feature-txn-amend            FEATURE-TxnAmend.md
+  ✓ PASS        [104/144]  load-categories-success                             feature-load-categories      FEATURE-LoadCategories.md
+  ✓ PASS        [105/144]  load-categories-rejected-row-stores-nothing         feature-load-categories      FEATURE-LoadCategories.md
+  ✓ PASS        [106/144]  load-categories-invalid-fields                      feature-load-categories      FEATURE-LoadCategories.md
+  ✓ PASS        [107/144]  load-categories-duplicates-rejected                 feature-load-categories      FEATURE-LoadCategories.md
+  ✓ PASS        [108/144]  load-categories-header-and-usage                    feature-load-categories      FEATURE-LoadCategories.md
+  ✓ PASS        [109/144]  transfer-success                                    feature-transfer             FEATURE-Transfer.md
+  ✓ PASS        [110/144]  transfer-conserves-cash                             feature-transfer             FEATURE-Transfer.md
+  ✓ PASS        [111/144]  transfer-insufficient-funds                         feature-transfer             FEATURE-Transfer.md
+  ✓ PASS        [112/144]  transfer-rejections                                 feature-transfer             FEATURE-Transfer.md
+  ✓ PASS        [113/144]  transfer-usage                                      feature-transfer             FEATURE-Transfer.md
+  ✓ PASS        [114/144]  load-transactions-success                           feature-load-transactions    FEATURE-LoadTransactions.md
+  ✓ PASS        [115/144]  load-transactions-unknown-reference-stores-nothing  feature-load-transactions    FEATURE-LoadTransactions.md
+  ✓ PASS        [116/144]  load-transactions-invalid-fields                    feature-load-transactions    FEATURE-LoadTransactions.md
+  ✓ PASS        [117/144]  load-transactions-duplicate-ids-rejected            feature-load-transactions    FEATURE-LoadTransactions.md
+  ✓ PASS        [118/144]  load-transactions-negative-balance-rejected         feature-load-transactions    FEATURE-LoadTransactions.md
+  ✓ PASS        [119/144]  load-transactions-balance-considers-whole-file      feature-load-transactions    FEATURE-LoadTransactions.md
+  ✓ PASS        [120/144]  load-transactions-header-and-usage                  feature-load-transactions    FEATURE-LoadTransactions.md
+  ✓ PASS        [121/144]  report-balances-values                              feature-report-balances      FEATURE-ReportBalances.md
+  ✓ PASS        [122/144]  report-balances-order-and-empty                     feature-report-balances      FEATURE-ReportBalances.md
+  ✓ PASS        [123/144]  report-balances-total-consistency                   feature-report-balances      FEATURE-ReportBalances.md
+  ✓ PASS        [124/144]  report-balances-format                              feature-report-balances      FEATURE-ReportBalances.md
+  ✓ PASS        [125/144]  report-balances-usage                               feature-report-balances      FEATURE-ReportBalances.md
+  ✓ PASS        [126/144]  report-monthly-rows                                 feature-report-monthly       FEATURE-ReportMonthly.md
+  ✓ PASS        [127/144]  report-monthly-usage                                feature-report-monthly       FEATURE-ReportMonthly.md
+  ✓ PASS        [128/144]  report-monthly-reflects-changes                     feature-report-monthly       FEATURE-ReportMonthly.md
+  ✓ PASS        [129/144]  report-categories-values                            feature-report-categories    FEATURE-ReportCategories.md
+  ✓ PASS        [130/144]  report-categories-empty                             feature-report-categories    FEATURE-ReportCategories.md
+  ✓ PASS        [131/144]  report-categories-order                             feature-report-categories    FEATURE-ReportCategories.md
+  ✓ PASS        [132/144]  report-categories-net-identity                      feature-report-categories    FEATURE-ReportCategories.md
+  ✓ PASS        [133/144]  report-categories-format                            feature-report-categories    FEATURE-ReportCategories.md
+  ✓ PASS        [134/144]  report-categories-usage                             feature-report-categories    FEATURE-ReportCategories.md
+  ✓ PASS        [135/144]  contract-usage-errors                               feature-command-contract     FEATURE-CommandContract.md
+  ✓ PASS        [136/144]  contract-csv-format                                 feature-command-contract     FEATURE-CommandContract.md
+  ✓ PASS        [137/144]  contract-failures-silent-stdout                     feature-command-contract     FEATURE-CommandContract.md
+  ✓ PASS        [138/144]  contract-rejected-writes-change-nothing             feature-command-contract     FEATURE-CommandContract.md
+  ✓ PASS        [139/144]  nonneg-load                                         feature-no-negative-balance  FEATURE-NoNegativeBalance.md
+  ✓ PASS        [140/144]  nonneg-post                                         feature-no-negative-balance  FEATURE-NoNegativeBalance.md
+  ✓ PASS        [141/144]  nonneg-amend                                        feature-no-negative-balance  FEATURE-NoNegativeBalance.md
+  ✓ PASS        [142/144]  nonneg-delete                                       feature-no-negative-balance  FEATURE-NoNegativeBalance.md
+  ✓ PASS        [143/144]  nonneg-transfer                                     feature-no-negative-balance  FEATURE-NoNegativeBalance.md
+  ✓ PASS        [144/144]  verification-full-suite                             feature-verification         FEATURE-Verification.md
+
+Acceptance verification: LayersTesting  (2026-10-27T15:08:22+00:00)
+  PASS 119   FAIL 0   UNVERIFIED 0   PREPASSED 25   (144 AC)
+
+  ✓ PASS        arch-project-files                                  foundation-python            ARCHITECTURE.md
+  ✓ PASS        arch-packages-import                                foundation-python            ARCHITECTURE.md
+  ✓ PASS        arch-config-precedence                              foundation-python            ARCHITECTURE.md
+  ✓ PASS        arch-error-exit-codes                               foundation-python            ARCHITECTURE.md
+  ✓ PASS        arch-driver-boundary                                foundation-python            ARCHITECTURE.md
+  ✓ PASS        arch-no-float                                       foundation-python            ARCHITECTURE.md
+  ✓ PASS        accounts-create                                     foundation-database          DATABASE.md
+  ✓ PASS        accounts-get                                        foundation-database          DATABASE.md
+  ✓ PASS        accounts-update                                     foundation-database          DATABASE.md
+  ✓ PASS        accounts-delete                                     foundation-database          DATABASE.md
+  ✓ PASS        accounts-list                                       foundation-database          DATABASE.md
+  ✓ PASS        accounts-clear                                      foundation-database          DATABASE.md
+  ✓ PASS        categories-create                                   foundation-database          DATABASE.md
+  ✓ PASS        categories-get                                      foundation-database          DATABASE.md
+  ✓ PASS        categories-update                                   foundation-database          DATABASE.md
+  ✓ PASS        categories-delete                                   foundation-database          DATABASE.md
+  ✓ PASS        categories-list                                     foundation-database          DATABASE.md
+  ✓ PASS        categories-clear                                    foundation-database          DATABASE.md
+  ✓ PASS        transactions-create                                 foundation-database          DATABASE.md
+  ✓ PASS        transactions-get                                    foundation-database          DATABASE.md
+  ✓ PASS        transactions-update                                 foundation-database          DATABASE.md
+  ✓ PASS        transactions-delete                                 foundation-database          DATABASE.md
+  ✓ PASS        transactions-list                                   foundation-database          DATABASE.md
+  ✓ PASS        transactions-clear                                  foundation-database          DATABASE.md
+  ✓ PASS        cli-registry-load                                   foundation-cli               FEATURE-CliEntry.md
+  ✓ PASS        cli-unknown-command                                 foundation-cli               FEATURE-CliEntry.md
+  ✓ PASS        cli-dispatch-success                                foundation-cli               FEATURE-CliEntry.md
+  ✓ PASS        cli-usage-errors                                    foundation-cli               FEATURE-CliEntry.md
+  ✓ PASS        cli-domain-error-codes                              foundation-cli               FEATURE-CliEntry.md
+  ✓ PASS        cli-unopenable-database                             foundation-cli               FEATURE-CliEntry.md
+  ✓ PASS        cli-launcher                                        foundation-cli               FEATURE-CliEntry.md
+  ✓ PASS        validation-code                                     feature-validation           FEATURE-Validation.md
+  ✓ PASS        validation-name                                     feature-validation           FEATURE-Validation.md
+  ✓ PASS        validation-memo                                     feature-validation           FEATURE-Validation.md
+  ✓ PASS        validation-date                                     feature-validation           FEATURE-Validation.md
+  ✓ PASS        money-parse-valid                                   feature-validation           FEATURE-Validation.md
+  ✓ PASS        money-parse-invalid                                 feature-validation           FEATURE-Validation.md
+  ✓ PASS        money-format                                        feature-validation           FEATURE-Validation.md
+  ✓ PASS        money-round-trip                                    feature-validation           FEATURE-Validation.md
+  ✓ PASS        balance-current                                     feature-balance-rule         FEATURE-BalanceRule.md
+  ✓ PASS        balance-insert                                      feature-balance-rule         FEATURE-BalanceRule.md
+  ✓ PASS        balance-insert-new-account                          feature-balance-rule         FEATURE-BalanceRule.md
+  ✓ PASS        balance-edit                                        feature-balance-rule         FEATURE-BalanceRule.md
+  ✓ PASS        balance-delete                                      feature-balance-rule         FEATURE-BalanceRule.md
+  ✓ PASS        balance-combined                                    feature-balance-rule         FEATURE-BalanceRule.md
+  ✓ PASS        balance-multi-account                               feature-balance-rule         FEATURE-BalanceRule.md
+  ✓ PASS        count-shape                                         feature-init-count           FEATURE-InitCount.md
+  ✓ PASS        count-tracks-writes                                 feature-init-count           FEATURE-InitCount.md
+  ✓ PASS        init-empties-tables                                 feature-init-count           FEATURE-InitCount.md
+  ✓ PASS        init-then-count                                     feature-init-count           FEATURE-InitCount.md
+  ✓ PASS        init-fresh-database                                 feature-init-count           FEATURE-InitCount.md
+  ~ PREPASSED   init-count-usage                                    feature-init-count           FEATURE-InitCount.md
+  ✓ PASS        csvio-reads-numbered-rows                           feature-load-csv-reader      FEATURE-LoadCsvReader.md
+  ✓ PASS        csvio-header-only-is-empty                          feature-load-csv-reader      FEATURE-LoadCsvReader.md
+  ✓ PASS        csvio-missing-file-operational                      feature-load-csv-reader      FEATURE-LoadCsvReader.md
+  ✓ PASS        csvio-bad-header-rejected                           feature-load-csv-reader      FEATURE-LoadCsvReader.md
+  ✓ PASS        csvio-wrong-field-count-rejected                    feature-load-csv-reader      FEATURE-LoadCsvReader.md
+  ✓ PASS        csvio-load-missing-file-exit-1                      feature-load-csv-reader      FEATURE-LoadCsvReader.md
+  ✓ PASS        account-add-success                                 feature-account-add          FEATURE-AccountAdd.md
+  ✓ PASS        account-add-duplicate-rejected                      feature-account-add          FEATURE-AccountAdd.md
+  ✓ PASS        account-add-invalid-code                            feature-account-add          FEATURE-AccountAdd.md
+  ✓ PASS        account-add-invalid-name                            feature-account-add          FEATURE-AccountAdd.md
+  ✓ PASS        account-add-boundary-lengths                        feature-account-add          FEATURE-AccountAdd.md
+  ~ PREPASSED   account-add-usage-errors                            feature-account-add          FEATURE-AccountAdd.md
+  ✓ PASS        account-row-helper                                  feature-account-add          FEATURE-AccountAdd.md
+  ✓ PASS        txn-post-success                                    feature-txn-post             FEATURE-TxnPost.md
+  ✓ PASS        txn-post-default-memo                               feature-txn-post             FEATURE-TxnPost.md
+  ✓ PASS        txn-post-next-id                                    feature-txn-post             FEATURE-TxnPost.md
+  ✓ PASS        txn-post-rejections                                 feature-txn-post             FEATURE-TxnPost.md
+  ✓ PASS        txn-post-negative-balance                           feature-txn-post             FEATURE-TxnPost.md
+  ~ PREPASSED   txn-post-usage                                      feature-txn-post             FEATURE-TxnPost.md
+  ✓ PASS        load-accounts-success                               feature-load-accounts        FEATURE-LoadAccounts.md
+  ✓ PASS        load-accounts-rejected-row-stores-nothing           feature-load-accounts        FEATURE-LoadAccounts.md
+  ✓ PASS        load-accounts-invalid-fields                        feature-load-accounts        FEATURE-LoadAccounts.md
+  ✓ PASS        load-accounts-duplicates-rejected                   feature-load-accounts        FEATURE-LoadAccounts.md
+  ~ PREPASSED   load-accounts-header-and-usage                      feature-load-accounts        FEATURE-LoadAccounts.md
+  ✓ PASS        account-delete-success                              feature-account-delete       FEATURE-AccountDelete.md
+  ✓ PASS        account-delete-in-use                               feature-account-delete       FEATURE-AccountDelete.md
+  ✓ PASS        account-delete-absent                               feature-account-delete       FEATURE-AccountDelete.md
+  ~ PREPASSED   account-delete-usage                                feature-account-delete       FEATURE-AccountDelete.md
+  ✓ PASS        txn-get-existing                                    feature-txn-get              FEATURE-TxnGet.md
+  ✓ PASS        txn-get-negative-amount                             feature-txn-get              FEATURE-TxnGet.md
+  ✓ PASS        txn-get-absent                                      feature-txn-get              FEATURE-TxnGet.md
+  ✓ PASS        txn-get-bad-id                                      feature-txn-get              FEATURE-TxnGet.md
+  ✓ PASS        account-rename-success                              feature-account-rename       FEATURE-AccountRename.md
+  ✓ PASS        account-rename-absent                               feature-account-rename       FEATURE-AccountRename.md
+  ✓ PASS        account-rename-invalid-name                         feature-account-rename       FEATURE-AccountRename.md
+  ~ PREPASSED   account-rename-usage                                feature-account-rename       FEATURE-AccountRename.md
+  ✓ PASS        account-get-existing                                feature-account-get          FEATURE-AccountGet.md
+  ✓ PASS        account-get-empty-account                           feature-account-get          FEATURE-AccountGet.md
+  ✓ PASS        account-get-absent                                  feature-account-get          FEATURE-AccountGet.md
+  ~ PREPASSED   account-get-usage                                   feature-account-get          FEATURE-AccountGet.md
+  ✓ PASS        txn-delete-success                                  feature-txn-delete           FEATURE-TxnDelete.md
+  ✓ PASS        txn-delete-absent                                   feature-txn-delete           FEATURE-TxnDelete.md
+  ✓ PASS        txn-delete-negative-balance                         feature-txn-delete           FEATURE-TxnDelete.md
+  ✓ PASS        txn-delete-bad-id                                   feature-txn-delete           FEATURE-TxnDelete.md
+  ~ PREPASSED   txn-delete-usage                                    feature-txn-delete           FEATURE-TxnDelete.md
+  ✓ PASS        txn-amend-success                                   feature-txn-amend            FEATURE-TxnAmend.md
+  ✓ PASS        txn-amend-only-amount                               feature-txn-amend            FEATURE-TxnAmend.md
+  ✓ PASS        txn-amend-absent                                    feature-txn-amend            FEATURE-TxnAmend.md
+  ✓ PASS        txn-amend-negative-balance                          feature-txn-amend            FEATURE-TxnAmend.md
+  ✓ PASS        txn-amend-invalid-amount                            feature-txn-amend            FEATURE-TxnAmend.md
+  ~ PREPASSED   txn-amend-usage                                     feature-txn-amend            FEATURE-TxnAmend.md
+  ✓ PASS        load-categories-success                             feature-load-categories      FEATURE-LoadCategories.md
+  ✓ PASS        load-categories-rejected-row-stores-nothing         feature-load-categories      FEATURE-LoadCategories.md
+  ✓ PASS        load-categories-invalid-fields                      feature-load-categories      FEATURE-LoadCategories.md
+  ✓ PASS        load-categories-duplicates-rejected                 feature-load-categories      FEATURE-LoadCategories.md
+  ~ PREPASSED   load-categories-header-and-usage                    feature-load-categories      FEATURE-LoadCategories.md
+  ✓ PASS        transfer-success                                    feature-transfer             FEATURE-Transfer.md
+  ✓ PASS        transfer-conserves-cash                             feature-transfer             FEATURE-Transfer.md
+  ✓ PASS        transfer-insufficient-funds                         feature-transfer             FEATURE-Transfer.md
+  ✓ PASS        transfer-rejections                                 feature-transfer             FEATURE-Transfer.md
+  ~ PREPASSED   transfer-usage                                      feature-transfer             FEATURE-Transfer.md
+  ✓ PASS        load-transactions-success                           feature-load-transactions    FEATURE-LoadTransactions.md
+  ✓ PASS        load-transactions-unknown-reference-stores-nothing  feature-load-transactions    FEATURE-LoadTransactions.md
+  ✓ PASS        load-transactions-invalid-fields                    feature-load-transactions    FEATURE-LoadTransactions.md
+  ✓ PASS        load-transactions-duplicate-ids-rejected            feature-load-transactions    FEATURE-LoadTransactions.md
+  ✓ PASS        load-transactions-negative-balance-rejected         feature-load-transactions    FEATURE-LoadTransactions.md
+  ✓ PASS        load-transactions-balance-considers-whole-file      feature-load-transactions    FEATURE-LoadTransactions.md
+  ~ PREPASSED   load-transactions-header-and-usage                  feature-load-transactions    FEATURE-LoadTransactions.md
+  ✓ PASS        report-balances-values                              feature-report-balances      FEATURE-ReportBalances.md
+  ✓ PASS        report-balances-order-and-empty                     feature-report-balances      FEATURE-ReportBalances.md
+  ✓ PASS        report-balances-total-consistency                   feature-report-balances      FEATURE-ReportBalances.md
+  ✓ PASS        report-balances-format                              feature-report-balances      FEATURE-ReportBalances.md
+  ~ PREPASSED   report-balances-usage                               feature-report-balances      FEATURE-ReportBalances.md
+  ✓ PASS        report-monthly-rows                                 feature-report-monthly       FEATURE-ReportMonthly.md
+  ~ PREPASSED   report-monthly-usage                                feature-report-monthly       FEATURE-ReportMonthly.md
+  ✓ PASS        report-monthly-reflects-changes                     feature-report-monthly       FEATURE-ReportMonthly.md
+  ✓ PASS        report-categories-values                            feature-report-categories    FEATURE-ReportCategories.md
+  ✓ PASS        report-categories-empty                             feature-report-categories    FEATURE-ReportCategories.md
+  ✓ PASS        report-categories-order                             feature-report-categories    FEATURE-ReportCategories.md
+  ✓ PASS        report-categories-net-identity                      feature-report-categories    FEATURE-ReportCategories.md
+  ✓ PASS        report-categories-format                            feature-report-categories    FEATURE-ReportCategories.md
+  ~ PREPASSED   report-categories-usage                             feature-report-categories    FEATURE-ReportCategories.md
+  ~ PREPASSED   contract-usage-errors                               feature-command-contract     FEATURE-CommandContract.md
+  ~ PREPASSED   contract-csv-format                                 feature-command-contract     FEATURE-CommandContract.md
+  ~ PREPASSED   contract-failures-silent-stdout                     feature-command-contract     FEATURE-CommandContract.md
+  ~ PREPASSED   contract-rejected-writes-change-nothing             feature-command-contract     FEATURE-CommandContract.md
+  ~ PREPASSED   nonneg-load                                         feature-no-negative-balance  FEATURE-NoNegativeBalance.md
+  ~ PREPASSED   nonneg-post                                         feature-no-negative-balance  FEATURE-NoNegativeBalance.md
+  ~ PREPASSED   nonneg-amend                                        feature-no-negative-balance  FEATURE-NoNegativeBalance.md
+  ~ PREPASSED   nonneg-delete                                       feature-no-negative-balance  FEATURE-NoNegativeBalance.md
+  ~ PREPASSED   nonneg-transfer                                     feature-no-negative-balance  FEATURE-NoNegativeBalance.md
+  ~ PREPASSED   verification-full-suite                             feature-verification         FEATURE-Verification.md
+
+  ~ PREPASSED   init-count-usage
+        intent: init and count with an extra argument are usage errors that exit 2 with empty stdout.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   account-add-usage-errors
+        intent: the wrong number of arguments is a usage error with exit 2 and no output.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   txn-post-usage
+        intent: Too few or too many arguments are usage errors with exit 2 and no standard output.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   load-accounts-header-and-usage
+        intent: a wrong header exits 3 with nothing stored, and a missing file argument is a usage error with exit 2.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   account-delete-usage
+        intent: A missing argument is a usage error with exit 2 and no standard output.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   account-rename-usage
+        intent: A wrong argument count is a usage error with exit 2 and no standard output.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   account-get-usage
+        intent: A missing or surplus argument is a usage error with exit 2 and no standard output.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   txn-delete-usage
+        intent: A wrong argument count for txn delete exits 2 with nothing on stdout.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   txn-amend-usage
+        intent: A wrong argument count for txn amend exits 2 with nothing on stdout.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   load-categories-header-and-usage
+        intent: a wrong header exits 3 with nothing stored, and a missing file argument is a usage error with exit 2.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   transfer-usage
+        intent: A wrong argument count for transfer exits 2 with nothing on stdout.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   load-transactions-header-and-usage
+        intent: a wrong header exits 3 with nothing stored, an unreadable file exits 1, and a missing file argument exits 2.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   report-balances-usage
+        intent: Extra arguments and an unknown report name exit 2 with nothing on stdout.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   report-monthly-usage
+        intent: Extra arguments to report monthly are a usage error with exit 2 and nothing on standard output.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   report-categories-usage
+        intent: Extra arguments exit 2 with nothing on stdout.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   contract-usage-errors
+        intent: Unknown commands, unknown tables or reports, and wrong argument counts all exit 2 with empty standard output.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   contract-csv-format
+        intent: Successful commands emit the declared headers, newline-only endings, no trailing spaces, and amounts with exactly two decimals.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   contract-failures-silent-stdout
+        intent: Failing commands write nothing to standard output and exactly one diagnostic line to standard error, with the documented exit code for each failure class.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   contract-rejected-writes-change-nothing
+        intent: Rejected writing commands exit 3 and leave the counts of all three tables unchanged.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   nonneg-load
+        intent: A transactions load whose earlier rows are individually valid but whose combined effect makes the balance negative is rejected whole with exit 3 and stores none of its rows.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   nonneg-post
+        intent: Posting an outflow larger than the balance exits 3 and leaves the balance and transaction count unchanged.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   nonneg-amend
+        intent: Amending a deposit down so the account would go negative exits 3 and the original amount remains.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   nonneg-delete
+        intent: Deleting a deposit that funds a later outflow exits 3, keeps the row, and leaves the balance unchanged.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   nonneg-transfer
+        intent: A transfer larger than the source balance exits 3 and stores neither row; both balances and the table count are unchanged.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  ~ PREPASSED   verification-full-suite
+        intent: The supplied grader and the project&#x27;s own test suite both exit zero when run from the application root against their own temporary databases.
+        green at this block&#x27;s baseline too, before its code existed — confirm the criterion exercises the story&#x27;s work
+
+  Run `drydock score ac LayersTesting --full` for untruncated output per failure.
+
+
+  Proof coverage: 119 of 144 criteria are proof — green here, and observed red before the work that turned them green.
+    25 are not. Each names a story whose acceptance did not test it.
+
+    PREPASSED  init-count-usage  feature-init-count  FEATURE-InitCount.md
+               green before its block built
+    PREPASSED  account-add-usage-errors  feature-account-add  FEATURE-AccountAdd.md
+               green before its block built
+    PREPASSED  txn-post-usage  feature-txn-post  FEATURE-TxnPost.md
+               green before its block built
+    PREPASSED  load-accounts-header-and-usage  feature-load-accounts  FEATURE-LoadAccounts.md
+               green before its block built
+    PREPASSED  account-delete-usage  feature-account-delete  FEATURE-AccountDelete.md
+               green before its block built
+    PREPASSED  account-rename-usage  feature-account-rename  FEATURE-AccountRename.md
+               green before its block built
+    PREPASSED  account-get-usage  feature-account-get  FEATURE-AccountGet.md
+               green before its block built
+    PREPASSED  txn-delete-usage  feature-txn-delete  FEATURE-TxnDelete.md
+               green before its block built
+    PREPASSED  txn-amend-usage  feature-txn-amend  FEATURE-TxnAmend.md
+               green before its block built
+    PREPASSED  load-categories-header-and-usage  feature-load-categories  FEATURE-LoadCategories.md
+               green before its block built
+    PREPASSED  transfer-usage  feature-transfer  FEATURE-Transfer.md
+               green before its block built
+    PREPASSED  load-transactions-header-and-usage  feature-load-transactions  FEATURE-LoadTransactions.md
+               green before its block built
+    PREPASSED  report-balances-usage  feature-report-balances  FEATURE-ReportBalances.md
+               green before its block built
+    PREPASSED  report-monthly-usage  feature-report-monthly  FEATURE-ReportMonthly.md
+               green before its block built
+    PREPASSED  report-categories-usage  feature-report-categories  FEATURE-ReportCategories.md
+               green before its block built
+    PREPASSED  contract-usage-errors  feature-command-contract  FEATURE-CommandContract.md
+               green before its block built
+    PREPASSED  contract-csv-format  feature-command-contract  FEATURE-CommandContract.md
+               green before its block built
+    PREPASSED  contract-failures-silent-stdout  feature-command-contract  FEATURE-CommandContract.md
+               green before its block built
+    PREPASSED  contract-rejected-writes-change-nothing  feature-command-contract  FEATURE-CommandContract.md
+               green before its block built
+    PREPASSED  nonneg-load  feature-no-negative-balance  FEATURE-NoNegativeBalance.md
+               green before its block built
+    PREPASSED  nonneg-post  feature-no-negative-balance  FEATURE-NoNegativeBalance.md
+               green before its block built
+    PREPASSED  nonneg-amend  feature-no-negative-balance  FEATURE-NoNegativeBalance.md
+               green before its block built
+    PREPASSED  nonneg-delete  feature-no-negative-balance  FEATURE-NoNegativeBalance.md
+               green before its block built
+    PREPASSED  nonneg-transfer  feature-no-negative-balance  FEATURE-NoNegativeBalance.md
+               green before its block built
+    PREPASSED  verification-full-suite  feature-verification  FEATURE-Verification.md
+               green before its block built
+
+Soundings: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/workspace/targets/LayersTesting/SOUNDINGS.md
+Target - committed project workspace git store
+</pre></article>
+</main>
+</body>
+</html>

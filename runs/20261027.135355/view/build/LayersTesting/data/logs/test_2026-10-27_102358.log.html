@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/data/logs/test_2026-10-27_102358.log</title>
+<link rel="stylesheet" href="../../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/data/logs/test_2026-10-27_102358.log</h1><div class="filenav"><a href="../../../../../index.html">&larr; Report</a><a href="../../../../../build/LayersTesting/data/logs/test_2026-10-27_102358.log">Raw file</a></div></header>
+<article class="doc"><pre>=== test started at 2026-10-27 10:23:58 ===
+Arguments: 
+Working dir: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.135355/build/LayersTesting
+---
+...................F.................................                    [100%]
+=================================== FAILURES ===================================
+_____________ test_unopenable_database_exits_one_with_empty_stdout _____________
+
+scratch_commands = {(&#x27;zzopen&#x27;, &#x27;ok&#x27;): Command(handler=&lt;function test_unopenable_database_exits_one_with_empty_stdout.&lt;locals&gt;.&lt;lambda&gt; at 0x72e7a6fca980&gt;, min_args=0, max_args=0)}
+monkeypatch = &lt;_pytest.monkeypatch.MonkeyPatch object at 0x72e7a6ff6c90&gt;
+
+    def test_unopenable_database_exits_one_with_empty_stdout(scratch_commands, monkeypatch):
+        monkeypatch.setenv(&quot;DATABASE_URL&quot;, &quot;missing-directory/app.db&quot;)
+        monkeypatch.delenv(&quot;DATABASE_PATH&quot;, raising=False)
+        scratch_commands[(&quot;zzopen&quot;, &quot;ok&quot;)] = registry.Command(lambda db, args: [[&quot;h&quot;]], 0, 0)
+        code, out, _ = cli_runner(&quot;zzopen&quot;, &quot;ok&quot;)
+&gt;       assert code == 1
+E       assert 0 == 1
+
+tests/test_cli.py:174: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_cli.py::test_unopenable_database_exits_one_with_empty_stdout
+1 failed, 52 passed in 9.84s
+</pre></article>
+</main>
+</body>
+</html>

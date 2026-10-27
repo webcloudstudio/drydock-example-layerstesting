@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/tests/conftest.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/tests/conftest.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/tests/conftest.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;Fixtures shared by the command tests: a fresh, initialised ledger store per test under ``tmp_path``.
+
+CLI writes commit to their own connection, so these tests point ``DATABASE_URL`` at a private file.
+That keeps ``data/app.db`` out of reach of anything a command does.
+&quot;&quot;&quot;
+
+import pytest
+
+from cli.testing import cli_runner
+from persistence import open_database
+
+
+@pytest.fixture
+def ledger_store(tmp_path, monkeypatch):
+    &quot;&quot;&quot;Point the ledger at an empty, initialised store and return its path.&quot;&quot;&quot;
+    path = tmp_path / &quot;ledger.db&quot;
+    monkeypatch.setenv(&quot;DATABASE_URL&quot;, str(path))
+    monkeypatch.delenv(&quot;DATABASE_PATH&quot;, raising=False)
+    code, _, err = cli_runner(&quot;init&quot;)
+    assert code == 0, err
+    return path
+
+
+@pytest.fixture
+def store_open():
+    &quot;&quot;&quot;Open the store at a path for read-back through the persistence interface.&quot;&quot;&quot;
+
+    def opener(path):
+        return open_database(str(path))
+
+    return opener
+</pre></article>
+</main>
+</body>
+</html>

@@ -1,0 +1,56 @@
+The block needs four new command modules, three helper modules, and tests. The schema is not created on open, so `init` has to apply `schema.sql` itself. I'll write the helpers first.Now the command modules.Before writing the project tests, a quick smoke run against a throwaway store, so the default `data/app.db` is never touched.The smoke run behaves as specified. The `count` failure on a fresh store is the expected "no such table" before `init`, and there is no category command in this block, so the transaction tests will seed categories through the persistence interface. Now the project tests, each on a fresh store under `tmp_path` so CLI writes never reach `data/app.db`.Two tests in `test_maintenance.py` are weak: the last one asserts nothing about `init`, and one name is unclear. I'll fix those before running.Now the project suite, run through the declared runner's pytest in the project venv.All 237 tests pass. Checking the working tree for what changed and confirming nothing outside the expected files was touched.Block 5 is implemented: `init`, `count`, `account add`, `txn post`, and the CSV reader. The project suite passes, 237 tests, run with the project venv's pytest.
+
+Two things differ from the spec wording and are worth a look:
+
+- **`init` applies the schema itself.** Nothing creates tables when a store opens, so `init` runs `schema.sql` on a store that has no tables yet. It probes with a read first, because the acceptance harness forbids schema SQL. A provisioned store is left alone.
+- **`count` on a fresh store without `init` exits 1** with "no such table". That follows from the first point.
+
+The spec's acceptance blocks are not runnable here: they import `drydock_acceptance`, which is not in this build. I wrote project tests covering the same assertions, and they run against a fresh store per test, so nothing writes to `data/app.db`.
+
+Also noticed, not changed: `ledger` refuses to open a store whose directory is missing, so `init` on a fresh checkout with no `data/` directory exits 1. That behavior is from block 3's entry point.
+
+Files added:
+- `ledger_core/csvio.py`
+- `ledger_core/accounts.py`
+- `ledger_core/transactions.py`
+- `cli/commands/maintenance.py`
+- `cli/commands/accounts.py`
+- `cli/commands/transactions.py`
+- `tests/conftest.py`
+- `tests/test_csvio.py`
+- `tests/test_maintenance.py`
+- `tests/test_accounts.py`
+- `tests/test_transactions.py`
+
+No commit was made, per the build rules.
+
+<blueprint-decisions>
+[{"spec":"FEATURE-InitCount.md","severity":"Material","subject":"Schema creation on init","decision":"The spec says opening the database creates the declared schema, but the entry point does not do that and nothing else does. I made init apply schema.sql when the store has no tables, probing with a read first because execute_script is forbidden under the acceptance harness. The alternative was changing the block-3 entry point to create the schema on every open. Should opening create the schema for all commands, or stay with init-only creation?"}]
+</blueprint-decisions>
+
+RESULT: SUCCESS
+
+FILES CHANGED:
+- cli/commands/maintenance.py
+- cli/commands/accounts.py
+- cli/commands/transactions.py
+- ledger_core/accounts.py
+- ledger_core/csvio.py
+- ledger_core/transactions.py
+- tests/conftest.py
+- tests/test_csvio.py
+- tests/test_maintenance.py
+- tests/test_accounts.py
+- tests/test_transactions.py
+
+SUMMARY:
+- `ledger init` applies `schema.sql` to a store with no tables, then clears transactions, categories, and accounts in that order. It prints nothing and exits 0. A second run also exits 0.
+- `ledger count` prints `table,rows` and the three counts, each read from `list()`.
+- `ledger account add <code> <name>` validates, rejects a duplicate with exit 3, inserts, and prints the account row with balance `0.00`. `account_row` computes the transaction count and cent balance on each call.
+- `ledger txn post` checks amount, date, and memo, then the account, then the category, then the no-negative-balance rule. Only after all of these does it insert. The txn_id is the largest stored id plus one, or 1 when empty.
+- `read_rows(path, header)` raises `Operational` for an unreadable, missing, or undecodable file. It raises `Rejected` for a wrong header, an empty file, or a wrong field count, and returns numbered rows with blank lines skipped.
+- Tests run in `pytest -q` with `.venv/bin/pytest`: 237 passed. Every CLI-writing test uses a fresh store under `tmp_path`. Nothing writes to `data/app.db`.
+- Not run: the spec's acceptance blocks verbatim, because they need `drydock_acceptance`, which is not in this build.
+
+BLOCKERS:
+- None.

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>build/LayersTesting/ledger_core/atomic.py</title>
+<link rel="stylesheet" href="../../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>build/LayersTesting/ledger_core/atomic.py</h1><div class="filenav"><a href="../../../../index.html">&larr; Report</a><a href="../../../../build/LayersTesting/ledger_core/atomic.py">Raw file</a></div></header>
+<article class="doc"><pre>&quot;&quot;&quot;All-or-nothing writes for commands that store more than one row.
+
+The persistence layer commits each declared operation on its own, so this module cannot open one
+database transaction around several writes. Callers therefore run every check before the first
+write. Each step then inserts one row; when a later insert fails, the rows already inserted are
+deleted again, newest first, and the failure is reported as ``Operational``.
+&quot;&quot;&quot;
+
+from collections.abc import Callable, Sequence
+
+from ledger_core.errors import Operational
+from persistence import PersistenceError
+
+Step = tuple[Callable[[], object], Callable[[], object]]
+
+
+def run_all(steps: Sequence[Step]) -&gt; None:
+    &quot;&quot;&quot;Run each ``(insert, undo)`` pair in order. On failure, undo the completed inserts and raise.&quot;&quot;&quot;
+    completed: list[Callable[[], object]] = []
+    for insert, undo in steps:
+        try:
+            insert()
+        except PersistenceError as exc:
+            for undo_done in reversed(completed):
+                undo_done()
+            raise Operational(f&quot;write failed and was rolled back: {exc}&quot;) from exc
+        completed.append(undo)
+</pre></article>
+</main>
+</body>
+</html>
