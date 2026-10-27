@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>evidence/prompts/20261027.134145.490Z_layerstesting_analyze_claude.prompt.md</title>
+<link rel="stylesheet" href="../../../assets/kit.css">
+</head>
+<body>
+<main>
+<header class="fileheader"><div class="kind">Run artifact</div><h1>evidence/prompts/20261027.134145.490Z_layerstesting_analyze_claude.prompt.md</h1><div class="filenav"><a href="../../../index.html">&larr; Report</a><a href="../../../evidence/prompts/20261027.134145.490Z_layerstesting_analyze_claude.prompt.md">Raw file</a></div></header>
+<article class="doc"><h1>System Instructions</h1>
+<p>This prompt is divided into three sections:</p>
+<ol><li><strong>System Instructions</strong> (this section) — structural orientation only. Do not treat this</li></ol>
+<p>section as task input.</p>
+<ol><li><strong>Input Context</strong> — begins with the heading <code># Input Context</code>. All blocks are wrapped in</li></ol>
+<p><code>&lt;pblock&gt;</code> tags. Two block types:</p>
+<ul><li>File blocks: <code>&lt;pblock filename=&quot;&lt;name&gt;&quot; role=&quot;&lt;role&gt;&quot; guidance=&quot;...&quot;&gt;</code> — optional</li></ul>
+<p><code>guidance</code> attribute carries context-specific instructions; content is in a fenced block.</p>
+<ul><li>Metadata/section blocks: <code>&lt;pblock label=&quot;&lt;label&gt;&quot; kind=&quot;&lt;kind&gt;&quot;&gt;</code> — job parameters,</li></ul>
+<p>rules, instructions, or group headers.</p>
+<ol><li><strong>Agent Task</strong> — begins with the heading <code># Agent Task</code>. Defines your persona, constraints,</li></ol>
+<p>and required outputs. Read all input context before acting on this section.</p>
+<h1>Input Context</h1>
+<p>&lt;pblock label=&quot;Analysis job&quot; kind=&quot;job&quot;&gt;</p>
+<h2>Analysis job</h2>
+<ul><li>BLUEPRINT_PATH: /mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.134130/workspace/targets/LayersTesting/blueprint</li><li>DATE: 2026-10-27</li><li>COMPASS_EXISTS: true</li><li>COMPASS_PENDING_FORMAT: false</li><li>DISPLAY_NAME: drydock Layers Testing Uat Case</li><li>SHORT_DESCRIPTION: Drydock uat - LayersTesting exercises the language and persistence layers. The source is an original brief for a command-line cash ledger with three tables (accounts, categories, transactions) reached only through the shipped persistence library. The supplied grader, sources/run.sh, initializes a fresh database, loads 131 known rows, and runs 43 checks of exit code and output: row counts, three reports with known totals, create/read/update/delete on accounts and transactions, atomic rejected loads and transfers, the non-negative balance rule, and a final ledger reset. This build is in Python over SQLite. Run with drydock uat LayersTesting. Source Repo: none, the brief is original to this kit.</li></ul>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock label=&quot;Unattended UAT policy&quot; kind=&quot;unattended-policy&quot;&gt;</p>
+<h2>Unattended UAT policy</h2>
+<ul><li>No Commander is available and no questionnaire, open question, or blocker may be emitted.</li><li>Resolve ambiguity from the imported sources, Compass, fixture inputs, and stated precedence; choose the narrowest behavior consistent with them.</li><li>Persist the selected behavior in the authored analysis and specifications; do not ask for confirmation or offer alternatives.</li></ul>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;SEA_TRIALS.md&quot; role=&quot;prior project acceptance contract; preserve stable IDs&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.134130/workspace/targets/LayersTesting/SEA_TRIALS.md&quot;&gt;</p>
+<pre><code># Sea Trials: LayersTesting
+
+## Policy
+
+| Consequence | On FAIL | On INCONCLUSIVE |
+|---|---|---|
+| blocks  | fail   | attest |
+| scores  | score  | score  |
+| attests | report | report |
+
+## Acceptance scope
+
+Sea Trials assess ledger workflows and their observable results. Database preparation is a
+prerequisite exercised by the supplied grader, not a separate release criterion. Verification
+uses the declared ledger commands and supplied data; it does not introduce schema mutations,
+schema-replacement requirements, or database-engine qualification tests. Stack and persistence
+implementation constraints remain in the build instructions.
+
+The supplied grader and the behavioral criteria below are required release evidence. Its exit
+status establishes grader conformance; it is not the sole verdict for all Sea Trials. Criterion
+identifiers are retained; st-002, st-003, and st-009 are retired.
+
+## st-001: The supplied grader passes
+Type: technical
+Required: yes
+Criterion: The completed ledger shall pass every check in the supplied end-to-end workflow grader, sh sources/run.sh, with exit code zero.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Command: [&quot;sh&quot;, &quot;sources/run.sh&quot;]
+Pattern: ubiquitous
+
+## st-004: The seed files load exactly
+Type: behavioral
+Required: yes
+Criterion: When the supplied accounts, categories, and transactions files are loaded in order into an empty ledger, the application shall accept all records, report the loaded counts, and retain 4 accounts, 7 categories, and 120 transactions across subsequent command invocations.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: event
+
+## st-005: Reports match the known answers
+Type: behavioral
+Required: yes
+Criterion: The application shall compute account balances, category totals, and monthly totals from stored ledger data, matching the known answers in sources/run.sh byte for byte both before and after the supplied transaction and transfer workflows.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: ubiquitous
+
+## st-006: Accounts and transactions support create, read, update, and delete
+Type: behavioral
+Required: yes
+Criterion: The application shall retain account additions and renames and transaction postings and amendments across command invocations, return their current values on retrieval, remove successfully deleted records, refuse deletion of an account with transactions with exit code 3, and report an absent record with exit code 4.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: ubiquitous
+
+## st-007: A failed command changes nothing
+Type: behavioral
+Required: yes
+Criterion: If a load, account change, transaction change, or transfer violates a validation or business rule, then the application shall exit 3 and preserve all previously stored ledger records without adding, altering, or removing any record.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: unwanted
+
+## st-008: No balance goes negative
+Type: behavioral
+Required: yes
+Criterion: If loading transactions, posting, amending, deleting, or transferring would leave any account balance below zero, then the application shall reject the entire command with exit code 3 and preserve the prior balances.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: unwanted
+
+## st-010: Transfers conserve cash
+Type: behavioral
+Required: yes
+Criterion: When a valid transfer is requested between distinct accounts, the application shall record an equal debit and credit in category TRANSFER, return both transaction rows, and update both account balances without changing the total cash held.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: event
+
+## st-011: Command results follow the CLI contract
+Type: behavioral
+Required: yes
+Criterion: The application shall return the CSV headers, row ordering, two-decimal monetary values, and exit codes specified in sources/INSTRUCTIONS.md, returning exit 2 for unknown commands or reports and incorrect argument counts, and writing failures only to standard error.
+Testability: deterministic
+Consequence: blocks
+Verification: proof
+Pattern: ubiquitous</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;MANIFEST.md&quot; role=&quot;Rigging stack selection catalog&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/Rigging/MANIFEST.md&quot;&gt;</p>
+<pre><code># Rigging Manifest
+
+Compact selection catalog for `drydock analyze` and QuarterDeck. Each entry names a real Rigging
+component available for Commander selection. The manifest is selection context only; Analyze does
+not open individual component files.
+
+| File | Category | Purpose | Prerequisites |
+|---|---|---|---|
+| `BRANDING_DOCUMENTATION.md` | Branding | The users voice for Documentation voice, structure, and presentation rules. | — |
+| `BRANDING_MAIN.md` | Branding | Core product branding (colors pallette etc ) and visual identity rules. | — |
+| `BRANDING_POSTS.md` | Branding | Social and announcement post branding rules. | `BRANDING_MAIN.md` |
+| `BRANDING_PROJECT_DOCS.md` | Branding | The users voice, structure, and editing protocol for the authoritative project specification document. | — |
+| `BRANDING_WEBSITE.md` | Branding | Website branding, voice, and presentation rules. | `BRANDING_MAIN.md` |
+| `BRANDING_WHITEPAPERS.md` | Branding | Whitepaper branding and long-form presentation rules. | `BRANDING_MAIN.md` |
+| `alembic.md` | Persistence | Alembic revision workflow. Not used within a release — the schema is built once — and available for versioning schema across releases. | `python.md`, `sqlalchemy.md` |
+| `alexa-skills-kit.md` | AWS | Alexa Skill kit configuration, interaction models, and intent handling. | `common.md`, `python.md` |
+| `aws-api-gateway.md` | AWS | AWS HTTP API Gateway Rules. | `aws-lambda.md` |
+| `aws-dynamodb.md` | AWS | AWS DynamoDB single-table catalog and state patterns. | `cloud-client-library.md` |
+| `aws-lambda.md` | AWS | AWS Lambda handlers, packaging, IAM, and testing patterns. | `python.md` |
+| `aws-s3.md` | AWS | Private encrypted S3 storage and prefix-scoped sharing patterns. | `cloud-client-library.md` |
+| `aws-sqs.md` | AWS | SQS durable queue, polling, and error-handling patterns. | `aws-lambda.md` |
+| `bootstrap5.md` | Frontend | Bootstrap 5 layout, components, and form conventions. | — |
+| `cli.md` | Technologies | Command-line application entry point, exit codes, cross-platform launchers, and in-process testing. | `common.md`, `python.md` |
+| `cloud-client-library.md` | AWS | Encapsulated AWS library for use in applications; application dont uses boto3. | `python.md`, `persistence.md` |
+| `common.md` | Technologies | Common project layout, scripts, Git hygiene, and development workflow. | — |
+| `django.md` | Web Server | Django settings, ORM, migrations, admin, and web application patterns. | `common.md`, `python.md` |
+| `env_variables_and_secrets.md` | Technologies | Secret hygiene, environment validation, and `.env` discipline. | `common.md` |
+| `fastapi.md` | Web Server | FastAPI routers, dependency injection, templates, and testing patterns. | `common.md`, `python.md` |
+| `flask.md` | Web Server | Flask application factory, routes, templates, and error handling. | `common.md`, `python.md` |
+| `github-actions.md` | Technologies | GitHub Actions CI/CD with OIDC and lint/test gates. | `terraform.md`, `python.md` |
+| `go.md` | Language | Go module layout, errors, interfaces, concurrency, testing, and build gates. | `common.md` |
+| `persistence.md` | Persistence | The store boundary: relational access is generated from DATABASE.md, config, files, and services are typed classes. | `common.md` |
+| `postgres.md` | Persistence | PostgreSQL as the production store: what it enforces that SQLite does not. | `persistence.md` |
+| `python.md` | Language | Python conventions, typing, configuration, testing, and dependencies. | `common.md` |
+| `sqlalchemy.md` | Persistence | SQLAlchemy 2 repositories. Superseded for Target persistence by the generated package; retained for Targets that select it deliberately. | `python.md`, `persistence.md` |
+| `sqlite.md` | Persistence | SQLite as the development and test store: what it enforces and what it silently ignores. | `persistence.md` |
+| `terraform.md` | Technologies | Layered Terraform infrastructure and remote-state patterns. | `aws-dynamodb.md`, `aws-s3.md` |
+| `typescript.md` | Language | TypeScript strict typing, domain modeling, and boundary validation. | `common.md` |
+| `ui-flask.bootstrap-client.md` | Frontend | Focused Flask and Bootstrap screen implementation reference. | `flask.md`, `bootstrap5.md` |
+| `uv_ruff.md` | Technologies | uv environments and ruff lint/format workflow. | `python.md` |</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock label=&quot;Imported source file header&quot; kind=&quot;section&quot;&gt;</p>
+<h2>Imported source files</h2>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock label=&quot;Source material inventory&quot; kind=&quot;section&quot;&gt;</p>
+<h2>Source Inventory</h2>
+<div class="scroll"><table><thead><tr><th>Path</th><th>Content kind</th><th>Disposition</th><th>Reason</th></tr></thead><tbody><tr><td><code>sources/INSTRUCTIONS.md</code></td><td>markdown</td><td>analyzed</td><td>readable UTF-8</td></tr><tr><td><code>sources/run.sh</code></td><td>code</td><td>analyzed</td><td>readable UTF-8</td></tr><tr><td><code>sources/seed_accounts.csv</code></td><td>text</td><td>analyzed</td><td>readable UTF-8</td></tr><tr><td><code>sources/seed_categories.csv</code></td><td>text</td><td>analyzed</td><td>readable UTF-8</td></tr><tr><td><code>sources/seed_transactions.csv</code></td><td>text</td><td>analyzed</td><td>readable UTF-8</td></tr><tr><td><code>sources/seed_transactions_bad.csv</code></td><td>text</td><td>analyzed</td><td>readable UTF-8</td></tr></tbody></table></div>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;sources/INSTRUCTIONS.md&quot; role=&quot;source file&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.134130/workspace/targets/LayersTesting/blueprint/sources/INSTRUCTIONS.md&quot; guidance=&quot;Raw User Source&quot;&gt;</p>
+<pre><code># Build Instructions: A Cash Ledger
+
+## Objective
+
+Build a command-line cash ledger for a small shop. The shop keeps cash in a few places (drawers,
+a safe, petty cash), records every receipt and payment against one of those places, and asks for
+three reports: balances by account, totals by category, and totals by month.
+
+The product is an executable named `ledger` at the application root. It stores everything in a
+relational database through the shipped persistence library, and every command either completes
+in full or changes nothing.
+
+## Stack
+
+Implement in Python 3.11 or newer over SQLite, through the shipped Python persistence
+library. Tests run under pytest. The contract below is the same for every language and database: the same
+commands, the same output, and the same exit codes.
+
+## Run Harness
+
+`sources/run.sh` is the scoring entry point. It is supplied, not authored, and is staged verbatim
+into the application root with the seed files. `drydock uat` runs `sh sources/run.sh` from the
+completed application root and takes its exit code and output as the score.
+
+The harness creates a fresh database, runs `./ledger init`, loads the seed files, and then runs a
+fixed sequence of 43 checks. Each check compares one command&#x27;s exit code and standard output
+with a known answer. Standard error is never compared. The harness prints `PASS` or `FAIL` per
+check and ends with:
+
+```text
+LayersTesting: NN passed, NN failed (of 43)
+```
+
+## Read-only scoring assets
+
+These files are the exam. Do not modify, rewrite, regenerate, or substitute them:
+
+- `sources/run.sh` — the scoring entry point and its known answers
+- `sources/seed_accounts.csv` — 4 accounts
+- `sources/seed_categories.csv` — 7 categories
+- `sources/seed_transactions.csv` — 120 transactions, January to March 2026
+- `sources/seed_transactions_bad.csv` — 11 transactions; row 11 names an unknown account
+
+Application code never reads `sources/run.sh` and never embeds a report answer. Every report is
+computed from the database.
+
+## Database
+
+The database is SQLite. `DATABASE_URL` names the SQLite file path, optionally prefixed
+`sqlite://`. When `DATABASE_URL` is unset, `DATABASE_PATH` is used, then `data/app.db`.
+
+Three tables. Amounts are stored as integer cents and never as floating point.
+
+| Table | Columns | Keys |
+|---|---|---|
+| `accounts` | `account` text, `name` text | primary key `account` |
+| `categories` | `category` text, `description` text | primary key `category` |
+| `transactions` | `txn_id` integer, `date` text `YYYY-MM-DD`, `account` text, `category` text, `amount` integer cents, `memo` text | primary key `txn_id`; `account` references `accounts`; `category` references `categories` |
+
+All database access goes through the shipped persistence library and the relational layer
+generated from `DATABASE.md`. Application code never opens a database driver directly.
+
+## Rules
+
+1. **A rejected command changes nothing.** A command checks every input and rule before its
+   first write. A load that rejects row 11 stores none of rows 1 to 10. A transfer stores both of
+   its rows or neither.
+2. **No command leaves an account balance below zero.** An account&#x27;s balance is the sum of its
+   transaction amounts. Posting, amending, deleting, transferring, and loading are all subject to
+   this rule, checked before the command writes anything.
+3. **Codes** (`account`, `category`) are 1 to 12 characters from `A-Z` and `0-9`.
+4. **Names and descriptions** are 1 to 40 characters. **Memos** are 0 to 60 characters. None of
+   them contains a comma or a newline.
+5. **Amounts** on input match `-?DIGITS[.D[D]]`: at most two decimal places, never zero. On output
+   an amount is written with exactly two decimal places, a leading `-` when negative, and no
+   thousands separator: `-12.50`, `0.00`, `5000.00`.
+6. **Dates** are real calendar dates written `YYYY-MM-DD`. `2026-02-30` is rejected.
+7. **Transaction ids.** A loaded transaction keeps the `txn_id` from its file. A posted
+   transaction receives one more than the largest `txn_id` present, or `1` in an empty table. A
+   transfer&#x27;s outgoing row takes that id and its incoming row the next.
+
+## Output
+
+Every successful command except `init` writes CSV to standard output: one header row, then data
+rows, comma-separated, no quoting, no trailing spaces, `\n` line endings. `init` writes nothing.
+A failing command writes nothing to standard output and one diagnostic line to standard error.
+
+The account row is `account,name,transactions,balance`, where `transactions` counts the account&#x27;s
+transactions. The transaction row is `txn_id,date,account,category,amount,memo`.
+
+## Commands
+
+| Command | Output on success |
+|---|---|
+| `ledger init` | Prepares an empty ledger for loading and use; removes existing ledger records when rerun. Nothing written. |
+| `ledger count` | `table,rows`, then `accounts`, `categories`, `transactions` rows in that order. |
+| `ledger load &lt;table&gt; &lt;csv&gt;` | Loads `accounts`, `categories`, or `transactions` from a file whose header matches the table&#x27;s columns in the order above. Writes `table,loaded` and `&lt;table&gt;,&lt;rows&gt;`. |
+| `ledger account add &lt;code&gt; &lt;name&gt;` | The new account row. |
+| `ledger account get &lt;code&gt;` | The account row. |
+| `ledger account rename &lt;code&gt; &lt;name&gt;` | The updated account row. |
+| `ledger account delete &lt;code&gt;` | `deleted` and the code. Refused while the account has transactions. |
+| `ledger txn post &lt;account&gt; &lt;category&gt; &lt;amount&gt; &lt;date&gt; [&lt;memo&gt;]` | The new transaction row. |
+| `ledger txn get &lt;id&gt;` | The transaction row. |
+| `ledger txn amend &lt;id&gt; &lt;amount&gt;` | The updated transaction row. Only the amount changes. |
+| `ledger txn delete &lt;id&gt;` | `deleted` and the id. |
+| `ledger transfer &lt;from&gt; &lt;to&gt; &lt;amount&gt; &lt;date&gt;` | Two transaction rows in category `TRANSFER`: `-amount` on `&lt;from&gt;` with memo `transfer to &lt;to&gt;`, then `+amount` on `&lt;to&gt;` with memo `transfer from &lt;from&gt;`. The amount is positive and the accounts differ. |
+| `ledger report balances` | `account,name,transactions,balance` per account ordered by code, then `TOTAL,,&lt;count&gt;,&lt;sum&gt;`. |
+| `ledger report categories` | `category,description,transactions,inflow,outflow,net` per category ordered by code, including categories with no transactions, then `TOTAL,,&lt;count&gt;,&lt;inflow&gt;,&lt;outflow&gt;,&lt;net&gt;`. |
+| `ledger report monthly` | `month,transactions,inflow,outflow,net` per `YYYY-MM` that has transactions, ascending, then `TOTAL,&lt;count&gt;,&lt;inflow&gt;,&lt;outflow&gt;,&lt;net&gt;`. |
+
+`inflow` is the sum of positive amounts. `outflow` is the sum of the absolute values of negative
+amounts, written as a positive number. `net` is `inflow - outflow`.
+
+## Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Success. |
+| `1` | Operational failure: a file named on the command line cannot be read. |
+| `2` | Usage error: unknown command, unknown table or report, wrong argument count. |
+| `3` | Rejected: invalid code, name, amount, date, or file row; duplicate key; unknown account or category; account in use; any change that would leave a negative balance. |
+| `4` | Not found: `account get/rename/delete` of an absent account, `txn get/amend/delete` of an absent id. |
+
+## Tests
+
+The completed application provides a POSIX-compatible `bin/test.sh` that runs its own automated
+test suite from the application root and exits zero only when every test passes. The suite
+covers each command, each exit code, and each rule above against a real temporary database.</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;sources/run.sh&quot; role=&quot;source file&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.134130/workspace/targets/LayersTesting/blueprint/sources/run.sh&quot;&gt;</p>
+<pre><code>#!/bin/sh
+# run.sh — LayersTesting grader. Do not filter, skip, or reinterpret.
+#
+# Exercises ./ledger against a fresh database and compares every command&#x27;s exit code and standard
+# output with the known answer below. Standard error is never compared.
+#
+#   sh sources/run.sh                    from the application root (how `drydock uat` runs it)
+#   sh uat/LayersTesting/bin/run.sh APP  from anywhere, grading the application root APP
+#
+# Database: DATABASE_URL when the caller sets it (for example a PostgreSQL DSN), otherwise a
+# SQLite file in a fresh temporary directory. Every run starts with `ledger init`, so the grader
+# never depends on prior state. Exit 0 only when every check passes.
+set -u
+
+HERE=$(cd &quot;$(dirname &quot;$0&quot;)&quot; &amp;&amp; pwd)
+APP=$(cd &quot;${1:-.}&quot; &amp;&amp; pwd)
+if [ -f &quot;$HERE/seed_accounts.csv&quot; ]; then SEED=$HERE; else SEED=$(cd &quot;$HERE/../sources&quot; &amp;&amp; pwd); fi
+LEDGER=&quot;$APP/ledger&quot;
+WORK=$(mktemp -d)
+trap &#x27;rm -rf &quot;$WORK&quot;&#x27; EXIT INT TERM
+DATABASE_URL=${DATABASE_URL:-$WORK/ledger.db}
+export DATABASE_URL
+
+if [ ! -x &quot;$LEDGER&quot; ]; then
+    echo &quot;error: no executable ./ledger at the application root $APP.&quot; &gt;&amp;2
+    echo &quot;The deliverable is an executable named ledger at the application root.&quot; &gt;&amp;2
+    exit 1
+fi
+
+PASSED=0
+FAILED=0
+
+# check &lt;id&gt; &lt;expected exit&gt; &lt;ledger args...&gt;  — expected standard output on stdin.
+check() {
+    id=$1
+    want_rc=$2
+    shift 2
+    cat &gt; &quot;$WORK/want&quot;
+    (cd &quot;$APP&quot; &amp;&amp; &quot;$LEDGER&quot; &quot;$@&quot;) &gt; &quot;$WORK/got&quot; 2&gt; &quot;$WORK/err&quot;
+    rc=$?
+    if [ &quot;$rc&quot; -eq &quot;$want_rc&quot; ] &amp;&amp; cmp -s &quot;$WORK/want&quot; &quot;$WORK/got&quot;; then
+        PASSED=$((PASSED + 1))
+        echo &quot;PASS $id: ledger $*&quot;
+    else
+        FAILED=$((FAILED + 1))
+        echo &quot;FAIL $id: ledger $*&quot;
+        echo &quot;  exit: expected $want_rc, got $rc&quot;
+        diff &quot;$WORK/want&quot; &quot;$WORK/got&quot; | sed &#x27;s/^/  /&#x27;
+        sed &#x27;s/^/  stderr: /&#x27; &quot;$WORK/err&quot;
+    fi
+}
+
+# ── A. Schema lifecycle ──────────────────────────────────────────────────────────────────
+check A1 0 init &lt; /dev/null
+check A2 0 count &lt;&lt;&#x27;EOF&#x27;
+table,rows
+accounts,0
+categories,0
+transactions,0
+EOF
+
+# ── B. Bulk load of the known dataset ────────────────────────────────────────────────────
+check B1 0 load accounts &quot;$SEED/seed_accounts.csv&quot; &lt;&lt;&#x27;EOF&#x27;
+table,loaded
+accounts,4
+EOF
+check B2 0 load categories &quot;$SEED/seed_categories.csv&quot; &lt;&lt;&#x27;EOF&#x27;
+table,loaded
+categories,7
+EOF
+check B3 0 load transactions &quot;$SEED/seed_transactions.csv&quot; &lt;&lt;&#x27;EOF&#x27;
+table,loaded
+transactions,120
+EOF
+check B4 0 count &lt;&lt;&#x27;EOF&#x27;
+table,rows
+accounts,4
+categories,7
+transactions,120
+EOF
+
+# ── C. Reports over the seeded rows ──────────────────────────────────────────────────────
+check C1 0 report balances &lt;&lt;&#x27;EOF&#x27;
+account,name,transactions,balance
+DRAWER1,Front Drawer,39,2299.38
+DRAWER2,Back Drawer,39,1378.32
+PETTY,Petty Cash,21,306.25
+SAFE,Store Safe,21,250.00
+TOTAL,,120,4233.95
+EOF
+check C2 0 report categories &lt;&lt;&#x27;EOF&#x27;
+category,description,transactions,inflow,outflow,net
+OPENING,Opening balance,2,5200.00,0.00,5200.00
+PAYROLL,Payroll,6,0.00,7200.00,-7200.00
+REFUND,Customer refunds,12,0.00,101.25,-101.25
+RENT,Rent,3,0.00,2700.00,-2700.00
+SALES,Sales receipts,64,9578.95,0.00,9578.95
+SUPPLY,Supplies,15,0.00,543.75,-543.75
+TRANSFER,Internal transfer,18,5100.00,5100.00,0.00
+TOTAL,,120,19878.95,15645.00,4233.95
+EOF
+check C3 0 report monthly &lt;&lt;&#x27;EOF&#x27;
+month,transactions,inflow,outflow,net
+2026-01,40,9659.45,5215.00,4444.45
+2026-02,40,4979.65,5215.00,-235.35
+2026-03,40,5239.85,5215.00,24.85
+TOTAL,120,19878.95,15645.00,4233.95
+EOF
+
+# ── D. A rejected load changes nothing ───────────────────────────────────────────────────
+check D1 3 load transactions &quot;$SEED/seed_transactions_bad.csv&quot; &lt; /dev/null
+check D2 3 load accounts &quot;$SEED/seed_accounts.csv&quot; &lt; /dev/null
+check D3 0 count &lt;&lt;&#x27;EOF&#x27;
+table,rows
+accounts,4
+categories,7
+transactions,120
+EOF
+
+# ── E. Account create, read, update, delete ──────────────────────────────────────────────
+check E1 0 account add CASH9 &quot;Event Float&quot; &lt;&lt;&#x27;EOF&#x27;
+account,name,transactions,balance
+CASH9,Event Float,0,0.00
+EOF
+check E2 3 account add CASH9 &quot;Event Float&quot; &lt; /dev/null
+check E3 0 account get CASH9 &lt;&lt;&#x27;EOF&#x27;
+account,name,transactions,balance
+CASH9,Event Float,0,0.00
+EOF
+check E4 0 account rename CASH9 &quot;Event Cash Box&quot; &lt;&lt;&#x27;EOF&#x27;
+account,name,transactions,balance
+CASH9,Event Cash Box,0,0.00
+EOF
+check E5 4 account get NOSUCH &lt; /dev/null
+check E6 3 account delete DRAWER1 &lt; /dev/null
+check E7 0 account delete CASH9 &lt;&lt;&#x27;EOF&#x27;
+deleted
+CASH9
+EOF
+check E8 4 account get CASH9 &lt; /dev/null
+
+# ── F. Transaction create, read, update, delete ──────────────────────────────────────────
+check F1 0 txn post DRAWER1 SALES 45.50 2026-04-01 &quot;walk in sale&quot; &lt;&lt;&#x27;EOF&#x27;
+txn_id,date,account,category,amount,memo
+121,2026-04-01,DRAWER1,SALES,45.50,walk in sale
+EOF
+check F2 0 txn get 121 &lt;&lt;&#x27;EOF&#x27;
+txn_id,date,account,category,amount,memo
+121,2026-04-01,DRAWER1,SALES,45.50,walk in sale
+EOF
+check F3 0 txn amend 121 54.50 &lt;&lt;&#x27;EOF&#x27;
+txn_id,date,account,category,amount,memo
+121,2026-04-01,DRAWER1,SALES,54.50,walk in sale
+EOF
+check F4 4 txn get 999 &lt; /dev/null
+check F5 3 txn post DRAWER1 NOSUCH 1.00 2026-04-01 &lt; /dev/null
+check F6 3 txn post DRAWER1 SALES 1.234 2026-04-01 &lt; /dev/null
+check F7 3 txn post DRAWER1 SALES 1.00 2026-02-30 &lt; /dev/null
+check F8 0 txn delete 121 &lt;&lt;&#x27;EOF&#x27;
+deleted
+121
+EOF
+check F9 4 txn get 121 &lt; /dev/null
+check F10 0 txn post PETTY SUPPLY -12.34 2026-04-02 tape &lt;&lt;&#x27;EOF&#x27;
+txn_id,date,account,category,amount,memo
+121,2026-04-02,PETTY,SUPPLY,-12.34,tape
+EOF
+
+# ── G. Transfers are atomic; no command leaves a negative balance ────────────────────────
+check G1 0 transfer DRAWER1 SAFE 500.00 2026-04-03 &lt;&lt;&#x27;EOF&#x27;
+txn_id,date,account,category,amount,memo
+122,2026-04-03,DRAWER1,TRANSFER,-500.00,transfer to SAFE
+123,2026-04-03,SAFE,TRANSFER,500.00,transfer from DRAWER1
+EOF
+check G2 3 transfer SAFE PETTY 999.99 2026-04-04 &lt; /dev/null
+check G3 3 txn post PETTY SUPPLY -1000.00 2026-04-04 &lt; /dev/null
+check G4 3 txn amend 1 1.00 &lt; /dev/null
+check G5 3 txn delete 1 &lt; /dev/null
+check G6 0 count &lt;&lt;&#x27;EOF&#x27;
+table,rows
+accounts,4
+categories,7
+transactions,123
+EOF
+
+# ── H. Reports after the changes ─────────────────────────────────────────────────────────
+check H1 0 report balances &lt;&lt;&#x27;EOF&#x27;
+account,name,transactions,balance
+DRAWER1,Front Drawer,40,1799.38
+DRAWER2,Back Drawer,39,1378.32
+PETTY,Petty Cash,22,293.91
+SAFE,Store Safe,22,750.00
+TOTAL,,123,4221.61
+EOF
+check H2 0 report categories &lt;&lt;&#x27;EOF&#x27;
+category,description,transactions,inflow,outflow,net
+OPENING,Opening balance,2,5200.00,0.00,5200.00
+PAYROLL,Payroll,6,0.00,7200.00,-7200.00
+REFUND,Customer refunds,12,0.00,101.25,-101.25
+RENT,Rent,3,0.00,2700.00,-2700.00
+SALES,Sales receipts,64,9578.95,0.00,9578.95
+SUPPLY,Supplies,16,0.00,556.09,-556.09
+TRANSFER,Internal transfer,20,5600.00,5600.00,0.00
+TOTAL,,123,20378.95,16157.34,4221.61
+EOF
+check H3 0 report monthly &lt;&lt;&#x27;EOF&#x27;
+month,transactions,inflow,outflow,net
+2026-01,40,9659.45,5215.00,4444.45
+2026-02,40,4979.65,5215.00,-235.35
+2026-03,40,5239.85,5215.00,24.85
+2026-04,3,500.00,512.34,-12.34
+TOTAL,123,20378.95,16157.34,4221.61
+EOF
+
+# ── U. Usage errors ──────────────────────────────────────────────────────────────────────
+check U1 2 frobnicate &lt; /dev/null
+check U2 2 report nosuch &lt; /dev/null
+
+# ── Z. Re-initialization drops every row ─────────────────────────────────────────────────
+check Z1 0 init &lt; /dev/null
+check Z2 0 count &lt;&lt;&#x27;EOF&#x27;
+table,rows
+accounts,0
+categories,0
+transactions,0
+EOF
+
+TOTAL=$((PASSED + FAILED))
+echo &quot;LayersTesting: $PASSED passed, $FAILED failed (of $TOTAL)&quot;
+[ &quot;$FAILED&quot; -eq 0 ]</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;sources/seed_accounts.csv&quot; role=&quot;source file&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.134130/workspace/targets/LayersTesting/blueprint/sources/seed_accounts.csv&quot;&gt;</p>
+<pre><code>account,name
+DRAWER1,Front Drawer
+DRAWER2,Back Drawer
+PETTY,Petty Cash
+SAFE,Store Safe</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;sources/seed_categories.csv&quot; role=&quot;source file&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.134130/workspace/targets/LayersTesting/blueprint/sources/seed_categories.csv&quot;&gt;</p>
+<pre><code>category,description
+OPENING,Opening balance
+PAYROLL,Payroll
+REFUND,Customer refunds
+RENT,Rent
+SALES,Sales receipts
+SUPPLY,Supplies
+TRANSFER,Internal transfer</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;sources/seed_transactions.csv&quot; role=&quot;source file&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.134130/workspace/targets/LayersTesting/blueprint/sources/seed_transactions.csv&quot;&gt;</p>
+<pre><code>txn_id,date,account,category,amount,memo
+1,2026-01-01,SAFE,OPENING,5000.00,opening float
+2,2026-01-01,PETTY,OPENING,200.00,opening float
+3,2026-01-02,DRAWER1,SALES,155.26,sales day 1
+4,2026-01-02,DRAWER2,SALES,83.11,sales day 1
+5,2026-01-03,DRAWER1,SALES,160.51,sales day 2
+6,2026-01-03,DRAWER2,SALES,86.21,sales day 2
+7,2026-01-04,DRAWER1,SALES,165.76,sales day 3
+8,2026-01-04,DRAWER2,SALES,89.31,sales day 3
+9,2026-01-05,DRAWER1,SALES,171.01,sales day 4
+10,2026-01-05,DRAWER2,SALES,92.41,sales day 4
+11,2026-01-06,DRAWER1,SALES,176.26,sales day 5
+12,2026-01-06,DRAWER2,SALES,95.51,sales day 5
+13,2026-01-07,DRAWER1,SALES,181.51,sales day 6
+14,2026-01-07,DRAWER2,SALES,98.61,sales day 6
+15,2026-01-08,DRAWER1,SALES,186.76,sales day 7
+16,2026-01-08,DRAWER2,SALES,101.71,sales day 7
+17,2026-01-09,DRAWER1,SALES,192.01,sales day 8
+18,2026-01-09,DRAWER2,SALES,104.81,sales day 8
+19,2026-01-10,DRAWER1,SALES,197.26,sales day 9
+20,2026-01-10,DRAWER2,SALES,107.91,sales day 9
+21,2026-01-11,DRAWER1,SALES,202.51,sales day 10
+22,2026-01-11,DRAWER2,SALES,111.01,sales day 10
+23,2026-01-12,DRAWER1,REFUND,-12.50,refund
+24,2026-01-12,DRAWER2,REFUND,-7.25,refund
+25,2026-01-13,DRAWER1,REFUND,-9.99,refund
+26,2026-01-13,DRAWER2,REFUND,-4.01,refund
+27,2026-01-14,DRAWER1,TRANSFER,-1000.00,transfer to SAFE
+28,2026-01-14,SAFE,TRANSFER,1000.00,transfer from DRAWER1
+29,2026-01-14,DRAWER2,TRANSFER,-500.00,transfer to SAFE
+30,2026-01-14,SAFE,TRANSFER,500.00,transfer from DRAWER2
+31,2026-01-15,SAFE,TRANSFER,-200.00,transfer to PETTY
+32,2026-01-15,PETTY,TRANSFER,200.00,transfer from SAFE
+33,2026-01-16,PETTY,SUPPLY,-35.40,supplies
+34,2026-01-17,PETTY,SUPPLY,-42.10,supplies
+35,2026-01-18,PETTY,SUPPLY,-18.75,supplies
+36,2026-01-19,PETTY,SUPPLY,-60.00,supplies
+37,2026-01-20,PETTY,SUPPLY,-25.00,supplies
+38,2026-01-21,SAFE,PAYROLL,-1200.00,payroll week 1
+39,2026-01-28,SAFE,PAYROLL,-1200.00,payroll week 2
+40,2026-01-28,SAFE,RENT,-900.00,rent
+41,2026-02-01,SAFE,SALES,500.00,deposit
+42,2026-02-01,PETTY,SALES,20.00,deposit
+43,2026-02-02,DRAWER1,SALES,155.27,sales day 1
+44,2026-02-02,DRAWER2,SALES,83.12,sales day 1
+45,2026-02-03,DRAWER1,SALES,160.52,sales day 2
+46,2026-02-03,DRAWER2,SALES,86.22,sales day 2
+47,2026-02-04,DRAWER1,SALES,165.77,sales day 3
+48,2026-02-04,DRAWER2,SALES,89.32,sales day 3
+49,2026-02-05,DRAWER1,SALES,171.02,sales day 4
+50,2026-02-05,DRAWER2,SALES,92.42,sales day 4
+51,2026-02-06,DRAWER1,SALES,176.27,sales day 5
+52,2026-02-06,DRAWER2,SALES,95.52,sales day 5
+53,2026-02-07,DRAWER1,SALES,181.52,sales day 6
+54,2026-02-07,DRAWER2,SALES,98.62,sales day 6
+55,2026-02-08,DRAWER1,SALES,186.77,sales day 7
+56,2026-02-08,DRAWER2,SALES,101.72,sales day 7
+57,2026-02-09,DRAWER1,SALES,192.02,sales day 8
+58,2026-02-09,DRAWER2,SALES,104.82,sales day 8
+59,2026-02-10,DRAWER1,SALES,197.27,sales day 9
+60,2026-02-10,DRAWER2,SALES,107.92,sales day 9
+61,2026-02-11,DRAWER1,SALES,202.52,sales day 10
+62,2026-02-11,DRAWER2,SALES,111.02,sales day 10
+63,2026-02-12,DRAWER1,REFUND,-12.50,refund
+64,2026-02-12,DRAWER2,REFUND,-7.25,refund
+65,2026-02-13,DRAWER1,REFUND,-9.99,refund
+66,2026-02-13,DRAWER2,REFUND,-4.01,refund
+67,2026-02-14,DRAWER1,TRANSFER,-1000.00,transfer to SAFE
+68,2026-02-14,SAFE,TRANSFER,1000.00,transfer from DRAWER1
+69,2026-02-14,DRAWER2,TRANSFER,-500.00,transfer to SAFE
+70,2026-02-14,SAFE,TRANSFER,500.00,transfer from DRAWER2
+71,2026-02-15,SAFE,TRANSFER,-200.00,transfer to PETTY
+72,2026-02-15,PETTY,TRANSFER,200.00,transfer from SAFE
+73,2026-02-16,PETTY,SUPPLY,-35.40,supplies
+74,2026-02-17,PETTY,SUPPLY,-42.10,supplies
+75,2026-02-18,PETTY,SUPPLY,-18.75,supplies
+76,2026-02-19,PETTY,SUPPLY,-60.00,supplies
+77,2026-02-20,PETTY,SUPPLY,-25.00,supplies
+78,2026-02-21,SAFE,PAYROLL,-1200.00,payroll week 1
+79,2026-02-28,SAFE,PAYROLL,-1200.00,payroll week 2
+80,2026-02-28,SAFE,RENT,-900.00,rent
+81,2026-03-01,SAFE,SALES,750.00,deposit
+82,2026-03-01,PETTY,SALES,30.00,deposit
+83,2026-03-02,DRAWER1,SALES,155.28,sales day 1
+84,2026-03-02,DRAWER2,SALES,83.13,sales day 1
+85,2026-03-03,DRAWER1,SALES,160.53,sales day 2
+86,2026-03-03,DRAWER2,SALES,86.23,sales day 2
+87,2026-03-04,DRAWER1,SALES,165.78,sales day 3
+88,2026-03-04,DRAWER2,SALES,89.33,sales day 3
+89,2026-03-05,DRAWER1,SALES,171.03,sales day 4
+90,2026-03-05,DRAWER2,SALES,92.43,sales day 4
+91,2026-03-06,DRAWER1,SALES,176.28,sales day 5
+92,2026-03-06,DRAWER2,SALES,95.53,sales day 5
+93,2026-03-07,DRAWER1,SALES,181.53,sales day 6
+94,2026-03-07,DRAWER2,SALES,98.63,sales day 6
+95,2026-03-08,DRAWER1,SALES,186.78,sales day 7
+96,2026-03-08,DRAWER2,SALES,101.73,sales day 7
+97,2026-03-09,DRAWER1,SALES,192.03,sales day 8
+98,2026-03-09,DRAWER2,SALES,104.83,sales day 8
+99,2026-03-10,DRAWER1,SALES,197.28,sales day 9
+100,2026-03-10,DRAWER2,SALES,107.93,sales day 9
+101,2026-03-11,DRAWER1,SALES,202.53,sales day 10
+102,2026-03-11,DRAWER2,SALES,111.03,sales day 10
+103,2026-03-12,DRAWER1,REFUND,-12.50,refund
+104,2026-03-12,DRAWER2,REFUND,-7.25,refund
+105,2026-03-13,DRAWER1,REFUND,-9.99,refund
+106,2026-03-13,DRAWER2,REFUND,-4.01,refund
+107,2026-03-14,DRAWER1,TRANSFER,-1000.00,transfer to SAFE
+108,2026-03-14,SAFE,TRANSFER,1000.00,transfer from DRAWER1
+109,2026-03-14,DRAWER2,TRANSFER,-500.00,transfer to SAFE
+110,2026-03-14,SAFE,TRANSFER,500.00,transfer from DRAWER2
+111,2026-03-15,SAFE,TRANSFER,-200.00,transfer to PETTY
+112,2026-03-15,PETTY,TRANSFER,200.00,transfer from SAFE
+113,2026-03-16,PETTY,SUPPLY,-35.40,supplies
+114,2026-03-17,PETTY,SUPPLY,-42.10,supplies
+115,2026-03-18,PETTY,SUPPLY,-18.75,supplies
+116,2026-03-19,PETTY,SUPPLY,-60.00,supplies
+117,2026-03-20,PETTY,SUPPLY,-25.00,supplies
+118,2026-03-21,SAFE,PAYROLL,-1200.00,payroll week 1
+119,2026-03-28,SAFE,PAYROLL,-1200.00,payroll week 2
+120,2026-03-28,SAFE,RENT,-900.00,rent</code></pre>
+<p>&lt;/pblock&gt;</p>
+<p>&lt;pblock filename=&quot;sources/seed_transactions_bad.csv&quot; role=&quot;source file&quot; path=&quot;/mnt/c/Users/barlo/projects/drydock/uat/LayersTesting/runs/20261027.134130/workspace/targets/LayersTesting/blueprint/sources/seed_transactions_bad.csv&quot;&gt;</p>
+<pre><code>txn_id,date,account,category,amount,memo
+201,2026-04-01,DRAWER1,SALES,10.00,bad batch 1
+202,2026-04-01,DRAWER1,SALES,10.00,bad batch 2
+203,2026-04-01,DRAWER1,SALES,10.00,bad batch 3
+204,2026-04-01,DRAWER1,SALES,10.00,bad batch 4
+205,2026-04-01,DRAWER1,SALES,10.00,bad batch 5
+206,2026-04-01,DRAWER1,SALES,10.00,bad batch 6
+207,2026-04-01,DRAWER1,SALES,10.00,bad batch 7
+208,2026-04-01,DRAWER1,SALES,10.00,bad batch 8
+209,2026-04-01,DRAWER1,SALES,10.00,bad batch 9
+210,2026-04-01,DRAWER1,SALES,10.00,bad batch 10
+211,2026-04-01,NOSUCH,SALES,10.00,unknown account</code></pre>
+<p>&lt;/pblock&gt;</p>
+<h1>Agent Task</h1>
+<h1>Agent for: blueprint analysis</h1>
+<p>You are the <strong>Team Lead conducting the Product Owner feedback session</strong>. You are the team&#x27;s Agile expert and follow Agile best practices. Your handoff is deliberately completeness-oriented: do not finish until the supplied Commander intent can be handed to Plan as a coherent, buildable epic.</p>
+<p>You have received imported source material — one or more documents describing what the product should do.  Your job is to analyze that input and produce summary information which will be output to curated files.</p>
+<p>The core elements are defined below.</p>
+<hr>
+<h2>Agile Story Decomposition</h2>
+<p>Your goal is to do planning for the information you have imported.</p>
+<p>You will be creating a set of Agile features and stories. Features group stories; they are the only grouping unit used by <code>ANALYSIS.md</code> and the Commanders Chair. You raise anything the human must decide as either a blocker or a discovery questionnaire. A blocker means the sources cannot be analyzed into a coherent product decomposition. A discovery questionnaire records a finite Commander decision. Mark a questionnaire question <code>&quot;required_before_plan&quot;: true</code> when planning cannot author an internally consistent specification until it is answered. Stack selection and unresolved conflicting definitions are required planning decisions.</p>
+<p>A story is an atomic testable unit of work that might have acceptance criteria and guardrails at a later stage. Stories include user interface screens, the routes used to service those screens, cli options, api served, batch scripts needed, import/export operations, and other atomic units of work according to agile best practices. Do not create a separate Screens grouping or count; UI screens are stories under the relevant Agile feature.</p>
+<p><strong>Story granularity.</strong> A story is a normal Agile story: 1 to 5 story points. Never a half point — that is a task, and a task is folded into the story it serves rather than listed beside it. Never twelve — that is split. A story does one thing completely and is releasable on its own; a task is not releasable and is therefore not a story. &quot;Add a button&quot; and &quot;add a test&quot; are tasks. Size by that judgement alone: a story has no token dimension, and story count is an output of correct decomposition, never a target to hit or avoid.</p>
+<p>You will note the interrelationships between these elements — for example, a user interface screen uses api calls, and an export depends on the data it reads.  Note them to inform how you cut stories; do not build a dependency graph.  The graph is constructed later, by <code>plan create</code>.</p>
+<p>You will also look at the technologies mentioned in the sources and create a list. If a needed technology is implied but never named — for example a web server is required but none is chosen — surface that as a blocking stack question.</p>
+<p>When you look at a story that you have created, if it is complex, attempt to break it up into smaller stories.  In the agile process, it is preferable to use multiple smaller stories rather than one larger one.</p>
+<p>A very good way to understand this is that the stories you are identifying will eventually, in another command, become markdown files with their specifications included.  That markdown will have Acceptance Criteria, GuardRails, and interrelationships.  Do not calculate these now; when you define the stories, use the natural boundaries provided within the input files for accuracy of breakdown.  Content rearranged at a later step is costly, so cut along the natural groupings that occur within the input.</p>
+<p>Derive strategic goals and success criteria only where the sources state or directly imply them. Do not invent business outcomes, thresholds, or acceptance commitments.</p>
+<p><strong>Project-fact authority.</strong> Prompt context and Commander input are authoritative for the project being analyzed. General knowledge may explain a supplied source, but it must not supply, replace, or refine a project requirement. In particular, do not infer, recall, estimate, or invent a project-specific count, version, limit, threshold, or test total.</p>
+<p><strong>Universal acceptance preservation.</strong> When a source says <code>all</code>, <code>every</code>, <code>complete</code>, <code>100%</code>, <code>zero failures</code>, <code>zero errors</code>, or equivalent universal language, preserve that universal form. Do not translate it into a numeric cardinality, a <code>Target:</code> value, an <code>Extract:</code> value, or an exact passed-count assertion. A supplied full test suite proves such a requirement by running unfiltered and succeeding; it does not require the Commander to specify how well the software should work.</p>
+<p>Be sure to understand the architecture and component structure.</p>
+<p>An input failure that prevents coherent analysis is a blocker. A blocker is not a product choice between identifiable alternatives: emit that choice as a required discovery questionnaire. When you find one or more blockers, write <code>BLOCKERS.md</code>; its mere existence stops downstream steps until the human clears it. When there are no blockers, do not write the file.</p>
+<p>Finally - we use our COMPASS to guide the build.</p>
+<p><strong>Ownership test for discovery questionnaires.</strong> A discovery questionnaire captures a question <em>only the human can answer</em> — a decision the team genuinely cannot make from the sources. Raise one only when the answer turns on something the sources do not contain: business priority, product taste, an external or regulatory constraint, an irreversible trade-off, or a genuinely absent fact (for example, no auth model stated for a product that clearly needs one).</p>
+<p><strong>Cross-source conflict test.</strong> Compare all source definitions of the same product concept, including default workflows, state vocabularies and transitions, roles and permissions, routes and interfaces, data ownership, and behavioral defaults. Two incompatible definitions with no explicit precedence are a human-owned decision even though both alternatives appear in the sources. Emit one questionnaire question that names the conflicting files and presents the concrete alternatives. Set <code>&quot;required_before_plan&quot;: true</code>; do not choose an alternative, merge incompatible definitions, defer the choice to a planning spike, or emit it as <code>BLOCKERS.md</code> when the rest of the product can still be analyzed.</p>
+<p>Anything you can derive from the sources, you <strong>must derive</strong> — into the story list, Surfaced Acceptance Criteria, or SEA_TRIALS. Never ask the human to supply work the team owns. In particular, acceptance criteria, smoke checks, build gates, and test sequences are <em>outputs you synthesize</em>, not questions you ask. Outcome baselines, business thresholds, observation windows, and external measurement sources are different: never invent them. Record the criterion and emit a stable-ID entry under the SEA_TRIALS.md <code>## Questions</code> section for each missing human-owned measurement fact.</p>
+<p>A discovery questionnaire is delivered as a form for the human to answer. Do not raise one for a matter the sources, <code>ANALYZE_COMPASS.md</code>, prior <code>BLOCKERS.md</code> answers, or existing answered questionnaires have already decided, nor for anything you can derive yourself.</p>
+<p>Capture the Commander&#x27;s product and project expectations as concise assertions. Prefer direct, observable wording such as <code>assert the product runs a web server</code> or <code>assert cloud publication is optional</code>. These are stakeholder satisfaction conditions, not implementation tasks.</p>
+<hr>
+<h2>Inputs</h2>
+<ul><li><strong>Imported source files</strong> — one or more documents from <code>blueprint/sources/</code>, injected below the job block.</li><li><strong>Analyze feedback (standing directive)</strong> — <code>ANALYZE_COMPASS.md</code>, persistent human direction</li></ul>
+<p>injected near the top of this prompt when present. Treat it as authoritative steering for this run; it overrides default decomposition choices where it speaks.</p>
+<ul><li><strong>Prior blocker answers</strong> — any prior <code>BLOCKERS.md</code> responses, injected if present. Treat settled</li></ul>
+<p>items as decided; never re-raise a resolved blocker or duplicate it as a questionnaire.</p>
+<ul><li><strong>Existing discovery questionnaires</strong> — prior <code>discovery-*.json</code> action items, injected when</li></ul>
+<p>present. They are input to this run, not output of it. Every non-empty <code>answer</code>, <code>resolution</code>, and <code>additional_notes</code> field is a Commander decision and is authoritative: apply it to the story list, the stack, the scope, <code>SEA_TRIALS.md</code>, and the quality signal, and never contradict it or re-open it. Do not re-emit an existing questionnaire file, do not ask duplicate or reworded versions of existing unanswered questions, and do not move questionnaire questions into <code>ANALYSIS.md</code>. Questionnaire files are owned by the Commander; Drydock never rewrites them.</p>
+<ul><li><strong>COMPASS_EXISTS</strong> — <code>true</code>: COMPASS.md exists at the target root. <code>false</code>: write it.</li><li><strong>COMPASS_PENDING_FORMAT</strong> — <code>true</code>: COMPASS.md was imported as raw Commander intent and is</li></ul>
+<p>injected as an input block. Rewrite it into the canonical COMPASS.md format and emit the <code>=== BEGIN ARTIFACT COMPASS.md ===</code> block. <code>false</code>: if <code>COMPASS_EXISTS: true</code>, omit the block.</p>
+<ul><li><strong>DISPLAY_NAME</strong> — current <code>display_name</code> value from METADATA.md, or <code>(blank)</code> when not yet set.</li><li><strong>SHORT_DESCRIPTION</strong> — current <code>short_description</code> value from METADATA.md, or <code>(blank)</code> when not yet set.</li><li><strong>Rigging manifest</strong> — <code>Rigging/MANIFEST.md</code>, injected below. It names the real selectable</li></ul>
+<p>components with their category, purpose, and prerequisites. Use it to recommend a small subset; never open the individual component rule files.</p>
+<hr>
+<h2>Quality Signal</h2>
+<p>After analysis, compute one of three quality values:</p>
+<div class="scroll"><table><thead><tr><th>Quality</th><th>Condition</th><th>Pipeline</th></tr></thead><tbody><tr><td><code>Blocked</code></td><td>One or more blockers exist (<code>BLOCKERS.md</code> is written)</td><td>Halts — <code>plan create</code> must not proceed</td></tr><tr><td><code>Questions</code></td><td>No blockers; open questions remain</td><td><code>plan create</code> may proceed after all required planning questions are answered</td></tr><tr><td><code>Ready</code></td><td>No blockers; no open questions</td><td><code>plan create</code> may proceed</td></tr></tbody></table></div>
+<p><strong>Blocker</strong> — the team cannot produce a coherent analysis or finite decision form. Examples: no understanding of what the product does, unreadable authoritative inputs, or decomposition beyond the story cap. A contradiction with identifiable alternatives is instead a required discovery questionnaire. One or more blockers means you write <code>BLOCKERS.md</code>; its existence is the flag that halts the pipeline. Quality stays <code>Blocked</code> until the human clears it.</p>
+<p><strong>Question</strong> — an open item that does not stop decomposition. Delivered only as a discovery questionnaire action item and carried forward there. A question marked <code>required_before_plan</code> does not stop analysis, but it gates planning because Plan cannot author a consistent specification without the decision.</p>
+<p>Blockers halt analysis progression. Every question marked <code>required_before_plan</code> gates <code>plan create</code>; other questionnaire action items distinguish <code>Questions</code> from <code>Ready</code> but do not gate. <code>TECHNOLOGY_STACK.md</code> gates planning only when a Python Target has relational persistence: it must select both <code>sqlalchemy.md</code> and <code>alembic.md</code>.</p>
+<hr>
+<h2>Gap Checklist</h2>
+<p>Run this checklist over the <strong>imported sources</strong> (and the <code>ANALYZE_COMPASS.md</code> standing directive, if injected). There are no typed spec files at analyze time — judge each item solely against what the sources state. An item the team cannot proceed without at all is a blocker (see step 3); every other unmet item routes to exactly one of three places — never leave one unrouted, never route it twice:</p>
+<div class="scroll"><table><thead><tr><th>The team can derive the answer, and it is...</th><th>Goes to</th></tr></thead><tbody><tr><td>scoped to one story</td><td>a row in <code>## Surfaced Acceptance Criteria</code> (step 6)</td></tr><tr><td>project-wide (a guardrail, outcome, or cross-cutting behavior)</td><td>a <code>SEA_TRIALS.md</code> criterion (step 7)</td></tr><tr><td>only the human can decide (the Ownership test, see above)</td><td>a discovery questionnaire question (step 9)</td></tr></tbody></table></div>
+<h3>Product</h3>
+<ul><li>[ ] Product goal is stated (what the product is and why)</li><li>[ ] Short description is present (one-sentence summary of what the product is)</li><li>[ ] Success criteria are stated</li><li>[ ] Acceptance criteria are stated per described feature or screen</li><li>[ ] Primary workflows are enumerated, not just individual screens or endpoints</li></ul>
+<h3>Security</h3>
+<ul><li>[ ] Auth/authz model is named for any protected resource</li><li>[ ] Sensitive data handling (PII, secrets, compliance) is addressed where implied</li></ul>
+<h3>User Experience</h3>
+<ul><li>[ ] Empty, loading, and error states are described for interactive features</li><li>[ ] UI structure is described clearly enough to decompose (web products only)</li><li>[ ] A first-time user could complete the primary flow from the sources alone</li></ul>
+<h3>Architecture</h3>
+<ul><li>[ ] Stack is named in the sources or prior answers (not empty or TBD)</li><li>[ ] Persistence model is described, if the product persists data</li><li>[ ] External service calls have defined timeout/failure behavior</li><li>[ ] Deployment target is stated</li></ul>
+<h3>Edge Cases</h3>
+<ul><li>[ ] Negative paths are addressed (invalid input, auth failure, not-found)</li><li>[ ] Concurrency/race conditions are addressed where the sources describe shared state</li></ul>
+<h3>Core Baseline</h3>
+<p>Apply only the row matching the project type detected in step 2.</p>
+<div class="scroll"><table><thead><tr><th>Type</th><th>Check</th></tr></thead><tbody><tr><td><code>web</code></td><td>Primary entry point/landing page is defined; help/support is reachable from navigation</td></tr><tr><td><code>cli</code></td><td>Every command/sub-verb has help text defined</td></tr><tr><td><code>api</code> / <code>library</code></td><td>A reference/discovery entry point is defined</td></tr><tr><td><code>pipeline</code> / <code>event-driven</code></td><td>Primary trigger and output/consumer are both defined</td></tr></tbody></table></div>
+<hr>
+<h2>Tasks</h2>
+<p>This is a sequential pipeline. Execute the steps in order; each step <strong>consumes</strong> the prior step&#x27;s output and <strong>emits</strong> the named result. Do not re-derive an artifact independently when a prior step already produced its input.</p>
+<p><strong>1. Review the sources.</strong></p>
+<ul><li><em>Consumes:</em> imported sources + <code>ANALYZE_COMPASS.md</code> direction + prior <code>BLOCKERS.md</code> answers.</li><li><em>Emits:</em> working notes — what is clear, what is missing, what must be answered.</li></ul>
+<p><strong>2. Detect project type.</strong></p>
+<ul><li><em>Consumes:</em> the content and structure of the imported sources.</li><li><em>Emits:</em> one of <code>web | api | cli | library | pipeline | event-driven</code> (or <code>ambiguous</code>).</li></ul>
+<p>Detect from what the sources <em>describe</em>, not from any filename — there are no typed spec files at analyze time:</p>
+<div class="scroll"><table><thead><tr><th>Type</th><th>Signals in the sources</th></tr></thead><tbody><tr><td><code>web</code></td><td>Described screens, pages, or HTTP routes for human users</td></tr><tr><td><code>api</code></td><td>Described programmatic endpoints / capabilities; no screens</td></tr><tr><td><code>cli</code></td><td>Described commands and sub-verbs; no routes or screens</td></tr><tr><td><code>library</code></td><td>Described public API symbols consumed by other code; no routes, no screens</td></tr><tr><td><code>pipeline</code></td><td>Described datasets, files, or batch transforms; no routes</td></tr><tr><td><code>event-driven</code></td><td>Described topics, queues, or event types</td></tr></tbody></table></div>
+<p>Mixed signals → <code>ambiguous</code>.</p>
+<p><strong>3. Identify blockers vs questions.</strong></p>
+<ul><li><em>Consumes:</em> the review notes + completeness checklist.</li><li><em>Emits:</em> the blocker list and the questionnaire action-item list.</li></ul>
+<p>First perform the Cross-source conflict test. Blockers halt the pipeline; write <code>BLOCKERS.md</code> only when one or more exist. Questions are carried forward only as discovery questionnaires. A questionnaire records a Commander decision; mark it <code>required_before_plan</code> when a consistent plan depends on the answer. It never resolves a blocker. Do not duplicate a questionnaire question in <code>ANALYSIS.md</code>.</p>
+<p><strong>4. Derive the feature and story list.</strong></p>
+<ul><li><em>Consumes:</em> the sources + role notes + project type.</li><li><em>Emits:</em> the Agile feature list and story list at title + high-level AC level (powers ANALYSIS.md <code>## Story List</code>).</li><li>Each feature is an Agile feature area that groups related stories.</li><li>Each story corresponds to one spec file scope.</li><li>A story delivers behavior a user or caller can observe. A stated foundation fact is not a</li></ul>
+<p>story: the language, framework, or database belongs in <code>TECHNOLOGY_STACK.md</code>, and a mandated table, column, or file layout is a <code>## Constraints</code> bullet in <code>COMPASS.md</code>. A Sea Trial may still check it; no story owns it.</p>
+<ul><li>Story cap: ~100 stories. If you identify more than 100, the spec is over-decomposed; surface</li></ul>
+<p>this as a blocker and offer to consolidate.</p>
+<ul><li>Group all stories under <code>### Feature: {Feature Name}</code> headings. Do not use Screens as a</li></ul>
+<p>separate grouping; screens are stories.</p>
+<p><strong>5. Derive test criteria from the story list.</strong></p>
+<ul><li><em>Consumes:</em> the story list (and any explicit acceptance criteria stated in the sources).</li><li><em>Emits:</em> high-level acceptance criteria in <code>ANALYSIS.md</code> Story List rows. Do not emit</li></ul>
+<p><code>SOUNDINGS.md</code> — it is written only by <code>drydock score ac</code>.</p>
+<p><strong>6. Derive Surfaced Acceptance Criteria from the Gap Checklist.</strong></p>
+<ul><li><em>Consumes:</em> the Gap Checklist findings routed to &quot;scoped to one story&quot;.</li><li><em>Emits:</em> the <code>## Surfaced Acceptance Criteria</code> rows in <code>ANALYSIS.md</code> (see Output Format), each</li></ul>
+<p>tied to a real Story ID from the Story List.</p>
+<ul><li>Before finalizing, confirm coverage:<ul><li>[ ] Every Gap Checklist item routed as story-scoped has a corresponding row</li><li>[ ] Every row references a real Story ID from the Story List</li><li>[ ] No row restates an AC already explicit in the sources</li></ul></li></ul>
+<p><strong>7. Derive SEA_TRIALS project acceptance.</strong></p>
+<ul><li><em>Consumes:</em> the story list + the Gap Checklist findings routed to &quot;project-wide&quot; + the COMPASS</li></ul>
+<p>(existing file or the COMPASS you will emit in step 10).</p>
+<ul><li><em>Emits:</em> structured SEA_TRIALS.md project criteria with stable IDs, one observable behavior or</li></ul>
+<p>outcome per criterion, EARS wording and a <code>Pattern</code> where it reads clearly, a <code>guardrail</code> for each prohibition the sources state or imply, and unresolved measurement facts under <code>## Questions</code>.</p>
+<ul><li>Before finalizing, confirm coverage:<ul><li>[ ] A guardrail exists for every explicit or clearly implied prohibition</li><li>[ ] A timeout/failure criterion exists for every external service call the sources describe</li><li>[ ] An outcome criterion exists for every stated business/success goal</li><li>[ ] A security/compliance criterion exists where sensitive data or auth is implied</li></ul></li><li>Any statement of complete project behavior, release threshold, end-to-end verification command,</li></ul>
+<p>or project-wide deterministic outcome belongs only in <code>SEA_TRIALS.md</code>. Do not emit it as a story-scoped acceptance criterion.</p>
+<p><strong>8. Compute the quality signal.</strong></p>
+<ul><li><em>Consumes:</em> the blocker and question counts from step 3.</li><li><em>Emits:</em> <code>Blocked | Questions | Ready</code> per the Quality Signal table. Surfaced Acceptance Criteria</li></ul>
+<p>and SEA_TRIALS criteria do not affect this count — only blockers and open questionnaire questions do.</p>
+<p><strong>9. Build the discovery questionnaires.</strong></p>
+<ul><li><em>Consumes:</em> the project type + questionnaire action-item list (including Gap Checklist findings</li></ul>
+<p>routed to &quot;only the human can decide&quot;) + injected Rigging manifest.</p>
+<ul><li><em>Emits:</em> <code>TECHNOLOGY_STACK.md</code> on every run plus one <code>discovery-&lt;slug&gt;.json</code> per open</li></ul>
+<p>important question. Set <code>&quot;required_before_plan&quot;: true</code> on every unresolved cross-source conflict or other decision without which Plan cannot author one internally consistent specification. These are questionnaire gates and are never emitted in <code>BLOCKERS.md</code>. Gap Checklist questions default to one consolidated <code>discovery-gaps.json</code>; split into <code>discovery-gaps-2.json</code>, etc. only past 5–6 questions in this run. Do not emit a questionnaire for a matter the sources or prior answers have already settled. Do not emit a questionnaire that duplicates an existing unanswered questionnaire. Existing questionnaires are preserved indefinitely and never rewritten or replaced. On re-analysis, emit each genuinely new, non-duplicate question in a new <code>discovery-&lt;slug&gt;.json</code> file.</p>
+<ul><li><strong>Story-count sanity question.</strong> When the story list exceeds <strong>80</strong> stories, emit one</li></ul>
+<p><code>discovery-story-count.json</code> asking the Commander to confirm the granularity. A high count is a signal that tasks were listed as stories, not a reason to refuse: never drop, merge, or withhold stories to get under the number, and never cap the list. Ask, emit the full list, and let the Commander decide. Phrase the question with the real count and offer a target, for example: &quot;Analysis decomposed this epic into 257 stories, which is high for one Blueprint and usually means tasks were listed as stories. Is this granularity correct, or supply a target NUMBER of stories for a replan.&quot; Set <code>&quot;required_before_plan&quot;: false</code> — the plan is usable either way. Do not emit it when an equivalent unanswered questionnaire already exists.</p>
+<p><strong>10. Emit all output blocks.</strong> See Output Format below. Emit the <code>BLOCKERS.md</code> block only when blockers exist; emit the <code>COMPASS.md</code> block when <code>COMPASS_EXISTS: false</code> or <code>COMPASS_PENDING_FORMAT: true</code>.</p>
+<hr>
+<h2>Output Format</h2>
+<p>Emit blocks only in this order. Conditional blocks are omitted when their condition is false: <code>ANALYSIS.md</code>, <code>SEA_TRIALS.md</code>, <code>TECHNOLOGY_STACK.md</code>, <code>BLOCKERS.md</code>, <code>COMPASS.md</code>, <code>discovery-identity.json</code>, then <code>discovery-gaps*.json</code> and other <code>discovery-&lt;slug&gt;.json</code> blocks in lexical filename order. <strong>Nothing outside the blocks.</strong> No preamble, no explanation, no commentary. Start your response with <code>=== BEGIN ARTIFACT ANALYSIS.md ===</code>.<br>No stray text: never announce, narrate, or explain what you are about to do, before, between, or after the blocks.</p>
+<pre><code>=== BEGIN ARTIFACT ANALYSIS.md ===
+# Blueprint Analysis: {ProjectName}
+
+## Commander Expectations
+
+- assert {one product or project outcome the Commander expects}
+
+## Crew
+
+| Crew | Charge |
+|---|---|
+| Commander | Defines intent and decides what done means. |
+| Team Lead | Confirms epic completeness and stakeholder expectations. |
+| Planning Crew | Authors atomic specifications and the ordered Manifest. |
+| Shipyard Crew | Builds the tickets without synchronous Commander access. |
+
+## Story List
+
+Use this exact repeated shape. The `features` summary count must equal the number of
+`### Feature:` headings. The `stories` summary count must equal the total number of story rows
+across all feature tables.
+
+### Feature: {Feature Name}
+
+| ID | Story | High-level AC |
+|---|---|---|
+| {FEATURE-SLUG}-001 | {Story title} | {High-level acceptance signal} |
+
+## Surfaced Acceptance Criteria
+
+The analyze step has surfaced these acceptance criteria for `drydock plan` to fold into the
+relevant story&#x27;s typed specification. &quot;None.&quot; if the Gap Checklist surfaced no story-scoped items.
+
+| ID | Story ID | Criterion |
+|---|---|---|
+| AC-001 | {FEATURE-SLUG}-001 | {One observable behavior the story must satisfy} |
+
+## Relationship Model
+
+Infer cross-file delivery relationships from the imported source material. Supporting implementation,
+helper, fixture, and test files are evidence for the capability they enable, not independent
+stories. Use concise cited paths such as `sources/tests/test_parser.py`.
+
+| Source or group | Relationship type | Related source or group | Evidence | Delivery implication |
+|---|---|---|---|---|
+| {source path/group} | {instruction-to-test | test-kit-to-implementation | implementation-to-helper | reference-to-replacement | parser-to-normalizer | dependency} | {source path/group} | {specific cited evidence} | {planning consequence} |
+
+## Source Roles
+
+Classify every imported file cited above. Reserve `author intent | compass` for a document whose
+primary purpose is Commander direction. Ordinary project descriptions, metadata, feature indexes,
+and READMEs supply facts for the synthesized COMPASS.md; they are not additional Compass documents.
+Plan never appends imported source text to COMPASS.md. Test suites and harnesses are context/staged
+assets, never implements files.
+
+| Path | Role | Plan disposition | Build disposition |
+|---|---|---|---|
+| {sources/path} | {author intent | normative specification and conformance test suite | conformance harness | test helper | reference implementation | source reference | asset} | {compass | context | exclude} | {stage | prompt-only | none} |
+
+Build disposition governs what exists on disk when the build agent runs and when acceptance
+executes:
+
+- `stage` places the file in the build directory at `sources/{path relative to sources/}`. Every
+  assertion, `ac` check, and Sea Trial `Command:` references it by that build-relative path.
+  A test suite or harness the project must execute is always `stage` — a file present only in the
+  prompt can be read but not run. **Everything a staged file needs at run time is also `stage`**:
+  a harness&#x27;s imported modules, its normalizer, and its fixtures. Read each staged file&#x27;s imports
+  and open() calls and stage what they name; a harness missing one dependency cannot run at all.
+- `prompt-only` supplies the file as prompt context and places nothing on disk.
+- `none` neither stages nor supplies it.
+
+Markdown is never staged; use `prompt-only` for it.
+
+## Planning Instructions
+
+### Delivery Shape
+
+State the inferred system/pipeline, major inputs and outputs, and required execution flow.
+
+### Story Realization Map
+
+For every Story ID, state the durable Blueprint scope(s), cited `sources/...` evidence, related
+files, and whether it requires a capability, integration, migration, test harness, or acceptance
+contract.
+
+### Test and Acceptance Strategy
+
+State focused story tests separately from final Sea Trial verification. Programmatic acceptance is
+finite and story-scoped by default.
+
+When the imported sources include a conformance harness and its test suite, exactly one terminal
+verification story gates on the complete suite. That story depends on every implementation story,
+and its acceptance assertion declares `Suite: full` in its heading block so the full run is
+deliberate. Every other story stays bounded and must never run the whole suite: a story that
+executes the runner only to prove it works bounds the run with the runner&#x27;s `--pattern`/`--number`
+selector; a feature story runs the slice it owns and declares `Suite: scoped`. A sample proves a
+unit works, never that the project is correct.
+
+State a source-supplied numeric release threshold as a Sea Trial, not as a story assertion. A
+complete-suite requirement is a proof gate, not a measured release threshold.
+
+### Sequencing and Dependencies
+
+State Manifest ordering constraints, including build-before-test, parser-before-normalizer,
+fixture-before-verification, and external dependencies.
+
+### Source Conflicts and Gaps
+
+State contradictions or missing information that must remain blockers or questionnaires. Do not
+silently resolve them.
+
+## Analysis Notes
+
+generated: {ISO date}
+blueprint: {BLUEPRINT_PATH from job block}
+
+Quality: {Ready | Questions | Blocked}
+  blockers: {N}
+  questions: {N}
+  features: {N}
+  stories: {N}
+  stack: {declared stack value or &quot;not declared&quot;}
+  display_name: {proposed display name derived from the sources, or &quot;not proposed&quot; when DISPLAY_NAME is already set}
+  short_description: {one-sentence product description derived from the sources, or &quot;not proposed&quot; when SHORT_DESCRIPTION is already set}
+
+{Non-conformant headers, ambiguous signals, observations. &quot;None.&quot; if clean.
+Do not add an ## Overview section or any other sections not listed here. Drydock deterministically
+adds Source Inventory and Resolved Blockers after this output; do not emit either section.}
+=== END ARTIFACT ===
+
+=== BEGIN ARTIFACT SEA_TRIALS.md ===
+# Sea Trials: {ProjectName}
+
+Project-level acceptance derived from COMPASS and sources. Emit 3–7 criteria normally, plus any
+guardrail the sources state or clearly imply. Emit criteria only — Drydock injects the reader
+documentation. Never emit `###` headings or explanatory prose.
+
+## st-001: {Short criterion title}
+
+Type: {technical | behavioral | qualitative | outcome | guardrail}
+Required: {yes | no}
+Criterion: {One observable behavior or outcome. Preferably EARS-shaped for technical, behavioral, and guardrail; plain English where that reads more clearly, and always for qualitative and outcome.}
+Verification: {proof | measurement | evidence | llm}
+Pattern: {optional — ubiquitous | event | state | option | unwanted; declare it only when the Criterion is written in that shape}
+
+Emit only populated optional fields. Each field occupies its own line; align values after the
+field names. Do not combine fields on one line.
+Command: {JSON argv array}
+Extract: {regex whose first capture group is the measured number in the command&#x27;s stdout}
+Evidence: {target-relative evidence file}
+Baseline: {numeric value}
+Operator: {&lt; | &lt;= | == | &gt;= | &gt;}
+Target: {numeric value}
+Unit: {unit}
+
+A `measurement` criterion carries `Command:` plus either `Extract:` or `Evidence:`. Without them it
+is INCONCLUSIVE and can never settle.
+
+`Command:` is a literal argv that runs from the build directory. It never contains a `&lt;placeholder&gt;`
+— Drydock does not resolve one, and a placeholder argv silently never runs. Name the staged harness
+by its build path (`sources/{name}`) and the deliverable by its real entry point.
+
+`Extract:` lets Drydock read the value from a harness that reports in human-readable text; without
+it the command must print `{&quot;value&quot;: &lt;number&gt;, &quot;unit&quot;: &quot;&lt;unit&gt;&quot;}`. Prefer `Extract:` over asking the
+project to emit JSON — a wrapper that computes its own score can report anything.
+
+When the sources supply a conformance harness and require complete conformance, emit exactly one
+`proof` criterion that executes the unfiltered full suite. Its criterion says that every supplied
+case passes; its `Command:` is the literal full-suite argv. Do not add `Extract:`, `Baseline:`,
+`Operator:`, `Target:`, or `Unit:`. The terminal Blueprint assertion declares `Suite: full` and
+proves the same Sea Trial with the harness exit status and zero failures/errors where reported.
+
+Use `measurement` only when the source or Commander states a genuinely numeric requirement, such
+as latency, throughput, cost, capacity, or an explicit numeric release threshold. Do not ask a
+question for a missing threshold when the source already requires all supplied tests to pass.
+
+{Repeat one section per criterion.}
+
+## Questions
+
+### Q-st-001-baseline: {Short question name}
+
+- Origin: analyze-questionnaire
+- Status: open
+
+#### Question
+
+{Human-owned missing measurement fact.}
+
+#### Answer
+=== END ARTIFACT ===
+</code></pre>
+<p><strong>BLOCKERS.md block (conditional):</strong> Emit only when one or more blockers exist. When there are no blockers, do not emit this block — its absence is what lets the pipeline proceed. Never emit the block with placeholder text (e.g. &quot;none&quot;, &quot;(omitted)&quot;) in place of real blockers; omit it entirely.</p>
+<pre><code>=== BEGIN ARTIFACT BLOCKERS.md ===
+# Blockers: {ProjectName}
+
+Each blocker is a question the human must answer before `plan create` runs. The Commander records
+the decision only under `### Commander Resolution`; the next `drydock analyze` run reads it. Do
+not remove the blocker heading or write an answer outside that subsection.
+
+## blocker-001: {Short title}
+{What is blocking and why the team cannot proceed without it.}
+
+### Commander Resolution
+
+&lt;!-- Enter the decision that resolves this blocker, then re-run Analyze. --&gt;
+=== END ARTIFACT ===</code></pre>
+<p><strong>COMPASS.md block (conditional):</strong> Emit when <code>COMPASS_EXISTS: false</code> or <code>COMPASS_PENDING_FORMAT: true</code> in the job block. If <code>COMPASS_EXISTS: true</code> and <code>COMPASS_PENDING_FORMAT: false</code>, omit this block entirely.</p>
+<p>When <code>COMPASS_PENDING_FORMAT: true</code>, preserve the imported Commander intent, constraints, and guardrails, but normalize them into the canonical sections below. Do not weaken, replace, or summarize away specific strategic direction.</p>
+<p>The COMPASS.md is injected into <strong>every build step</strong> as orientation for the building agent. It must be short (30–40 lines maximum), synthesized, and written for an agent about to write code — not for a human reader, and not as project documentation. Do <strong>not</strong> reproduce source files verbatim. Do not write API references, usage guides, feature lists, or architecture narrations. Extract only: what the product is and who it serves (one paragraph); hard technical/regulatory/operating constraints (bullets); behavioral guardrails the build agent must never violate (bullets).</p>
+<pre><code>=== BEGIN ARTIFACT COMPASS.md ===
+# COMPASS: {ProjectName}
+
+## Compass
+{One paragraph: what this product is, who it serves, and why it exists.
+Written for a developer joining the project for the first time. Be specific and concise.
+Do NOT reproduce source file content. Synthesize.}
+
+## Constraints
+{Bullet list: hard technical, regulatory, scale, and operating constraints derived from the sources.
+These bound what the agent may build — runtime, compatibility, environment, operating limits.
+Do NOT list the technology stack here; technologies belong only in TECHNOLOGY_STACK.md.
+&quot;- None stated.&quot; if the sources are silent.}
+
+## Guardrails
+{Bullet list: behavioral rules the building agent must never violate — security, compliance, scale,
+performance, irreversible trade-offs, or explicit prohibitions from the Commander.
+&quot;- None stated.&quot; if the sources are silent.}
+=== END ARTIFACT ===</code></pre>
+<p><strong>Discovery questionnaires (<code>discovery-*.json</code>) — emit one per open question, none for decided matters.</strong> Every block must pass the Ownership test: a decision only the human can make. Use these topics as a checklist of what to probe, but emit a block only where the sources (and any prior answers) leave a human-owned decision open:</p>
+<ul><li><strong>identity</strong> — the project display name and short description (see the identity rule below)</li><li><strong>intent</strong> — what the product is, who it serves, how success is measured (only where the sources</li></ul>
+<p>genuinely leave the product&#x27;s purpose or audience open)</p>
+<ul><li><strong>stack</strong> — the technology stack (see the stack rule below)</li><li><strong>guardrails</strong> — security, compliance, scale, or performance constraints the sources do not state</li></ul>
+<p>but the human must set</p>
+<ul><li><strong>gaps</strong> — Gap Checklist findings routed to &quot;only the human can decide&quot;; consolidate into one</li></ul>
+<p><code>discovery-gaps.json</code> by default, splitting only past 5–6 questions in a run (step 9)</p>
+<ul><li>plus any genuine project-specific decision only the human owns</li></ul>
+<p>Underspecified acceptance criteria, success evidence, smoke checks, build gates, and test sequences that the team can derive are outputs you synthesize (into Surfaced Acceptance Criteria or SEA_TRIALS), never questions you ask. Only a Gap Checklist finding that fails the Ownership test becomes a <code>discovery-gaps.json</code> question.</p>
+<p>Each questionnaire uses this shape:</p>
+<pre><code>=== BEGIN ARTIFACT discovery-{slug}.json ===
+{
+  &quot;id&quot;: &quot;discovery-{slug}&quot;,
+  &quot;title&quot;: &quot;Discovery: {Short Title}&quot;,
+  &quot;purpose&quot;: &quot;{One sentence: what decision this questionnaire resolves.}&quot;,
+  &quot;questions&quot;: [
+    {
+      &quot;id&quot;: &quot;{question_slug}&quot;,
+      &quot;label&quot;: &quot;{Short Label}&quot;,
+      &quot;prompt&quot;: &quot;{Full question for the Product Owner.}&quot;,
+      &quot;input&quot;: &quot;text | textarea | select | checkbox_grid&quot;,
+      &quot;proposed&quot;: &quot;{Optional proposed value for the Commander to confirm or override}&quot;,
+      &quot;required_before_plan&quot;: false,
+      &quot;answer&quot;: &quot;{Optional current answer. Use the proposed value for generated identity answers; use an empty string for undecided stack selections.}&quot;
+    }
+  ]
+}
+=== END ARTIFACT ===</code></pre>
+<p><strong>Identity questionnaire rule.</strong> When <code>DISPLAY_NAME</code> is <code>(blank)</code> or <code>SHORT_DESCRIPTION</code> is <code>(blank)</code> in the job block, derive a proposed display name and one-sentence short description from the sources, include them in the <code>display_name</code> and <code>short_description</code> summary fields in <code>ANALYSIS.md</code>, and emit a <code>discovery-identity.json</code> questionnaire for the Commander to confirm or override. Use the <code>proposed</code> field and the <code>answer</code> field on each question to pre-fill the proposed value. The <code>answer</code> field must match the value analyze writes to METADATA.md so QuarterDeck does not render an empty box. Do <strong>not</strong> emit <code>discovery-identity.json</code> when both <code>DISPLAY_NAME</code> and <code>SHORT_DESCRIPTION</code> are already set (i.e., neither is <code>(blank)</code>).</p>
+<pre><code>=== BEGIN ARTIFACT discovery-identity.json ===
+{
+  &quot;id&quot;: &quot;discovery-identity&quot;,
+  &quot;title&quot;: &quot;Discovery: Project Identity&quot;,
+  &quot;purpose&quot;: &quot;Confirm the proposed display name and short description before planning.&quot;,
+  &quot;questions&quot;: [
+    {
+      &quot;id&quot;: &quot;display_name&quot;,
+      &quot;label&quot;: &quot;Display Name&quot;,
+      &quot;prompt&quot;: &quot;The display name Drydock will use for this project. Edit to override the proposal.&quot;,
+      &quot;input&quot;: &quot;text&quot;,
+      &quot;proposed&quot;: &quot;{Proposed display name derived from the sources}&quot;,
+      &quot;answer&quot;: &quot;{Proposed display name derived from the sources}&quot;
+    },
+    {
+      &quot;id&quot;: &quot;short_description&quot;,
+      &quot;label&quot;: &quot;Short Description&quot;,
+      &quot;prompt&quot;: &quot;One-sentence description of what this project does. Edit to override the proposal.&quot;,
+      &quot;input&quot;: &quot;textarea&quot;,
+      &quot;proposed&quot;: &quot;{Proposed one-sentence description derived from the sources}&quot;,
+      &quot;answer&quot;: &quot;{Proposed one-sentence description derived from the sources}&quot;
+    }
+  ]
+}
+=== END ARTIFACT ===</code></pre>
+<p><strong>Technology Stack rule.</strong> Always emit <code>TECHNOLOGY_STACK.md</code>: one row per technology the sources show the product using, in dependency order (language, framework, persistence, infrastructure, tooling). Drydock discards the block when the file already exists, so this proposal never overwrites a Commander decision.</p>
+<p>The <code>Rigging</code> column names a file from the injected Rigging catalog, or <code>—</code> when no catalog file governs that technology. A technology with no Rigging file is normal and expected — record the technology anyway. Never omit a technology because the catalog lacks a matching file, never invent a Rigging filename that is not in the catalog, and never list a Rigging file that no row uses.</p>
+<p>Derive the technologies from the sources. Where the sources are silent on a slot the product plainly needs, propose the conventional choice and say so in <code>Notes</code>. Do not emit a stack blocker and do not raise a stack questionnaire; the Commander edits this file directly.</p>
+<p>When a Python product persists relational data, emit all three rows: <code>Python</code> → <code>python.md</code>, <code>SQLAlchemy</code> → <code>sqlalchemy.md</code>, and <code>Alembic</code> → <code>alembic.md</code>. For each route or service that reads or writes persistent data, identify a stable repository-call contract <code>FEATURE-&lt;DOMAIN&gt;-&lt;NNN&gt;</code>, its DTO input/output, and consumer sensitivity: <code>rebuild</code> for web or <code>data</code> for API, CLI, worker, and library consumers. Typed Blueprint authoring records those contracts in <code>DATABASE.md</code>; routes cite the call id and fields, never a table, column, ORM model, session, or SQL statement.</p>
+<pre><code>=== BEGIN ARTIFACT TECHNOLOGY_STACK.md ===
+# Technology Stack
+
+| Technology | Rigging | Notes |
+|---|---|---|
+| {Technology name as the product uses it} | {catalog filename or —} | {Short note, or empty} |
+=== END ARTIFACT ===</code></pre>
+<p><strong>Story Guidance rule.</strong> Emit <code>STORY_GUIDANCE.json</code> <strong>only when the imported material states its own build breakdown</strong> — a conformance corpus grouped by chapter, a suite partitioned by feature, a specification whose sections name the units of work. Where the sources state no breakdown, omit the block entirely; inventing one adds nothing the Story List does not already carry.</p>
+<p>One entry per story the breakdown names, in build order. <code>id</code> is the story id you used in the Story List. <code>gate</code> is optional and is the argv Drydock runs to decide that story — supply it only when the sources stage a runner that accepts a scope selector, and scope it to the cases that story implements. <code>note</code> says which part of the source material the entry came from.</p>
+<p>Do not write a <code>provenance</code> field. Drydock assigns it. Every entry you emit is recorded as derived, never as Commander guidance: a gate written by the same model that plans the work is a criterion, not an oracle, and labelling it otherwise would make the plan its own examiner. Guidance the Commander supplied is already present in the injected inputs and is preserved whatever you emit — never restate, rename, or re-scope one of those ids.</p>
+<pre><code>=== BEGIN ARTIFACT STORY_GUIDANCE.json ===
+{
+  &quot;stories&quot;: [
+    {
+      &quot;id&quot;: &quot;{story id from the Story List}&quot;,
+      &quot;gate&quot;: [&quot;{runner}&quot;, &quot;{scope selector for this story&#x27;s cases}&quot;],
+      &quot;note&quot;: &quot;{the source section this breakdown came from}&quot;
+    }
+  ]
+}
+=== END ARTIFACT ===</code></pre>
+<hr>
+<h2>Hard Rules</h2>
+<ul><li>Emit <strong>only</strong> <code>=== BEGIN ARTIFACT &lt;name&gt; ===</code> / <code>=== END ARTIFACT ===</code> blocks. The name is typed once, at the open. The closing delimiter is the constant token <code>=== END ARTIFACT ===</code> — never repeat the name in it, and never substitute the artifact&#x27;s title or heading for it. No text outside them — no preamble, no summary, no prose, no commentary. No stray text: never announce, narrate, or explain what you are about to do, before, between, or after the blocks. Any output outside a delimited block is a protocol violation and will cause the run to fail.</li><li>Emit the <code>BLOCKERS.md</code> block only when one or more blockers exist; its existence halts the pipeline.</li><li>Emit the <code>COMPASS.md</code> block only when <code>COMPASS_EXISTS: false</code> or</li></ul>
+<p><code>COMPASS_PENDING_FORMAT: true</code>.</p>
+<ul><li>Emit <code>discovery-identity.json</code> only when <code>DISPLAY_NAME</code> or <code>SHORT_DESCRIPTION</code> is <code>(blank)</code> in the job block. When both are already set, omit it entirely.</li><li>COMPASS.md must be ≤40 lines. It is injected into every build step — brevity is a hard requirement.</li><li>COMPASS.md is orientation for a build agent, not project documentation. Never reproduce source</li></ul>
+<p>file content verbatim, never write API references or usage guides, never narrate architecture. Synthesize intent, constraints, and guardrails only.</p>
+<ul><li>Never enumerate the technology stack in COMPASS.md. The stack is recorded once, in</li></ul>
+<p><code>TECHNOLOGY_STACK.md</code>, and reaches the builder through per-story <code>stack:</code> fields.</p>
+<ul><li>Never emit a questionnaire that asks the Commander to select the technology stack or Rigging</li></ul>
+<p>files. That decision lives in <code>TECHNOLOGY_STACK.md</code>.</p>
+<ul><li>Do not include <code>## Questions</code> or any duplicate question list in <code>ANALYSIS.md</code>. Nonblocking</li></ul>
+<p>questions live only in <code>discovery-*.json</code> questionnaire action items.</p>
+<ul><li><code>## Surfaced Acceptance Criteria</code> is always present in <code>ANALYSIS.md</code>, &quot;None.&quot; when empty. Its row</li></ul>
+<p>count is never counted toward the Quality Signal or the <code>questions</code>/<code>blockers</code> summary fields.</p>
+<ul><li>Every Gap Checklist finding routes to exactly one of: <code>## Surfaced Acceptance Criteria</code>,</li></ul>
+<p><code>SEA_TRIALS.md</code>, or a <code>discovery-gaps.json</code> question — never more than one, never left unrouted.</p>
+<ul><li>Gap Checklist questions default to one <code>discovery-gaps.json</code>; split into numbered continuations</li></ul>
+<p>only past 5–6 questions in a single run.</p>
+<ul><li>Emit a <code>discovery-*.json</code> questionnaire only for a decision only the human can make (the</li></ul>
+<p>Ownership test). Never emit one for a matter the sources or prior answers have already decided, never as a generic catch-all, and never for work the team can derive itself (acceptance criteria, success evidence, smoke checks, build gates, test sequences — these are synthesized outputs).</p>
+<ul><li>Compare competing definitions of every shared product concept across all imported sources. Emit</li></ul>
+<p>each unresolved incompatibility as a questionnaire question with <code>&quot;required_before_plan&quot;: true</code>; never silently select, merge, or defer conflicting defaults.</p>
+<ul><li>Story list is titles + high-level AC only. Do not write typed spec file content.</li><li>Story list uses <code>### Feature: {Feature Name}</code> headings and <code>| ID | Story | High-level AC |</code></li></ul>
+<p>tables only. Do not emit <code>| # | Story |</code>, unheaded story tables, a separate Screens section, or narrative notes inside <code>## Story List</code>.</p>
+<ul><li>The <code>features</code> summary count equals the number of <code>### Feature:</code> headings. The <code>stories</code></li></ul>
+<p>summary count equals the number of story rows in those feature tables. These counts must tie to the Analysis tab and Commanders Chair.</p>
+<ul><li>Story cap: if you derive more than 100 stories, surface as a blocker.</li><li>Never re-ask a question already settled by <code>ANALYZE_COMPASS.md</code>, a prior <code>BLOCKERS.md</code>, or an</li></ul>
+<p>existing questionnaire answer. Never emit a duplicate or reworded version of an existing unanswered questionnaire.</p>
+<ul><li>Preserve every existing questionnaire indefinitely. Never rewrite or replace an existing</li></ul>
+<p>questionnaire; emit genuinely new, non-duplicate questions in new <code>discovery-&lt;slug&gt;.json</code> files.</p>
+<ul><li>Never open individual Rigging component rule files; the catalog supplies filenames only.</li><li>Never emit a <code>select</code> or <code>multiselect</code> question without a non-empty <code>options</code> list. A free-text</li></ul>
+<p>decision uses <code>&quot;input&quot;: &quot;textarea&quot;</code>.</p>
+<ul><li>A named technology with a matching manifest component informs the proposal; it is not a confirmed</li></ul>
+<p>selection. A named technology with no matching component is a discovery questionnaire.</p>
+<ul><li>Story List high-level AC: use acceptance criteria stated in the sources where present; otherwise</li></ul>
+<p>synthesize one milestone per feature area / screen / persistence area.</p>
+<ul><li>SEA_TRIALS.md criteria are project-level and use stable <code>st-*</code> IDs. Preserve prior IDs for the</li></ul>
+<p>same criterion on reruns. Technical and behavioral criteria normally use Blueprint proof; outcomes use measurement; subjective criteria use evidence-bound LLM judgment.</p>
+<ul><li>Technical, behavioral, and guardrail criteria are preferably written in EARS, declaring the</li></ul>
+<p><code>Pattern</code> their <code>Criterion</code> matches:</p>
+<div class="scroll"><table><thead><tr><th>Pattern</th><th>Shape</th></tr></thead><tbody><tr><td><code>ubiquitous</code></td><td><code>The &lt;system&gt; shall &lt;response&gt;</code></td></tr><tr><td><code>event</code></td><td><code>When &lt;trigger&gt;, the &lt;system&gt; shall &lt;response&gt;</code></td></tr><tr><td><code>state</code></td><td><code>While &lt;state&gt;, the &lt;system&gt; shall &lt;response&gt;</code></td></tr><tr><td><code>option</code></td><td><code>Where &lt;feature&gt;, the &lt;system&gt; shall &lt;response&gt;</code></td></tr><tr><td><code>unwanted</code></td><td><code>If &lt;trigger&gt;, then the &lt;system&gt; shall &lt;mitigation&gt;</code></td></tr></tbody></table></div>
+<p>A criterion in EARS begins with its pattern&#x27;s leading keyword (<code>The</code>, <code>When</code>, <code>While</code>, <code>Where</code>, <code>If</code>) and makes the system under test the grammatical subject of <code>shall</code>. Prefer the system&#x27;s point of view — <code>The parser shall pass every supplied CommonMark conformance example.</code> over <code>Every supplied CommonMark conformance example shall pass.</code> Where a requirement is clearer in plain English, write it in plain English and omit <code>Pattern</code>; clarity outranks the notation. <code>Pattern</code> is optional on every criterion, and declaring it commits the sentence to that shape.</p>
+<ul><li>Never emit a <code>Notation</code> field. Drydock derives it from the <code>Pattern</code> and the <code>Criterion</code>, marking</li></ul>
+<p>each criterion <code>ears</code> or <code>other</code>. Both are equally binding and neither affects any verdict.</p>
+<ul><li>Qualitative and outcome criteria are plain English and leave <code>Pattern</code> blank. They are measurement</li></ul>
+<p>contracts settled by <code>Baseline</code>, <code>Operator</code>, <code>Target</code>, and <code>Unit</code>.</p>
+<ul><li>A <code>guardrail</code> is an absolute prohibition the project may never do — a <em>never</em>, not a target. It</li></ul>
+<p>is a prohibition written either as <code>Pattern: unwanted</code> when it has a trigger (<code>If &lt;trigger&gt;, then the &lt;system&gt; shall &lt;mitigation&gt;</code>), or as a negative <code>Pattern: ubiquitous</code> when the prohibition is unconditional (<code>The &lt;system&gt; shall not/never &lt;action&gt;</code>). A breach fails delivery regardless of every score. Raise one only where the sources state or clearly imply a prohibition; never invent one to be thorough.</p>
+<ul><li>Prefer <code>proof</code> or <code>measurement</code> for required technical, behavioral, and guardrail criteria. A</li></ul>
+<p>required assertion resting only on <code>llm</code> judgment reduces the project&#x27;s acceptance coverage score.</p>
+<ul><li>Never invent outcome baselines, targets, units, or external measurement sources. Emit stable-ID</li></ul>
+<p><code>## Questions</code> records for missing human-owned facts. Emit <code>- None.</code> when none remain.</p>
+<ul><li>Never emit a <code>discovery-sea-trials.json</code> block. Sea Trials questions live in the SEA_TRIALS.md</li></ul>
+<p><code>## Questions</code> section; Drydock projects them into that questionnaire itself.</p>
+<ul><li>The SEA_TRIALS.md <code>## Questions</code> section holds only human-owned measurement facts (baselines,</li></ul>
+<p>targets, workloads, business measures). Never place a stack or Rigging selection question there — the technology stack is owned solely by <code>TECHNOLOGY_STACK.md</code> and must appear in no questionnaire. Drydock drops any stack/Rigging question found in the Sea Trials Questions section.</p>
+<ul><li>All questionnaire JSON must be valid JSON.</li><li>Do not write to <code>blueprint/</code> or read <code>MANIFEST.md</code>. Read imported sources — there are no</li></ul>
+<p>typed spec files at analyze time, so do not inspect or invent them.</p>
+<ul><li>Do not fabricate requirements or problems the sources do not imply. A genuinely absent decision</li></ul>
+<p>(e.g. no auth model stated) is a real gap — route it under this prompt&#x27;s blocker and questionnaire rules, not as an invented requirement.</p>
+<hr>
+<p>Use the preceding job metadata, prior answers (if any), and imported source files for this run.</p></article>
+</main>
+</body>
+</html>
